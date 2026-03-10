@@ -107,7 +107,7 @@ export function ScrollCatalog() {
               }
             >
               <img
-                src={`https://placehold.co/${index === 0 || index === 3 ? '306x220' : '242x220'}`}
+                src="/images/placeholder.svg"
                 alt=""
                 width={index === 0 || index === 3 ? 306 : 242}
                 height={220}

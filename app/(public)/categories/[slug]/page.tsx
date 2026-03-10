@@ -116,7 +116,7 @@ export default async function CategoryPage({
               </div>
             </div>
             <img
-              src="https://placehold.co/768x393"
+              src="/images/placeholder.svg"
               alt=""
               width={768}
               height={393}

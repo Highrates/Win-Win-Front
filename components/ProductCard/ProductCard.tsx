@@ -20,7 +20,7 @@ export function ProductCard({
   slug,
   name,
   price,
-  imageUrl = 'https://placehold.co/400x400',
+  imageUrl = '/images/placeholder.svg',
   collections = 5,
   likes = 180,
   comments = 180,

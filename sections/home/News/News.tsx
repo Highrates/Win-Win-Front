@@ -44,7 +44,7 @@ export function News() {
                     <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={styles.arrow} />
                   </span>
                 </div>
-                <img className={styles.articleCover} src="https://placehold.co/340x516" alt="" width={340} height={516} />
+                <img className={styles.articleCover} src="/images/placeholder.svg" alt="" width={340} height={516} />
               </Link>
             </div>
             <div className={styles.rightCol}>
@@ -58,7 +58,7 @@ export function News() {
                       <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={styles.arrow} />
                     </span>
                   </div>
-                  <img className={styles.articleCardCover} src="https://placehold.co/140x140" alt="" width={140} height={140} />
+                  <img className={styles.articleCardCover} src="/images/placeholder.svg" alt="" width={140} height={140} />
                 </Link>
               ))}
             </div>
