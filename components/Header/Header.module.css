@@ -1,0 +1,493 @@
+.header {
+  position: relative;
+  top: 0;
+  z-index: 20;
+  margin-top: 0;
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-bright-snow);
+}
+
+.headerMinimal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: transparent;
+  border-bottom: none;
+}
+
+.headerMinimal .siteHeaderWrap {
+  padding-top: 24px;
+  align-items: start;
+}
+
+.headerMinimal .menuItem {
+  color: var(--color-white);
+}
+
+.headerMinimal .menuChevron {
+  color: var(--color-white);
+}
+
+/* header_main: тёмный хедер после скролла Hero / на всех остальных страницах; всегда поверх супер-меню */
+.headerMain {
+  position: relative;
+  top: 0;
+  z-index: 20;
+  margin-top: 0;
+  background: #051826;
+}
+
+/* На главной после скролла: main в overlay, плавное появление dissolve — страница не двигается */
+.headerMainOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.headerMainOverlayVisible {
+  visibility: visible;
+  pointer-events: auto;
+  animation: headerDissolveIn 0.5s ease-in-out forwards;
+}
+
+@keyframes headerDissolveIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Лого «печатается» — появление слева направо при появлении header-main */
+.headerMainOverlayVisible .logoImg {
+  animation: logoTypeIn 0.45s ease-out 0.08s forwards;
+  clip-path: inset(0 100% 0 0);
+}
+
+@keyframes logoTypeIn {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.headerMain .menuItem {
+  color: var(--color-white);
+}
+
+.headerMain .menuChevron {
+  color: var(--color-white);
+}
+
+.headerMain .iconBtn {
+  color: var(--color-white);
+}
+
+.headerMain .iconBtn img {
+  filter: brightness(0) invert(1);
+}
+
+/* В header_main внутренний wrap с py-9px */
+.headerMain .siteHeaderWrap {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.headerMain .logoImg {
+  width: 100px;
+  height: auto;
+  filter: brightness(0) invert(1);
+  display: block;
+}
+
+/* Полоса хедера — поверх супер-меню при открытии */
+.headerBar {
+  position: relative;
+  z-index: 10;
+}
+
+/* minimal + супер-меню открыто: полоса minimal остаётся сверху (выше .superMenu z-index: 9) */
+.headerMinimal.headerSuperMenuOpen .headerBar {
+  z-index: 11;
+}
+
+/* Grid: site-header__wrap */
+.siteHeaderWrap {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  position: relative;
+  font-size: var(--text-body);
+  font-weight: 300;
+  align-items: center;
+  padding-top: 40px;
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .siteHeaderWrap {
+    gap: 20px;
+  }
+}
+
+/* Logo block: figure, grid-column 1/span 3 — nav с 4-й колонки */
+.logoBlock {
+  position: relative;
+  pointer-events: all;
+  grid-column: 1 / span 3;
+  width: 240px;
+}
+
+.headerMain .logoBlock {
+  width: 100px;
+}
+
+.logoImg {
+  display: block;
+  width: 240px;
+  height: auto;
+}
+
+.headerMinimal .logoImg {
+  filter: brightness(0) invert(1);
+  color: var(--color-white);
+}
+
+/* Nav: site-header__nav — колонки 4–11, выравнивание с superMenuMenu */
+.siteHeaderNav {
+  pointer-events: all;
+  display: none;
+  grid-column: 4 / -2;
+}
+
+@media (min-width: 1280px) {
+  .siteHeaderNav {
+    display: block;
+  }
+}
+
+.siteHeaderMenu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.menuItem {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-white);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+
+.header .menuItem {
+  color: var(--color-ink-black);
+}
+
+/* При ховере на меню: остальные пункты 50%, текущий без изменений */
+.siteHeaderMenu:hover .menuItem {
+  opacity: 0.5;
+}
+
+.siteHeaderMenu .menuItem:hover {
+  opacity: 1;
+}
+
+.menuItemText {
+  font-size: var(--text-body);
+  flex: 1;
+  white-space: nowrap;
+}
+
+.menuChevron {
+  margin: 0;
+  color: var(--color-white);
+  display: inline-flex;
+  align-items: center;
+}
+
+.header .menuChevron {
+  color: var(--color-ink-black);
+}
+
+.menuChevron svg {
+  display: block;
+}
+
+/* Chevron rotation when section open */
+.menuChevron[data-open] svg {
+  transform: rotate(180deg);
+}
+.menuChevron svg {
+  transition: transform 0.25s ease;
+}
+
+/* When super menu is open: dim inactive triggers */
+.headerSuperMenuOpen .siteHeaderMenu .menuItem {
+  opacity: 0.5;
+}
+.headerSuperMenuOpen .siteHeaderMenu .menuItem[aria-expanded='true'] {
+  opacity: 1;
+}
+
+/* --- Super menu (mega menu): как preload — открытие сверху вниз, закрытие снизу вверх --- */
+.superMenu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9;
+}
+
+/* Обёртка слайда: высота по контенту, уезжает вверх при закрытии */
+.superMenuSlideWrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(-100%);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.superMenu[aria-hidden='false'] .superMenuSlideWrap {
+  transform: translateY(0);
+}
+
+.superMenu.superMenuClosing .superMenuSlideWrap {
+  transform: translateY(-100%);
+}
+
+.superMenuBg {
+  position: absolute;
+  inset: 0;
+  background: var(--color-ink-black);
+}
+
+.superMenuPanel {
+  position: relative;
+  z-index: 1;
+  padding-top: 72px;
+  padding-bottom: 24px;
+}
+
+/* В супер-меню siteHeaderWrap содержит один ряд; inner на всю ширину grid */
+.superMenuPanel .siteHeaderWrap {
+  padding-top: 0;
+  align-items: start;
+}
+
+.superMenuPanel .siteHeaderWrap .superMenuPanelInner {
+  grid-column: 1 / -1;
+  max-width: none;
+  margin: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .superMenuPanel .siteHeaderWrap .superMenuPanelInner {
+    gap: 20px;
+  }
+}
+
+.superMenuPanelInner .superMenuSection {
+  grid-column: 1 / -1;
+}
+
+.superMenuSection {
+  display: none;
+  flex-direction: column;
+  animation: superMenuSectionIn 0.25s ease-out;
+}
+
+.superMenuSection[data-active] {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes superMenuSectionIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Структура как в siteHeaderWrap: logoBlock + menu (без rightNav) */
+.superMenuSectionWrap {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  width: 100%;
+}
+
+/* При открытии супер-меню с minimal — отступ сверху у контента секции */
+.superMenuOpenedFromMinimal .superMenuSectionWrap {
+  padding-top: 12px;
+}
+
+@media (min-width: 1280px) {
+  .superMenuSectionWrap {
+    gap: 20px;
+  }
+}
+
+/* Блок со ссылкой «Показать все» (items-end) */
+.superMenuSectionItemsEnd {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+.superMenuSectionShowAll {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  text-transform: uppercase;
+  color: #00bcd4;
+}
+
+.superMenuSectionShowAll:hover {
+  text-decoration: underline;
+}
+
+.superMenuLogoBlock {
+  position: relative;
+  grid-column: 1 / span 3;
+  display: flex;
+  align-items: stretch;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.12s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s;
+}
+
+.superMenu.superMenuContentRevealed .superMenuLogoBlock {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.superMenu.superMenuClosing .superMenuLogoBlock {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.superMenuLogoLink {
+  display: block;
+  height: 100%;
+}
+
+.superMenuLogoImg {
+  display: block;
+  width: 240px;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.superMenuMenu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  grid-column: 4 / -1;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.2s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+}
+
+.superMenu.superMenuContentRevealed .superMenuMenu {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.superMenu.superMenuClosing .superMenuMenu {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.superMenuItem {
+  position: relative;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-white);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.superMenuItem:hover {
+  opacity: 0.85;
+}
+
+/* site-header__rightNav — последняя колонка грида */
+.rightNav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  grid-column: -2 / -1;
+  align-self: center;
+  pointer-events: all;
+  margin-left: auto;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-black);
+}
+
+.iconBtn:hover {
+  opacity: 0.8;
+}
+
+.iconBtn img {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 768px) {
+  .rightNav {
+    gap: 28px;
+  }
+}

@@ -1,0 +1,14 @@
+.heroBg {
+  min-height: 520px;
+  background: var(--color-ink-black);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.heroImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}

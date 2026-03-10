@@ -1,0 +1,136 @@
+.footer {
+  margin-top: 180px;
+  color: var(--color-white);
+}
+
+.bg {
+  min-height: 520px;
+  background: var(--color-ink-black);
+  display: flex;
+}
+
+.footerContent {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.top {
+  display: flex;
+  flex-direction: row;
+  gap: 96px;
+  align-items: flex-end;
+}
+
+.topLeft {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 40px;
+  margin-top: -32px;
+}
+
+.footerImg {
+  width: 500px;
+  height: auto;
+  display: block;
+}
+
+.logo {
+  width: 400px;
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+
+.footerMenu {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  padding-top: 56px;
+}
+
+.menuColumn {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.columnTitle {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  color: var(--color-white);
+}
+
+.columnLinks {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.columnLinks a {
+  font-size: var(--text-body);
+  color: var(--color-white);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.columnLinks a:hover {
+  opacity: 0.85;
+}
+
+.bottom {
+  padding-top: 32px;
+  padding-bottom: 32px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.6);
+}
+
+.bottomInner {
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.bottomText {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.bottomLinks {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 56px;
+}
+
+.bottomLinks a {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.bottomLinks a:hover {
+  opacity: 0.85;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    margin-top: 80px;
+  }
+  .bg {
+    min-height: 400px;
+  }
+}
