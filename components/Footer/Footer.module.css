@@ -130,7 +130,40 @@
   .footer {
     margin-top: 80px;
   }
+
   .bg {
     min-height: 400px;
+  }
+
+  .footerImg {
+    display: none;
+  }
+
+  .top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .topLeft {
+    order: 1;
+    margin-top: 0;
+    padding-bottom: 32px;
+  }
+
+  .footerMenu {
+    order: -1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 40px;
+    column-gap: 24px;
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+
+  .bottomInner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 }

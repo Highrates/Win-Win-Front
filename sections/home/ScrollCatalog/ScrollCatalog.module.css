@@ -115,14 +115,14 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: 108px;
+  width: 120px;
   text-decoration: none;
   color: inherit;
 }
 
 .mobileCardImgWrap {
-  width: 108px;
-  height: 98px;
+  width: 120px;
+  height: 109px;
   background: var(--color-bright-snow);
   border-radius: 8px;
   overflow: hidden;

@@ -131,8 +131,8 @@ export function ScrollCatalog() {
                   <img
                     src="/images/placeholder.svg"
                     alt=""
-                    width={108}
-                    height={98}
+                    width={120}
+                    height={109}
                     className={styles.mobileCardImg}
                   />
                 </div>

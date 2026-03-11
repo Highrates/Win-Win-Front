@@ -97,3 +97,14 @@
   font-weight: var(--text-caption-weight);
   color: var(--color-black);
 }
+
+@media (max-width: 768px) {
+  .interactWrapper {
+    gap: 20px;
+  }
+
+  .interactIcon {
+    width: 18px;
+    height: 18px;
+  }
+}

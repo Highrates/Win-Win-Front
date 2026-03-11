@@ -159,6 +159,50 @@
 }
 
 @media (max-width: 768px) {
+  .previewPageSection {
+    margin-top: 78px;
+  }
+
+  .previewPageWrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .previewPageTitles {
+    gap: 56px;
+  }
+
+  .previewImage {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+
+  .marketSection {
+    margin-top: 96px;
+  }
+
+  .marketSectionRowLeft {
+    gap: 16px;
+  }
+
+  .marketSectionRowLeft img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .marketSortGroup {
+    gap: 6px;
+  }
+
+  .paginationWrapper {
+    margin-top: 32px;
+  }
+
+  .paginationPageCurrent {
+    padding-bottom: 8px;
+  }
+
   .marketGrid {
     grid-template-columns: repeat(2, 1fr);
   }
