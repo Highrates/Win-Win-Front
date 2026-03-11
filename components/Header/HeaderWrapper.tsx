@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Header, HeaderVariant } from './Header';
 
+const MOBILE_BREAKPOINT = 768;
 const HERO_SECTION_ID = 'hero-section';
 /** Мёртвая зона (px): переключаем на main только когда проскроллили на PAST_THRESHOLD ниже низа hero, обратно на minimal — когда hero снова на OVER_MINIMAL выше низа вьюпорта. Убирает рябь на границе. */
 const PAST_THRESHOLD = 80;
@@ -73,13 +74,26 @@ function useScrolledPastHero(pathname: string) {
   return past;
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const update = () => setIsMobile(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+  return isMobile;
+}
+
 export function HeaderWrapper() {
   const pathname = usePathname();
   const hasScrolledPastHero = useScrolledPastHero(pathname);
+  const isMobile = useIsMobile();
   const [superMenuOpen, setSuperMenuOpen] = useState(false);
 
   const variant: HeaderVariant =
-    pathname !== '/' ? 'main' : hasScrolledPastHero ? 'main' : 'minimal';
+    isMobile ? 'main' : pathname !== '/' ? 'main' : hasScrolledPastHero ? 'main' : 'minimal';
   const isMainOverlayOnHome =
     (pathname === '/' && variant === 'main') || pathname.startsWith('/categories/');
 

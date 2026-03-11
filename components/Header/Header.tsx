@@ -13,7 +13,22 @@ const MENU_SECTIONS = [
 ] as const;
 
 const SUPER_MENU_PANEL_ID = 'super-menu-panel';
+const MOBILE_MENU_PANEL_ID = 'mobile-menu-panel';
 const BODY_SUPER_MENU_OPEN = 'header-super-menu-open';
+const BODY_MOBILE_MENU_OPEN = 'header-mobile-menu-open';
+
+const MOBILE_MENU_SUBLINKS: Record<string, string[]> = {
+  categories: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
+  brands: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
+  designers: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
+  projects: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
+};
+
+const MOBILE_INFO_LINKS = [
+  { href: '/about', label: 'О Win-Win' },
+  { href: '/delivery', label: 'Доставка и оплата' },
+  { href: '/guarantee', label: 'Гарантия, обмен и возврат' },
+] as const;
 
 function MenuChevron({ open }: { open: boolean }) {
   return (
@@ -51,6 +66,11 @@ export function Header({
   const [superMenuSection, setSuperMenuSection] = useState<string | null>(null);
   const [superMenuClosing, setSuperMenuClosing] = useState(false);
   const [superMenuContentRevealed, setSuperMenuContentRevealed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenuContentRevealed, setMobileMenuContentRevealed] = useState(false);
+  const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
+  const [mobileMenuExpandedId, setMobileMenuExpandedId] = useState<string | null>(null);
+  const mobileMenuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTransitioningRef = useRef(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeSuperMenuRef = useRef<() => void>(() => {});
@@ -159,6 +179,52 @@ export function Header({
     setSuperMenuOpen(true);
   };
 
+  const closeMobileMenu = () => {
+    if (!mobileMenuOpen || mobileMenuClosing) return;
+    setMobileMenuContentRevealed(false);
+    setMobileMenuClosing(true);
+    if (mobileMenuCloseTimeoutRef.current) clearTimeout(mobileMenuCloseTimeoutRef.current);
+    mobileMenuCloseTimeoutRef.current = setTimeout(() => {
+      mobileMenuCloseTimeoutRef.current = null;
+      setMobileMenuOpen(false);
+      setMobileMenuClosing(false);
+    }, 280);
+  };
+  const toggleMobileMenu = () => {
+    if (mobileMenuClosing) return;
+    setMobileMenuOpen((o) => !o);
+  };
+
+  useEffect(() => {
+    if (!mobileMenuOpen || mobileMenuClosing) {
+      setMobileMenuContentRevealed(false);
+      return;
+    }
+    const rafId = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setMobileMenuContentRevealed(true));
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [mobileMenuOpen, mobileMenuClosing]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMobileMenu();
+    };
+    document.body.classList.add(BODY_MOBILE_MENU_OPEN);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.classList.remove(BODY_MOBILE_MENU_OPEN);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (mobileMenuCloseTimeoutRef.current) clearTimeout(mobileMenuCloseTimeoutRef.current);
+    };
+  }, []);
+
   // При открытии с minimal остаёмся minimal; с main — без изменений
   const openedFromMinimal = superMenuOpen && variant === 'minimal';
   const superMenuVisible = superMenuOpen || superMenuClosing;
@@ -176,6 +242,23 @@ export function Header({
     <header className={className}>
       <div className={`padding-global ${styles.headerBar}`}>
         <div className={styles.siteHeaderWrap}>
+          <button
+            type="button"
+            className={styles.burgerBtn}
+            aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls={MOBILE_MENU_PANEL_ID}
+            onClick={toggleMobileMenu}
+          >
+            <span className={styles.burgerIcon} aria-hidden data-open={mobileMenuOpen || undefined}>
+              <svg className={styles.burgerIconSvg} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              <svg className={styles.closeIconSvg} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
           <div className={styles.logoBlock}>
             <Link href="/" aria-label="На главную">
               <Image
@@ -215,6 +298,133 @@ export function Header({
               <img src="/icons/user.svg" alt="" width={20} height={20} />
             </Link>
           </nav>
+        </div>
+      </div>
+
+      {/* Мобильное меню: раскрывается сверху вниз, на весь экран */}
+      <div
+        className={[styles.mobileMenuOverlay, mobileMenuOpen && styles.mobileMenuOverlayOpen].filter(Boolean).join(' ')}
+        aria-hidden={!mobileMenuOpen}
+        style={{ pointerEvents: mobileMenuOpen ? 'auto' : 'none' }}
+      >
+        <div
+          id={MOBILE_MENU_PANEL_ID}
+          className={[
+            'padding-global',
+            styles.mobileMenuPanel,
+            mobileMenuOpen && styles.mobileMenuPanelOpen,
+            mobileMenuContentRevealed && styles.mobileMenuContentRevealed,
+            mobileMenuClosing && styles.mobileMenuClosing,
+          ].filter(Boolean).join(' ')}
+          role="dialog"
+          aria-label="Мобильное меню"
+        >
+          <div className={styles.mobileMenuHeader}>
+            <Link href="/" onClick={closeMobileMenu} className={styles.mobileMenuLogoLink} aria-label="На главную">
+              <Image
+                src="/images/logo.svg"
+                alt="Win-Win"
+                width={200}
+                height={30}
+                className={styles.mobileMenuLogoImg}
+              />
+            </Link>
+            <button
+              type="button"
+              className={styles.mobileMenuCloseBtn}
+              aria-label="Закрыть меню"
+              onClick={closeMobileMenu}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+          <div className={styles.mobileMenuInner}>
+            <nav className={styles.mobileMenuNav} aria-label="Основное меню">
+              {MENU_SECTIONS.map(({ id, href, label }) => {
+                const isExpanded = mobileMenuExpandedId === id;
+                const sublinks = MOBILE_MENU_SUBLINKS[id] ?? [];
+                return (
+                  <div key={id} className={styles.mobileMenuItem}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className={styles.mobileMenuTrigger}
+                      onClick={() => setMobileMenuExpandedId((prev) => (prev === id ? null : id))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setMobileMenuExpandedId((prev) => (prev === id ? null : id));
+                        }
+                      }}
+                      aria-expanded={isExpanded}
+                    >
+                      <span className={styles.mobileMenuTriggerRow}>
+                        <span className={styles.mobileMenuTriggerText}>{label}</span>
+                        <span className={styles.mobileMenuArrow} aria-hidden data-open={isExpanded || undefined}>
+                          <svg width="9" height="5" viewBox="0 0 9 5" fill="none">
+                            <path d="M0 0L4.5 5L9 0" stroke="currentColor" strokeWidth="1.2" />
+                          </svg>
+                        </span>
+                      </span>
+                      {sublinks.length > 0 && (
+                        <div
+                          className={styles.mobileMenuSublinks}
+                          hidden={!isExpanded}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {sublinks.map((sublabel, i) => (
+                            <Link
+                              key={i}
+                              href={`${href}#${i}`}
+                              className={styles.mobileMenuSublink}
+                              onClick={closeMobileMenu}
+                            >
+                              {sublabel}
+                            </Link>
+                          ))}
+                          <Link href={href} className={styles.mobileMenuShowAll} onClick={closeMobileMenu}>
+                            Показать все
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </nav>
+          </div>
+          <div className={styles.mobileMenuInner}>
+            <nav className={styles.mobileMenuSimpleNav} aria-label="Информация">
+              {MOBILE_INFO_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={styles.mobileMenuSimpleLink}
+                  onClick={closeMobileMenu}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+          <div className={styles.mobileMenuInner}>
+            <div className={styles.mobileMenuActions}>
+              <button type="button" className={styles.mobileMenuSearchBtn} aria-label="Поиск" onClick={closeMobileMenu}>
+                <img src="/icons/search-normal.svg" alt="" width={18} height={18} />
+                <span className={styles.mobileMenuSearchLabel}>Поиск</span>
+              </button>
+              <Link
+                href="/login"
+                className={styles.mobileMenuLoginLink}
+                onClick={closeMobileMenu}
+              >
+                <img src="/icons/user.svg" alt="" width={18} height={18} />
+                <span>Войти в личный кабинет</span>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 

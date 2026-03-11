@@ -79,6 +79,10 @@ body {
   background-color: var(--color-white);
 }
 
+body.header-mobile-menu-open {
+  overflow: hidden;
+}
+
 /* Heading classes for use across the app */
 .h1 {
   font-size: var(--h1-size);

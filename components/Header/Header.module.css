@@ -140,6 +140,54 @@
   }
 }
 
+/* Бургер: только на мобильной версии header-main */
+.burgerBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-white);
+}
+
+.burgerBtn:hover {
+  opacity: 0.85;
+}
+
+.burgerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.burgerIconSvg {
+  display: block;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.closeIconSvg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.burgerIcon[data-open] .burgerIconSvg {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.burgerIcon[data-open] .closeIconSvg {
+  opacity: 1;
+  pointer-events: none;
+}
+
 /* Logo block: figure, grid-column 1/span 3 — nav с 4-й колонки */
 .logoBlock {
   position: relative;
@@ -490,4 +538,382 @@
   .rightNav {
     gap: 28px;
   }
+}
+
+/* Мобильная версия header-main: бургер слева, лого по центру */
+@media (max-width: 768px) {
+  .headerMain .siteHeaderWrap {
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+  }
+
+  .headerMain .burgerBtn {
+    display: flex;
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .headerMain .logoBlock {
+    grid-column: 2;
+    justify-self: center;
+    width: 100px;
+  }
+
+  .headerMain .siteHeaderNav {
+    display: none;
+  }
+
+  .headerMain .rightNav {
+    grid-column: 3;
+    justify-self: end;
+  }
+}
+
+/* --- Мобильное меню: на весь экран, раскрывается сверху вниз --- */
+.mobileMenuOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .mobileMenuOverlay {
+    display: block;
+  }
+}
+
+.mobileMenuOverlayOpen {
+  pointer-events: auto;
+}
+
+.mobileMenuPanel {
+  position: absolute;
+  inset: 0;
+  max-height: 100vh;
+  background: var(--color-ink-black);
+  border-radius: 0;
+  transform: translateY(-100%);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobileMenuPanelOpen {
+  transform: translateY(0);
+}
+
+/* Верхняя полоса: лого + крестик (появление как superMenuLogoBlock) */
+.mobileMenuHeader {
+  width: 100%;
+  padding-top: 32px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.12s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s;
+}
+
+.mobileMenuContentRevealed .mobileMenuHeader {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobileMenuClosing .mobileMenuHeader {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.mobileMenuLogoLink {
+  display: block;
+  line-height: 0;
+}
+
+.mobileMenuLogoImg {
+  display: block;
+  width: 200px;
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+
+.mobileMenuCloseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-white);
+  cursor: pointer;
+}
+
+.mobileMenuCloseBtn:hover {
+  opacity: 0.9;
+}
+
+.mobileMenuInner {
+  width: 100%;
+  padding-top: 32px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+.mobileMenuNav {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.2s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+}
+
+.mobileMenuContentRevealed .mobileMenuNav {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobileMenuClosing .mobileMenuNav {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.mobileMenuItem {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.mobileMenuTrigger {
+  align-self: stretch;
+  width: 100%;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  color: var(--color-white);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mobileMenuTrigger:hover {
+  opacity: 0.9;
+}
+
+.mobileMenuTriggerRow {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobileMenuTriggerText {
+  white-space: nowrap;
+}
+
+.mobileMenuArrow {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-white);
+  transition: transform 0.25s ease;
+}
+
+.mobileMenuArrow svg {
+  display: block;
+}
+
+.mobileMenuArrow[data-open] {
+  transform: rotate(180deg);
+}
+
+.mobileMenuSublinks {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding-left: 0;
+}
+
+.mobileMenuSublinks[hidden] {
+  display: none;
+}
+
+.mobileMenuSublink {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-white);
+  opacity: 0.85;
+  text-decoration: none;
+}
+
+.mobileMenuSublink:hover {
+  opacity: 1;
+}
+
+.mobileMenuShowAll {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  text-transform: uppercase;
+  color: #00bcd4;
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.mobileMenuShowAll:hover {
+  text-decoration: underline;
+}
+
+/* Второй блок: простые ссылки (О Win-Win, Доставка и оплата, Гарантия...) */
+.mobileMenuSimpleNav {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.28s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.28s;
+}
+
+.mobileMenuContentRevealed .mobileMenuSimpleNav {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobileMenuClosing .mobileMenuSimpleNav {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.mobileMenuSimpleLink {
+  width: 100%;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.3);
+  color: var(--color-white);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.mobileMenuSimpleLink:hover {
+  opacity: 0.9;
+}
+
+/* Третий блок: поиск и войти в личный кабинет */
+.mobileMenuActions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.36s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.36s;
+}
+
+.mobileMenuContentRevealed .mobileMenuActions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobileMenuClosing .mobileMenuActions {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.mobileMenuSearchBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.3);
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  color: var(--color-white);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mobileMenuSearchBtn:hover {
+  opacity: 0.9;
+}
+
+.mobileMenuSearchBtn img {
+  filter: brightness(0) invert(1);
+}
+
+.mobileMenuSearchLabel {
+  white-space: nowrap;
+}
+
+.mobileMenuLoginLink {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  color: var(--color-white);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.mobileMenuLoginLink:hover {
+  opacity: 0.9;
+}
+
+.mobileMenuLoginLink img {
+  filter: brightness(0) invert(1);
 }
