@@ -184,8 +184,24 @@
 }
 
 @media (max-width: 768px) {
+  .section {
+    margin-top: 96px;
+  }
+
   .twoColGrid {
     grid-template-columns: 1fr;
     gap: 24px;
+  }
+
+  .leftCol {
+    display: none;
+  }
+
+  .wrapperDetails {
+    align-self: stretch;
+  }
+
+  .brandName {
+    color: var(--color-black);
   }
 }

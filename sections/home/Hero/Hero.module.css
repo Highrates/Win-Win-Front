@@ -12,3 +12,24 @@
   height: auto;
   object-fit: cover;
 }
+
+.heroImgMob {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .heroBg {
+    min-height: 33vh;
+  }
+
+  .heroImg {
+    display: none;
+  }
+
+  .heroImgMob {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+}

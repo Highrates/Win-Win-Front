@@ -198,8 +198,25 @@
 
 @media (max-width: 768px) {
   .section {
-    margin-top: 80px;
+    margin-top: 96px;
   }
+
+  .wrapper {
+    border-radius: 5px;
+    padding-top: 16px;
+    padding-right: 16px;
+    padding-bottom: 24px;
+    padding-left: 16px;
+  }
+
+  .titles .logo {
+    display: none;
+  }
+
+  .categoriesWrapper {
+    gap: 16px;
+  }
+
   .grid {
     grid-template-columns: 1fr;
     gap: 40px;

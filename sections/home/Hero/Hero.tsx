@@ -14,6 +14,14 @@ export function Hero() {
             className={styles.heroImg}
             priority
           />
+          <Image
+            src="/images/hero-mob-img.png"
+            alt=""
+            width={768}
+            height={520}
+            className={styles.heroImgMob}
+            priority
+          />
         </div>
       </div>
     </section>

@@ -267,6 +267,7 @@ export function Header({
                 width={280}
                 height={41}
                 className={styles.logoImg}
+                style={{ height: 'auto' }}
                 priority
               />
             </Link>
@@ -327,6 +328,7 @@ export function Header({
                 width={200}
                 height={30}
                 className={styles.mobileMenuLogoImg}
+                style={{ height: 'auto' }}
               />
             </Link>
             <button
@@ -340,6 +342,7 @@ export function Header({
               </svg>
             </button>
           </div>
+          <div className={styles.mobileMenuScroll}>
           <div className={styles.mobileMenuInner}>
             <nav className={styles.mobileMenuNav} aria-label="Основное меню">
               {MENU_SECTIONS.map(({ id, href, label }) => {
@@ -424,6 +427,7 @@ export function Header({
                 <span>Войти в личный кабинет</span>
               </Link>
             </div>
+          </div>
           </div>
         </div>
       </div>

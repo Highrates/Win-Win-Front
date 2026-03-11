@@ -118,6 +118,29 @@ export function ScrollCatalog() {
           </Link>
         ))}
       </div>
+      {/* Мобильная версия: только родительские категории (табы) в виде карточек*/}
+      <div className={styles.mobileWrapper}>
+        <div className={styles.mobileCardsWrapper}>
+          {tabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={`/categories/${tab.id}`}
+                className={styles.mobileCard}
+              >
+                <div className={styles.mobileCardImgWrap}>
+                  <img
+                    src="/images/placeholder.svg"
+                    alt=""
+                    width={108}
+                    height={98}
+                    className={styles.mobileCardImg}
+                  />
+                </div>
+                <span className={styles.mobileCardTitle}>{tab.label}</span>
+              </Link>
+            ))}
+        </div>
+      </div>
     </section>
   );
 }
