@@ -36,7 +36,10 @@
   top: 0;
   z-index: 20;
   margin-top: 0;
+  padding-top: env(safe-area-inset-top, 0);
   background: #051826;
+  /* Перекрываем возможную белую полосу 1px сверху (округление/субпиксель) */
+  box-shadow: 0 -1px 0 0 #051826;
 }
 
 /* На главной после скролла: main в overlay, плавное появление dissolve — страница не двигается */
@@ -46,6 +49,9 @@
   left: 0;
   right: 0;
   z-index: 20;
+  padding-top: env(safe-area-inset-top, 0);
+  background: #051826;
+  box-shadow: 0 -1px 0 0 #051826;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
