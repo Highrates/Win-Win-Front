@@ -1,0 +1,58 @@
+/* Кнопка: self-stretch, px-24 py-12, rounded-lg, inline-flex center, gap-10, overflow-hidden */
+
+.btn {
+  align-self: stretch;
+  flex-shrink: 0;
+  padding: 12px 24px;
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.btnSecondary {
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+}
+
+.btnPrimary {
+  background: var(--color-ink-black);
+  color: var(--color-white);
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+}
+
+.btnIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.btnChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-black);
+  flex-shrink: 0;
+}
+
+.btnChevron svg {
+  display: block;
+  width: 9px;
+  height: 5px;
+}
+
+.btnPrimary .btnChevron {
+  color: var(--color-white);
+}

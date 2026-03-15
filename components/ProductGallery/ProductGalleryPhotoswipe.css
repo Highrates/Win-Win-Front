@@ -1,0 +1,21 @@
+/* Скругление всех слайдов в полноэкранной галерее PhotoSwipe */
+
+.pswp--winwin .pswp__item {
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.pswp--winwin .pswp__content,
+.pswp--winwin .pswp__zoom-wrap,
+.pswp--winwin .pswp__img {
+  border-radius: 10px;
+}
+
+.pswp--winwin .pswp__img {
+  object-fit: cover;
+}
+
+.pswp--winwin div.pswp__img--placeholder,
+.pswp--winwin .pswp__img--with-bg {
+  border-radius: 10px;
+}

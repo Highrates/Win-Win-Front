@@ -1,0 +1,603 @@
+/* Страница товара: section mt-94px, vertical flow, product-imgs-wrapper */
+
+.productSection {
+  margin-top: 94px;
+}
+
+.productPageFlow {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+
+/* Хлебные крошки (как на categories) */
+.breadcrumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.breadcrumbsLink {
+  color: var(--color-gray);
+  text-decoration: none;
+}
+
+.breadcrumbsLink:hover {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsCurrent {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsSep {
+  color: var(--color-gray);
+  user-select: none;
+}
+
+.productImgsWrapper {
+  width: 100%;
+  height: 538px;
+  max-height: 538px;
+  display: flex;
+  flex-direction: column;
+}
+
+.productImgsWrapper > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Product details: grid 2 cols 40% / 60% */
+.productDetails {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  justify-content: start;
+  align-items: start;
+  width: 100%;
+}
+
+.productDetailsLeft {
+  padding-right: 56px;
+}
+
+.productDetailsInner {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.productTitles {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.productBrandName {
+  font-size: var(--h5-size);
+  font-weight: var(--h5-weight);
+  text-transform: uppercase;
+}
+
+.productName {
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* Блок как ProductCard interactWrapper + interactItem */
+.productDetailsInteract {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.productDetailsInteractItem {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+}
+
+.productDetailsInteractIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.productDetailsInteractValue {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.productDetailsRight {
+  min-width: 0;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.productDetailsRightRow {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.productDetailsPrice {
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+}
+
+.productDetailsBtnsWrapper {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+}
+
+.productDetailsBtnsSecondary {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+}
+
+.productDetailsStickyBar {
+  display: none;
+}
+
+.productDetailsStickyPrice {
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+  color: var(--color-ink-black);
+}
+
+.descriptionWrapper {
+  align-self: stretch;
+}
+
+.descriptionText {
+  font-size: var(--text-body-long-size);
+  line-height: var(--text-body-long-height);
+  font-weight: var(--text-body-weight);
+}
+
+.productColorWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.productColorTitle {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.productColorSelect {
+  align-self: stretch;
+  padding: 6px 12px 6px 6px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.productColorSelectInner {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+}
+
+.productColorSwatch {
+  width: 70px;
+  height: 70px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+}
+
+.productColorName {
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+}
+
+.productColorChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-black);
+  flex-shrink: 0;
+}
+
+.productColorChevron svg {
+  display: block;
+  width: 9px;
+  height: 5px;
+}
+
+.productSizeSelect {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.productSizeTitle {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.productSizeOptions {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.productSizeOption {
+  padding: 8px 16px;
+  border-radius: 6px;
+  outline: 0.5px solid rgba(0, 0, 0, 0.2);
+  outline-offset: -0.5px;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+}
+
+.productSizeOption:hover {
+  outline-color: rgba(0, 0, 0, 0.4);
+  background: var(--color-bright-snow);
+}
+
+.productSizeOption[aria-pressed="true"],
+.productSizeOptionSelected {
+  outline: 1px solid var(--color-ink-black);
+  outline-offset: -0.5px;
+  background: var(--color-bright-snow);
+}
+
+.productSizeOption:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.brandWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.brandTitle {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  text-transform: uppercase;
+  color: var(--color-ink-black);
+}
+
+.brandContent {
+  align-self: stretch;
+  padding: 20px 16px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.brandContentInner {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.brandLogo {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 100px;
+  background: var(--color-white);
+  flex-shrink: 0;
+}
+
+.brandShortDescription {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.brandName {
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+  color: var(--color-ink-black);
+}
+
+.brandDescription {
+  font-size: var(--text-body-long-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-long-height);
+  color: var(--color-ink-black);
+}
+
+.brandArrow {
+  flex-shrink: 0;
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.accordionsWrapper {
+  align-self: stretch;
+  padding: 0 16px;
+  border-radius: 8px;
+  outline: 0.5px solid rgba(0, 0, 0, 0.2);
+  outline-offset: -0.5px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.accordion {
+  align-self: stretch;
+}
+
+.accordionTrigger {
+  align-self: stretch;
+  width: 100%;
+  padding: 16px 0;
+  border-radius: 6px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.accordionTrigger:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.accordionTriggerInner {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+}
+
+.accordionIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.accordionTitle {
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+}
+
+.accordionChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-black);
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.accordionChevron svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.accordionPanel {
+  overflow: hidden;
+}
+
+.accordionContent {
+  padding-top: 16px;
+  padding-bottom: 16px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-long-height);
+}
+
+.accordionContent h3 {
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  margin: 1em 0 0.5em;
+}
+
+.accordionContent h3:first-child {
+  margin-top: 0;
+}
+
+.accordionContent p {
+  margin: 0 0 0.75em;
+}
+
+.accordionContent ul,
+.accordionContent ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+
+@media (max-width: 768px) {
+  .productSection {
+    margin-top: 78px;
+  }
+
+  .productImgsWrapper {
+    height: 360px;
+    max-height: 360px;
+  }
+
+  .productDetails {
+    grid-template-columns: 1fr;
+  }
+
+  .productDetailsRight {
+    padding-top: 32px;
+    padding-bottom: 0;
+  }
+
+  .productDetailsLeft {
+    padding-right: 0;
+  }
+
+  .productDetailsInteract {
+    gap: 22px;
+  }
+
+  .productDetailsInteractIcon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .productDetailsInner {
+    gap: 24px;
+  }
+
+  .productDetailsRightRow {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .productDetailsRightRow .productDetailsPrice {
+    display: none;
+  }
+
+  .productDetailsRightRow .productDetailsBtnPrimary {
+    display: none;
+  }
+
+  .productDetailsRightRow .productDetailsBtnsWrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .productDetailsRightRow .productDetailsBtnsSecondary {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .productDetailsRightRow .productDetailsBtnsSecondary .button {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .productDetailsStickyBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    background: var(--color-white);
+    outline: 0.5px solid rgba(0, 0, 0, 0.1);
+    outline-offset: 0;
+    z-index: 15;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .productDetailsStickyBar[data-hidden] {
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .productDetailsStickyBar .button {
+    flex-shrink: 0;
+  }
+
+  .productSizeOptions {
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .productSizeOptions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .productSizeOption {
+    flex-shrink: 0;
+  }
+
+  .brandContentInner {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .accordionChevron svg {
+    width: 20px;
+    height: 20px;
+  }
+}

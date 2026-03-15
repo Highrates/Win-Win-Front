@@ -95,7 +95,9 @@ export function HeaderWrapper() {
   const variant: HeaderVariant =
     isMobile ? 'main' : pathname !== '/' ? 'main' : hasScrolledPastHero ? 'main' : 'minimal';
   const isMainOverlayOnHome =
-    (pathname === '/' && variant === 'main') || pathname.startsWith('/categories/');
+    (pathname === '/' && variant === 'main') ||
+    pathname.startsWith('/categories/') ||
+    pathname.startsWith('/product/');
 
   const prevScrolledPastHeroRef = useRef(hasScrolledPastHero);
 

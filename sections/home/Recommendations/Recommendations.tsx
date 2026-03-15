@@ -38,7 +38,13 @@ function generateItems(count: number) {
   });
 }
 
-export function Recommendations() {
+type RecommendationsProps = {
+  title?: string;
+  /** Опциональный id секции (например для скрытия sticky-панели при скролле) */
+  id?: string;
+};
+
+export function Recommendations({ title = 'Рекомендации', id }: RecommendationsProps) {
   const [items, setItems] = useState(() => generateItems(ITEMS_PER_LOAD));
 
   const handleLoadMore = useCallback(() => {
@@ -49,9 +55,9 @@ export function Recommendations() {
   }, []);
 
   return (
-    <section className={styles.section}>
+    <section id={id} className={styles.section}>
       <div className="padding-global">
-        <h5 className={styles.title}>Рекомендации</h5>
+        <h5 className={styles.title}>{title}</h5>
         <div className={styles.grid}>
           {items.map((p) => (
             <ProductCard key={p.key} slug={p.slug} name={p.name} price={p.price} />
