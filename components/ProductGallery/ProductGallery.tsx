@@ -94,6 +94,29 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
   const goNext = useCallback(() => go(1), [go]);
   const goPrev = useCallback(() => go(-1), [go]);
 
+  const touchStartX = useRef<number | null>(null);
+  const didSwipeRef = useRef(false);
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    didSwipeRef.current = false;
+  }, []);
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartX.current === null) return;
+      const endX = e.changedTouches[0].clientX;
+      const delta = touchStartX.current - endX;
+      touchStartX.current = null;
+      const threshold = 50;
+      if (delta > threshold) {
+        didSwipeRef.current = true;
+        goNext();
+      } else if (delta < -threshold) {
+        didSwipeRef.current = true;
+        goPrev();
+      }
+    },
+    [goNext, goPrev]
+  );
   const openFullscreen = useCallback(
     (slotIndex: number) => {
       const globalIndex = (offset + slotIndex) % N;
@@ -119,6 +142,18 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
       pswp.init();
     },
     [offset, N, dataSource]
+  );
+
+  const handleSlotClick = useCallback(
+    (e: React.MouseEvent, slotIndex: number) => {
+      if (didSwipeRef.current) {
+        e.preventDefault();
+        didSwipeRef.current = false;
+        return;
+      }
+      openFullscreen(slotIndex);
+    },
+    [openFullscreen]
   );
 
   useEffect(() => {
@@ -178,7 +213,7 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
         className={styles.galleryImageSlot}
         onClick={(e) => {
           e.preventDefault();
-          openFullscreen(slotIndex);
+          handleSlotClick(e, slotIndex);
         }}
         aria-label={`Изображение ${slotIndex + 1} из ${N}, открыть в полном размере`}
       >
@@ -213,6 +248,8 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
       aria-label={`Галерея изображений: ${productName}`}
       aria-roledescription="карусель"
       tabIndex={0}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       style={{
         ['--gallery-transition-duration' as string]: `${TRANSITION_MS}ms`,
         ['--gallery-easing' as string]: EASING,

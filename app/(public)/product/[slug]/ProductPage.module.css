@@ -262,8 +262,8 @@
 .productSizeOption {
   padding: 8px 16px;
   border-radius: 6px;
-  outline: 0.5px solid rgba(0, 0, 0, 0.2);
-  outline-offset: -0.5px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  outline: none;
   display: inline-flex;
   justify-content: flex-start;
   align-items: center;
@@ -278,14 +278,14 @@
 }
 
 .productSizeOption:hover {
-  outline-color: rgba(0, 0, 0, 0.4);
+  border-color: rgba(0, 0, 0, 0.4);
   background: var(--color-bright-snow);
 }
 
 .productSizeOption[aria-pressed="true"],
 .productSizeOptionSelected {
-  outline: 1px solid var(--color-ink-black);
-  outline-offset: -0.5px;
+  border-width: 1px;
+  border-color: var(--color-ink-black);
   background: var(--color-bright-snow);
 }
 
@@ -350,8 +350,8 @@
 }
 
 .brandName {
-  font-size: var(--text-card-16-300);
-  font-weight: 300;
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
   color: var(--color-ink-black);
 }
 
@@ -373,8 +373,7 @@
   align-self: stretch;
   padding: 0 16px;
   border-radius: 8px;
-  outline: 0.5px solid rgba(0, 0, 0, 0.2);
-  outline-offset: -0.5px;
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
   display: inline-flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -423,6 +422,7 @@
 .accordionTitle {
   font-size: var(--text-card-16-300);
   font-weight: 300;
+  color: var(--color-ink-black);
 }
 
 .accordionChevron {
@@ -496,12 +496,21 @@
   }
 
   .productDetailsInteract {
-    gap: 22px;
+    gap: 32px;
   }
 
   .productDetailsInteractIcon {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .brandName {
+    font-size: var(--text-card-20-400);
+    font-weight: 400;
+  }
+
+  .accordionTriggerInner {
+    gap: 12px;
   }
 
   .productDetailsInner {
@@ -599,5 +608,9 @@
   .accordionChevron svg {
     width: 20px;
     height: 20px;
+  }
+
+  .productDetailsStickyPrice {
+    font-weight: 400;
   }
 }
