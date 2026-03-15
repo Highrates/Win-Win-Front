@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { Recommendations } from '@/sections/home';
 import ProductAccordions from './ProductAccordions';
 import ProductSizeOptions from './ProductSizeOptions';
+import ProductMaterialsOptions from './ProductMaterialsOptions';
 import { ProductDetailsStickyBar } from './ProductDetailsStickyBar';
 import styles from './ProductPage.module.css';
 
@@ -192,6 +193,11 @@ export default async function ProductPage({
                   </div>
                 </div>
 
+                <div className={styles.productMaterialsSelect}>
+                  <span className={styles.productMaterialsTitle}>Материалы</span>
+                  <ProductMaterialsOptions />
+                </div>
+
                 <div className={styles.productSizeSelect}>
                   <span className={styles.productSizeTitle}>Размеры</span>
                   <ProductSizeOptions />
@@ -203,7 +209,11 @@ export default async function ProductPage({
 
                 <div className={styles.brandWrapper}>
                   <h2 className={styles.brandTitle}>Бренд</h2>
-                  <div className={styles.brandContent}>
+                  <Link
+                    href="/brands/glamor-master"
+                    className={styles.brandContent}
+                    aria-label="Перейти на страницу бренда Glamor Master"
+                  >
                     <div className={styles.brandContentInner}>
                       <div className={styles.brandLogo} aria-hidden />
                       <div className={styles.brandShortDescription}>
@@ -214,7 +224,7 @@ export default async function ProductPage({
                       </div>
                     </div>
                     <img src="/icons/arrow.svg" alt="" width={22} height={22} className={styles.brandArrow} aria-hidden />
-                  </div>
+                  </Link>
                 </div>
               </div>
             </div>

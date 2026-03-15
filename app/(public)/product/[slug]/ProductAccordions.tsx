@@ -21,18 +21,12 @@ const ACCORDIONS = [
   },
 ] as const;
 
-function AccordionPlusMinus({ open }: { open: boolean }) {
+function AccordionChevronIcon({ open }: { open: boolean }) {
   return (
     <span className={styles.accordionChevron} data-open={open || undefined} aria-hidden>
-      {open ? (
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-          <path d="M4 11h14" />
-        </svg>
-      ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-          <path d="M11 4v14M4 11h14" />
-        </svg>
-      )}
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
+        <path d="M11 4v14M4 11h14" />
+      </svg>
     </span>
   );
 }
@@ -58,17 +52,16 @@ export default function ProductAccordions() {
                 <img src={icon} alt="" width={20} height={20} className={styles.accordionIcon} aria-hidden />
                 <span className={styles.accordionTitle}>{title}</span>
               </div>
-              <AccordionPlusMinus open={isOpen} />
+              <AccordionChevronIcon open={isOpen} />
             </button>
             <div
               id={`accordion-panel-${id}`}
               role="region"
               aria-labelledby={`accordion-trigger-${id}`}
               className={styles.accordionPanel}
-              style={{ display: isOpen ? undefined : 'none' }}
+              data-open={isOpen || undefined}
             >
-              {isOpen && (
-                <div className={styles.accordionContent}>
+              <div className={styles.accordionContent}>
                   {id === 'delivery' && (
                     <>
                       <h3>Способы доставки</h3>
@@ -95,8 +88,7 @@ export default function ProductAccordions() {
                       <p>Возможна индивидуальная комплектация и выбор ткани из каталога.</p>
                     </>
                   )}
-                </div>
-              )}
+              </div>
             </div>
           </div>
         );

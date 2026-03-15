@@ -188,23 +188,45 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
-.navDot,
-.navDotActive {
-  width: 6px;
-  height: 6px;
+.galleryNavDots .navDot,
+.galleryNavDots .navDotActive {
+  padding: 6px;
+  margin: 0;
+  border: none;
   border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
   flex-shrink: 0;
 }
 
+.galleryNavDots .navDot::before,
+.galleryNavDots .navDotActive::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
 .navDot {
+  background: transparent;
+}
+
+.navDot::before {
   background: rgba(0, 0, 0, 0.2);
 }
 
-.navDotActive {
+.navDotActive::before {
   background: var(--color-ink-black);
+}
+
+.galleryNavDots .navDot:focus-visible,
+.galleryNavDots .navDotActive:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
 }
 
 .navBtnPrev,

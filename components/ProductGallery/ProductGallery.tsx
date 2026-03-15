@@ -94,6 +94,50 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
   const goNext = useCallback(() => go(1), [go]);
   const goPrev = useCallback(() => go(-1), [go]);
 
+  const goToIndex = useCallback(
+    (index: number) => {
+      if (index === offset || slideActive) return;
+      slideTargetRef.current = -50;
+      transitionMsRef.current = TRANSITION_MS;
+      flushSync(() => {
+        setPrevOffset(offset);
+        setOffset(index);
+        setSlideTranslate(0);
+        setSlideActive(true);
+      });
+    },
+    [offset, slideActive]
+  );
+
+  const dotTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const handleDotKeyDown = useCallback(
+    (e: React.KeyboardEvent, i: number) => {
+      let next: number | null = null;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        next = (i + 1) % N;
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        next = (i - 1 + N) % N;
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        next = 0;
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        next = N - 1;
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        goToIndex(i);
+        return;
+      }
+      if (next !== null) {
+        goToIndex(next);
+        dotTabRefs.current[next]?.focus();
+      }
+    },
+    [N, goToIndex]
+  );
+
   const touchStartX = useRef<number | null>(null);
   const didSwipeRef = useRef(false);
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -186,6 +230,7 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
   );
 
   function renderSlotImage(slotIndex: number, imgIndex: number) {
+    const isLazy = slotIndex >= 2;
     return (
       <img
         src={images[imgIndex]}
@@ -193,6 +238,7 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
         width={IMG_WIDTH}
         height={IMG_HEIGHT}
         className={styles.galleryImg}
+        loading={isLazy ? 'lazy' : undefined}
         onError={(e) => {
           const el = e.currentTarget;
           if (el.src !== FALLBACK_IMG) el.src = FALLBACK_IMG;
@@ -243,6 +289,7 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
   return (
     <div
       ref={galleryRef}
+      id="gallery-panel"
       className={styles.productGallery}
       role="region"
       aria-label={`Галерея изображений: ${productName}`}
@@ -269,14 +316,25 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
             >
               <img src="/icons/arrow.svg" alt="" className={styles.navArrowPrev} aria-hidden />
             </button>
-            <div className={styles.galleryNavDots} role="tablist" aria-label="Номер изображения">
+            <div
+              className={styles.galleryNavDots}
+              role="tablist"
+              aria-label="Номер изображения"
+            >
               {Array.from({ length: N }, (_, i) => (
-                <span
+                <button
+                  type="button"
                   key={i}
+                  ref={(el) => { dotTabRefs.current[i] = el; }}
                   role="tab"
                   aria-selected={i === offset}
+                  aria-controls="gallery-panel"
+                  id={`gallery-tab-${i}`}
+                  tabIndex={i === offset ? 0 : -1}
                   aria-label={`Изображение ${i + 1}`}
                   className={i === offset ? styles.navDotActive : styles.navDot}
+                  onClick={() => goToIndex(i)}
+                  onKeyDown={(e) => handleDotKeyDown(e, i)}
                 />
               ))}
             </div>
