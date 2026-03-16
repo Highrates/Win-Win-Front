@@ -180,10 +180,6 @@
   .brandCardsWrapper {
     grid-template-columns: repeat(2, 1fr);
   }
-
-  .brandCardImage {
-    max-height: 148px;
-  }
 }
 
 .brandCard {
@@ -271,6 +267,10 @@
 }
 
 @media (max-width: 768px) {
+  .brandCardImage {
+    max-height: 148px;
+  }
+
   .allBrandsSection {
     margin-top: 48px;
   }
