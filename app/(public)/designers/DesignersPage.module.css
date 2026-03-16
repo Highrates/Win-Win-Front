@@ -1,0 +1,393 @@
+.mainSection {
+  margin-top: 94px;
+}
+
+.sectionInner {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+  width: 100%;
+}
+
+/* --- Breadcrumbs --- */
+.breadcrumbs {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.breadcrumbsLink {
+  color: var(--color-gray);
+  text-decoration: none;
+}
+
+.breadcrumbsLink:hover {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsCurrent {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsSep {
+  color: var(--color-gray);
+  user-select: none;
+}
+
+/* --- Search box --- */
+.searchBox {
+  max-width: 972px;
+  width: 100%;
+  border-radius: 8px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 8px;
+  padding-bottom: 16px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.searchBoxInner {
+  align-self: stretch;
+  padding: 10px;
+  background: #fafafa;
+  border-radius: 8px;
+  outline: 0.5px solid rgba(0, 0, 0, 0.1);
+  outline-offset: -0.5px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  overflow: hidden;
+}
+
+.searchRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.searchIcon {
+  flex-shrink: 0;
+  width: 19px;
+  height: 19px;
+  color: var(--color-gray);
+}
+
+.searchInput {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-ink-black);
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+.searchInput::placeholder {
+  color: var(--color-gray);
+}
+
+.searchInput:focus {
+  outline: none;
+}
+
+/* --- Market section row (same as BrandPage) --- */
+.marketSectionRow {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.marketSectionRowLeft {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 32px;
+}
+
+.marketFilterGroup,
+.marketCityGroup {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.marketFilterGroup button,
+.marketCityGroup button {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.marketCityArrow {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--color-gray);
+  transform: rotate(90deg);
+}
+
+.marketSectionRowResult {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.marketSectionRowResultLabel {
+  color: var(--color-gray);
+}
+
+.marketSectionRowResultValue {
+  color: var(--color-ink-black);
+}
+
+/* --- Designers grid --- */
+.designersCardsWrapper {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.designerCard {
+  align-self: stretch;
+  padding: 8px 14px 8px 8px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.designerCardInner {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+}
+
+.designerCardAvatar {
+  width: 132px;
+  height: 132px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.designerCardContent {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.designerCardInfo {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.designerCardName {
+  font-size: var(--text-card-16-500);
+  font-weight: 500;
+  color: var(--color-ink-black);
+  margin: 0;
+}
+
+.designerCardServices {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--color-gray);
+  margin: 0;
+}
+
+.designerCardCity {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+  margin: 0;
+}
+
+.interactWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.interactItem {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+}
+
+.interactIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.interactValue {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.designerCardArrow {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  color: var(--color-gray);
+  transform: rotate(0deg);
+}
+
+/* Пагинация (как CategoryPage) */
+.paginationWrapper {
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  margin-top: 56px;
+}
+
+.paginationBtn {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  text-transform: uppercase;
+  color: var(--color-ink-black);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.paginationBtn:hover {
+  opacity: 0.8;
+}
+
+.paginationBtnDisabled {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  text-transform: uppercase;
+  color: var(--color-gray);
+  cursor: default;
+}
+
+.paginationPages {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+}
+
+.paginationPage,
+.paginationPageCurrent {
+  width: 26px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid transparent;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  text-decoration: none;
+  color: var(--color-ink-black);
+  box-sizing: border-box;
+}
+
+.paginationPage {
+  border-bottom-color: transparent;
+  color: var(--color-gray);
+}
+
+.paginationPage:hover {
+  color: var(--color-ink-black);
+}
+
+.paginationPageCurrent {
+  border-bottom-color: var(--color-ink-black);
+  color: var(--color-ink-black);
+}
+
+@media (max-width: 768px) {
+  .mainSection {
+    margin-top: 78px;
+  }
+
+  .designerCardArrow {
+    display: none;
+  }
+
+  .marketSectionRowLeft {
+    gap: 16px;
+  }
+
+  .marketSectionRowLeft img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .designersCardsWrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .interactWrapper {
+    gap: 22px;
+  }
+
+  .interactIcon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .paginationWrapper {
+    margin-top: 32px;
+  }
+
+  .paginationPageCurrent {
+    padding-bottom: 8px;
+  }
+}

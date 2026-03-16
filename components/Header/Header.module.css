@@ -30,15 +30,15 @@
   color: var(--color-white);
 }
 
-/* header_main: тёмный хедер после скролла Hero / на всех остальных страницах; всегда поверх супер-меню */
 .headerMain {
-  position: relative;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
   margin-top: 0;
   padding-top: env(safe-area-inset-top, 0);
   background: #051826;
-  /* Перекрываем возможную белую полосу 1px сверху (округление/субпиксель) */
   box-shadow: 0 -1px 0 0 #051826;
 }
 
