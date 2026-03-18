@@ -1,0 +1,108 @@
+.productCardSmall {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.productCardSmall:hover {
+  opacity: 0.85;
+}
+
+.productImg {
+  width: 130px;
+  height: 140px;
+  flex-shrink: 0;
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  object-fit: cover;
+  display: block;
+}
+
+.productDetails {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.productTitles {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.productName {
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+  color: var(--color-ink-black);
+}
+
+.productPrice {
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+  color: var(--color-ink-black);
+  white-space: nowrap;
+}
+
+.productInteract {
+  align-self: stretch;
+  padding-top: 12px;
+  border-top: 0.5px solid rgba(0, 0, 0, 0.16);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.interactWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.interactItem {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+}
+
+.interactIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.interactValue {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+@media (max-width: 768px) {
+  .interactWrapper {
+    gap: 22px;
+  }
+
+  .interactIcon {
+    width: 18px;
+    height: 18px;
+  }
+}

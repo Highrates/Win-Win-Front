@@ -25,6 +25,11 @@
   color: var(--color-ink-black);
 }
 
+.btnSecondary:hover {
+  outline: 0.5px solid rgba(0, 0, 0, 0.2);
+  outline-offset: 0;
+}
+
 .btnPrimary {
   background: var(--color-ink-black);
   color: var(--color-white);
