@@ -911,7 +911,26 @@
     align-items: stretch;
   }
 
+  .projectBlockLeft {
+    padding: 24px;
+  }
+
+  .projectTitlesInner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .projectImagesWrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sliderCoversGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
   .projectProductsWrapper {
-    max-height: none;
+    display: none;
   }
 }
