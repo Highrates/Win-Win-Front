@@ -283,6 +283,12 @@
 }
 
 @media (max-width: 768px) {
+  .productGallery {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
   .galleryMain {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;

@@ -1,6 +1,7 @@
 'use client';
 
-export type ViewMode = 'grid' | 'slider';
+/** grid = сетка обложек; list = список проектов (полные карточки) */
+export type ViewMode = 'grid' | 'list';
 
 type Props = {
   styles: Record<string, string>;
@@ -14,6 +15,19 @@ export function DesignerViewToggle({ styles, activeView, onViewChange }: Props) 
       <button
         type="button"
         className={
+          activeView === 'list'
+            ? `${styles.viewToggleBtn} ${styles.viewToggleBtnActive}`
+            : styles.viewToggleBtn
+        }
+        onClick={() => onViewChange('list')}
+        aria-label="Вид списком"
+        aria-pressed={activeView === 'list'}
+      >
+        <img src="/icons/slider-vertical.svg" alt="" aria-hidden />
+      </button>
+      <button
+        type="button"
+        className={
           activeView === 'grid'
             ? `${styles.viewToggleBtn} ${styles.viewToggleBtnActive}`
             : styles.viewToggleBtn
@@ -23,19 +37,6 @@ export function DesignerViewToggle({ styles, activeView, onViewChange }: Props) 
         aria-pressed={activeView === 'grid'}
       >
         <img src="/icons/grid.svg" alt="" aria-hidden />
-      </button>
-      <button
-        type="button"
-        className={
-          activeView === 'slider'
-            ? `${styles.viewToggleBtn} ${styles.viewToggleBtnActive}`
-            : styles.viewToggleBtn
-        }
-        onClick={() => onViewChange('slider')}
-        aria-label="Вид слайдером"
-        aria-pressed={activeView === 'slider'}
-      >
-        <img src="/icons/slider-vertical.svg" alt="" aria-hidden />
       </button>
     </div>
   );

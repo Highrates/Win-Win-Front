@@ -454,7 +454,7 @@
   display: block;
 }
 
-/* Вид слайдером: сетка обложек 4 колонки */
+/* Вид сеткой: сетка обложек (4 колонки на десктопе) */
 .sliderCoversGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

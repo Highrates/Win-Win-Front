@@ -53,7 +53,7 @@ export function DesignerProjectsSection({ projects, stylesModule }: Props) {
         />
       </div>
 
-      {activeView === 'grid' && (
+      {activeView === 'list' && (
         <div className={stylesModule.projectsList}>
           {projects.map((project, index) => {
             const isReversed = index % 2 === 1;
@@ -166,7 +166,7 @@ export function DesignerProjectsSection({ projects, stylesModule }: Props) {
         </div>
       )}
 
-      {activeView === 'slider' && (
+      {activeView === 'grid' && (
         <div className={stylesModule.sliderCoversGrid}>
           {projects.map((project) => (
             <button

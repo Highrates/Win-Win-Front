@@ -560,22 +560,71 @@
     margin-top: 78px;
   }
 
+  /* Не даём контенту «выпирать» за padding-global по горизонтали */
+  .productPageFlow {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .breadcrumbs {
+    flex-wrap: wrap;
+    max-width: 100%;
+    row-gap: 4px;
+  }
+
   .productImgsWrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     height: 360px;
     max-height: 360px;
   }
 
   .productDetails {
     grid-template-columns: 1fr;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
   }
 
   .productDetailsRight {
     padding-top: 32px;
     padding-bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .productDetailsLeft {
     padding-right: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .productDetailsInner {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .productTitles {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .productBrandName,
+  .productName {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .productDetailsInteract {
+    flex-wrap: wrap;
+    max-width: 100%;
   }
 
   .productDetailsInteract {
@@ -637,6 +686,61 @@
     width: 100%;
   }
 
+  .descriptionWrapper,
+  .descriptionText {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .productColorWrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .productColorSelect {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .productColorSelectInner {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .productColorName {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .productSizeSelect {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .accordionsWrapper {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .brandWrapper {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .brandContent {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
   .productDetailsStickyBar {
     display: flex;
     align-items: center;
@@ -668,6 +772,9 @@
   }
 
   .productSizeOptions {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
     flex-wrap: nowrap;
@@ -684,11 +791,20 @@
   }
 
   .productMaterialsOptions {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+  }
+
+  .productMaterialsSelect {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .productMaterialsOptions::-webkit-scrollbar {
@@ -711,5 +827,10 @@
 
   .productDetailsStickyPrice {
     font-weight: 400;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
