@@ -55,6 +55,7 @@ export function Footer() {
                 width={400}
                 height={59}
                 className={styles.logo}
+                sizes="(max-width: 768px) 100vw, 400px"
               />
             </div>
             <nav className={styles.footerMenu} aria-label="Футер">
