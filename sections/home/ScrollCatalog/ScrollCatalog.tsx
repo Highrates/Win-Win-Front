@@ -4,16 +4,18 @@ import Link from 'next/link';
 import { useRef } from 'react';
 import styles from './ScrollCatalog.module.css';
 
+/** Родительские разделы: href — реальные маршруты (не `/categories/<id>` из id). */
 const tabs = [
-  { id: 'living', label: 'Гостиная', active: true },
-  { id: 'dining', label: 'Столовая', active: false },
-  { id: 'light', label: 'Свет', active: false },
-  { id: 'office', label: 'Офис', active: false },
-  { id: 'hotel', label: 'Отель', active: false },
-  { id: 'decor', label: 'Декор', active: false },
-  { id: 'garden', label: 'Сад', active: false },
-  { id: 'materials', label: 'Отделочные материалы', active: false },
-  { id: 'plumbing', label: 'Сантехника', active: false },
+  { id: 'living', label: 'Гостиная', active: true, href: '/categories' },
+  /* Пока нет отдельных страниц родителей — ведём в каталог; заменить href при появлении роутов */
+  { id: 'dining', label: 'Столовая', active: false, href: '/categories' },
+  { id: 'light', label: 'Свет', active: false, href: '/categories' },
+  { id: 'office', label: 'Офис', active: false, href: '/categories' },
+  { id: 'hotel', label: 'Отель', active: false, href: '/categories' },
+  { id: 'decor', label: 'Декор', active: false, href: '/categories' },
+  { id: 'garden', label: 'Сад', active: false, href: '/categories' },
+  { id: 'materials', label: 'Отделочные материалы', active: false, href: '/categories' },
+  { id: 'plumbing', label: 'Сантехника', active: false, href: '/categories' },
 ];
 
 const catalogCards = [
@@ -124,7 +126,7 @@ export function ScrollCatalog() {
           {tabs.map((tab) => (
               <Link
                 key={tab.id}
-                href={`/categories/${tab.id}`}
+                href={tab.href}
                 className={styles.mobileCard}
               >
                 <div className={styles.mobileCardImgWrap}>

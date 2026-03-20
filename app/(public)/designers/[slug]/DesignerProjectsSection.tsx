@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import Link from 'next/link';
+import { useState, useCallback, type ReactNode } from 'react';
 import { ProductCardSmall } from '@/components/ProductCardSmall';
 import { DesignerViewToggle, type ViewMode } from './DesignerViewToggle';
 import { MoreAboutProjectModal, type ProjectProduct } from './MoreAboutProjectModal';
-import styles from './DesignerPage.module.css';
+
+export type ProjectDesignerLink = {
+  name: string;
+  slug: string;
+  avatarSrc: string;
+};
 
 export type ProjectData = {
   title: string;
@@ -14,11 +20,15 @@ export type ProjectData = {
   coverImage: string;
   /** Second image for grid block (optional) */
   coverImage2?: string;
+  /** Ссылка на дизайнера (страница проектов и т.п.) */
+  designer?: ProjectDesignerLink;
 };
 
 type Props = {
   projects: ProjectData[];
   stylesModule: Record<string, string>;
+  /** Вместо заголовка «Проекты» в строке с переключателем вида */
+  titlesLeft?: ReactNode;
 };
 
 function SliderCoverArrow() {
@@ -30,8 +40,8 @@ function SliderCoverArrow() {
   );
 }
 
-export function DesignerProjectsSection({ projects, stylesModule }: Props) {
-  const [activeView, setActiveView] = useState<ViewMode>('grid');
+export function DesignerProjectsSection({ projects, stylesModule, titlesLeft }: Props) {
+  const [activeView, setActiveView] = useState<ViewMode>('list');
   const [modalProject, setModalProject] = useState<ProjectData | null>(null);
 
   const openProjectModal = useCallback((project: ProjectData) => {
@@ -45,7 +55,7 @@ export function DesignerProjectsSection({ projects, stylesModule }: Props) {
   return (
     <>
       <div className={stylesModule.titlesWrapper}>
-        <h5 className={stylesModule.titlesWrapperH5}>Проекты</h5>
+        {titlesLeft ?? <h5 className={stylesModule.titlesWrapperH5}>Проекты</h5>}
         <DesignerViewToggle
           styles={stylesModule}
           activeView={activeView}
@@ -60,47 +70,80 @@ export function DesignerProjectsSection({ projects, stylesModule }: Props) {
             const blockLeft = (
               <div key="left" className={stylesModule.projectBlockLeft}>
                 <div className={stylesModule.projectTitlesWrapper}>
-                  <div className={stylesModule.projectTitlesInner}>
-                    <div className={stylesModule.projectTitlesCol}>
-                      <div className={stylesModule.projectTitleBlock}>
-                        <h3 className={stylesModule.projectTitleName}>{project.title}</h3>
-                        <span className={stylesModule.projectTitlePlaces}>{project.places}</span>
-                      </div>
-                      <p className={stylesModule.projectDescription}>{project.description}</p>
-                      <div className={stylesModule.projectInteractWrapper}>
-                        <div className={stylesModule.projectInteractItem}>
-                          <img
-                            src="/icons/heart.svg"
-                            alt=""
-                            width={20}
-                            height={20}
-                            className={stylesModule.projectInteractIcon}
-                          />
-                          <span>24</span>
+                  <div className={stylesModule.projectTitlesStack}>
+                    <div className={stylesModule.projectTitlesInner}>
+                      <div className={stylesModule.projectTitlesCol}>
+                        <div className={stylesModule.projectTitleBlock}>
+                          <h3 className={stylesModule.projectTitleName}>{project.title}</h3>
+                          <span className={stylesModule.projectTitlePlaces}>{project.places}</span>
                         </div>
-                        <div className={stylesModule.projectInteractItem}>
-                          <img
-                            src="/icons/message.svg"
-                            alt=""
-                            width={20}
-                            height={20}
-                            className={stylesModule.projectInteractIcon}
-                          />
-                          <span>8</span>
+                        <p className={stylesModule.projectDescription}>{project.description}</p>
+                        <div className={stylesModule.projectInteractWrapper}>
+                          <div className={stylesModule.projectInteractItem}>
+                            <img
+                              src="/icons/heart.svg"
+                              alt=""
+                              width={20}
+                              height={20}
+                              className={stylesModule.projectInteractIcon}
+                            />
+                            <span>24</span>
+                          </div>
+                          <div className={stylesModule.projectInteractItem}>
+                            <img
+                              src="/icons/message.svg"
+                              alt=""
+                              width={20}
+                              height={20}
+                              className={stylesModule.projectInteractIcon}
+                            />
+                            <span>8</span>
+                          </div>
                         </div>
                       </div>
+                      <MoreAboutProjectModal
+                        project={{
+                          title: project.title,
+                          places: project.places,
+                          description: project.description,
+                          products: project.products,
+                        }}
+                        linkClassName={stylesModule.moreAboutProjectLink}
+                        textClassName={stylesModule.moreAboutProjectText}
+                        arrowClassName={stylesModule.moreAboutProjectArrow}
+                      />
                     </div>
-                    <MoreAboutProjectModal
-                      project={{
-                        title: project.title,
-                        places: project.places,
-                        description: project.description,
-                        products: project.products,
-                      }}
-                      linkClassName={stylesModule.moreAboutProjectLink}
-                      textClassName={stylesModule.moreAboutProjectText}
-                      arrowClassName={stylesModule.moreAboutProjectArrow}
-                    />
+                    {project.designer && (
+                      <Link
+                        href={`/designers/${project.designer.slug}`}
+                        className={stylesModule.designerLinkWrapper}
+                        aria-label={`Перейти к дизайнеру ${project.designer.name}`}
+                      >
+                        <img
+                          src={project.designer.avatarSrc}
+                          alt=""
+                          width={43}
+                          height={42}
+                          className={stylesModule.designerLinkAvatar}
+                        />
+                        <span className={stylesModule.designerLinkName}>{project.designer.name}</span>
+                        <svg
+                          className={stylesModule.designerLinkArrow}
+                          viewBox="0 0 22 22"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          aria-hidden
+                        >
+                          <path
+                            d="M8.25 16.5L13.75 11L8.25 5.5"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </Link>
+                    )}
                   </div>
                 </div>
                 <div className={stylesModule.projectImagesWrapper}>

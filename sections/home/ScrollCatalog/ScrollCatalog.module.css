@@ -46,8 +46,17 @@
   -ms-overflow-style: none;
 }
 
+.cardsWrapperTightTop {
+  margin-top: 0;
+}
+
 .cardsWrapper::-webkit-scrollbar {
   display: none;
+}
+
+/* Модификатор: на мобилке полоса остаётся видимой (см. @media) */
+.cardsWrapperOnCategoryParent {
+  min-height: 0;
 }
 
 .card {
@@ -155,6 +164,32 @@
 
   .cardsWrapper {
     display: none;
+  }
+
+  /* Горизонтальные карточки подкатегорий на странице родительской категории (/categories) */
+  .cardsWrapper.cardsWrapperOnCategoryParent {
+    display: flex;
+    padding-left: 16px;
+    gap: 12px;
+  }
+
+  /* Размеры как у .mobileCard на главной */
+  .cardsWrapper.cardsWrapperOnCategoryParent .card {
+    width: 120px;
+    gap: 8px;
+  }
+
+  .cardsWrapper.cardsWrapperOnCategoryParent .imgWrap,
+  .cardsWrapper.cardsWrapperOnCategoryParent .imgWrapWide {
+    width: 120px;
+    height: 109px;
+  }
+
+  .cardsWrapper.cardsWrapperOnCategoryParent .cardTitle {
+    font-size: var(--text-body);
+    font-weight: var(--text-body-weight);
+    text-align: center;
+    line-height: 1.2;
   }
 
   .mobileWrapper {

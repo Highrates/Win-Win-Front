@@ -1,0 +1,114 @@
+/* Горизонтальная полоса категорий: разметка как ProjectsPage marketRoomGroup; табы — marketRoomBtn */
+.blogCategoryStrip {
+  width: 100%;
+  min-width: 0;
+}
+
+.blogMarketRoomGroupDesktop {
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: min(100%, 1200px);
+}
+
+.blogMarketRoomGroupWrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 16px;
+}
+
+.blogMarketRoomGroupWrap::-webkit-scrollbar {
+  display: none;
+}
+
+.blogMarketRoomGroup {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  padding-bottom: 0;
+}
+
+.blogMarketRoomGroup > a {
+  text-decoration: none;
+}
+
+/* Сетка статей */
+.articlesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 56px 16px;
+  width: 100%;
+  padding-top: 0;
+}
+
+.articleCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.articleCard:hover {
+  opacity: 0.85;
+}
+
+.articleCardCover {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.articleCardMeta {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+}
+
+.articleCardTitle {
+  font-size: var(--text-card-20-300);
+  font-weight: 300;
+  color: var(--color-ink-black);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .blogMarketRoomGroupWrap {
+    padding-bottom: 0;
+  }
+
+  /* Строка не уже контейнера; активный таб растягивается и заполняет оставшуюся ширину */
+  .blogMarketRoomGroup {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .blogMarketRoomGroup > a {
+    flex: 0 0 auto;
+  }
+
+  .blogMarketRoomGroup > span[role='tab'][aria-selected='true'] {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .articlesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .articleCardCover {
+    aspect-ratio: 1 / 1;
+    border-radius: 5px;
+  }
+}

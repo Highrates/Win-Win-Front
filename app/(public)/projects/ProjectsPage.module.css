@@ -1,0 +1,173 @@
+/* Страница «Проекты»: hero и фильтр помещения */
+
+/* Маркет: 56px только на /projects; у дизайнера в DesignerPage — 180px без изменений */
+section.projectsPageMarketSection {
+  margin-top: 56px;
+}
+
+.projectsPreviewTitlesTight {
+  gap: 40px;
+}
+
+.projectsPageHeroOuter {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.projectsPageHeroTitle {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* Как DesignersPage_marketSectionRowLeft + группа выбора */
+.marketSectionRowLeft {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Десктоп: чипы помещений, max 1200px + горизонтальный скролл */
+.marketRoomGroupDesktop {
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: min(100%, 1200px);
+}
+
+.marketRoomGroupWrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.marketRoomGroupWrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.marketRoomGroup {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  padding-bottom: 0;
+}
+
+/* Мобилка: пока только подпись + стрелка (меню выбора — позже) */
+.marketRoomGroupMobile {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+}
+
+.marketRoomMobileTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  font-family: inherit;
+  color: var(--color-ink-black);
+  text-align: left;
+}
+
+.marketRoomMobileTriggerLabel {
+  min-width: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.marketRoomMobileChevron {
+  flex-shrink: 0;
+  color: var(--color-gray);
+}
+
+/* Как DesignersPage: marketFilterGroup */
+.marketFilterGroup {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.marketFilterGroup button {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.marketRoomBtn,
+.marketRoomBtnActive {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: var(--color-white);
+  color: var(--color-ink-black);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.marketRoomBtn:hover {
+  border-color: rgba(0, 0, 0, 0.35);
+  background: var(--color-bright-snow);
+}
+
+.marketRoomBtnActive {
+  border-color: var(--color-ink-black);
+  background: var(--color-bright-snow);
+}
+
+@media (max-width: 768px) {
+  .marketSectionRowLeft {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    row-gap: 12px;
+  }
+
+  .marketRoomGroupDesktop {
+    display: none;
+  }
+
+  .marketRoomGroupMobile {
+    display: flex;
+    width: auto;
+    flex: 0 1 auto;
+  }
+}
