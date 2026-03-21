@@ -11,6 +11,11 @@
   --color-red: #FF0000;
   --color-blue: #3d83f6;
 
+  --account-hairline-width: 0.7px;
+  --account-hairline-color: rgba(0, 0, 0, 0.2);
+
+  --icon-menu-stroke-width: 1.2;
+
   /* Font family */
   --font-commissioner: 'Commissioner Variable', sans-serif;
 
@@ -95,6 +100,10 @@ body {
 }
 
 body.header-mobile-menu-open {
+  overflow: hidden;
+}
+
+body.account-mobile-dock-open {
   overflow: hidden;
 }
 

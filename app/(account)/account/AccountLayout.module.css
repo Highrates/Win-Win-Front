@@ -1,0 +1,55 @@
+/* ЛК: отступ под header-main, сетка как у категорий (main → section → padding-global → wrapper) */
+
+.accountMainSection {
+  margin-top: 94px;
+}
+
+@media (max-width: 768px) {
+  .accountMainSection {
+    margin-top: 78px;
+  }
+}
+
+/* Как у header-main → .siteHeaderWrap: 12 колонок, те же gap */
+.accountLayoutWrapper {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+@media (min-width: 1280px) {
+  .accountLayoutWrapper {
+    gap: 20px;
+  }
+}
+
+/* Лого в header-main: grid-column 1 / span 3 */
+.accountSidebarSlot {
+  grid-column: 1 / span 3;
+  min-width: 0;
+  justify-self: start;
+}
+
+/* Навигация в header-main: grid-column 4 / -2; в ЛК справа нет колонки иконок — до конца ряда */
+.accountContent {
+  grid-column: 4 / -1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .accountLayoutWrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .accountSidebarSlot {
+    grid-column: 1 / -1;
+  }
+
+  .accountContent {
+    grid-column: 1 / -1;
+    /* место под фиксированный док ЛК (иконки + подписи + safe area) */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}

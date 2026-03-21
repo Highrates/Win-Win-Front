@@ -1,0 +1,348 @@
+/* Боковое меню личного кабинета (макет) */
+
+.sidebarRoot {
+  box-sizing: border-box;
+  width: 288px;
+  flex-shrink: 0;
+  padding: 16px 12px 12px;
+  border-radius: 8px;
+  /* Толщина/цвет: globals --account-hairline-*. outline на скруглении даёт обрывы — inset box-shadow стабильнее. */
+  box-shadow: inset 0 0 0 var(--account-hairline-width) var(--account-hairline-color);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.menuHeader {
+  align-self: stretch;
+  padding-left: 10px;
+  padding-right: 10px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.menuHeaderRow {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+
+.userName {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  color: var(--color-ink-black);
+  line-height: 1.2;
+}
+
+.editLink {
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 0;
+  color: var(--color-gray);
+}
+
+.editLink img {
+  display: block;
+}
+
+.partnerStatus {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.menuAllItems {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.menuItemsWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.divider {
+  align-self: stretch;
+  flex-shrink: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-top: var(--account-hairline-width) solid var(--account-hairline-color);
+  background: transparent;
+}
+
+.menuItem {
+  box-sizing: border-box;
+  align-self: stretch;
+  padding: 7px 10px;
+  border-radius: 6px;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.menuItemInner {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Как ProductCard .interactIcon: img + object-fit, 16×16 */
+.menuItemIconImg {
+  display: block;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.menuItemLabel {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+}
+
+.menuItemNotificationDot {
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: #ff0000;
+}
+
+.menuItem:hover:not(.menuItemActive) {
+  background: var(--color-bright-snow);
+}
+
+.menuItemActive {
+  background: var(--color-bright-snow);
+}
+
+/* --- Мобильный док (как productDetailsStickyBar) + шторка «Ещё» --- */
+
+.mobileDock {
+  display: none;
+}
+
+.mobileDockItem {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 6px 4px;
+  text-decoration: none;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.mobileDockIconImg {
+  display: block;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.mobileDockLabel {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-ink-black);
+  text-align: center;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileDockItemActive {
+  background: var(--color-bright-snow);
+}
+
+.mobileDockItemActive .mobileDockLabel {
+  color: var(--color-ink-black);
+}
+
+.mobileDockBurger {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--color-ink-black);
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.mobileDockBurgerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.mobileDockBurgerIcon svg {
+  display: block;
+}
+
+.mobileDockBurgerLineMenu,
+.mobileDockBurgerLineClose {
+  transition: opacity 0.15s ease;
+}
+
+.mobileDockBurgerLineClose {
+  opacity: 0;
+}
+
+.mobileDockBurgerOpen .mobileDockBurgerLineMenu {
+  opacity: 0;
+}
+
+.mobileDockBurgerOpen .mobileDockBurgerLineClose {
+  opacity: 1;
+}
+
+.mobileSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 26;
+  display: flex;
+  align-items: flex-end;
+  justify-content: stretch;
+}
+
+.mobileSheetBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  background: rgba(5, 24, 38, 0.35);
+}
+
+.mobileSheetPanel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-height: min(88vh, 640px);
+  overflow: auto;
+  background: var(--color-white);
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  padding: 12px 16px 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 24px rgba(5, 24, 38, 0.12);
+}
+
+.mobileSheetTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+
+.mobileSheetProfile {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.mobileSheetClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px;
+  margin: -4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-black);
+}
+
+.sheetDivider {
+  align-self: stretch;
+  flex-shrink: 0;
+  height: 0;
+  margin: 8px 0;
+  padding: 0;
+  border: none;
+  border-top: var(--account-hairline-width) solid var(--account-hairline-color);
+  background: transparent;
+}
+
+.mobileSheetList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (max-width: 768px) {
+  .sidebarRoot {
+    display: none;
+  }
+
+  .mobileDock {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 25;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 10px 8px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    background: var(--color-white);
+    border-top: var(--account-hairline-width) solid var(--account-hairline-color);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+  }
+}

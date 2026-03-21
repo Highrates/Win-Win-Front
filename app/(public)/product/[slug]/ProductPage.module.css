@@ -262,7 +262,7 @@
 .productSizeOption {
   padding: 8px 16px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
   outline: none;
   display: inline-flex;
   justify-content: flex-start;
@@ -283,7 +283,7 @@
 
 .productSizeOption[aria-pressed="true"],
 .productSizeOptionSelected {
-  border-width: 1px;
+  border-width: var(--account-hairline-width);
   border-color: var(--color-ink-black);
   background: var(--color-bright-snow);
 }
@@ -318,7 +318,7 @@
 .productMaterialsOption {
   padding: 8px 16px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
   outline: none;
   display: inline-flex;
   justify-content: flex-start;
@@ -339,7 +339,7 @@
 
 .productMaterialsOption[aria-pressed="true"],
 .productMaterialsOptionSelected {
-  border-width: 1px;
+  border-width: var(--account-hairline-width);
   border-color: var(--color-ink-black);
   background: var(--color-bright-snow);
 }
@@ -435,7 +435,7 @@
   align-self: stretch;
   padding: 0 16px;
   border-radius: 8px;
-  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
   display: inline-flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -444,7 +444,7 @@
 
 .accordion {
   align-self: stretch;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.2);
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
 }
 
 .accordion:last-child {

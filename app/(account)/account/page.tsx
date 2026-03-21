@@ -1,8 +1,8 @@
 export default function AccountPage() {
   return (
-    <main>
+    <div>
       <h1>Личный кабинет</h1>
       <p>Обзор: заказы, коллекции, рефералы</p>
-    </main>
+    </div>
   );
 }

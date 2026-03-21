@@ -1,9 +1,9 @@
 /** Account: Cases — кейсы */
 export default function CasesPage() {
   return (
-    <main>
+    <div>
       <h1>Кейсы</h1>
       <p>Мои кейсы</p>
-    </main>
+    </div>
   );
 }

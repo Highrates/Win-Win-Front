@@ -1,8 +1,8 @@
 export default function SettingsPage() {
   return (
-    <main>
+    <div>
       <h1>Настройки</h1>
       <p>Профиль, реквизиты (опционально)</p>
-    </main>
+    </div>
   );
 }

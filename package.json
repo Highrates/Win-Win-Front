@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
+    "dev:webpack": "next dev",
     "clean": "rm -rf .next",
-    "dev:clean": "npm run clean && next dev",
+    "dev:clean": "npm run clean && next dev --turbo",
+    "dev:clean:webpack": "npm run clean && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

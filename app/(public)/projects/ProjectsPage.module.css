@@ -134,7 +134,7 @@ section.projectsPageMarketSection {
   font-weight: var(--text-body-weight);
   font-family: inherit;
   cursor: pointer;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
   background: var(--color-white);
   color: var(--color-ink-black);
   transition:
