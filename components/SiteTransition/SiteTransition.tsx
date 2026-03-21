@@ -4,11 +4,22 @@ import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import * as transition from './transitionLogic';
 
+/** Совпадает с зоной без хрома в SiteChrome — переходы только между auth без оверлея */
+function isAuthPath(p: string) {
+  return (
+    p === '/login' ||
+    p.startsWith('/login/') ||
+    p === '/register' ||
+    p.startsWith('/register/')
+  );
+}
+
 export function SiteTransition() {
   const overlayRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const isFirstMount = useRef(true);
+  const prevPathnameRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!overlayRef.current || !bgRef.current) return;
@@ -21,8 +32,17 @@ export function SiteTransition() {
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false;
+      prevPathnameRef.current = pathname;
       return;
     }
+
+    const prev = prevPathnameRef.current;
+    prevPathnameRef.current = pathname;
+
+    if (prev != null && isAuthPath(prev) && isAuthPath(pathname)) {
+      return;
+    }
+
     transition.enter();
   }, [pathname]);
 
