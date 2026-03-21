@@ -2,6 +2,7 @@
 
 .accountMainSection {
   margin-top: 94px;
+  margin-bottom: 32px;
 }
 
 @media (max-width: 768px) {

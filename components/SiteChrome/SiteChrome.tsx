@@ -13,15 +13,21 @@ function shouldHideChrome(pathname: string) {
   );
 }
 
+/** ЛК: футер не показываем */
+function shouldHideFooter(pathname: string) {
+  return pathname === '/account' || pathname.startsWith('/account/');
+}
+
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? '';
   const hideChrome = shouldHideChrome(pathname);
+  const hideFooter = shouldHideFooter(pathname);
 
   return (
     <>
       {!hideChrome && <HeaderWrapper />}
       {children}
-      {!hideChrome && <Footer />}
+      {!hideChrome && !hideFooter && <Footer />}
     </>
   );
 }

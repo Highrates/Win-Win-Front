@@ -242,10 +242,11 @@
   opacity: 1;
 }
 
+/* Ниже header-main (z-index: 20) и моб. меню хедера (30); выше контента страницы */
 .mobileSheet {
   position: fixed;
   inset: 0;
-  z-index: 26;
+  z-index: 18;
   display: flex;
   align-items: flex-end;
   justify-content: stretch;
@@ -334,7 +335,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 25;
+    z-index: 17;
     align-items: stretch;
     justify-content: space-between;
     gap: 4px;
