@@ -4,28 +4,13 @@ import type { Metadata } from 'next';
 import brandsStyles from '../brands/BrandsPage.module.css';
 import projectsStyles from '../projects/ProjectsPage.module.css';
 import blogStyles from './BlogPage.module.css';
+import { BLOG_CATEGORIES } from './blogCategories';
+import { BLOG_POSTS } from './blogPosts';
 
 export const metadata: Metadata = {
   title: 'Блог — Win-Win',
   description: 'Статьи, события и материалы Win-Win',
 };
-
-const BLOG_CATEGORIES = [
-  { id: 'all', label: 'Все статьи' },
-  { id: 'events', label: 'События' },
-  { id: 'brands', label: 'Бренды' },
-  { id: 'interviews', label: 'Интервью' },
-  { id: 'guides', label: 'Гиды' },
-] as const;
-
-const BLOG_POSTS = [
-  { slug: 'novaya-kollekciya', title: 'Новая коллекция мебели 2025 года уже в каталоге', category: 'events', date: '15 января 2025' },
-  { slug: 'trendy-interera', title: 'Тренды интерьера: что останется в моде', category: 'guides', date: '10 января 2025' },
-  { slug: 'sovety-dizajneram', title: 'Советы начинающим дизайнерам', category: 'interviews', date: '5 января 2025' },
-  { slug: 'brend-istoriya', title: 'История бренда: от мастерской до шоурума', category: 'brands', date: '1 января 2025' },
-  { slug: 'vystavka-moskva', title: 'События сезона: выставка в Москве', category: 'events', date: '28 декабря 2024' },
-  { slug: 'materialy-gid', title: 'Гид по отделочным материалам', category: 'guides', date: '20 декабря 2024' },
-];
 
 type Props = {
   searchParams: Promise<{ category?: string }>;

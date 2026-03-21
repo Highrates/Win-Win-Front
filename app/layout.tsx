@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { HeaderWrapper } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+import { SiteChrome } from '@/components/SiteChrome/SiteChrome';
 import { SiteTransitionProvider } from '@/components/SiteTransition';
 import { ClientOnlyOverlays } from '@/components/ClientOnlyOverlays';
 
@@ -20,9 +19,7 @@ export default function RootLayout({
       <body>
         <SiteTransitionProvider>
           <ClientOnlyOverlays />
-          <HeaderWrapper />
-          {children}
-          <Footer />
+          <SiteChrome>{children}</SiteChrome>
         </SiteTransitionProvider>
       </body>
     </html>

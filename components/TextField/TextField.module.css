@@ -1,0 +1,110 @@
+.field {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.fieldDisabled {
+  cursor: not-allowed;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  cursor: text;
+}
+
+.fieldDisabled .label {
+  cursor: not-allowed;
+}
+
+.labelText {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.input {
+  align-self: stretch;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  background: var(--color-bright-snow);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.input::placeholder {
+  color: var(--color-gray);
+}
+
+.input:hover:not(:disabled):not(:read-only):not([aria-invalid='true']) {
+  border-color: rgba(5, 24, 38, 0.28);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-blue);
+  background: var(--color-bright-snow);
+}
+
+.input:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--color-blue) 50%, transparent);
+  outline-offset: 1px;
+}
+
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: rgba(0, 0, 0, 0.12);
+  background: var(--color-bright-snow);
+}
+
+.fieldDisabled .input:disabled {
+  pointer-events: none;
+}
+
+.input:read-only {
+  cursor: default;
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(246, 246, 246, 0.85);
+  color: var(--color-gray);
+}
+
+.input:read-only:focus-visible {
+  outline: 2px solid rgba(5, 24, 38, 0.35);
+  outline-offset: 2px;
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--color-red);
+}
+
+.input[aria-invalid='true']:focus,
+.input[aria-invalid='true']:focus-visible {
+  outline-color: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.errorMessage {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-red);
+}

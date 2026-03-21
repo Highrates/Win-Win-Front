@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { Button } from '@/components/Button';
-import { DesignerProjectsSection } from './DesignerProjectsSection';
+import { DesignerProjectsSection } from '../DesignerProjectsSection';
 import { MoreAboutDesignerModal } from './MoreAboutDesignerModal';
 import styles from './DesignerPage.module.css';
 

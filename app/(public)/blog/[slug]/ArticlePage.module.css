@@ -1,0 +1,165 @@
+.articleMainSection {
+  margin-top: 94px;
+}
+
+/* Блок шапки по центру страницы; содержимое внутри — слева */
+.articleHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 24px;
+  max-width: 42rem;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Как News_allNewsLink / News_allNewsText + News_arrow: стрелка слева, «назад» */
+.articleBackLink {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.articleBackLink:hover {
+  opacity: 0.85;
+}
+
+.articleBackText {
+  font-size: var(--text-body);
+  color: var(--color-gray);
+}
+
+.articleBackArrow {
+  display: block;
+  transform: scaleX(-1);
+}
+
+.articleDate {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+}
+
+.articleTitle {
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.articleLead {
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Стрелка в чипе рубрики: как icons/arrow.svg, цвет через currentColor */
+.categoryBtnInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.categoryArrow {
+  flex-shrink: 0;
+  color: var(--color-gray);
+  display: block;
+}
+
+/* Чипы рубрик статьи — вровень с левым краем шапки */
+.articleCategoryGroup {
+  justify-content: flex-start;
+}
+
+.articleHeroOuter {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 32px;
+}
+
+/* 800×600: высоту задаёт aspect-ratio у рамки */
+.articleHeroFrame {
+  display: grid;
+  width: 800px;
+  max-width: 100%;
+  aspect-ratio: 800 / 600;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.articleHeroImage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: block;
+  object-fit: cover;
+}
+
+/* Текст статьи: те же правила, что richContent в модалке дизайнера, но один модуль — короткие классы в DOM */
+.articleRich {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 56px;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 42rem;
+  width: 100%;
+  padding-top: 0;
+  padding-bottom: 24px;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.articleRichLead {
+  font-size: var(--text-body-long-size);
+  line-height: var(--text-body-long-height);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+}
+
+.articleRichH3 {
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  margin: 0;
+  color: var(--color-ink-black);
+}
+
+.articleRichText {
+  font-size: var(--text-body-long-size);
+  line-height: var(--text-body-long-height);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .articleMainSection {
+    margin-top: 78px;
+  }
+
+  .articleCategoryGroup {
+    width: auto;
+    min-width: 0;
+    display: inline-flex;
+  }
+
+  .articleCategoryGroup > a[role='listitem'] {
+    flex: 0 0 auto;
+  }
+}

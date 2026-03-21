@@ -1,0 +1,142 @@
+.authSection {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 48px;
+  padding-bottom: 48px;
+}
+
+.authDetailsWrapper {
+  width: 524px;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.authBack {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.authBack:hover {
+  opacity: 0.85;
+}
+
+.authBackText {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
+.authBackArrow {
+  display: block;
+  transform: scaleX(-1);
+}
+
+.authIntro {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.authTitle {
+  margin: 0;
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  color: var(--color-ink-black);
+  text-transform: uppercase;
+}
+
+.authSubtitle {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+}
+
+.authLinkAccent {
+  color: var(--color-blue);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.authLinkAccent:hover {
+  opacity: 0.85;
+}
+
+.authForm {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 40px;
+}
+
+.authFields {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.authForgotLink {
+  align-self: flex-start;
+  text-align: left;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+  text-decoration: none;
+  transition: text-decoration-color 0.15s ease;
+}
+
+.authForgotLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.authAltMethod {
+  align-self: flex-start;
+  text-align: left;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+  text-decoration: none;
+  transition: text-decoration-color 0.15s ease;
+}
+
+.authAltMethod:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+button.authAltMethod {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.authOtpHint {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  line-height: 1.4;
+}

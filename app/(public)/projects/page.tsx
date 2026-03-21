@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Fragment } from 'react';
+import React, { Fragment } from 'react';
 import type { Metadata } from 'next';
-import { DesignerProjectsSection } from '../designers/[slug]/DesignerProjectsSection';
-import type { ProjectData } from '../designers/[slug]/DesignerProjectsSection';
+import { DesignerProjectsSection } from '../designers/DesignerProjectsSection';
+import type { ProjectData } from '../designers/DesignerProjectsSection';
 import { ProjectsRoomFilter } from './ProjectsRoomFilter';
 /**
  * Общие стили превью, маркета и карточек проектов (те же классы, что на странице дизайнера).

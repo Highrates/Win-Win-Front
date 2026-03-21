@@ -35,6 +35,17 @@
   color: var(--color-white);
   font-size: var(--text-card-16-300);
   font-weight: 300;
+  transition:
+    background-color 0.15s ease,
+    filter 0.15s ease;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  filter: brightness(1.22);
+}
+
+.btnPrimary:active:not(:disabled) {
+  filter: brightness(0.94);
 }
 
 .btnIcon {
