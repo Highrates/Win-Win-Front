@@ -164,18 +164,22 @@ body.header-mobile-menu-open {
 .text-card-16-400 { font-size: var(--text-card-16-400); font-weight: 400; }
 .text-card-16-300 { font-size: var(--text-card-16-300); font-weight: 300; }
 
-/* Контейнер с глобальными отступами */
+/* Контейнер с глобальными отступами (хедер, каталог, auth — одинаковая сетка) */
 .padding-global {
+  box-sizing: border-box;
+  width: 100%;
   max-width: 1536px;
-  margin: 0 auto;
+  margin-left: auto;
+  margin-right: auto;
   padding-left: 2rem;
   padding-right: 2rem;
 }
 
 @media (max-width: 768px) {
   .padding-global {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    /* max(1rem, …) — как у страниц с хедером: учёт safe-area на вырезах */
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
   }
 }
 

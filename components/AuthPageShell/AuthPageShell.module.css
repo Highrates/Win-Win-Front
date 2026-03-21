@@ -1,8 +1,11 @@
 .authSection {
+  box-sizing: border-box;
+  width: 100%;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: stretch;
   padding-top: 48px;
   padding-bottom: 48px;
 }
