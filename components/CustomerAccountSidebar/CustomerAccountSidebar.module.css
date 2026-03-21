@@ -134,8 +134,10 @@
   background: #ff0000;
 }
 
-.menuItem:hover:not(.menuItemActive) {
-  background: var(--color-bright-snow);
+@media (min-width: 769px) {
+  .menuItem:hover:not(.menuItemActive) {
+    background: var(--color-bright-snow);
+  }
 }
 
 .menuItemActive {
