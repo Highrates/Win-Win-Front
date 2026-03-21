@@ -19,6 +19,16 @@
   gap: 40px;
 }
 
+@media (max-width: 768px) {
+  .authDetailsWrapper {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    min-width: 0;
+  }
+}
+
 .authBack {
   display: inline-flex;
   flex-direction: row;
