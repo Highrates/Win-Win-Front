@@ -962,12 +962,21 @@
     align-items: stretch;
   }
 
+  /* flex: 1 1 0 + overflow: hidden на десктопе давали на мобилке нулевую/обрезанную высоту блока с текстом */
   .projectBlockLeft {
     padding: 24px;
+    flex: 0 1 auto;
+    align-self: stretch;
+    overflow: visible;
+    min-height: min-content;
   }
 
   .designerLinkWrapper {
     padding-top: 16px;
+  }
+
+  .projectTitlesWrapper {
+    justify-content: flex-start;
   }
 
   .projectTitlesInner {
@@ -975,9 +984,17 @@
     align-items: stretch;
   }
 
+  /* В колонке flex: 1 1 0 на слоте задаёт базу по высоте → при height: auto у родителя слоты схлопываются в 0 (остаётся только gap ≈16px). На ряду та же схема работала по ширине. */
   .projectImagesWrapper {
     flex-direction: column;
     align-items: stretch;
+    width: 100%;
+  }
+
+  .projectThumbSlot {
+    flex: 0 0 auto;
+    width: 100%;
+    align-self: stretch;
   }
 
   .sliderCoversGrid {
@@ -990,6 +1007,7 @@
     height: 18px;
   }
 
+  /* Список товаров справа — только десктоп; на мобилке смотреть «Подробнее о проекте» / сетку */
   .projectProductsWrapper {
     display: none;
   }

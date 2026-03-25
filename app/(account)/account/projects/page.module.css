@@ -1,0 +1,730 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  gap: 0;
+}
+
+.toolbar {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.createProjectButton {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.projectHeader {
+  align-self: stretch;
+  width: 100%;
+  margin-top: 48px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.projectTitleRow {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.projectTitle {
+  font-family: var(--font-commissioner);
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  color: var(--color-black);
+  text-transform: uppercase;
+}
+
+.projectAddress {
+  margin-top: 10px;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
+.ctaRow {
+  align-self: stretch;
+  width: 100%;
+  margin-top: 24px;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ctaSnowPanel {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  padding: 16px 18px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ctaCheckoutBtn {
+  flex-shrink: 0;
+  align-self: stretch;
+  padding: 16px 18px;
+  background: var(--color-ink-black);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-white);
+}
+
+.ctaCheckoutBtn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.ctaCheckoutBtn:hover {
+  opacity: 0.92;
+}
+
+/* Мобильный CTA: как аккордеон на ProductPage */
+.ctaAccordionWrapper {
+  align-self: stretch;
+  width: 100%;
+  margin-top: 24px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+
+.ctaAccordion {
+  align-self: stretch;
+  width: 100%;
+}
+
+.ctaAccordionTrigger {
+  align-self: stretch;
+  width: 100%;
+  padding: 16px 0;
+  border-radius: 6px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.ctaAccordionTrigger:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.ctaAccordionTriggerInner {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.ctaAccordionTriggerLeft {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ctaAccordionTriggerPrice {
+  flex-shrink: 0;
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  color: var(--color-black);
+  white-space: nowrap;
+}
+
+.ctaAccordionChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-black);
+  flex-shrink: 0;
+}
+
+.ctaAccordionChevron svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  transition: transform 0.25s ease-out;
+}
+
+.ctaAccordionChevron[data-open] svg {
+  transform: rotate(45deg);
+}
+
+.ctaAccordionPanel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+  transform: translateZ(0);
+  align-self: stretch;
+}
+
+.ctaAccordionPanel[data-open] {
+  max-height: 480px;
+}
+
+.ctaAccordionPanel > .ctaAccordionContent {
+  overflow: hidden;
+}
+
+.ctaAccordionContent {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding-top: 0;
+  padding-bottom: 16px;
+}
+
+.ctaAccordionContent .ctaCheckoutBtn {
+  align-self: stretch;
+  width: 100%;
+  justify-content: center;
+}
+
+.ctaAccordionSnowStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.ctaAccordionSnowStack .ctaRightInfo {
+  align-items: flex-start;
+}
+
+.tabsOffset {
+  margin-top: 32px;
+  width: 100%;
+}
+
+.sectionTabsWrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  padding-bottom: 16px;
+}
+
+.sectionTab,
+.sectionTabActive {
+  font-size: var(--text-card-20-300);
+  font-weight: 300;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-commissioner);
+  text-decoration: none;
+  color: inherit;
+}
+
+.sectionTab {
+  color: var(--color-gray);
+}
+
+.sectionTab:hover {
+  color: var(--color-ink-black);
+}
+
+.sectionTabActive {
+  color: var(--color-ink-black);
+}
+
+@media (max-width: 768px) {
+  .sectionTabsWrapper {
+    gap: 24px;
+    padding-bottom: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sectionTabsWrapper .sectionTab,
+  .sectionTabsWrapper .sectionTabActive {
+    flex-shrink: 0;
+    padding-bottom: 16px;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+  }
+
+  .sectionTabsWrapper .sectionTabActive {
+    border-bottom-color: var(--color-ink-black);
+  }
+
+  .marketSectionRowLeft {
+    gap: 16px;
+  }
+
+  .marketSectionRowLeft img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .createProjectButton {
+    align-self: flex-start;
+  }
+
+  .ctaAccordionWrapper {
+    padding: 0 12px;
+  }
+}
+
+.ctaLeftInfo {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ctaLabel {
+  color: var(--color-black);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  text-transform: uppercase;
+}
+
+.ctaCount {
+  color: var(--color-gray);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.ctaRightInfo {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.ctaPrice {
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  color: var(--color-black);
+  white-space: nowrap;
+}
+
+.ctaBonus {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+.ctaBonusLabel {
+  color: var(--color-black);
+}
+
+.ctaBonusValue {
+  font-weight: 400;
+  color: var(--color-black);
+}
+
+.iconButton {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-black);
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* edit.svg в /icons — серый stroke, для чёрной иконки */
+.iconBlack {
+  display: block;
+  filter: brightness(0);
+}
+
+.projectTools {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+  flex-shrink: 0;
+}
+
+.specLink {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+  text-align: left;
+}
+
+.specLink:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.specIcon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.productsTopRow {
+  align-self: stretch;
+  width: 100%;
+  margin-top: 32px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+/* Как CategoryPage.module.css — .marketSectionRowLeft */
+.marketSectionRowLeft {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 32px;
+}
+
+/* Как CategoryPage.module.css — .marketFilterGroup */
+.marketFilterGroup {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.marketFilterGroup button {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.selectAllButton {
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.selectAllButton:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.productCardDetailedRow {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.productCardCheckbox {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  margin-top: 8px;
+  appearance: none;
+  box-sizing: border-box;
+  border: 1.3px solid var(--color-gray);
+  border-radius: 4px;
+  background: var(--color-white);
+  cursor: pointer;
+}
+
+.productCardCheckbox:checked {
+  background-color: var(--color-blue);
+  border-color: var(--color-blue);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 5 5 9 13 1' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 9px;
+}
+
+.productCardCheckbox:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.productCardDetailedWrapper {
+  align-self: stretch;
+  margin-top: 32px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.productCardDetailed {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.productCardDetailedImageWrap {
+  flex-shrink: 0;
+  width: 200px;
+  aspect-ratio: 200 / 215;
+  border-radius: 6px;
+  overflow: hidden;
+  align-self: flex-start;
+}
+
+.productCardDetailedImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.productCardDetailedBody {
+  align-self: stretch;
+  flex: 1 1 0;
+  min-width: 0;
+  padding-block: 8px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.productCardDetailedTitleRow {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+  color: var(--color-black);
+}
+
+.productCardDetailedTitleTexts {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.productCardDetailedName {
+  min-width: 0;
+}
+
+.productCardDetailedPrice {
+  white-space: nowrap;
+}
+
+.productCardDetailedTitleMore {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.productCardDetailedMeta {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.productCardDetailedMetaItem {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.productCardDetailedMetaLabel {
+  color: var(--color-gray);
+}
+
+.productCardDetailedMetaLabel::after {
+  content: ':';
+}
+
+.productCardDetailedFooter {
+  align-self: stretch;
+  padding-top: 12px;
+  box-shadow: inset 0 var(--account-hairline-width) 0 0 var(--account-hairline-color);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.productCardDetailedQty {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+}
+
+.qtyButton {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: var(--text-body);
+  font-weight: 400;
+  color: var(--color-black);
+  padding: 0;
+}
+
+.qtyValue {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+@media (max-width: 1024px) {
+  .projectHeader {
+    align-self: flex-start;
+    width: 100%;
+    margin-top: 24px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .projectTools {
+    align-self: flex-start;
+    width: auto;
+    justify-content: flex-start;
+  }
+
+  .productCardDetailed {
+    flex-direction: column;
+  }
+
+  .productCardDetailedImageWrap {
+    width: 100%;
+    max-width: none;
+    align-self: stretch;
+  }
+
+  .productCardCheckbox {
+    margin-top: 0;
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .productCardDetailedImageWrap {
+    width: 200px;
+    height: 200px;
+    aspect-ratio: 1;
+    max-width: 100%;
+    align-self: flex-start;
+  }
+}
