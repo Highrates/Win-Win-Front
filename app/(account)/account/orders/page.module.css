@@ -215,6 +215,22 @@
 }
 
 @media (max-width: 768px) {
+  .productsTopRowOrders {
+    margin-top: 24px;
+  }
+
+  .productCardDetailedWrapperOrders {
+    margin-top: 24px;
+  }
+
+  .ordersMainContent {
+    margin-top: 24px;
+  }
+
+  .summaryBottom {
+    margin-top: 24px;
+  }
+
   .ordersSidebar {
     order: -1;
   }

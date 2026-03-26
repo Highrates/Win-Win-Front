@@ -1,0 +1,213 @@
+.page {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.topBar {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+}
+
+.caseSearchBox {
+  align-self: stretch;
+  width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.productsTopRowOrders {
+  align-self: stretch;
+  margin-top: 32px;
+  height: 20px;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.casesList {
+  align-self: stretch;
+  width: 100%;
+  margin-top: 32px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.selectAllButton {
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.iconBlack {
+  display: block;
+  filter: brightness(0);
+}
+
+.casesWrapper {
+  align-self: stretch;
+  width: 100%;
+  padding: 32px;
+  background: var(--color-bright-snow);
+  border-radius: 10px;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 40px;
+  box-sizing: border-box;
+}
+
+.caseCheckbox {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  margin-top: 2px;
+  appearance: none;
+  box-sizing: border-box;
+  border: 1.3px solid var(--color-gray);
+  border-radius: 4px;
+  background: var(--color-white);
+  cursor: pointer;
+}
+
+.caseCheckbox:checked {
+  background-color: var(--color-blue);
+  border-color: var(--color-blue);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 5 5 9 13 1' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 9px;
+}
+
+.caseCheckbox:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.casesWrapperInner {
+  align-self: stretch;
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.caseHead {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.editCaseButton {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-gray);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.caseTitle {
+  font-size: var(--text-card-20-400);
+  font-weight: 400;
+  color: var(--color-black);
+}
+
+.caseMeta {
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.caseDescription {
+  margin-top: 16px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+.interactWrapper {
+  margin-top: 16px;
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.interactItem {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+}
+
+.interactIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.interactValue {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+@media (max-width: 768px) {
+  .topBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .caseSearchBox {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .page .productsTopRowOrders {
+    margin-top: 24px;
+  }
+
+  .page .casesList {
+    margin-top: 24px;
+  }
+
+  .casesWrapper {
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+}
