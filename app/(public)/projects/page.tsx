@@ -7,7 +7,7 @@ import { ProjectsRoomFilter } from './ProjectsRoomFilter';
 /**
  * Общие стили превью, маркета и карточек проектов (те же классы, что на странице дизайнера).
  */
-import listingLayoutStyles from '../designers/[slug]/DesignerPage.module.css';
+import listingLayoutStyles from './ProjectsListingLayout.module.css';
 import projectsStyles from './ProjectsPage.module.css';
 
 export const metadata: Metadata = {

@@ -1,47 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/Button/Button';
 import { SearchBox } from '@/components/SearchBox/SearchBox';
+import { CASES } from '@/lib/account/cases';
 import styles from './page.module.css';
 
-type CaseItem = {
-  id: string;
-  title: string;
-  roomType: string;
-  description: string;
-  likes: number;
-  messages: number;
-};
-
-const CASES: CaseItem[] = [
-  {
-    id: '1',
-    title: 'Скандинавская гостиная',
-    roomType: 'Гостиная',
-    description: 'Светлый интерьер с акцентом на натуральные материалы и мягкий сценарий освещения.',
-    likes: 24,
-    messages: 6,
-  },
-  {
-    id: '2',
-    title: 'Современная кухня-столовая',
-    roomType: 'Кухня',
-    description: 'Функциональная планировка с островом, теплыми текстурами и акцентным светом.',
-    likes: 18,
-    messages: 4,
-  },
-  {
-    id: '3',
-    title: 'Спальня в мягких тонах',
-    roomType: 'Спальня',
-    description: 'Спокойная палитра, тактильные материалы и многосценарное освещение для отдыха.',
-    likes: 31,
-    messages: 9,
-  },
-];
-
 export function AccountCasesPageClient() {
+  const router = useRouter();
   const [selectionMode, setSelectionMode] = useState(false);
 
   const onSelectAllToggle = () => {
@@ -52,7 +19,9 @@ export function AccountCasesPageClient() {
     <div className={styles.page}>
       <div className={styles.topBar}>
         <SearchBox placeholder="Поиск кейса" ariaLabel="Поиск кейса" className={styles.caseSearchBox} />
-        <Button variant="primary">+Добавить кейс</Button>
+        <Button variant="primary" onClick={() => router.push('/account/cases/new')}>
+          +Добавить кейс
+        </Button>
       </div>
 
       <div className={styles.productsTopRowOrders}>

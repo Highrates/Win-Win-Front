@@ -1,0 +1,339 @@
+.page {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.headerRow {
+  align-self: stretch;
+  padding-bottom: 16px;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.backLink {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--color-black);
+  transition: opacity 0.2s ease;
+}
+
+.backLink:hover {
+  opacity: 0.85;
+}
+
+.backText {
+  font-size: var(--text-body);
+  color: var(--color-black);
+}
+
+.backArrow {
+  display: block;
+  transform: scaleX(-1);
+  filter: brightness(0);
+}
+
+.form {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.field {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.labelRow {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.label {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+.counter {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+}
+
+.textarea {
+  min-height: 132px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  resize: vertical;
+}
+
+.multiSelect {
+  position: relative;
+  align-self: stretch;
+  width: 100%;
+}
+
+.multiSelectInput {
+  min-height: 48px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.placeholder {
+  color: var(--color-gray);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--color-bright-snow);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.chipRemove {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-gray);
+  line-height: 1;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-gray);
+  transition: transform 0.2s ease;
+  transform: rotate(90deg);
+}
+
+.chevronOpen {
+  transform: rotate(-90deg);
+}
+
+.options {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 8px;
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  background: var(--color-white);
+  box-shadow: 0 8px 20px rgba(5, 24, 38, 0.08);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+.option:hover {
+  background: var(--color-bright-snow);
+}
+
+.check {
+  color: var(--color-blue);
+}
+
+.gridOptions {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gridOption {
+  align-self: stretch;
+  width: 100%;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  border-radius: 8px;
+  background: var(--color-white);
+  padding: 12px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--color-black);
+}
+
+.gridOptionTop {
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.gridOptionLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.gridRadio {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1.3px solid var(--color-gray);
+  background: var(--color-white);
+  box-sizing: border-box;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.gridRadioChecked {
+  border-color: var(--color-blue);
+}
+
+.gridRadioChecked::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 999px;
+  background: var(--color-blue);
+}
+
+.gridRatio {
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.uploadInput {
+  display: none;
+}
+
+.uploadGrid43 {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.uploadBox43,
+.uploadBox169 {
+  position: relative;
+  border: var(--account-hairline-width) dashed var(--account-hairline-color);
+  border-radius: 8px;
+  background: var(--color-bright-snow);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  box-sizing: border-box;
+}
+
+.uploadBoxDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.uploadBox43 {
+  width: calc((100% - 8px) / 2);
+  aspect-ratio: 3 / 4;
+}
+
+.uploadBox169 {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.uploadCaption {
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploadRemove {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 768px) {
+  .form {
+    gap: 24px;
+  }
+}

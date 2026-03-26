@@ -1,0 +1,1013 @@
+.previewPageSection {
+  margin-top: 94px;
+}
+
+.previewPageWrapper {
+  margin-top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  gap: 24px;
+}
+
+.previewPageTitles {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 148px;
+}
+
+.previewPageTitlesRow {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+}
+
+.designerAvatar {
+  width: 82px;
+  height: 82px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.designerTitlesCol {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.previewPageTitlesOuter {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.designerCity {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.designerName {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.designerServices {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  margin: 0;
+}
+
+.interactWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 32px;
+}
+
+.contactBtn {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+.interactItem {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.interactIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.moreAboutDesignerLink {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.moreAboutDesignerLink:hover {
+  opacity: 0.85;
+}
+
+.moreAboutDesignerText {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
+.moreAboutDesignerArrow {
+  display: block;
+}
+
+.breadcrumbs {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.breadcrumbsLink {
+  color: var(--color-gray);
+  text-decoration: none;
+}
+
+.breadcrumbsLink:hover {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsCurrent {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsSep {
+  color: var(--color-gray);
+  user-select: none;
+}
+
+.previewImages {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.previewImageSlot {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thumbZoomBtn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: none;
+  background: var(--color-white);
+  cursor: pointer;
+  overflow: hidden;
+  border-bottom-right-radius: 8px;
+}
+
+.thumbZoomBtn:hover {
+  opacity: 0.9;
+}
+
+.thumbZoomBtn:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.thumbZoomBtn img {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.previewImage {
+  width: 406px;
+  height: 393px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+/* Секция маркета (как CategoryPage_marketSection) */
+.marketSection {
+  margin-top: 180px;
+}
+
+.marketSectionInner {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+}
+
+.titlesWrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.titlesWrapperH5 {
+  font-size: var(--h5-size);
+  font-weight: var(--h5-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.viewToggleGroup {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewToggleBtn {
+  padding: 10px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  border: none;
+  cursor: pointer;
+  background: var(--color-bright-snow);
+}
+
+.viewToggleBtn:hover {
+  opacity: 0.9;
+}
+
+.viewToggleBtnActive {
+  background: var(--color-ink-black);
+}
+
+.viewToggleBtn img {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.viewToggleBtnActive img {
+  filter: brightness(0) invert(1);
+}
+
+.projectsList {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  width: 100%;
+}
+
+/* Сетка проектов (view: grid) */
+.projectWrapper {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+}
+
+.projectBlockLeft {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  padding: 32px;
+  background: var(--color-bright-snow);
+  border-radius: 10px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+  overflow: hidden;
+}
+
+.projectTitlesWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.projectTitlesStack {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.projectTitlesInner {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.projectTitlesCol {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.projectTitleBlock {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.projectTitleName {
+  font-size: var(--text-card-20-400);
+  font-weight: 400;
+  color: var(--color-ink-black);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.projectTitlePlaces {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  margin: 0;
+}
+
+.projectDescription {
+  font-size: var(--text-body-long-size);
+  line-height: var(--text-body-long-height);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+}
+
+.projectInteractWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 32px;
+}
+
+.projectInteractItem {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.projectInteractIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.moreAboutProjectLink {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.moreAboutProjectLink:hover {
+  opacity: 0.85;
+}
+
+.moreAboutProjectText {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
+.moreAboutProjectArrow {
+  display: block;
+}
+
+.designerLinkWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.designerLinkWrapper:hover {
+  opacity: 0.85;
+}
+
+.designerLinkAvatar {
+  width: 43px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  object-fit: cover;
+  display: block;
+}
+
+.designerLinkName {
+  font-size: var(--text-card-16-500);
+  font-weight: 500;
+  color: var(--color-ink-black);
+  margin: 0;
+}
+
+.designerLinkArrow {
+  flex-shrink: 0;
+  display: block;
+  width: 22px;
+  height: 22px;
+  color: var(--color-gray);
+}
+
+.projectImagesWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.projectThumbSlot {
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.projectThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Вид сеткой: сетка обложек (4 колонки на десктопе) */
+.sliderCoversGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.sliderCoverCard {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: var(--color-bright-snow);
+  aspect-ratio: 3 / 4;
+}
+
+.sliderCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sliderCoverOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.sliderCoverCard:hover .sliderCoverOverlay {
+  opacity: 1;
+}
+
+.sliderCoverArrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sliderCoverCard:hover .sliderCoverArrow {
+  opacity: 1;
+}
+
+.projectProductsWrapper {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  max-height: 708px;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 0;
+}
+
+.projectProductsScroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 24px;
+}
+
+.projectProductsScrollFade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--color-white) 20%, transparent);
+}
+
+.projectProductsScrollHint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+}
+
+.projectProductsScrollHintIcon {
+  width: 24px;
+  height: 24px;
+  color: var(--color-gray);
+  transform: rotate(90deg);
+}
+
+/* Модальное окно «Еще о дизайнере» (как BrandPage) */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.4);
+  transition: opacity 0.2s ease;
+}
+
+.modalPanel {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 31;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  border-radius: 10px;
+  background: var(--color-white);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: modalSlideIn 0.35s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .modalPanel {
+    left: auto;
+    right: 8px;
+    width: 75%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .modalPanel {
+    width: 66.666667%;
+  }
+}
+
+.modalPanelFullscreen {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+@media (min-width: 768px) {
+  .modalPanelFullscreen {
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
+}
+
+.modalHeader {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 31;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid transparent;
+  background: var(--color-white);
+  padding: 8px 0;
+}
+
+.modalHeaderPadding {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.modalIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-ink-black);
+  border-radius: 8px;
+}
+
+.modalIconBtn:hover {
+  background: var(--color-bright-snow);
+}
+
+.modalIconBtn img,
+.modalIconBtn svg {
+  display: block;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.modalContent {
+  padding: 0;
+}
+
+.modalContent .padding-global {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+.richContent {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+.richContentTitle {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  margin: 0;
+  text-transform: uppercase;
+  color: var(--color-ink-black);
+}
+
+.richContentLead {
+  font-size: var(--text-body-long-size);
+  line-height: var(--text-body-long-height);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+}
+
+.richContentImageWrap {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-bright-snow);
+}
+
+.richContentImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.richContentH3 {
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  margin: 0;
+  color: var(--color-ink-black);
+}
+
+.richContentText {
+  font-size: var(--text-body-long-size);
+  line-height: var(--text-body-long-height);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+}
+
+/* Аккордеон в модалке (как ProductPage) */
+.modalAccordionsWrapper {
+  align-self: stretch;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modalAccordion {
+  align-self: stretch;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.2);
+  width: 100%;
+}
+
+.modalAccordion:last-child {
+  border-bottom: none;
+}
+
+.modalAccordionTrigger {
+  align-self: stretch;
+  width: 100%;
+  padding: 16px 0;
+  border-radius: 6px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.modalAccordionTrigger:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.modalAccordionTriggerInner {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+}
+
+.modalAccordionIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.modalAccordionTitle {
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+  color: var(--color-ink-black);
+}
+
+.modalAccordionChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-black);
+  flex-shrink: 0;
+}
+
+.modalAccordionChevron svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  transition: transform 0.25s ease-out;
+}
+
+.modalAccordionChevron[data-open] svg {
+  transform: rotate(45deg);
+}
+
+.modalAccordionPanel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+  transform: translateZ(0);
+  width: 100%;
+}
+
+.modalAccordionPanel[data-open] {
+  max-height: 70vh;
+}
+
+.modalAccordionContent {
+  padding-top: 16px;
+  padding-bottom: 16px;
+  overflow: hidden;
+}
+
+.modalProjectTitle {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  color: var(--color-ink-black);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.modalProjectPlaces {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  margin: 0 0 16px;
+}
+
+.modalProjectProductsScroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .previewPageSection {
+    margin-top: 78px;
+  }
+
+  .previewPageWrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .previewPageTitles {
+    gap: 56px;
+  }
+
+  .previewImages {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .previewImage {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 406 / 393;
+    object-fit: cover;
+  }
+
+  .marketSection {
+    margin-top: 96px;
+  }
+
+  .projectWrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* flex: 1 1 0 + overflow: hidden на десктопе давали на мобилке нулевую/обрезанную высоту блока с текстом */
+  .projectBlockLeft {
+    padding: 24px;
+    flex: 0 1 auto;
+    align-self: stretch;
+    overflow: visible;
+    min-height: min-content;
+  }
+
+  .designerLinkWrapper {
+    padding-top: 16px;
+  }
+
+  .projectTitlesWrapper {
+    justify-content: flex-start;
+  }
+
+  .projectTitlesInner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* В колонке flex: 1 1 0 на слоте задаёт базу по высоте -> при height: auto у родителя слоты схлопываются в 0 (остаётся только gap ~16px). На ряду та же схема работала по ширине. */
+  .projectImagesWrapper {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .projectThumbSlot {
+    flex: 0 0 auto;
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .sliderCoversGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .designerLinkArrow {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Список товаров справа — только десктоп; на мобилке смотреть «Подробнее о проекте» / сетку */
+  .projectProductsWrapper {
+    display: none;
+  }
+}

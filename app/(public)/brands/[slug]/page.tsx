@@ -2,72 +2,13 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { ProductCard } from '@/components/ProductCard';
+import {
+  BRAND_CATEGORY_TABS,
+  getBrandBySlug,
+  PRODUCTS_POOL,
+} from '@/lib/public/brands';
 import { MoreAboutBrandModal } from './MoreAboutBrandModal';
 import styles from './BrandPage.module.css';
-
-const PRODUCTS_POOL = [
-  { slug: 'sofa-classic', name: 'Диван Classic', price: 135090 },
-  { slug: 'kreslo-lounge', name: 'Кресло Lounge', price: 45000 },
-  { slug: 'stolik-round', name: 'Столик Round', price: 28500 },
-  { slug: 'konsol-wood', name: 'Консоль Wood', price: 67200 },
-  { slug: 'stul-comfort', name: 'Стул Comfort', price: 19900 },
-  { slug: 'puf-velvet', name: 'Пуф Velvet', price: 12400 },
-  { slug: 'shkaf-modern', name: 'Шкаф Modern', price: 89000 },
-  { slug: 'lampa-arc', name: 'Лампа Arc', price: 35090 },
-  { slug: 'krovat-dream', name: 'Кровать Dream', price: 156000 },
-  { slug: 'tumba-night', name: 'Тумба Night', price: 24300 },
-  { slug: 'zerkalo-wall', name: 'Зеркало Wall', price: 31500 },
-  { slug: 'polka-open', name: 'Полка Open', price: 14700 },
-  { slug: 'stol-dining', name: 'Стол Dining', price: 78000 },
-  { slug: 'bra-minimal', name: 'Бра Minimal', price: 9800 },
-  { slug: 'komod-line', name: 'Комод Line', price: 54600 },
-  { slug: 'kreslo-relax', name: 'Кресло Relax', price: 62000 },
-  { slug: 'stol-coffee', name: 'Стол Coffee', price: 42000 },
-  { slug: 'kreslo-wing', name: 'Кресло Wing', price: 73500 },
-  { slug: 'svetilnik-spot', name: 'Светильник Spot', price: 11200 },
-  { slug: 'polka-wall', name: 'Полка Wall', price: 18900 },
-];
-
-const LONG_DESCRIPTION =
-  'Продукция компании охватывает все жилые зоны, такие как гостиная, чайная комната, столовая, спальня и кабинет и включает различные виды мебели, такие как диваны, чайные столики, обеденные столы и кровати.';
-
-/** Slug → название бренда (позже можно заменить на API) */
-const SLUG_TO_BRAND: Record<string, { name: string; description: string }> = {
-  'glamor-master': { name: 'Glamor Master', description: LONG_DESCRIPTION },
-  adidas: { name: 'Adidas', description: LONG_DESCRIPTION },
-  nike: { name: 'Nike', description: LONG_DESCRIPTION },
-  zara: { name: 'Zara', description: LONG_DESCRIPTION },
-  'h-m': { name: 'H&M', description: LONG_DESCRIPTION },
-  gucci: { name: 'Gucci', description: LONG_DESCRIPTION },
-  puma: { name: 'Puma', description: LONG_DESCRIPTION },
-  uniqlo: { name: 'Uniqlo', description: LONG_DESCRIPTION },
-  'massimo-dutti': { name: 'Massimo Dutti', description: LONG_DESCRIPTION },
-  reserved: { name: 'Reserved', description: LONG_DESCRIPTION },
-  bershka: { name: 'Bershka', description: LONG_DESCRIPTION },
-};
-
-/** Табы категорий — как в ScrollCatalog на главной */
-const BRAND_CATEGORY_TABS = [
-  { id: 'living', label: 'Гостиная' },
-  { id: 'dining', label: 'Столовая' },
-  { id: 'light', label: 'Свет' },
-  { id: 'office', label: 'Офис' },
-  { id: 'hotel', label: 'Отель' },
-  { id: 'decor', label: 'Декор' },
-  { id: 'garden', label: 'Сад' },
-  { id: 'materials', label: 'Отделочные материалы' },
-  { id: 'plumbing', label: 'Сантехника' },
-];
-
-function getBrandBySlug(slug: string): { name: string; description: string } {
-  const entry = SLUG_TO_BRAND[slug];
-  if (entry) return entry;
-  const name = slug
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
-  return { name, description: LONG_DESCRIPTION };
-}
 
 export async function generateMetadata({
   params,
@@ -151,32 +92,22 @@ export default async function BrandPage({
       <section className={styles.marketSection} aria-label="Товары бренда">
         <div className="padding-global">
           <div className={styles.marketSectionInner}>
-            <div className={styles.tabsWrapper} role="tablist" aria-label="Категории товаров бренда">
+            <nav className={styles.tabsWrapper} aria-label="Категории товаров бренда">
               {BRAND_CATEGORY_TABS.map((tab) => {
                 const isActive = tab.id === currentCategory;
-                const href = isActive ? undefined : `/brands/${slug}?category=${tab.id}`;
-                return href ? (
+                const href = `/brands/${slug}?category=${tab.id}`;
+                return (
                   <Link
                     key={tab.id}
                     href={href}
-                    role="tab"
-                    aria-selected={false}
-                    className={styles.tab}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={isActive ? styles.tabActive : styles.tab}
                   >
                     {tab.label}
                   </Link>
-                ) : (
-                  <span
-                    key={tab.id}
-                    role="tab"
-                    aria-selected
-                    className={styles.tabActive}
-                  >
-                    {tab.label}
-                  </span>
                 );
               })}
-            </div>
+            </nav>
             <div className={styles.marketSectionRow}>
               <div className={styles.marketSectionRowLeft}>
                 <div className={styles.marketFilterGroup}>

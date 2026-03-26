@@ -1,0 +1,53 @@
+.richEditorWrap {
+  align-self: stretch;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+.richMediaToolbar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+  background: var(--color-bright-snow);
+}
+.richToolBtn {
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  border-radius: 6px;
+  background: var(--color-white);
+  color: var(--color-black);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.richToolBtnActive {
+  border-color: var(--color-blue);
+  background: color-mix(in srgb, var(--color-blue) 10%, var(--color-white));
+  color: var(--color-blue);
+}
+.mediaStatusOn,.mediaStatusOff{font-size:var(--text-caption);font-weight:var(--text-caption-weight);margin-right:4px}
+.mediaStatusOn{color:var(--color-black)}
+.mediaStatusOff{color:var(--color-gray)}
+.richToolSep { width: 1px; height: 18px; background: var(--account-hairline-color); }
+.hiddenPicker { display: none; }
+
+.richEditorWrap :global(.ql-toolbar.ql-snow) {
+  border: none;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+  background: var(--color-bright-snow);
+}
+.richEditorWrap :global(.ql-container.ql-snow) {
+  border: none;
+  min-height: 220px;
+  font-family: inherit;
+  font-size: var(--text-body);
+}
+.richEditorWrap :global(.ql-editor) { min-height: 220px; }
+.richEditorWrap :global(.ql-editor img),
+.richEditorWrap :global(.ql-editor video) { max-width: 100%; height: auto; display: block; }

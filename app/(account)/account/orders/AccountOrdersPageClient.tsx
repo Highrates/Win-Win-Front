@@ -3,47 +3,10 @@
 import { useState } from 'react';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { Button } from '@/components/Button/Button';
-import projectStyles from '../projects/page.module.css';
+import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
+import { ORDER_PRODUCTS, ORDER_TABS } from '@/lib/account/orders';
 import { AccordionBig } from './AccordionBig';
 import styles from './page.module.css';
-
-const ORDER_TABS = ['Подготовка заказа', 'В работе', 'Завершенные'] as const;
-
-type OrderProduct = {
-  id: string;
-  name: string;
-  price: string;
-  color: string;
-  material: string;
-  size: string;
-};
-
-const ORDER_PRODUCTS: OrderProduct[] = [
-  {
-    id: '1',
-    name: 'Кресло Otto Soft',
-    price: '~ 185 990',
-    color: 'Светло-серый',
-    material: 'Массив дуба, текстиль',
-    size: '82 × 76 × 90 см',
-  },
-  {
-    id: '2',
-    name: 'Диван Bergen',
-    price: '~ 412 500',
-    color: 'Тёмно-синий',
-    material: 'Велюр, дерево',
-    size: '240 × 95 × 85 см',
-  },
-  {
-    id: '3',
-    name: 'Стол обеденный Nord',
-    price: '~ 89 900',
-    color: 'Натуральный дуб',
-    material: 'Массив дуба',
-    size: '180 × 90 × 75 см',
-  },
-];
 
 export function AccountOrdersPageClient() {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -71,8 +34,8 @@ export function AccountOrdersPageClient() {
   };
 
   return (
-    <div className={projectStyles.page}>
-      <div className={projectStyles.toolbar}>
+    <div className={productListStyles.page}>
+      <div className={productListStyles.toolbar}>
         <AccountProjectTabs
           projects={ORDER_TABS}
           selectedIndex={selectedIndex}
@@ -80,17 +43,17 @@ export function AccountOrdersPageClient() {
         />
       </div>
 
-      <div className={`${projectStyles.productsTopRow} ${styles.productsTopRowOrders}`}>
+      <div className={`${productListStyles.productsTopRow} ${styles.productsTopRowOrders}`}>
         <button
           type="button"
-          className={projectStyles.selectAllButton}
+          className={productListStyles.selectAllButton}
           onClick={onSelectAllToggle}
           aria-pressed={selectionMode}
         >
           {selectionMode ? (
             <>
               <span>Отменить</span>
-              <img src="/icons/delete.svg" alt="" width={20} height={20} className={projectStyles.iconBlack} />
+              <img src="/icons/delete.svg" alt="" width={20} height={20} className={productListStyles.iconBlack} />
             </>
           ) : (
             'Выбрать все'
@@ -99,64 +62,64 @@ export function AccountOrdersPageClient() {
       </div>
 
       <div className={styles.ordersMainContent}>
-        <div className={`${projectStyles.productCardDetailedWrapper} ${styles.productCardDetailedWrapperOrders}`}>
+        <div className={`${productListStyles.productCardDetailedWrapper} ${styles.productCardDetailedWrapperOrders}`}>
           {ORDER_PRODUCTS.map((product) => (
-            <div key={product.id} className={projectStyles.productCardDetailedRow}>
+            <div key={product.id} className={productListStyles.productCardDetailedRow}>
               {selectionMode ? (
                 <input
                   type="checkbox"
-                  className={projectStyles.productCardCheckbox}
+                  className={productListStyles.productCardCheckbox}
                   checked={selectedIds.has(product.id)}
                   onChange={(e) => onProductCheckChange(product.id, e.target.checked)}
                   aria-label={`Выбрать «${product.name}»`}
                 />
               ) : null}
-              <div className={projectStyles.productCardDetailed}>
-                <div className={projectStyles.productCardDetailedImageWrap}>
+              <div className={productListStyles.productCardDetailed}>
+                <div className={productListStyles.productCardDetailedImageWrap}>
                   <img
                     src="/images/placeholder.svg"
                     alt={product.name}
-                    className={projectStyles.productCardDetailedImage}
+                    className={productListStyles.productCardDetailedImage}
                   />
                 </div>
-                <div className={projectStyles.productCardDetailedBody}>
-                  <div className={projectStyles.productCardDetailedTitleRow}>
-                    <div className={projectStyles.productCardDetailedTitleTexts}>
-                      <span className={projectStyles.productCardDetailedName}>{product.name}</span>
-                      <span className={projectStyles.productCardDetailedPrice}>
+                <div className={productListStyles.productCardDetailedBody}>
+                  <div className={productListStyles.productCardDetailedTitleRow}>
+                    <div className={productListStyles.productCardDetailedTitleTexts}>
+                      <span className={productListStyles.productCardDetailedName}>{product.name}</span>
+                      <span className={productListStyles.productCardDetailedPrice}>
                         {product.price}
                         {'\u00A0'}₽
                       </span>
                     </div>
                     <button
                       type="button"
-                      className={`${projectStyles.iconButton} ${projectStyles.productCardDetailedTitleMore}`}
+                      className={`${productListStyles.iconButton} ${productListStyles.productCardDetailedTitleMore}`}
                       aria-label={`Ещё по товару: ${product.name}`}
                     >
                       <img src="/icons/more.svg" alt="" width={20} height={20} aria-hidden />
                     </button>
                   </div>
-                  <div className={projectStyles.productCardDetailedMeta}>
-                    <div className={projectStyles.productCardDetailedMetaItem}>
-                      <span className={projectStyles.productCardDetailedMetaLabel}>Цвет</span>
+                  <div className={productListStyles.productCardDetailedMeta}>
+                    <div className={productListStyles.productCardDetailedMetaItem}>
+                      <span className={productListStyles.productCardDetailedMetaLabel}>Цвет</span>
                       <span>{product.color}</span>
                     </div>
-                    <div className={projectStyles.productCardDetailedMetaItem}>
-                      <span className={projectStyles.productCardDetailedMetaLabel}>Материал</span>
+                    <div className={productListStyles.productCardDetailedMetaItem}>
+                      <span className={productListStyles.productCardDetailedMetaLabel}>Материал</span>
                       <span>{product.material}</span>
                     </div>
-                    <div className={projectStyles.productCardDetailedMetaItem}>
-                      <span className={projectStyles.productCardDetailedMetaLabel}>Размер</span>
+                    <div className={productListStyles.productCardDetailedMetaItem}>
+                      <span className={productListStyles.productCardDetailedMetaLabel}>Размер</span>
                       <span>{product.size}</span>
                     </div>
                   </div>
-                  <div className={projectStyles.productCardDetailedFooter}>
-                    <div className={projectStyles.productCardDetailedQty}>
-                      <button type="button" className={projectStyles.qtyButton} aria-label="Уменьшить количество">
+                  <div className={productListStyles.productCardDetailedFooter}>
+                    <div className={productListStyles.productCardDetailedQty}>
+                      <button type="button" className={productListStyles.qtyButton} aria-label="Уменьшить количество">
                         -
                       </button>
-                      <span className={projectStyles.qtyValue}>1</span>
-                      <button type="button" className={projectStyles.qtyButton} aria-label="Увеличить количество">
+                      <span className={productListStyles.qtyValue}>1</span>
+                      <button type="button" className={productListStyles.qtyButton} aria-label="Увеличить количество">
                         +
                       </button>
                     </div>

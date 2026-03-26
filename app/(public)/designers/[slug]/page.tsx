@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { Button } from '@/components/Button';
+import { getDesignerBySlug } from '@/lib/public/designers';
 import { DesignerProjectsSection } from '../DesignerProjectsSection';
 import { MoreAboutDesignerModal } from './MoreAboutDesignerModal';
 import styles from './DesignerPage.module.css';
@@ -62,91 +63,13 @@ const DESIGNER_PROJECTS_LIST = [
   },
 ];
 
-const DESIGNERS_BY_SLUG: Record<
-  string,
-  { name: string; city: string; services: string; collections: number; likes: number }
-> = {
-  'anna-ivanova': {
-    name: 'Анна Иванова',
-    city: 'г. Москва',
-    services: 'Проектирование, Комплектация, Подбор мебели, Авторский надзор, Декорирование',
-    collections: 12,
-    likes: 89,
-  },
-  'boris-petrov': {
-    name: 'Борис Петров',
-    city: 'г. Москва',
-    services: 'Проектирование, Подбор мебели, Декорирование',
-    collections: 8,
-    likes: 156,
-  },
-  'maria-sidorova': {
-    name: 'Мария Сидорова',
-    city: 'г. Санкт-Петербург',
-    services: 'Комплектация, Авторский надзор',
-    collections: 24,
-    likes: 203,
-  },
-  'dmitry-kozlov': {
-    name: 'Дмитрий Козлов',
-    city: 'г. Москва',
-    services: 'Проектирование, Комплектация, Подбор мебели, Декорирование',
-    collections: 5,
-    likes: 67,
-  },
-  'elena-novikova': {
-    name: 'Елена Новикова',
-    city: 'г. Москва',
-    services: 'Проектирование, Авторский надзор, Декорирование',
-    collections: 18,
-    likes: 312,
-  },
-  'sergey-volkov': {
-    name: 'Сергей Волков',
-    city: 'г. Москва',
-    services: 'Подбор мебели, Комплектация',
-    collections: 9,
-    likes: 98,
-  },
-  'olga-kuznetsova': {
-    name: 'Ольга Кузнецова',
-    city: 'г. Москва',
-    services: 'Проектирование, Комплектация, Подбор мебели, Авторский надзор, Декорирование',
-    collections: 15,
-    likes: 124,
-  },
-  'andrey-sokolov': {
-    name: 'Андрей Соколов',
-    city: 'г. Казань',
-    services: 'Проектирование, Декорирование',
-    collections: 7,
-    likes: 76,
-  },
-};
-
-function getDesigner(slug: string) {
-  const d = DESIGNERS_BY_SLUG[slug];
-  if (d) return d;
-  const name = slug
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
-  return {
-    name,
-    city: 'г. Москва',
-    services: '',
-    collections: 0,
-    likes: 0,
-  };
-}
-
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const { name } = getDesigner(slug);
+  const { name } = getDesignerBySlug(slug);
   return {
     title: `${name} — Дизайнер — Win-Win`,
     description: `Страница дизайнера ${name}`,
@@ -159,7 +82,7 @@ export default async function DesignerPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const designer = getDesigner(slug);
+  const designer = getDesignerBySlug(slug);
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
