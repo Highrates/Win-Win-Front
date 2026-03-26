@@ -56,10 +56,19 @@ export function ScrollCatalogCardsStrip() {
     }
   };
 
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    if (el.scrollWidth <= el.clientWidth) return;
+    el.scrollLeft += e.deltaY;
+    e.preventDefault();
+  };
+
   return (
     <div
       ref={wrapperRef}
       className={`${styles.cardsWrapper} ${styles.cardsWrapperOnCategoryParent} ${styles.cardsWrapperTightTop}`}
+      onWheel={handleWheel}
       onMouseDown={handlePointerDown}
       onMouseMove={handlePointerMove}
       onMouseLeave={handlePointerMove}

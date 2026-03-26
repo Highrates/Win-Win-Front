@@ -15,9 +15,17 @@ export function AccountProjectTabs({
   onSelect,
 }: AccountProjectTabsProps) {
   const list = projects.length ? projects : ACCOUNT_PROJECT_NAMES;
+  const onTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    // Windows mouse wheel usually emits deltaY; map it to horizontal scroll.
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    if (el.scrollWidth <= el.clientWidth) return;
+    el.scrollLeft += e.deltaY;
+    e.preventDefault();
+  };
 
   return (
-    <div className={styles.tabsWrapper} role="tablist" aria-label="Проекты">
+    <div className={styles.tabsWrapper} role="tablist" aria-label="Проекты" onWheel={onTabsWheel}>
       <div className={styles.tabsInner}>
         {list.map((label, index) => (
           <button
