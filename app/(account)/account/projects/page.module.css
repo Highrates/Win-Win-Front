@@ -721,8 +721,7 @@
 
 @media (max-width: 768px) {
   .productCardDetailedImageWrap {
-    width: 200px;
-    height: 200px;
+    width: 100%;
     aspect-ratio: 1;
     max-width: 100%;
     align-self: flex-start;

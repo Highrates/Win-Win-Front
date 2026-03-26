@@ -1,0 +1,230 @@
+.productsTopRowOrders {
+  height: 20px;
+  justify-content: flex-end;
+}
+
+.ordersMainContent {
+  margin-top: 32px;
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.productCardDetailedWrapperOrders {
+  align-self: stretch;
+  width: 100%;
+  margin-top: 0;
+}
+
+.ordersSidebar {
+  width: 372px;
+  flex-shrink: 0;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.accordionBig {
+  width: 372px;
+  padding: 18px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.accordionBigTrigger {
+  align-self: stretch;
+  width: 100%;
+  padding: 0;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.accordionBigTitle {
+  color: var(--color-black);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  text-transform: uppercase;
+}
+
+.accordionBigArrow {
+  flex-shrink: 0;
+  display: block;
+  filter: brightness(0);
+  transition: transform 0.2s ease;
+  transform: rotate(90deg);
+}
+
+.accordionBigArrowOpen {
+  transform: rotate(-90deg);
+}
+
+.accordionBigPanel {
+  align-self: stretch;
+  width: 100%;
+  padding-top: 12px;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.orderSummaryCard {
+  width: 372px;
+  padding: 18px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 56px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.summaryTop {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.summaryEta {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: var(--color-black);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.summaryEtaIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.summaryTitle {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+  text-transform: uppercase;
+}
+
+.summarySelected {
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.summaryPrice {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  color: var(--color-black);
+}
+
+.summaryBottom {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.bonusRow {
+  align-self: stretch;
+  padding: 16px 10px;
+  background: var(--color-white);
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.bonusLeft {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bonusText {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+.summaryHint {
+  align-self: stretch;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  text-align: center;
+}
+
+.orderSummaryAccordionMobile {
+  display: none;
+}
+
+.orderSummaryAccordionPanelMobile {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+@media (max-width: 1200px) {
+  .ordersMainContent {
+    flex-direction: column;
+  }
+
+  .ordersSidebar {
+    width: 100%;
+  }
+
+  .accordionBig,
+  .orderSummaryCard {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .ordersSidebar {
+    order: -1;
+  }
+
+  .orderSummaryCard {
+    display: none;
+  }
+
+  .orderSummaryAccordionMobile {
+    display: inline-flex;
+    width: 100%;
+  }
+}
