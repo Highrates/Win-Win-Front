@@ -139,20 +139,20 @@ export function MoreAboutDesignerModal({ designer, linkClassName, textClassName,
         </header>
         <div className={styles.modalContent}>
           <div className="padding-global">
-            <div className={styles.richContent}>
-              <h2 className={styles.richContentTitle}>О дизайнере</h2>
-              <p className={styles.richContentLead}>
+            <div className={`${styles.richContent} rich-content`}>
+              <h2>О дизайнере</h2>
+              <p>
                 {designer.name}, {designer.city}. {designer.services && `Услуги: ${designer.services}.`} Опыт работы с частными и коммерческими интерьерами.
               </p>
-              <div className={styles.richContentImageWrap}>
-                <img src="/images/placeholder.svg" alt="" width={640} height={360} className={styles.richContentImage} />
+              <div>
+                <img src="/images/placeholder.svg" alt="" width={640} height={360} />
               </div>
-              <h3 className={styles.richContentH3}>Подход к проектам</h3>
-              <p className={styles.richContentText}>
+              <h3>Подход к проектам</h3>
+              <p>
                 Индивидуальный подход к каждому заказчику, подбор материалов и мебели под бюджет и стиль. Полное ведение проекта от концепции до авторского надзора.
               </p>
-              <h3 className={styles.richContentH3}>Портфолио</h3>
-              <p className={styles.richContentText}>
+              <h3>Портфолио</h3>
+              <p>
                 В портфолио представлены реализованные проекты квартир, домов и коммерческих пространств. Сотрудничество с ведущими брендами мебели и отделочных материалов.
               </p>
             </div>

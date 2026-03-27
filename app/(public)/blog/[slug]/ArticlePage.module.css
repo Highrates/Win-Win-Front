@@ -109,45 +109,6 @@
   object-fit: cover;
 }
 
-/* Текст статьи: те же правила, что richContent в модалке дизайнера, но один модуль — короткие классы в DOM */
-.articleRich {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  margin-top: 56px;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 42rem;
-  width: 100%;
-  padding-top: 0;
-  padding-bottom: 24px;
-  align-items: flex-start;
-  text-align: left;
-}
-
-.articleRichLead {
-  font-size: var(--text-body-long-size);
-  line-height: var(--text-body-long-height);
-  font-weight: var(--text-body-weight);
-  color: var(--color-ink-black);
-  margin: 0;
-}
-
-.articleRichH3 {
-  font-size: var(--h3-size);
-  font-weight: var(--h3-weight);
-  margin: 0;
-  color: var(--color-ink-black);
-}
-
-.articleRichText {
-  font-size: var(--text-body-long-size);
-  line-height: var(--text-body-long-height);
-  font-weight: var(--text-body-weight);
-  color: var(--color-ink-black);
-  margin: 0;
-}
-
 @media (max-width: 768px) {
   .articleMainSection {
     margin-top: 78px;

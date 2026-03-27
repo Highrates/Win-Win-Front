@@ -172,58 +172,60 @@ export function MoreAboutProjectModal({ project, linkClassName, textClassName, a
           <div className="padding-global">
             <h1 className={styles.modalProjectTitle}>{project.title}</h1>
             <p className={styles.modalProjectPlaces}>{project.places}</p>
-            <div className={styles.modalAccordionsWrapper}>
-              <div className={styles.modalAccordion}>
-                <button
-                  type="button"
-                  className={styles.modalAccordionTrigger}
-                  onClick={() => setAccordionOpen((v) => !v)}
-                  aria-expanded={accordionOpen}
-                  aria-controls="project-products-panel"
-                  id="project-products-trigger"
-                >
-                  <div className={styles.modalAccordionTriggerInner}>
-                    <img src="/icons/3d-square.svg" alt="" width={20} height={20} className={styles.modalAccordionIcon} aria-hidden />
-                    <span className={styles.modalAccordionTitle}>Товары проекта</span>
-                  </div>
-                  <AccordionChevronIcon open={accordionOpen} />
-                </button>
-                <div
-                  id="project-products-panel"
-                  role="region"
-                  aria-labelledby="project-products-trigger"
-                  className={styles.modalAccordionPanel}
-                  data-open={accordionOpen || undefined}
-                >
-                  <div className={styles.modalAccordionContent}>
-                    <div className={styles.modalProjectProductsScroll}>
-                      {project.products.map((p) => (
-                        <ProductCardSmall
-                          key={p.slug}
-                          slug={p.slug}
-                          name={p.name}
-                          price={p.price}
-                          collections={p.collections}
-                          likes={p.likes}
-                          comments={p.comments}
-                        />
-                      ))}
+            <div className={styles.modalAccordionsOuter}>
+              <div className={styles.modalAccordionsWrapper}>
+                <div className={styles.modalAccordion}>
+                  <button
+                    type="button"
+                    className={styles.modalAccordionTrigger}
+                    onClick={() => setAccordionOpen((v) => !v)}
+                    aria-expanded={accordionOpen}
+                    aria-controls="project-products-panel"
+                    id="project-products-trigger"
+                  >
+                    <div className={styles.modalAccordionTriggerInner}>
+                      <img src="/icons/3d-square.svg" alt="" width={20} height={20} className={styles.modalAccordionIcon} aria-hidden />
+                      <span className={styles.modalAccordionTitle}>Товары проекта</span>
+                    </div>
+                    <AccordionChevronIcon open={accordionOpen} />
+                  </button>
+                  <div
+                    id="project-products-panel"
+                    role="region"
+                    aria-labelledby="project-products-trigger"
+                    className={styles.modalAccordionPanel}
+                    data-open={accordionOpen || undefined}
+                  >
+                    <div className={styles.modalAccordionContent}>
+                      <div className={styles.modalProjectProductsScroll}>
+                        {project.products.map((p) => (
+                          <ProductCardSmall
+                            key={p.slug}
+                            slug={p.slug}
+                            name={p.name}
+                            price={p.price}
+                            collections={p.collections}
+                            likes={p.likes}
+                            comments={p.comments}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div className={styles.richContent}>
-              <p className={styles.richContentLead}>{project.description}</p>
-              <div className={styles.richContentImageWrap}>
-                <img src="/images/placeholder.svg" alt="" width={640} height={360} className={styles.richContentImage} />
+            <div className={`${styles.richContent} rich-content`}>
+              <p>{project.description}</p>
+              <div>
+                <img src="/images/placeholder.svg" alt="" width={640} height={360} />
               </div>
-              <h3 className={styles.richContentH3}>Концепция</h3>
-              <p className={styles.richContentText}>
+              <h3>Концепция</h3>
+              <p>
                 Интерьер в светлых тонах с акцентом на натуральные материалы и функциональную мебель. Подбор предметов по стилю и бюджету заказчика.
               </p>
-              <h3 className={styles.richContentH3}>Реализация</h3>
-              <p className={styles.richContentText}>
+              <h3>Реализация</h3>
+              <p>
                 Полный цикл работ: проектирование, комплектация, подбор мебели и отделки, авторский надзор. Срок реализации — 4 месяца.
               </p>
             </div>

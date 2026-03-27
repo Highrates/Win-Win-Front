@@ -528,8 +528,8 @@
 }
 
 .accordionContent {
-  padding-top: 16px;
-  padding-bottom: 16px;
+  padding-top: 24px;
+  padding-bottom: 24px;
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
   line-height: var(--text-body-long-height);

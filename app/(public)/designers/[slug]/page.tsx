@@ -200,13 +200,15 @@ export default async function DesignerPage({
                   height={393}
                 />
               </div>
-              <img
-                src="/images/placeholder.svg"
-                alt=""
-                className={styles.previewImage}
-                width={406}
-                height={393}
-              />
+              <div className={styles.previewImageSlot}>
+                <img
+                  src="/images/placeholder.svg"
+                  alt=""
+                  className={styles.previewImage}
+                  width={406}
+                  height={393}
+                />
+              </div>
             </div>
           </div>
         </div>

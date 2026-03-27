@@ -7,12 +7,14 @@ type AccountProjectTabsProps = {
   projects?: readonly string[];
   selectedIndex: number;
   onSelect: (index: number) => void;
+  ariaLabel?: string;
 };
 
 export function AccountProjectTabs({
   projects = ACCOUNT_PROJECT_NAMES,
   selectedIndex,
   onSelect,
+  ariaLabel = 'Проекты',
 }: AccountProjectTabsProps) {
   const list = projects.length ? projects : ACCOUNT_PROJECT_NAMES;
   const onTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -25,7 +27,7 @@ export function AccountProjectTabs({
   };
 
   return (
-    <div className={styles.tabsWrapper} role="tablist" aria-label="Проекты" onWheel={onTabsWheel}>
+    <div className={styles.tabsWrapper} role="tablist" aria-label={ariaLabel} onWheel={onTabsWheel}>
       <div className={styles.tabsInner}>
         {list.map((label, index) => (
           <button

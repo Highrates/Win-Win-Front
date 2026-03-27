@@ -6,6 +6,7 @@ import styles from './RichBlock.module.css';
 import 'react-quill/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+const ReactQuillWithRef = ReactQuill as any;
 
 type RichBlockProps = {
   value: string;
@@ -17,7 +18,7 @@ export function RichBlock({ value, onChange, placeholder }: RichBlockProps) {
   const [selectedMediaEl, setSelectedMediaEl] = useState<HTMLElement | null>(null);
   const [activeSizePreset, setActiveSizePreset] = useState<'small' | 'medium' | 'full' | null>(null);
   const [activeAlignPreset, setActiveAlignPreset] = useState<'left' | 'center' | 'right' | 'wrap' | null>(null);
-  const quillEditorRef = useRef<any>(null);
+  const reactQuillRef = useRef<any>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -118,13 +119,15 @@ export function RichBlock({ value, onChange, placeholder }: RichBlockProps) {
     readMediaPresetState(selectedMediaEl);
   };
 
+  const getQuillEditor = () => reactQuillRef.current?.getEditor?.() ?? null;
+
   const insertImage = (file: File | null) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       const src = typeof reader.result === 'string' ? reader.result : '';
       if (!src) return;
-      const quill = quillEditorRef.current;
+      const quill = getQuillEditor();
       if (!quill) return onChange(`${value}<p><img src="${src}" alt="uploaded-image" /></p>`);
       const range = quill.getSelection(true);
       const index = range ? range.index : quill.getLength();
@@ -140,7 +143,7 @@ export function RichBlock({ value, onChange, placeholder }: RichBlockProps) {
     reader.onload = () => {
       const src = typeof reader.result === 'string' ? reader.result : '';
       if (!src) return;
-      const quill = quillEditorRef.current;
+      const quill = getQuillEditor();
       if (!quill) return onChange(`${value}<p><video class="case-rich-media-video" controls src="${src}"></video></p>`);
       const range = quill.getSelection(true);
       const index = range ? range.index : quill.getLength();
@@ -185,13 +188,11 @@ export function RichBlock({ value, onChange, placeholder }: RichBlockProps) {
         insertVideo(e.target.files?.[0] ?? null);
         e.currentTarget.value = '';
       }} />
-      <ReactQuill
+      <ReactQuillWithRef
+        ref={reactQuillRef}
         theme="snow"
         value={value}
         onChange={onChange}
-        onChangeSelection={(_range, _source, editor) => {
-          quillEditorRef.current = editor;
-        }}
         modules={modules}
         formats={formats as unknown as string[]}
         placeholder={placeholder}

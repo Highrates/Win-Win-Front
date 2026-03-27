@@ -140,7 +140,7 @@ export function CustomerAccountSidebar({
           <div className={styles.menuHeaderRow}>
             <span className={styles.userName}>{userName}</span>
             <Link
-              href="/account/profile/edit"
+              href="/account/profile?profileEdit=1"
               className={styles.editLink}
               aria-label="Редактировать профиль"
             >
@@ -257,7 +257,7 @@ export function CustomerAccountSidebar({
                 <div className={styles.menuHeaderRow}>
                   <span className={styles.userName}>{userName}</span>
                   <Link
-                    href="/account/profile/edit"
+                    href="/account/profile?profileEdit=1"
                     className={styles.editLink}
                     aria-label="Редактировать профиль"
                     onClick={closeMore}

@@ -171,11 +171,14 @@
   gap: 16px;
   flex: 1 1 0;
   min-width: 0;
+  max-width: 100%;
 }
 
 .previewImageSlot {
   position: relative;
-  flex-shrink: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 406px;
 }
 
 .thumbZoomBtn {
@@ -212,9 +215,11 @@
 }
 
 .previewImage {
-  width: 406px;
-  height: 393px;
-  flex-shrink: 0;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 406 / 393;
+  max-width: 406px;
   border-radius: 10px;
   object-fit: cover;
 }
@@ -658,7 +663,7 @@
 
 @media (min-width: 1024px) {
   .modalPanel {
-    width: 66.666667%;
+    width: 50%;
   }
 }
 
@@ -746,59 +751,6 @@
 .modalContent .padding-global {
   padding-top: 24px;
   padding-bottom: 24px;
-}
-
-.richContent {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding-top: 24px;
-  padding-bottom: 24px;
-}
-
-.richContentTitle {
-  font-size: var(--h2-size);
-  font-weight: var(--h2-weight);
-  margin: 0;
-  text-transform: uppercase;
-  color: var(--color-ink-black);
-}
-
-.richContentLead {
-  font-size: var(--text-body-long-size);
-  line-height: var(--text-body-long-height);
-  font-weight: var(--text-body-weight);
-  color: var(--color-ink-black);
-  margin: 0;
-}
-
-.richContentImageWrap {
-  width: 100%;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--color-bright-snow);
-}
-
-.richContentImage {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: cover;
-}
-
-.richContentH3 {
-  font-size: var(--h3-size);
-  font-weight: var(--h3-weight);
-  margin: 0;
-  color: var(--color-ink-black);
-}
-
-.richContentText {
-  font-size: var(--text-body-long-size);
-  line-height: var(--text-body-long-height);
-  font-weight: var(--text-body-weight);
-  color: var(--color-ink-black);
-  margin: 0;
 }
 
 /* Аккордеон в модалке (как ProductPage) */

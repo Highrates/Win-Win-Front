@@ -134,20 +134,20 @@ export function MoreAboutBrandModal({ linkClassName, textClassName, arrowClassNa
         </header>
         <div className={styles.modalContent}>
           <div className="padding-global">
-            <div className={styles.richContent}>
-              <h2 className={styles.richContentTitle}>О бренде</h2>
-              <p className={styles.richContentLead}>
+            <div className={`${styles.richContent} rich-content`}>
+              <h2>О бренде</h2>
+              <p>
                 Продукция компании охватывает все жилые зоны и включает различные виды мебели: диваны, чайные столики, обеденные столы и кровати.
               </p>
-              <div className={styles.richContentImageWrap}>
-                <img src="/images/placeholder.svg" alt="" width={640} height={360} className={styles.richContentImage} />
+              <div>
+                <img src="/images/placeholder.svg" alt="" width={640} height={360} />
               </div>
-              <h3 className={styles.richContentH3}>Коллекции</h3>
-              <p className={styles.richContentText}>
+              <h3>Коллекции</h3>
+              <p>
                 Мы сотрудничаем с ведущими дизайнерами и производителями. В каталоге представлены предметы для гостиной, столовой, спальни и кабинета.
               </p>
-              <h3 className={styles.richContentH3}>Качество и доставка</h3>
-              <p className={styles.richContentText}>
+              <h3>Качество и доставка</h3>
+              <p>
                 Все изделия проходят контроль качества. Доставка по России и СНГ. Гарантия и сервисное обслуживание.
               </p>
             </div>

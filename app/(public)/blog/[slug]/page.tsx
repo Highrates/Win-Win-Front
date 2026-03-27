@@ -111,12 +111,12 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
             </div>
           </div>
 
-          <div className={articleStyles.articleRich}>
-            <p className={articleStyles.articleRichLead}>{richIntro}</p>
+          <div className="rich-content">
+            <p>{richIntro}</p>
             {richSections.map((section, i) => (
               <div key={`${section.title}-${i}`}>
-                <h3 className={articleStyles.articleRichH3}>{section.title}</h3>
-                <p className={articleStyles.articleRichText}>{section.text}</p>
+                <h3>{section.title}</h3>
+                <p>{section.text}</p>
               </div>
             ))}
           </div>

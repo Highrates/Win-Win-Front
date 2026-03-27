@@ -61,7 +61,7 @@ export default function ProductAccordions() {
               className={styles.accordionPanel}
               data-open={isOpen || undefined}
             >
-              <div className={styles.accordionContent}>
+              <div className={`${styles.accordionContent} rich-content`}>
                   {id === 'delivery' && (
                     <>
                       <h3>Способы доставки</h3>
