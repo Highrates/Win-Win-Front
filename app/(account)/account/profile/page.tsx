@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { Button } from '@/components/Button';
@@ -41,7 +41,7 @@ function CollapseIcon() {
 }
 
 /** Account: Profile — превью профиля */
-export default function ProfilePage() {
+function ProfilePageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -419,5 +419,13 @@ export default function ProfilePage() {
         </>
       ) : null}
     </section>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <ProfilePageContent />
+    </Suspense>
   );
 }
