@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { Button } from '@/components/Button';
@@ -8,7 +8,13 @@ import { RichBlock } from '@/components/RichBlock/RichBlock';
 import { TextField } from '@/components/TextField';
 import textFieldStyles from '@/components/TextField/TextField.module.css';
 import { MultiSelectField } from '@/components/MultiSelectField';
+import { useModalBodyLock } from '@/hooks/useModalBodyLock';
+import { ProfileSettingsTab } from './ProfileSettingsTab';
 import styles from './page.module.css';
+
+const PROFILE_TAB_INFO = 0;
+const PROFILE_TAB_INCOME = 1;
+const PROFILE_TAB_SETTINGS = 2;
 
 function CloseIcon() {
   return (
@@ -65,11 +71,22 @@ function ProfilePageContent() {
   const CITY_OPTIONS = ['Москва', 'Санкт-Петербург', 'Казань', 'Сочи'] as const;
   const SERVICE_OPTIONS = ['Дизайн интерьера', 'Комплектация', 'Авторский надзор', 'Планировка'] as const;
 
-  const closeProfileModal = () => {
+  const avatarPreviewRef = useRef(avatarPreview);
+  avatarPreviewRef.current = avatarPreview;
+
+  const closeProfileModal = useCallback(() => {
     setProfileModalOpen(false);
     setCityOpen(false);
     setServicesOpen(false);
-  };
+  }, []);
+
+  const closeAboutModal = useCallback(() => {
+    setAboutModalOpen(false);
+    setAboutModalFullscreen(false);
+  }, []);
+
+  useModalBodyLock(profileModalOpen, closeProfileModal);
+  useModalBodyLock(aboutModalOpen, closeAboutModal);
 
   useEffect(() => {
     const shouldOpen = searchParams.get('profileEdit') === '1';
@@ -79,45 +96,11 @@ function ProfilePageContent() {
   }, [pathname, router, searchParams]);
 
   useEffect(() => {
-    if (!profileModalOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeProfileModal();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
     return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
+      const u = avatarPreviewRef.current;
+      if (u.startsWith('blob:')) URL.revokeObjectURL(u);
     };
-  }, [profileModalOpen]);
-
-  useEffect(() => {
-    if (!aboutModalOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setAboutModalOpen(false);
-        setAboutModalFullscreen(false);
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
-    };
-  }, [aboutModalOpen]);
+  }, []);
 
   return (
     <section className={styles.page} aria-label="Профиль">
@@ -128,112 +111,126 @@ function ProfilePageContent() {
         ariaLabel="Разделы профиля"
       />
 
-      <div className={styles.previewPageTitlesOuter}>
-        <div className={styles.previewPageTitlesRow}>
-          <img
-            src="/images/placeholder.svg"
-            alt=""
-            className={styles.profileAvatar}
-            width={82}
-            height={82}
-          />
-          <div className={styles.profileTitlesCol}>
-            <span className={styles.profileCity}>Москва</span>
-            <h1 className={styles.profileName}>Имя пользователя</h1>
-            <span className={styles.profileServices}>Дизайн интерьера, комплектация</span>
+      {selectedIndex === PROFILE_TAB_INFO ? (
+        <>
+          <div className={styles.previewPageTitlesOuter}>
+            <div className={styles.previewPageTitlesRow}>
+              <img
+                src="/images/placeholder.svg"
+                alt=""
+                className={styles.profileAvatar}
+                width={82}
+                height={82}
+              />
+              <div className={styles.profileTitlesCol}>
+                <span className={styles.profileCity}>Москва</span>
+                <h1 className={styles.profileName}>Имя пользователя</h1>
+                <span className={styles.profileServices}>Дизайн интерьера, комплектация</span>
+              </div>
+              <button
+                type="button"
+                className={styles.editButton}
+                aria-label="Редактировать профиль"
+                onClick={() => {
+                  setProfileModalOpen(true);
+                }}
+              >
+                <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
+              </button>
+            </div>
+
+            <div className={styles.interactWrapper}>
+              <Button
+                type="button"
+                variant="secondary"
+                iconLeft="/icons/message.svg"
+                className={styles.requestsBtn}
+                aria-label="Запросы"
+              >
+                Запросы
+              </Button>
+              <div className={styles.interactItem}>
+                <img
+                  src="/icons/collections.svg"
+                  alt=""
+                  width={20}
+                  height={20}
+                  className={styles.interactIcon}
+                />
+                <span>12</span>
+              </div>
+              <div className={styles.interactItem}>
+                <img
+                  src="/icons/heart.svg"
+                  alt=""
+                  width={20}
+                  height={20}
+                  className={styles.interactIcon}
+                />
+                <span>48</span>
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            className={styles.editButton}
-            aria-label="Редактировать профиль"
-            onClick={() => {
-              setProfileModalOpen(true);
-            }}
-          >
-            <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
-          </button>
-        </div>
 
-        <div className={styles.interactWrapper}>
-          <Button
-            type="button"
-            variant="secondary"
-            iconLeft="/icons/message.svg"
-            className={styles.requestsBtn}
-            aria-label="Запросы"
-          >
-            Запросы
-          </Button>
-          <div className={styles.interactItem}>
-            <img
-              src="/icons/collections.svg"
-              alt=""
-              width={20}
-              height={20}
-              className={styles.interactIcon}
-            />
-            <span>12</span>
+          <div className={styles.previewImages}>
+            <div className={styles.previewImageSlot}>
+              <button
+                type="button"
+                className={styles.thumbZoomBtn}
+                aria-label="Открыть галерею во весь экран"
+              >
+                <img src="/icons/zoom-in.svg" alt="" aria-hidden />
+              </button>
+              <img
+                src="/images/placeholder.svg"
+                alt=""
+                className={styles.previewImage}
+                width={406}
+                height={393}
+              />
+            </div>
+            <div className={styles.previewImageSlot}>
+              <img
+                src="/images/placeholder.svg"
+                alt=""
+                className={styles.previewImage}
+                width={406}
+                height={393}
+              />
+            </div>
           </div>
-          <div className={styles.interactItem}>
-            <img
-              src="/icons/heart.svg"
-              alt=""
-              width={20}
-              height={20}
-              className={styles.interactIcon}
-            />
-            <span>48</span>
-          </div>
-        </div>
-      </div>
 
-      <div className={styles.previewImages}>
-        <div className={styles.previewImageSlot}>
-          <button
-            type="button"
-            className={styles.thumbZoomBtn}
-            aria-label="Открыть галерею во весь экран"
-          >
-            <img src="/icons/zoom-in.svg" alt="" aria-hidden />
-          </button>
-          <img
-            src="/images/placeholder.svg"
-            alt=""
-            className={styles.previewImage}
-            width={406}
-            height={393}
-          />
-        </div>
-        <div className={styles.previewImageSlot}>
-          <img
-            src="/images/placeholder.svg"
-            alt=""
-            className={styles.previewImage}
-            width={406}
-            height={393}
-          />
-        </div>
-      </div>
+          <section className={styles.aboutSection} aria-label="Подробнее о вас">
+            <div className={styles.aboutHeaderRow}>
+              <h2 className={styles.aboutTitle}>Подробнее о вас</h2>
+              <button
+                type="button"
+                className={styles.aboutEditButton}
+                aria-label="Редактировать раздел подробнее о вас"
+                onClick={() => {
+                  setAboutRichDraft(aboutRichValue);
+                  setAboutModalOpen(true);
+                  setAboutModalFullscreen(false);
+                }}
+              >
+                <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
+              </button>
+            </div>
 
-      <section className={styles.aboutSection} aria-label="Подробнее о вас">
-        <div className={styles.aboutHeaderRow}>
-          <h2 className={styles.aboutTitle}>Подробнее о вас</h2>
-          <button
-            type="button"
-            className={styles.aboutEditButton}
-            aria-label="Редактировать раздел подробнее о вас"
-            onClick={() => {
-              setAboutRichDraft(aboutRichValue);
-              setAboutModalOpen(true);
-              setAboutModalFullscreen(false);
-            }}
-          >
-            <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
-          </button>
-        </div>
+            <div className={`rich-content ${styles.aboutRichContent}`} dangerouslySetInnerHTML={{ __html: aboutRichValue }} />
+          </section>
+        </>
+      ) : null}
 
-        <div className={`rich-content ${styles.aboutRichContent}`} dangerouslySetInnerHTML={{ __html: aboutRichValue }} />
-      </section>
+      {selectedIndex === PROFILE_TAB_INCOME ? (
+        <section aria-label="Доход">
+          <p className={styles.tabPlaceholder}>
+            Раздел «Доход» появится здесь: бонусы, выплаты, отчёты. Сейчас данные не подключены.
+          </p>
+        </section>
+      ) : null}
+
+      {selectedIndex === PROFILE_TAB_SETTINGS ? <ProfileSettingsTab /> : null}
 
       {profileModalOpen ? (
         <>
@@ -267,8 +264,10 @@ function ProfilePageContent() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      const url = URL.createObjectURL(file);
-                      setAvatarPreview(url);
+                      setAvatarPreview((prev) => {
+                        if (prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                        return URL.createObjectURL(file);
+                      });
                       e.currentTarget.value = '';
                     }}
                   />
@@ -281,7 +280,10 @@ function ProfilePageContent() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setAvatarPreview('/images/placeholder.svg');
+                        setAvatarPreview((prev) => {
+                          if (prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                          return '/images/placeholder.svg';
+                        });
                       }}
                     >
                       ×
@@ -364,10 +366,7 @@ function ProfilePageContent() {
             type="button"
             className={styles.aboutModalBackdrop}
             aria-label="Закрыть редактирование"
-            onClick={() => {
-              setAboutModalOpen(false);
-              setAboutModalFullscreen(false);
-            }}
+            onClick={closeAboutModal}
           />
           <section
             className={`${styles.aboutModalPanel} ${aboutModalFullscreen ? styles.aboutModalPanelFullscreen : ''}`}
@@ -384,15 +383,7 @@ function ProfilePageContent() {
               >
                 {aboutModalFullscreen ? <CollapseIcon /> : <ExpIcon />}
               </button>
-              <button
-                type="button"
-                className={styles.aboutModalIconBtn}
-                onClick={() => {
-                  setAboutModalOpen(false);
-                  setAboutModalFullscreen(false);
-                }}
-                aria-label="Закрыть"
-              >
+              <button type="button" className={styles.aboutModalIconBtn} onClick={closeAboutModal} aria-label="Закрыть">
                 <CloseIcon />
               </button>
             </header>
@@ -408,7 +399,7 @@ function ProfilePageContent() {
                   variant="primary"
                   onClick={() => {
                     setAboutRichValue(aboutRichDraft);
-                    setAboutModalOpen(false);
+                    closeAboutModal();
                   }}
                 >
                   Сохранить

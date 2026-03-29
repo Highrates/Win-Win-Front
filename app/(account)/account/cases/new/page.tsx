@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/Button/Button';
+import { Button } from '@/components/Button';
 import { CaseBasicFields } from './components/CaseBasicFields';
 import { CaseCoverGridPicker } from './components/CaseCoverGridPicker';
 import { CaseRichDescription } from './components/CaseRichDescription';

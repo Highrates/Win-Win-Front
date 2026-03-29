@@ -1,0 +1,49 @@
+.tbtn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: none;
+  outline: var(--account-hairline-width) solid var(--account-hairline-color);
+  outline-offset: -0.25px;
+  background: var(--color-white);
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: 400;
+  color: var(--color-ink-black);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.tbtn:hover:not(:disabled) {
+  background: var(--color-bright-snow);
+}
+
+.tbtnGhost {
+  background: transparent;
+}
+
+.tbtnGhost:hover:not(:disabled) {
+  background: transparent;
+}
+
+.tbtn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.tbtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tbtnChevronDown {
+  flex-shrink: 0;
+  display: block;
+  transform: rotate(90deg);
+  object-fit: contain;
+  /* stroke в SVG чёрный — приближаем к --color-gray */
+  opacity: 0.62;
+}

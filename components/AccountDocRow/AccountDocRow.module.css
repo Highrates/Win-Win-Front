@@ -1,0 +1,41 @@
+.doc {
+  align-self: stretch;
+  padding: 16px;
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+  text-decoration: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.doc:hover {
+  background: var(--color-bright-snow);
+}
+
+.doc:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.docIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.docTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+}

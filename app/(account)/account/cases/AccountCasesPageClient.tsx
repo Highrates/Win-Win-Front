@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/Button/Button';
+import { Button } from '@/components/Button';
 import { SearchBox } from '@/components/SearchBox/SearchBox';
 import { CASES } from '@/lib/account/cases';
 import styles from './page.module.css';

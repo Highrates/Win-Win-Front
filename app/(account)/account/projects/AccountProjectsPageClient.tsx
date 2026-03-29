@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { AccountDetailedProductRow } from '@/components/AccountProductList/AccountDetailedProductRow';
+import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { ACCOUNT_PROJECT_NAMES } from '@/components/AccountProjectTabs/accountProjectNames';
-import { Button } from '@/components/Button/Button';
+import { Button } from '@/components/Button';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import styles from './page.module.css';
 
 const PROJECT_SECTION_TABS = [
@@ -67,20 +70,6 @@ const PROJECT_PRODUCTS: ProjectProduct[] = [
     size: 'Ø 35 см, H 165 см',
   },
 ];
-
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    const onChange = () => setMatches(media.matches);
-    onChange();
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
-  }, [query]);
-
-  return matches;
-}
 
 function CtaAccordionChevronIcon({ open }: { open: boolean }) {
   return (
@@ -281,71 +270,15 @@ export function AccountProjectsPageClient() {
         </button>
       </div>
 
-      <div className={styles.productCardDetailedWrapper}>
+      <div className={productListStyles.productCardDetailedWrapper}>
         {PROJECT_PRODUCTS.map((product) => (
-          <div key={product.id} className={styles.productCardDetailedRow}>
-            {selectionMode ? (
-              <input
-                type="checkbox"
-                className={styles.productCardCheckbox}
-                checked={selectedIds.has(product.id)}
-                onChange={(e) => onProductCheckChange(product.id, e.target.checked)}
-                aria-label={`Выбрать «${product.name}»`}
-              />
-            ) : null}
-            <div className={styles.productCardDetailed}>
-              <div className={styles.productCardDetailedImageWrap}>
-                <img
-                  src="/images/placeholder.svg"
-                  alt={product.name}
-                  className={styles.productCardDetailedImage}
-                />
-              </div>
-              <div className={styles.productCardDetailedBody}>
-                <div className={styles.productCardDetailedTitleRow}>
-                  <div className={styles.productCardDetailedTitleTexts}>
-                    <span className={styles.productCardDetailedName}>{product.name}</span>
-                    <span className={styles.productCardDetailedPrice}>
-                      {product.price}
-                      {'\u00A0'}₽
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`${styles.iconButton} ${styles.productCardDetailedTitleMore}`}
-                    aria-label={`Ещё по товару: ${product.name}`}
-                  >
-                    <img src="/icons/more.svg" alt="" width={20} height={20} aria-hidden />
-                  </button>
-                </div>
-                <div className={styles.productCardDetailedMeta}>
-                  <div className={styles.productCardDetailedMetaItem}>
-                    <span className={styles.productCardDetailedMetaLabel}>Цвет</span>
-                    <span>{product.color}</span>
-                  </div>
-                  <div className={styles.productCardDetailedMetaItem}>
-                    <span className={styles.productCardDetailedMetaLabel}>Материал</span>
-                    <span>{product.material}</span>
-                  </div>
-                  <div className={styles.productCardDetailedMetaItem}>
-                    <span className={styles.productCardDetailedMetaLabel}>Размер</span>
-                    <span>{product.size}</span>
-                  </div>
-                </div>
-                <div className={styles.productCardDetailedFooter}>
-                  <div className={styles.productCardDetailedQty}>
-                    <button type="button" className={styles.qtyButton} aria-label="Уменьшить количество">
-                      -
-                    </button>
-                    <span className={styles.qtyValue}>1</span>
-                    <button type="button" className={styles.qtyButton} aria-label="Увеличить количество">
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <AccountDetailedProductRow
+            key={product.id}
+            product={product}
+            selectionMode={selectionMode}
+            selected={selectedIds.has(product.id)}
+            onSelectedChange={(checked) => onProductCheckChange(product.id, checked)}
+          />
         ))}
       </div>
     </div>
