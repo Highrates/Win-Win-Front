@@ -8,6 +8,154 @@
   gap: 24px;
 }
 
+.pageTitle {
+  margin: 0;
+  font-family: var(--font-commissioner);
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  text-transform: uppercase;
+  color: var(--color-ink-black);
+}
+
+.headingCardWrap {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+  width: 100%;
+  margin-top: 32px;
+}
+
+.teammateCard {
+  align-self: stretch;
+  padding: 8px 14px 8px 8px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.teammateCardTrigger {
+  border: none;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.teammateCardTrigger:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.teammateCardChevron {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: block;
+  transform: rotate(90deg);
+  color: var(--color-gray);
+  transition: transform 0.2s ease;
+}
+
+.teammateCardChevronOpen {
+  transform: rotate(-90deg);
+}
+
+.teammateCardMain {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.teammateAvatar {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  object-fit: cover;
+  display: block;
+}
+
+.teammateTexts {
+  align-self: center;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.teammateExpandList .teammateTexts {
+  align-self: stretch;
+}
+
+.teammateName {
+  font-family: var(--font-commissioner);
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  color: var(--color-black);
+}
+
+.teammateCity {
+  font-family: var(--font-commissioner);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.teammateExpandList {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  padding-top: 16px;
+  padding-bottom: 24px;
+  padding-left: 46px;
+}
+
+.teammateBranchesStack {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.teammateBranchBlock {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.teammateBranchCount {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
 .topBar {
   align-self: stretch;
   display: inline-flex;
@@ -319,5 +467,19 @@
 
   .programLink {
     text-align: left;
+  }
+
+  .teammateCardMain {
+    gap: 16px;
+  }
+
+  .teammateCardChevron {
+    width: 18px;
+    height: 18px;
+  }
+
+  .teammateBranchCount {
+    font-size: var(--text-caption);
+    font-weight: var(--text-caption-weight);
   }
 }
