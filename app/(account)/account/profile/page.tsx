@@ -9,6 +9,7 @@ import { TextField } from '@/components/TextField';
 import textFieldStyles from '@/components/TextField/TextField.module.css';
 import { MultiSelectField } from '@/components/MultiSelectField';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
+import { ProfileIncomeTab } from './ProfileIncomeTab';
 import { ProfileSettingsTab } from './ProfileSettingsTab';
 import styles from './page.module.css';
 
@@ -224,9 +225,7 @@ function ProfilePageContent() {
 
       {selectedIndex === PROFILE_TAB_INCOME ? (
         <section aria-label="Доход">
-          <p className={styles.tabPlaceholder}>
-            Раздел «Доход» появится здесь: бонусы, выплаты, отчёты. Сейчас данные не подключены.
-          </p>
+          <ProfileIncomeTab />
         </section>
       ) : null}
 

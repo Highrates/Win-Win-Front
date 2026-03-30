@@ -661,6 +661,50 @@
   line-height: 1.5;
 }
 
+/* ——— Профиль: вкладка «Доход» (layout; таблица — классы из team/page.module.css) ——— */
+.incomeTab {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 24px;
+  width: 100%;
+}
+
+.incomeSheetWrapper {
+  margin-top: 0;
+}
+
+.incomeTeamSummary {
+  margin-bottom: 0;
+}
+
+.incomeTeamDetailsLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+  text-decoration: none;
+}
+
+.incomeTeamDetailsLink:hover {
+  color: var(--color-black);
+}
+
+.incomeTeamDetailsLink:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.incomeTeamDetailsLink img {
+  display: block;
+  flex-shrink: 0;
+}
+
 @media (min-width: 768px) {
   .aboutModalPanel {
     left: auto;
