@@ -1,4 +1,5 @@
 import { catalogPublicFetchNext } from './catalogCache';
+import { jsonFromResponse } from './jsonFromResponse';
 import { getServerApiBase } from './serverApiBase';
 
 /** `GET /catalog/categories/tree` */
@@ -39,7 +40,7 @@ export async function fetchCategoryTree(): Promise<{ roots: PublicCategoryTreeRo
   try {
     const res = await fetch(`${base}/catalog/categories/tree`, { next: catalogPublicFetchNext() });
     if (!res.ok) return { roots: [] };
-    return res.json();
+    return await jsonFromResponse(res, { roots: [] as PublicCategoryTreeRoot[] });
   } catch {
     return { roots: [] };
   }
@@ -51,29 +52,34 @@ export async function fetchPublicRootCategoriesForNav(): Promise<{ slug: string;
   try {
     const res = await fetch(`${base}/catalog/categories/roots`, { next: catalogPublicFetchNext() });
     if (!res.ok) return [];
-    const data = (await res.json()) as {
-      items: { slug: string; name: string; sortOrder: number }[];
-    };
+    const data = await jsonFromResponse<{ items: { slug: string; name: string; sortOrder: number }[] }>(
+      res,
+      { items: [] },
+    );
     return data.items.map(({ slug, name }) => ({ slug, name }));
   } catch {
     return [];
   }
 }
 
-/** `GET /catalog/categories/:parentSlug/children` */
-export async function fetchCategoryChildrenByParentSlug(parentSlug: string): Promise<{
+export type CategoryChildrenPayload = {
   parent: { slug: string; name: string };
   children: PublicCategoryTreeChild[];
-} | null> {
+};
+
+/** `GET /catalog/categories/:parentSlug/children` */
+export async function fetchCategoryChildrenByParentSlug(
+  parentSlug: string,
+): Promise<CategoryChildrenPayload | null> {
   const base = getServerApiBase();
   try {
     const res = await fetch(
       `${base}/catalog/categories/${encodeURIComponent(parentSlug)}/children`,
-      { next: catalogPublicFetchNext() }
+      { next: catalogPublicFetchNext() },
     );
     if (res.status === 404) return null;
     if (!res.ok) return null;
-    return res.json();
+    return await jsonFromResponse<CategoryChildrenPayload | null>(res, null);
   } catch {
     return null;
   }
@@ -89,8 +95,7 @@ export async function fetchCategoryBySlug(
     });
     if (res.status === 404) return null;
     if (!res.ok) return null;
-    const data = (await res.json()) as CatalogCategoryBySlugApi | null;
-    return data ?? null;
+    return await jsonFromResponse<CatalogCategoryBySlugApi | null>(res, null);
   } catch {
     return null;
   }
