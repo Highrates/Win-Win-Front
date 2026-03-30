@@ -1,33 +1,26 @@
 import type { Metadata } from 'next';
-import { CategoryCatalogContent } from './CategoryCatalogContent';
-
-const LIVING_ROOM_NAME = 'Гостиная';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { fetchPublicRootCategoriesForNav } from '@/lib/catalogPublic';
 
 export const metadata: Metadata = {
-  title: `${LIVING_ROOM_NAME} — Win-Win`,
-  description: `Каталог: ${LIVING_ROOM_NAME}`,
+  title: 'Каталог — Win-Win',
+  description: 'Каталог мебели и предметов интерьера',
 };
 
-type Props = {
-  searchParams: Promise<{ page?: string }>;
-};
+export default async function CategoriesPage() {
+  const roots = await fetchPublicRootCategoriesForNav();
 
-/** Родительская категория «Гостиная» — тот же макет, что у подкатегорий (`/categories/[slug]`). */
-export default async function CategoriesPage({ searchParams }: Props) {
-  const { page: pageParam } = await searchParams;
-  const currentPage = Math.max(1, parseInt(String(pageParam || '1'), 10) || 1);
+  if (roots.length === 0) {
+    return (
+      <main className="padding-global" style={{ paddingTop: '4rem', paddingBottom: '4rem' }}>
+        <p>Каталог пока пуст.</p>
+        <p style={{ marginTop: '1rem' }}>
+          <Link href="/">На главную</Link>
+        </p>
+      </main>
+    );
+  }
 
-  return (
-    <CategoryCatalogContent
-      categoryTitle={LIVING_ROOM_NAME}
-      parentCategoryName={null}
-      breadcrumbs={[
-        { label: 'Главная', href: '/', current: false },
-        { label: LIVING_ROOM_NAME, href: '', current: true },
-      ]}
-      paginationBasePath="/categories"
-      currentPage={currentPage}
-      showSubcategoryCardsStrip
-    />
-  );
+  redirect(`/categories/${roots[0].slug}`);
 }

@@ -101,6 +101,68 @@
   font-weight: 500;
 }
 
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navGroupRow {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.navChevronBtn {
+  flex-shrink: 0;
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-gray, #9d9d9d);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.navChevronBtn:hover {
+  background: var(--color-bright-snow, #f5f7f8);
+  color: var(--color-black, #1a1a1a);
+}
+
+.navChevronIcon {
+  transition: transform 0.2s ease;
+}
+
+.navChevronIcon[data-open] {
+  transform: rotate(180deg);
+}
+
+.navGroupLink {
+  flex: 1;
+  min-width: 0;
+}
+
+.navGroupTitle {
+  cursor: default;
+}
+
+.navSub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 4px 8px;
+  margin-left: 10px;
+  border-left: 1px solid var(--account-hairline-color, #e2e6e8);
+}
+
+.navSublink {
+  padding-left: 14px;
+  font-size: 0.9375rem;
+}
+
 .logout {
   margin-top: auto;
   padding: 10px 12px;

@@ -1,41 +1,45 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { useMemo } from 'react';
+import { useCatalogNavRoots } from '@/components/CatalogNavContext';
 import styles from './Footer.module.css';
 
-const menuColumns = [
-  {
-    title: 'Информация',
-    links: [
-      { href: '/about', label: 'O Win-Win' },
-      { href: '/delivery', label: 'Доставка и оплата' },
-      { href: '/warranty', label: 'Гарантия, обмен и возврат' },
-      { href: '/careers', label: 'Карьера' },
-      { href: '/sitemap', label: 'Карта сайта' },
-      { href: '/referral', label: 'Реферальная программа' },
-    ],
-  },
-  {
-    title: 'Каталог',
-    links: [
-      { href: '/about', label: 'O Win-Win' },
-      { href: '/delivery', label: 'Доставка и оплата' },
-      { href: '/warranty', label: 'Гарантия, обмен и возврат' },
-      { href: '/careers', label: 'Карьера' },
-      { href: '/sitemap', label: 'Карта сайта' },
-      { href: '/referral', label: 'Реферальная программа' },
-    ],
-  },
-  {
-    title: 'Партнерам',
-    links: [
-      { href: '/about', label: 'O Win-Win' },
-      { href: '/delivery', label: 'Доставка и оплата' },
-      { href: '/referral', label: 'Реферальная программа' },
-    ],
-  },
+const infoLinks = [
+  { href: '/about', label: 'O Win-Win' },
+  { href: '/delivery', label: 'Доставка и оплата' },
+  { href: '/warranty', label: 'Гарантия, обмен и возврат' },
+  { href: '/careers', label: 'Карьера' },
+  { href: '/sitemap', label: 'Карта сайта' },
+  { href: '/referral', label: 'Реферальная программа' },
+];
+
+const partnerLinks = [
+  { href: '/about', label: 'O Win-Win' },
+  { href: '/delivery', label: 'Доставка и оплата' },
+  { href: '/referral', label: 'Реферальная программа' },
 ];
 
 export function Footer() {
+  const catalogRoots = useCatalogNavRoots();
+
+  const menuColumns = useMemo(() => {
+    const catalogLinks =
+      catalogRoots.length > 0
+        ? catalogRoots.map((c) => ({ href: `/categories/${c.slug}`, label: c.name, key: c.slug }))
+        : [{ href: '/categories', label: 'Каталог', key: 'catalog-fallback' }];
+
+    return [
+      { title: 'Информация', links: infoLinks.map((l, i) => ({ ...l, key: `info-${i}` })) },
+      { title: 'Каталог', links: catalogLinks },
+      {
+        title: 'Партнерам',
+        links: partnerLinks.map((l, i) => ({ ...l, key: `partner-${i}` })),
+      },
+    ];
+  }, [catalogRoots]);
+
   return (
     <footer className={styles.footer}>
       <div className={styles.bg}>
@@ -48,7 +52,7 @@ export function Footer() {
                 alt=""
                 width={500}
                 height={300}
-                />
+              />
               <Image
                 src="/images/logo.svg"
                 alt="Win-Win"
@@ -64,7 +68,7 @@ export function Footer() {
                   <span className={styles.columnTitle}>{col.title}</span>
                   <div className={styles.columnLinks}>
                     {col.links.map((link) => (
-                      <Link key={link.href} href={link.href}>
+                      <Link key={link.key} href={link.href}>
                         {link.label}
                       </Link>
                     ))}

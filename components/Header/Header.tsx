@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useCatalogNavRoots } from '@/components/CatalogNavContext';
 import styles from './Header.module.css';
 
 const MENU_SECTIONS = [
@@ -17,8 +18,17 @@ const MOBILE_MENU_PANEL_ID = 'mobile-menu-panel';
 const BODY_SUPER_MENU_OPEN = 'header-super-menu-open';
 const BODY_MOBILE_MENU_OPEN = 'header-mobile-menu-open';
 
+const SUPER_MENU_FALLBACK_LINKS = [
+  'Гостиная',
+  'Столовая',
+  'Свет',
+  'Офис',
+  'Отель',
+  'Декор',
+  'Сад',
+] as const;
+
 const MOBILE_MENU_SUBLINKS: Record<string, string[]> = {
-  categories: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
   brands: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
   designers: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
   projects: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
@@ -77,6 +87,7 @@ export function Header({
   const setSuperMenuOpenRef = useRef(setSuperMenuOpen);
   const superMenuPanelRef = useRef<HTMLDivElement | null>(null);
   setSuperMenuOpenRef.current = setSuperMenuOpen;
+  const catalogRoots = useCatalogNavRoots();
 
   const closeSuperMenu = () => {
     if (!superMenuOpen || superMenuClosing) return;
@@ -347,7 +358,15 @@ export function Header({
             <nav className={styles.mobileMenuNav} aria-label="Основное меню">
               {MENU_SECTIONS.map(({ id, href, label }) => {
                 const isExpanded = mobileMenuExpandedId === id;
-                const sublinks = MOBILE_MENU_SUBLINKS[id] ?? [];
+                const sublinks =
+                  id === 'categories'
+                    ? catalogRoots.length > 0
+                      ? catalogRoots.map((c) => ({ href: `/categories/${c.slug}`, label: c.name }))
+                      : [{ href: '/categories', label: 'Каталог' }]
+                    : (MOBILE_MENU_SUBLINKS[id] ?? []).map((sublabel, i) => ({
+                        href: `${href}#${i}`,
+                        label: sublabel,
+                      }));
                 return (
                   <div key={id} className={styles.mobileMenuItem}>
                     <div
@@ -377,14 +396,14 @@ export function Header({
                           hidden={!isExpanded}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {sublinks.map((sublabel, i) => (
+                          {sublinks.map((sub, i) => (
                             <Link
-                              key={i}
-                              href={`${href}#${i}`}
+                              key={`${id}-${sub.href}-${i}`}
+                              href={sub.href}
                               className={styles.mobileMenuSublink}
                               onClick={closeMobileMenu}
                             >
-                              {sublabel}
+                              {sub.label}
                             </Link>
                           ))}
                           <Link href={href} className={styles.mobileMenuShowAll} onClick={closeMobileMenu}>
@@ -467,25 +486,43 @@ export function Header({
                 <div className={styles.superMenuSectionWrap}>
                   <div className={styles.superMenuLogoBlock} />
                   <ul className={styles.superMenuMenu} role="list">
-                    {[
-                      'Гостиная',
-                      'Столовая',
-                      'Свет',
-                      'Офис',
-                      'Отель',
-                      'Декор',
-                      'Сад',
-                    ].map((label, i) => (
-                      <li key={i}>
-                        <Link
-                          href={`${section.href}#${i}`}
-                          className={styles.superMenuItem}
-                          onClick={closeSuperMenu}
-                        >
-                          {label}
-                        </Link>
-                      </li>
-                    ))}
+                    {section.id === 'categories' ? (
+                      catalogRoots.length > 0 ? (
+                        catalogRoots.map((c) => (
+                          <li key={c.slug}>
+                            <Link
+                              href={`/categories/${c.slug}`}
+                              className={styles.superMenuItem}
+                              onClick={closeSuperMenu}
+                            >
+                              {c.name}
+                            </Link>
+                          </li>
+                        ))
+                      ) : (
+                        <li>
+                          <Link
+                            href="/categories"
+                            className={styles.superMenuItem}
+                            onClick={closeSuperMenu}
+                          >
+                            Каталог
+                          </Link>
+                        </li>
+                      )
+                    ) : (
+                      SUPER_MENU_FALLBACK_LINKS.map((label, i) => (
+                        <li key={i}>
+                          <Link
+                            href={`${section.href}#${i}`}
+                            className={styles.superMenuItem}
+                            onClick={closeSuperMenu}
+                          >
+                            {label}
+                          </Link>
+                        </li>
+                      ))
+                    )}
                   </ul>
                 </div>
                 <div className={styles.superMenuSectionItemsEnd}>

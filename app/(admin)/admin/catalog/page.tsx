@@ -1,8 +1,5 @@
-export default function AdminCatalogPage() {
-  return (
-    <main>
-      <h1>Каталог (админ)</h1>
-      <p>Категории, товары, импорт, синхронизация с Meilisearch</p>
-    </main>
-  );
+import { redirect } from 'next/navigation';
+
+export default function AdminCatalogRedirectPage() {
+  redirect('/admin/catalog/categories');
 }

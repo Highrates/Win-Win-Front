@@ -1,37 +1,67 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { homeRootsFromPublicTreeClient, type HomeCatalogRoot } from '@/lib/homeCatalog';
 import styles from './ScrollCatalog.module.css';
-
-/** Родительские разделы: href — реальные маршруты (не `/categories/<id>` из id). */
-const tabs = [
-  { id: 'living', label: 'Гостиная', active: true, href: '/categories' },
-  /* Пока нет отдельных страниц родителей — ведём в каталог; заменить href при появлении роутов */
-  { id: 'dining', label: 'Столовая', active: false, href: '/categories' },
-  { id: 'light', label: 'Свет', active: false, href: '/categories' },
-  { id: 'office', label: 'Офис', active: false, href: '/categories' },
-  { id: 'hotel', label: 'Отель', active: false, href: '/categories' },
-  { id: 'decor', label: 'Декор', active: false, href: '/categories' },
-  { id: 'garden', label: 'Сад', active: false, href: '/categories' },
-  { id: 'materials', label: 'Отделочные материалы', active: false, href: '/categories' },
-  { id: 'plumbing', label: 'Сантехника', active: false, href: '/categories' },
-];
-
-const catalogCards = [
-  { slug: 'divany', name: 'Диваны' },
-  { slug: 'kresla', name: 'Кресла' },
-  { slug: 'kofejnye-stoliki', name: 'Кофейные столики' },
-  { slug: 'shkafy', name: 'Консольные столики' },
-  { slug: 'knizhnye-shkafy', name: 'Книжные шкафы' },
-  { slug: 'vinnye-shkafy', name: 'Винные шкафы' },
-  { slug: 'stoly', name: 'Столы' },
-  { slug: 'pufy', name: 'Пуфы' },
-];
 
 const DRAG_THRESHOLD = 5;
 
-export function ScrollCatalog() {
+type Props = {
+  roots: HomeCatalogRoot[];
+};
+
+export function ScrollCatalog({ roots: initialRoots }: Props) {
+  const pathname = usePathname();
+  const [roots, setRoots] = useState<HomeCatalogRoot[]>(initialRoots);
+
+  const pullTree = useCallback(async () => {
+    try {
+      const res = await fetch('/api/catalog/tree', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.roots && Array.isArray(data.roots)) {
+        setRoots(homeRootsFromPublicTreeClient(data));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    setRoots(initialRoots);
+  }, [initialRoots]);
+
+  useEffect(() => {
+    pullTree();
+  }, [pathname, pullTree]);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') pullTree();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [pullTree]);
+
+  const [activeId, setActiveId] = useState<string>(() => initialRoots[0]?.id ?? '');
+
+  useEffect(() => {
+    if (!roots.length) {
+      setActiveId('');
+      return;
+    }
+    if (!roots.some((r) => r.id === activeId)) {
+      setActiveId(roots[0].id);
+    }
+  }, [roots, activeId]);
+
+  const activeRoot = useMemo(
+    () => roots.find((r) => r.id === activeId) ?? roots[0],
+    [roots, activeId]
+  );
+
   const wrapperRef = useRef<HTMLDivElement>(null);
   const didDragRef = useRef(false);
   const startXRef = useRef(0);
@@ -77,23 +107,41 @@ export function ScrollCatalog() {
     e.preventDefault();
   };
 
+  if (!roots.length) {
+    return null;
+  }
+
+  const stripCards =
+    activeRoot && activeRoot.children.length > 0
+      ? activeRoot.children.map((c) => ({ slug: c.slug, name: c.name, image: c.cardImageUrl }))
+      : activeRoot
+        ? [{ slug: activeRoot.slug, name: activeRoot.name, image: activeRoot.cardImageUrl }]
+        : [];
+
   return (
     <section className={styles.section}>
       <div className="padding-global">
-        <div className={styles.tabsWrapper}>
-          {tabs.map((tab) => (
+        <div className={styles.tabsWrapper} role="tablist" aria-label="Разделы каталога">
+          {roots.map((tab) => (
             <button
               key={tab.id}
               type="button"
-              className={tab.active ? styles.tabActive : styles.tab}
-              aria-pressed={tab.active}
+              role="tab"
+              id={`catalog-tab-${tab.id}`}
+              aria-selected={tab.id === activeId}
+              aria-controls="catalog-cards-panel"
+              className={tab.id === activeId ? styles.tabActive : styles.tab}
+              onClick={() => setActiveId(tab.id)}
             >
-              {tab.label}
+              {tab.name}
             </button>
           ))}
         </div>
       </div>
       <div
+        id="catalog-cards-panel"
+        role="tabpanel"
+        aria-labelledby={activeRoot ? `catalog-tab-${activeRoot.id}` : undefined}
         ref={wrapperRef}
         className={styles.cardsWrapper}
         onWheel={handleWheel}
@@ -103,7 +151,7 @@ export function ScrollCatalog() {
         onTouchStart={handlePointerDown}
         onTouchMove={handlePointerMove}
       >
-        {catalogCards.map((card, index) => (
+        {stripCards.map((card, index) => (
           <Link
             key={card.slug}
             href={`/categories/${card.slug}`}
@@ -118,7 +166,7 @@ export function ScrollCatalog() {
               }
             >
               <img
-                src="/images/placeholder.svg"
+                src={card.image}
                 alt=""
                 width={index === 0 || index === 3 ? 306 : 242}
                 height={220}
@@ -129,27 +177,22 @@ export function ScrollCatalog() {
           </Link>
         ))}
       </div>
-      {/* Мобильная версия: только родительские категории (табы) в виде карточек*/}
       <div className={styles.mobileWrapper}>
         <div className={styles.mobileCardsWrapper}>
-          {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={styles.mobileCard}
-              >
-                <div className={styles.mobileCardImgWrap}>
-                  <img
-                    src="/images/placeholder.svg"
-                    alt=""
-                    width={120}
-                    height={109}
-                    className={styles.mobileCardImg}
-                  />
-                </div>
-                <span className={styles.mobileCardTitle}>{tab.label}</span>
-              </Link>
-            ))}
+          {roots.map((tab) => (
+            <Link key={tab.id} href={`/categories/${tab.slug}`} className={styles.mobileCard}>
+              <div className={styles.mobileCardImgWrap}>
+                <img
+                  src={tab.cardImageUrl}
+                  alt=""
+                  width={120}
+                  height={109}
+                  className={styles.mobileCardImg}
+                />
+              </div>
+              <span className={styles.mobileCardTitle}>{tab.name}</span>
+            </Link>
+          ))}
         </div>
       </div>
     </section>

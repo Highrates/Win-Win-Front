@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
 import { ProductCard } from '@/components/ProductCard';
-import { ScrollCatalogCardsStrip } from '@/sections/home';
+import { CategoryCardsStrip, type CategoryCardItem } from './CategoryCardsStrip';
 import {
   CATEGORY_PER_PAGE,
   categoryCatalogPageHref,
@@ -26,6 +26,8 @@ type Props = {
   currentPage: number;
   /** Родительская категория: полоса карточек подкатегорий после превью */
   showSubcategoryCardsStrip?: boolean;
+  previewImageSrc?: string;
+  subcategoryItems?: CategoryCardItem[];
 };
 
 export function CategoryCatalogContent({
@@ -35,6 +37,8 @@ export function CategoryCatalogContent({
   paginationBasePath,
   currentPage,
   showSubcategoryCardsStrip = false,
+  previewImageSrc = '/images/placeholder.svg',
+  subcategoryItems,
 }: Props) {
   const allProducts = getCategoryMarketProducts(60);
   const totalPages = Math.ceil(allProducts.length / CATEGORY_PER_PAGE) || 1;
@@ -70,7 +74,7 @@ export function CategoryCatalogContent({
               </div>
             </div>
             <img
-              src="/images/placeholder.svg"
+              src={previewImageSrc}
               alt=""
               width={768}
               height={393}
@@ -80,11 +84,11 @@ export function CategoryCatalogContent({
         </div>
       </section>
 
-      {showSubcategoryCardsStrip && (
+      {showSubcategoryCardsStrip && subcategoryItems && subcategoryItems.length > 0 ? (
         <div className={styles.categoryScrollCatalogSlot} aria-label="Подкатегории">
-          <ScrollCatalogCardsStrip />
+          <CategoryCardsStrip items={subcategoryItems} />
         </div>
-      )}
+      ) : null}
 
       <section className={styles.marketSection} aria-label="Каталог товаров">
         <div className="padding-global">

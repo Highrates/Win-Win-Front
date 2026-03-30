@@ -1,10 +1,12 @@
+import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
 import { Hero, ScrollCatalog, BestBrands, News, Recommendations } from '@/sections/home';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const catalogRoots = await fetchHomeCatalogRoots();
   return (
     <main>
       <Hero />
-      <ScrollCatalog />
+      <ScrollCatalog roots={catalogRoots} />
       <BestBrands />
       <News />
       <Recommendations />
