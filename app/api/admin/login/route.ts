@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   ADMIN_ACCESS_TOKEN_COOKIE,
   ADMIN_TOKEN_MAX_AGE_SEC,
+  adminCookieSecure,
 } from '@/lib/adminAuth';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     name: ADMIN_ACCESS_TOKEN_COOKIE,
     value: token,
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: adminCookieSecure(request),
     sameSite: 'lax',
     path: '/',
     maxAge: ADMIN_TOKEN_MAX_AGE_SEC,

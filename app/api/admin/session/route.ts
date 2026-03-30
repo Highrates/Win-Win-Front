@@ -1,10 +1,10 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/adminAuth';
+import { ADMIN_ACCESS_TOKEN_COOKIE, adminCookieSecure } from '@/lib/adminAuth';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
 /** Проверка cookie и валидности сессии на бэкенде. */
-export async function GET() {
+export async function GET(request: Request) {
   const token = cookies().get(ADMIN_ACCESS_TOKEN_COOKIE)?.value;
   if (!token) {
     return NextResponse.json({ authenticated: false });
@@ -27,7 +27,7 @@ export async function GET() {
       name: ADMIN_ACCESS_TOKEN_COOKIE,
       value: '',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: adminCookieSecure(request),
       sameSite: 'lax',
       path: '/',
       maxAge: 0,
