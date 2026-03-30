@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation';
 import { HeaderWrapper } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
-/** Пути без хедера и футера (страницы auth). */
-const NO_CHROME_PREFIXES = ['/login', '/register'];
+/** Пути без хедера и футера (страницы auth и админка со своим layout). */
+const NO_CHROME_PREFIXES = ['/login', '/register', '/admin'];
 
 function shouldHideChrome(pathname: string) {
   return NO_CHROME_PREFIXES.some(

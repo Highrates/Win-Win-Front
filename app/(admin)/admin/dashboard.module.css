@@ -1,0 +1,56 @@
+.title {
+  margin: 0 0 8px;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: var(--h2-size, 1.5rem);
+  font-weight: var(--h2-weight, 600);
+  text-transform: uppercase;
+  color: var(--color-ink-black, #051826);
+}
+
+.lead {
+  margin: 0 0 28px;
+  max-width: 42rem;
+  font-size: var(--text-body, 1rem);
+  color: var(--color-gray, #9d9d9d);
+  line-height: 1.5;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 16px;
+  min-height: 100px;
+  border-radius: 10px;
+  background: var(--color-white, #fff);
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 6px 20px rgba(5, 24, 38, 0.08);
+}
+
+.cardTitle {
+  font-family: var(--font-commissioner, system-ui);
+  font-size: var(--text-card-16-400, 1rem);
+  font-weight: 500;
+  color: var(--color-black, #1a1a1a);
+}
+
+.cardNote {
+  font-size: var(--text-caption, 0.875rem);
+  color: var(--color-gray, #9d9d9d);
+  line-height: 1.4;
+}

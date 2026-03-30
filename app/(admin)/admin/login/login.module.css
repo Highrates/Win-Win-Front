@@ -1,0 +1,64 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--color-bright-snow, #f5f7f8);
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 28px;
+  border-radius: 10px;
+  background: var(--color-white, #fff);
+  box-shadow: 0 8px 24px rgba(5, 24, 38, 0.08);
+}
+
+.title {
+  margin: 0 0 8px;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: var(--h3-size, 1.25rem);
+  font-weight: var(--h3-weight, 600);
+  text-transform: uppercase;
+  color: var(--color-ink-black, #051826);
+}
+
+.hint {
+  margin: 0 0 24px;
+  font-size: var(--text-caption, 0.875rem);
+  color: var(--color-gray, #9d9d9d);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-caption, 0.875rem);
+  color: var(--color-red, #c53029);
+  line-height: 1.45;
+}
+
+.submit {
+  margin-top: 4px;
+  width: 100%;
+}
+
+.footer {
+  margin: 24px 0 0;
+  text-align: center;
+  font-size: var(--text-caption, 0.875rem);
+}
+
+.footer a {
+  color: var(--color-gray, #9d9d9d);
+}
+
+.footer a:hover {
+  color: var(--color-black, #1a1a1a);
+}
