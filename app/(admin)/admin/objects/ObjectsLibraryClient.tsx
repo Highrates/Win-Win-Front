@@ -159,7 +159,6 @@ export function ObjectsLibraryClient() {
                 onClick={() => setFolderFilter(f.id)}
               >
                 {f.name}
-                <span className={styles.cardMeta}> · {f._count.objects}</span>
               </button>
               <button
                 type="button"
