@@ -4,8 +4,8 @@ export type TBtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children: React.ReactNode;
   /** Стрелка вниз справа (иконка как `/icons/arrow.svg`, 18×18, серый stroke). */
   trailingChevronDown?: boolean;
-  /** Прозрачный фон (без заливки и без hover-фона). */
-  variant?: 'default' | 'ghost';
+  /** Прозрачный фон, без рамки. */
+  variant?: 'default' | 'ghost' | 'danger';
 };
 
 function ChevronDownIcon() {
@@ -30,7 +30,8 @@ export function TBtn({
   variant = 'default',
   ...rest
 }: TBtnProps) {
-  const variantClass = variant === 'ghost' ? styles.tbtnGhost : '';
+  const variantClass =
+    variant === 'ghost' ? styles.tbtnGhost : variant === 'danger' ? styles.tbtnDanger : '';
   return (
     <button
       type={type}

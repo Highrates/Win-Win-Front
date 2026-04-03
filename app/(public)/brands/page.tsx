@@ -4,10 +4,15 @@ import type { Metadata } from 'next';
 import { SearchBox } from '@/components/SearchBox/SearchBox';
 import {
   ALL_BRANDS_TABS,
-  BRANDS,
   chunkColumns,
   groupBrandsByLetter,
 } from '@/lib/public/brands';
+import {
+  brandCoverImageUrl,
+  brandsSortedAlphabetically,
+  featuredBrandsWithCover,
+  fetchPublicBrands,
+} from '@/lib/brandsPublic';
 import styles from './BrandsPage.module.css';
 
 export const metadata: Metadata = {
@@ -25,6 +30,13 @@ export default async function BrandsPage({ searchParams }: Props) {
     categoryParam && ALL_BRANDS_TABS.some((t) => t.id === categoryParam)
       ? categoryParam
       : 'all';
+
+  const brands = await fetchPublicBrands();
+  const featured = featuredBrandsWithCover(brands, 8);
+  const forAlphabet = brandsSortedAlphabetically(brands).map((b) => ({
+    slug: b.slug,
+    name: b.name,
+  }));
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -72,24 +84,33 @@ export default async function BrandsPage({ searchParams }: Props) {
               })}
             </nav>
 
-            <div className={styles.brandCardsWrapper}>
-              {BRANDS.slice(0, 8).map((brand) => (
-                <Link
-                  key={brand.slug}
-                  href={`/brands/${brand.slug}`}
-                  className={styles.brandCard}
-                >
-                  <img
-                    src="/images/placeholder.svg"
-                    alt=""
-                    className={styles.brandCardImage}
-                    width={320}
-                    height={320}
-                  />
-                  <span className={styles.brandCardName}>{brand.name}</span>
-                </Link>
-              ))}
-            </div>
+            {featured.length > 0 ? (
+              <div className={styles.brandCardsWrapper}>
+                {featured.map((brand) => {
+                  const src = brandCoverImageUrl(brand) ?? '/images/placeholder.svg';
+                  return (
+                    <Link
+                      key={brand.slug}
+                      href={`/brands/${brand.slug}`}
+                      className={styles.brandCard}
+                    >
+                      <img
+                        src={src}
+                        alt=""
+                        className={styles.brandCardImage}
+                        width={320}
+                        height={320}
+                      />
+                      <span className={styles.brandCardName}>{brand.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={styles.emptyFeatured}>
+                Пока нет брендов с обложкой для этого блока — ниже полный список по алфавиту.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -101,9 +122,9 @@ export default async function BrandsPage({ searchParams }: Props) {
         <div className="padding-global">
           <div className={styles.allBrandsWrapper}>
             {(() => {
-              const byLetter = groupBrandsByLetter(BRANDS);
+              const byLetter = groupBrandsByLetter(forAlphabet);
               const letters = Array.from(byLetter.keys()).sort((a, b) =>
-                a.localeCompare(b)
+                a.localeCompare(b, 'ru'),
               );
               return letters.map((letter) => {
                 const list = byLetter.get(letter)!;

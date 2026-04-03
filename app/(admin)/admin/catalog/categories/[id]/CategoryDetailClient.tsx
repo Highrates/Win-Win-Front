@@ -4,11 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
-import {
-  adminBackendJson,
-  adminUploadCategoryImage,
-  revalidatePublicCatalogCache,
-} from '@/lib/adminBackendFetch';
+import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import styles from '../../catalogAdmin.module.css';
 import { SubcategoriesDnD, type SubcatRow } from './SubcategoriesDnD';
 
@@ -31,6 +28,7 @@ type CategoryDetail = {
   seoTitle: string | null;
   seoDescription: string | null;
   backgroundImageUrl: string | null;
+  backgroundMediaObjectId: string | null;
   parent: { id: string; name: string; slug: string } | null;
   children: SubcatRow[];
   products: ProductBrief[];
@@ -58,7 +56,8 @@ export function CategoryDetailClient({ id }: { id: string }) {
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [backgroundMediaObjectId, setBackgroundMediaObjectId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -74,6 +73,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
       setSeoTitle(row.seoTitle ?? '');
       setSeoDescription(row.seoDescription ?? '');
       setBackgroundImageUrl(row.backgroundImageUrl ?? '');
+      setBackgroundMediaObjectId(row.backgroundMediaObjectId ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не найдено');
       setData(null);
@@ -86,30 +86,16 @@ export function CategoryDetailClient({ id }: { id: string }) {
     load();
   }, [load]);
 
-  async function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    setUploading(true);
+  function clearCover() {
+    setBackgroundImageUrl('');
+    setBackgroundMediaObjectId(null);
     setSaveMsg(null);
-    try {
-      const { url } = await adminUploadCategoryImage(f);
-      setBackgroundImageUrl(url);
-    } catch (err) {
-      setSaveMsg(err instanceof Error ? err.message : 'Не удалось загрузить файл');
-    } finally {
-      setUploading(false);
-    }
   }
 
   async function saveMeta(e: React.FormEvent) {
     e.preventDefault();
     if (!data) return;
-    const bg = backgroundImageUrl.trim();
-    if (!bg) {
-      setSaveMsg('Загрузите фоновое изображение — поле обязательно.');
-      return;
-    }
+    const bgTrim = backgroundImageUrl.trim();
     setSaving(true);
     setSaveMsg(null);
     try {
@@ -121,10 +107,12 @@ export function CategoryDetailClient({ id }: { id: string }) {
           isActive,
           seoTitle: seoTitle.trim() || null,
           seoDescription: seoDescription.trim() || null,
-          backgroundImageUrl: bg,
+          backgroundImageUrl: bgTrim || null,
+          backgroundMediaObjectId: bgTrim ? backgroundMediaObjectId ?? null : null,
         }),
       });
       setData(updated);
+      setBackgroundMediaObjectId(updated.backgroundMediaObjectId ?? null);
       setSaveMsg('Сохранено');
       await revalidatePublicCatalogCache();
       router.refresh();
@@ -152,6 +140,18 @@ export function CategoryDetailClient({ id }: { id: string }) {
 
   return (
     <main>
+      <MediaLibraryPickerModal
+        open={pickerOpen}
+        title="Обложка категории — выберите изображение"
+        mediaFilter="image"
+        onClose={() => setPickerOpen(false)}
+        onPick={(sel) => {
+          setBackgroundImageUrl(sel.url);
+          setBackgroundMediaObjectId(sel.id);
+          setSaveMsg(null);
+          setPickerOpen(false);
+        }}
+      />
       <p className={styles.backRow}>
         <Link href="/admin/catalog/categories" className={styles.backLink}>
           ← Категории
@@ -173,7 +173,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
             type="submit"
             form={CATEGORY_FORM_ID}
             className={`${styles.btn} ${styles.btnPrimary}`}
-            disabled={saving || !backgroundImageUrl.trim()}
+            disabled={saving}
           >
             {saving ? 'Сохранение…' : 'Сохранить'}
           </button>
@@ -190,8 +190,8 @@ export function CategoryDetailClient({ id }: { id: string }) {
             <img src={backgroundImageUrl} alt="" />
           </div>
         ) : (
-          <p className={styles.error}>
-            Фоновое изображение не задано — загрузите файл и сохраните (поле обязательно для витрины).
+          <p className={styles.muted}>
+            Обложка не задана — при необходимости выберите изображение в форме ниже и сохраните.
           </p>
         )}
       </div>
@@ -237,10 +237,23 @@ export function CategoryDetailClient({ id }: { id: string }) {
           />
         </label>
         <div className={styles.label}>
-          Фоновое изображение <span className={styles.muted}>(обязательно)</span>
+          Обложка
           <div className={styles.fileRow}>
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPickImage} />
-            {uploading ? <span className={styles.muted}>Загрузка…</span> : null}
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnPrimary}`}
+              onClick={() => {
+                setSaveMsg(null);
+                setPickerOpen(true);
+              }}
+            >
+              Выбрать из медиатеки
+            </button>
+            {backgroundImageUrl.trim() ? (
+              <button type="button" className={styles.btn} onClick={clearCover}>
+                Убрать обложку
+              </button>
+            ) : null}
           </div>
         </div>
       </form>

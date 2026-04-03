@@ -1,0 +1,163 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 2vw, 24px);
+  background: rgba(5, 24, 38, 0.45);
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  width: min(1120px, 96vw);
+  max-height: min(90vh, 880px);
+  border-radius: 14px;
+  background: var(--color-white, #fff);
+  box-shadow: 0 24px 64px rgba(5, 24, 38, 0.22);
+  overflow: hidden;
+  font-family: var(--font-commissioner, system-ui);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--account-hairline-color, #e2e6e8);
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-ink-black, #051826);
+}
+
+.closeBtn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-bright-snow, #f5f7f8);
+  color: var(--color-ink-black, #051826);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.closeBtn:hover {
+  background: var(--account-hairline-color, #e2e6e8);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 20px;
+  padding: 16px 20px 12px;
+  overflow: hidden;
+}
+
+.bodyInner {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.filterHint {
+  margin: 0 0 12px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-gray, #9d9d9d);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--account-hairline-color, #e2e6e8);
+  flex-shrink: 0;
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+}
+
+/**
+ * Одна высота с основной кнопкой (Button): min-height + те же отступы, что у .btn.
+ */
+.footerActionBtn {
+  min-height: 46px;
+  box-sizing: border-box;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px !important;
+  border-radius: 8px;
+}
+
+.cardSelectable {
+  cursor: pointer;
+  text-align: left;
+}
+
+.cardSelectable:focus,
+.cardSelectable:focus-visible {
+  outline: none;
+}
+
+.selectedBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-white, #fff);
+  box-shadow: 0 1px 5px rgba(5, 24, 38, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-blue, #3d83f6);
+  pointer-events: none;
+}
+
+.selectedBadge svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.mainScroll {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding-bottom: 8px;
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

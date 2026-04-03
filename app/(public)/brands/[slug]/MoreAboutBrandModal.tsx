@@ -39,9 +39,17 @@ type Props = {
   linkClassName: string;
   textClassName: string;
   arrowClassName: string;
+  /** HTML из админки (RichBlock); без контента кнопка не показывается. */
+  bodyHtml?: string | null;
 };
 
-export function MoreAboutBrandModal({ linkClassName, textClassName, arrowClassName }: Props) {
+export function MoreAboutBrandModal({
+  linkClassName,
+  textClassName,
+  arrowClassName,
+  bodyHtml,
+}: Props) {
+  const hasBody = Boolean(bodyHtml?.trim());
   const [open, setOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -79,6 +87,8 @@ export function MoreAboutBrandModal({ linkClassName, textClassName, arrowClassNa
       body.style.overflow = prevBodyOverflow;
     };
   }, [open, closeModal]);
+
+  if (!hasBody || !bodyHtml) return null;
 
   if (!open) {
     return (
@@ -134,23 +144,10 @@ export function MoreAboutBrandModal({ linkClassName, textClassName, arrowClassNa
         </header>
         <div className={styles.modalContent}>
           <div className="padding-global">
-            <div className={`${styles.richContent} rich-content`}>
-              <h2>О бренде</h2>
-              <p>
-                Продукция компании охватывает все жилые зоны и включает различные виды мебели: диваны, чайные столики, обеденные столы и кровати.
-              </p>
-              <div>
-                <img src="/images/placeholder.svg" alt="" width={640} height={360} />
-              </div>
-              <h3>Коллекции</h3>
-              <p>
-                Мы сотрудничаем с ведущими дизайнерами и производителями. В каталоге представлены предметы для гостиной, столовой, спальни и кабинета.
-              </p>
-              <h3>Качество и доставка</h3>
-              <p>
-                Все изделия проходят контроль качества. Доставка по России и СНГ. Гарантия и сервисное обслуживание.
-              </p>
-            </div>
+            <div
+              className={`${styles.richContent} rich-content`}
+              dangerouslySetInnerHTML={{ __html: bodyHtml }}
+            />
           </div>
         </div>
       </div>

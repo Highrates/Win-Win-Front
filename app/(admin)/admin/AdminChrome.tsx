@@ -27,6 +27,7 @@ const NAV_HREFS = [
   '/admin/clients',
   '/admin/orders',
   '/admin/brands',
+  '/admin/objects',
   '/admin/blog',
   '/admin/referrals',
   '/admin/pages',

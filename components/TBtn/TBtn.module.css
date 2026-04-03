@@ -23,10 +23,22 @@
 
 .tbtnGhost {
   background: transparent;
+  outline: none;
 }
 
 .tbtnGhost:hover:not(:disabled) {
   background: transparent;
+}
+
+.tbtnDanger {
+  color: var(--color-red, #c53029);
+  outline: var(--account-hairline-width) solid #e8bcbc;
+  outline-offset: -0.25px;
+  background: var(--color-white);
+}
+
+.tbtnDanger:hover:not(:disabled) {
+  background: #fdf5f5;
 }
 
 .tbtn:focus-visible {

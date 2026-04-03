@@ -265,6 +265,12 @@
   text-decoration: underline;
 }
 
+.emptyFeatured {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+}
+
 @media (max-width: 768px) {
   .brandCardImage {
     max-height: 148px;

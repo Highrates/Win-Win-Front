@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useBrandsNavMenu } from '@/components/BrandsNavContext';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
 import styles from './Header.module.css';
 
@@ -29,7 +30,6 @@ const SUPER_MENU_FALLBACK_LINKS = [
 ] as const;
 
 const MOBILE_MENU_SUBLINKS: Record<string, string[]> = {
-  brands: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
   designers: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
   projects: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
 };
@@ -88,6 +88,7 @@ export function Header({
   const superMenuPanelRef = useRef<HTMLDivElement | null>(null);
   setSuperMenuOpenRef.current = setSuperMenuOpen;
   const catalogRoots = useCatalogNavRoots();
+  const brandsMenuItems = useBrandsNavMenu();
 
   const closeSuperMenu = () => {
     if (!superMenuOpen || superMenuClosing) return;
@@ -363,10 +364,14 @@ export function Header({
                     ? catalogRoots.length > 0
                       ? catalogRoots.map((c) => ({ href: `/categories/${c.slug}`, label: c.name }))
                       : [{ href: '/categories', label: 'Каталог' }]
-                    : (MOBILE_MENU_SUBLINKS[id] ?? []).map((sublabel, i) => ({
-                        href: `${href}#${i}`,
-                        label: sublabel,
-                      }));
+                    : id === 'brands'
+                      ? brandsMenuItems.length > 0
+                        ? brandsMenuItems.map((b) => ({ href: `/brands/${b.slug}`, label: b.name }))
+                        : [{ href: '/brands', label: 'Бренды' }]
+                      : (MOBILE_MENU_SUBLINKS[id] ?? []).map((sublabel, i) => ({
+                          href: `${href}#${i}`,
+                          label: sublabel,
+                        }));
                 return (
                   <div key={id} className={styles.mobileMenuItem}>
                     <div
@@ -507,6 +512,30 @@ export function Header({
                             onClick={closeSuperMenu}
                           >
                             Каталог
+                          </Link>
+                        </li>
+                      )
+                    ) : section.id === 'brands' ? (
+                      brandsMenuItems.length > 0 ? (
+                        brandsMenuItems.map((b) => (
+                          <li key={b.slug}>
+                            <Link
+                              href={`/brands/${b.slug}`}
+                              className={styles.superMenuItem}
+                              onClick={closeSuperMenu}
+                            >
+                              {b.name}
+                            </Link>
+                          </li>
+                        ))
+                      ) : (
+                        <li>
+                          <Link
+                            href="/brands"
+                            className={styles.superMenuItem}
+                            onClick={closeSuperMenu}
+                          >
+                            Бренды
                           </Link>
                         </li>
                       )

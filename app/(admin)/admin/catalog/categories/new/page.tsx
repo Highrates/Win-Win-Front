@@ -4,11 +4,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
-import {
-  adminBackendJson,
-  adminUploadCategoryImage,
-  revalidatePublicCatalogCache,
-} from '@/lib/adminBackendFetch';
+import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import styles from '../../catalogAdmin.module.css';
 
 function NewCategoryForm() {
@@ -22,45 +19,35 @@ function NewCategoryForm() {
   const [seoDescription, setSeoDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [backgroundMediaObjectId, setBackgroundMediaObjectId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  async function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    setUploading(true);
+  function clearCover() {
+    setBackgroundImageUrl('');
+    setBackgroundMediaObjectId(null);
     setError(null);
-    try {
-      const { url } = await adminUploadCategoryImage(f);
-      setBackgroundImageUrl(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось загрузить файл');
-    } finally {
-      setUploading(false);
-    }
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const bg = backgroundImageUrl.trim();
-    if (!bg) {
-      setError('Загрузите фоновое изображение — поле обязательно.');
-      return;
-    }
     setSaving(true);
     setError(null);
+    const bgTrim = backgroundImageUrl.trim();
     try {
       const body: Record<string, unknown> = {
         name: name.trim(),
         isActive,
-        backgroundImageUrl: bg,
         ...(slug.trim() ? { slug: slug.trim() } : {}),
         ...(parentId ? { parentId } : {}),
         ...(seoTitle.trim() ? { seoTitle: seoTitle.trim() } : {}),
         ...(seoDescription.trim() ? { seoDescription: seoDescription.trim() } : {}),
       };
+      if (bgTrim) {
+        body.backgroundImageUrl = bgTrim;
+        if (backgroundMediaObjectId) body.backgroundMediaObjectId = backgroundMediaObjectId;
+      }
       const created = await adminBackendJson<{ id: string }>('catalog/admin/categories', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -77,6 +64,18 @@ function NewCategoryForm() {
 
   return (
     <main>
+      <MediaLibraryPickerModal
+        open={pickerOpen}
+        title="Обложка категории — выберите изображение"
+        mediaFilter="image"
+        onClose={() => setPickerOpen(false)}
+        onPick={(sel) => {
+          setBackgroundImageUrl(sel.url);
+          setBackgroundMediaObjectId(sel.id);
+          setError(null);
+          setPickerOpen(false);
+        }}
+      />
       <p className={styles.backRow}>
         <Link
           className={styles.backLink}
@@ -139,10 +138,23 @@ function NewCategoryForm() {
           />
         </label>
         <div className={styles.label}>
-          Фоновое изображение <span className={styles.muted}>(обязательно)</span>
+          Обложка <span className={styles.muted}>(необязательно)</span>
           <div className={styles.fileRow}>
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onPickImage} />
-            {uploading ? <span className={styles.muted}>Загрузка…</span> : null}
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnPrimary}`}
+              onClick={() => {
+                setError(null);
+                setPickerOpen(true);
+              }}
+            >
+              Выбрать из медиатеки
+            </button>
+            {backgroundImageUrl.trim() ? (
+              <button type="button" className={styles.btn} onClick={clearCover}>
+                Убрать обложку
+              </button>
+            ) : null}
           </div>
           {backgroundImageUrl ? (
             <div className={styles.bgPreview} style={{ marginTop: 10 }}>
@@ -154,7 +166,7 @@ function NewCategoryForm() {
           <button
             type="submit"
             className={`${styles.btn} ${styles.btnPrimary}`}
-            disabled={saving || !backgroundImageUrl.trim()}
+            disabled={saving}
           >
             {saving ? 'Сохранение…' : 'Создать'}
           </button>

@@ -1,8 +1,11 @@
-/** Этап 3: Управление брендами */
+import styles from '../catalog/catalogAdmin.module.css';
+import { BrandsListClient } from './BrandsListClient';
+
 export default function AdminBrandsPage() {
   return (
     <main>
-      <h1>Управление брендами</h1>
+      <h1 className={styles.title}>Бренды</h1>
+      <BrandsListClient />
     </main>
   );
 }

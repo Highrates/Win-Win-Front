@@ -1,49 +1,76 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
+import type { ComponentType } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import styles from './RichBlock.module.css';
 import 'react-quill/dist/quill.snow.css';
 
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-const ReactQuillWithRef = ReactQuill as any;
+/** Без next/dynamic: Loadable не пробрасывает ref на классовый ReactQuill → warning в консоли. */
+
+export type RichBlockUploadMedia = (file: File, type: 'image' | 'video') => Promise<string>;
+
+/** Выбор уже загруженного файла из медиатеки (админ). Возвращает публичный URL или null при отмене. */
+export type RichBlockPickMediaFromLibrary = (kind: 'image' | 'video') => Promise<string | null>;
 
 type RichBlockProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Если задано — изображения/видео грузятся на сервер (S3), в HTML попадают URL, а не base64. */
+  uploadMedia?: RichBlockUploadMedia;
+  /** Если задано — «+ Изображение / + Видео» открывают выбор из медиатеки вместо файла с диска. */
+  pickMediaFromLibrary?: RichBlockPickMediaFromLibrary;
+  /** Дополнительно к сообщению под тулбаром (например, общий toast в родителе). */
+  onUploadError?: (message: string) => void;
 };
 
-export function RichBlock({ value, onChange, placeholder }: RichBlockProps) {
+export function RichBlock({
+  value,
+  onChange,
+  placeholder,
+  uploadMedia,
+  pickMediaFromLibrary,
+  onUploadError,
+}: RichBlockProps) {
+  const fieldId = useId();
+  const imageInputId = `${fieldId}-rich-img`;
+  const videoInputId = `${fieldId}-rich-vid`;
+
   const [selectedMediaEl, setSelectedMediaEl] = useState<HTMLElement | null>(null);
   const [activeSizePreset, setActiveSizePreset] = useState<'small' | 'medium' | 'full' | null>(null);
   const [activeAlignPreset, setActiveAlignPreset] = useState<'left' | 'center' | 'right' | 'wrap' | null>(null);
+  const [uploadBusy, setUploadBusy] = useState<'image' | 'video' | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const reactQuillRef = useRef<any>(null);
+  const [QuillEditor, setQuillEditor] = useState<ComponentType<Record<string, unknown>> | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
+    void (async () => {
       const rq = await import('react-quill');
+      if (!mounted) return;
       const Quill = rq.Quill;
-      if (!Quill || !mounted) return;
-      const BlockEmbed = Quill.import('blots/block/embed');
-      class CaseVideoBlot extends BlockEmbed {
-        static blotName = 'caseVideo';
-        static tagName = 'video';
-        static className = 'case-rich-media-video';
-        static create(src: string) {
-          const node = super.create() as HTMLVideoElement;
-          node.setAttribute('src', src);
-          node.setAttribute('controls', 'true');
-          node.setAttribute('playsinline', 'true');
-          node.setAttribute('preload', 'metadata');
-          return node;
+      if (Quill) {
+        const BlockEmbed = Quill.import('blots/block/embed');
+        class CaseVideoBlot extends BlockEmbed {
+          static blotName = 'caseVideo';
+          static tagName = 'video';
+          static className = 'case-rich-media-video';
+          static create(src: string) {
+            const node = super.create() as HTMLVideoElement;
+            node.setAttribute('src', src);
+            node.setAttribute('controls', 'true');
+            node.setAttribute('playsinline', 'true');
+            node.setAttribute('preload', 'metadata');
+            return node;
+          }
+          static value(node: HTMLVideoElement) {
+            return node.getAttribute('src') || '';
+          }
         }
-        static value(node: HTMLVideoElement) {
-          return node.getAttribute('src') || '';
-        }
+        Quill.register(CaseVideoBlot, true);
       }
-      Quill.register(CaseVideoBlot, true);
+      setQuillEditor(() => rq.default as ComponentType<Record<string, unknown>>);
     })();
     return () => {
       mounted = false;
@@ -121,34 +148,82 @@ export function RichBlock({ value, onChange, placeholder }: RichBlockProps) {
 
   const getQuillEditor = () => reactQuillRef.current?.getEditor?.() ?? null;
 
+  function insertSrcAtCursor(src: string, kind: 'image' | 'video') {
+    const quill = getQuillEditor();
+    if (!quill) {
+      if (kind === 'image') {
+        onChange(`${value}<p><img src="${src}" alt="" /></p>`);
+      } else {
+        onChange(`${value}<p><video class="case-rich-media-video" controls src="${src}"></video></p>`);
+      }
+      return;
+    }
+    const range = quill.getSelection(true);
+    const index = range ? range.index : quill.getLength();
+    if (kind === 'image') {
+      quill.insertEmbed(index, 'image', src, 'user');
+    } else {
+      quill.insertEmbed(index, 'caseVideo', src, 'user');
+    }
+    quill.setSelection(index + 1, 0);
+  }
+
   const insertImage = (file: File | null) => {
     if (!file) return;
+    setUploadError(null);
+
+    if (uploadMedia && !pickMediaFromLibrary) {
+      setUploadBusy('image');
+      void (async () => {
+        try {
+          const url = await uploadMedia(file, 'image');
+          insertSrcAtCursor(url, 'image');
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'Не удалось загрузить изображение';
+          setUploadError(msg);
+          onUploadError?.(msg);
+        } finally {
+          setUploadBusy(null);
+        }
+      })();
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const src = typeof reader.result === 'string' ? reader.result : '';
       if (!src) return;
-      const quill = getQuillEditor();
-      if (!quill) return onChange(`${value}<p><img src="${src}" alt="uploaded-image" /></p>`);
-      const range = quill.getSelection(true);
-      const index = range ? range.index : quill.getLength();
-      quill.insertEmbed(index, 'image', src, 'user');
-      quill.setSelection(index + 1, 0);
+      insertSrcAtCursor(src, 'image');
     };
     reader.readAsDataURL(file);
   };
 
   const insertVideo = (file: File | null) => {
     if (!file) return;
+    setUploadError(null);
+
+    if (uploadMedia && !pickMediaFromLibrary) {
+      setUploadBusy('video');
+      void (async () => {
+        try {
+          const url = await uploadMedia(file, 'video');
+          insertSrcAtCursor(url, 'video');
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'Не удалось загрузить видео';
+          setUploadError(msg);
+          onUploadError?.(msg);
+        } finally {
+          setUploadBusy(null);
+        }
+      })();
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const src = typeof reader.result === 'string' ? reader.result : '';
       if (!src) return;
-      const quill = getQuillEditor();
-      if (!quill) return onChange(`${value}<p><video class="case-rich-media-video" controls src="${src}"></video></p>`);
-      const range = quill.getSelection(true);
-      const index = range ? range.index : quill.getLength();
-      quill.insertEmbed(index, 'caseVideo', src, 'user');
-      quill.setSelection(index + 1, 0);
+      insertSrcAtCursor(src, 'video');
     };
     reader.readAsDataURL(file);
   };
@@ -162,14 +237,91 @@ export function RichBlock({ value, onChange, placeholder }: RichBlockProps) {
     readMediaPresetState(media ?? null);
   };
 
+  function pickImageFromLibrary() {
+    if (!pickMediaFromLibrary) return;
+    setUploadError(null);
+    setUploadBusy('image');
+    void (async () => {
+      try {
+        const url = await pickMediaFromLibrary('image');
+        if (url) insertSrcAtCursor(url, 'image');
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Не удалось выбрать изображение';
+        setUploadError(msg);
+        onUploadError?.(msg);
+      } finally {
+        setUploadBusy(null);
+      }
+    })();
+  }
+
+  function pickVideoFromLibrary() {
+    if (!pickMediaFromLibrary) return;
+    setUploadError(null);
+    setUploadBusy('video');
+    void (async () => {
+      try {
+        const url = await pickMediaFromLibrary('video');
+        if (url) insertSrcAtCursor(url, 'video');
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Не удалось выбрать видео';
+        setUploadError(msg);
+        onUploadError?.(msg);
+      } finally {
+        setUploadBusy(null);
+      }
+    })();
+  }
+
+  const busy = uploadBusy !== null;
+  const useLibraryPicker = !!pickMediaFromLibrary;
+
   return (
     <div className={styles.richEditorWrap} onClickCapture={handleEditorClickCapture}>
       <div className={styles.richMediaToolbar}>
         <span className={selectedMediaEl ? styles.mediaStatusOn : styles.mediaStatusOff}>
           {selectedMediaEl ? 'Выбрано медиа' : 'Не выбрано медиа'}
         </span>
-        <label className={styles.richToolBtn} htmlFor="rich-image-picker">+ Изображение</label>
-        <label className={styles.richToolBtn} htmlFor="rich-video-picker">+ Видео</label>
+        {uploadMedia && !useLibraryPicker ? (
+          <span className={styles.richToolBtn} style={{ opacity: 0.85, cursor: 'default' }} title="Файлы загружаются на сервер">
+            (облако)
+          </span>
+        ) : null}
+        {useLibraryPicker ? (
+          <span className={styles.richToolBtn} style={{ opacity: 0.85, cursor: 'default' }} title="Выбор из медиатеки">
+            (объекты)
+          </span>
+        ) : null}
+        {busy ? <span className={styles.mediaStatusOn}>Загрузка…</span> : null}
+        {useLibraryPicker ? (
+          <>
+            <button
+              type="button"
+              className={styles.richToolBtn}
+              disabled={busy}
+              onClick={pickImageFromLibrary}
+            >
+              + Изображение
+            </button>
+            <button
+              type="button"
+              className={styles.richToolBtn}
+              disabled={busy}
+              onClick={pickVideoFromLibrary}
+            >
+              + Видео
+            </button>
+          </>
+        ) : (
+          <>
+            <label className={styles.richToolBtn} htmlFor={imageInputId}>
+              + Изображение
+            </label>
+            <label className={styles.richToolBtn} htmlFor={videoInputId}>
+              + Видео
+            </label>
+          </>
+        )}
         <span className={styles.richToolSep} />
         <button type="button" className={`${styles.richToolBtn} ${activeSizePreset === 'small' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-small', 'size')}>small</button>
         <button type="button" className={`${styles.richToolBtn} ${activeSizePreset === 'medium' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-medium', 'size')}>medium</button>
@@ -180,23 +332,52 @@ export function RichBlock({ value, onChange, placeholder }: RichBlockProps) {
         <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'right' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-right', 'align')}>right</button>
         <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'wrap' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-wrap', 'align')}>wrap</button>
       </div>
-      <input id="rich-image-picker" type="file" accept="image/*" className={styles.hiddenPicker} onChange={(e) => {
-        insertImage(e.target.files?.[0] ?? null);
-        e.currentTarget.value = '';
-      }} />
-      <input id="rich-video-picker" type="file" accept="video/*" className={styles.hiddenPicker} onChange={(e) => {
-        insertVideo(e.target.files?.[0] ?? null);
-        e.currentTarget.value = '';
-      }} />
-      <ReactQuillWithRef
-        ref={reactQuillRef}
-        theme="snow"
-        value={value}
-        onChange={onChange}
-        modules={modules}
-        formats={formats as unknown as string[]}
-        placeholder={placeholder}
-      />
+      {uploadError ? (
+        <p className={styles.uploadError} role="alert">
+          {uploadError}
+        </p>
+      ) : null}
+      {!useLibraryPicker ? (
+        <>
+          <input
+            id={imageInputId}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className={styles.hiddenPicker}
+            disabled={busy}
+            onChange={(e) => {
+              insertImage(e.target.files?.[0] ?? null);
+              e.currentTarget.value = '';
+            }}
+          />
+          <input
+            id={videoInputId}
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+            className={styles.hiddenPicker}
+            disabled={busy}
+            onChange={(e) => {
+              insertVideo(e.target.files?.[0] ?? null);
+              e.currentTarget.value = '';
+            }}
+          />
+        </>
+      ) : null}
+      {QuillEditor ? (
+        <QuillEditor
+          ref={reactQuillRef}
+          theme="snow"
+          value={value}
+          onChange={onChange}
+          modules={modules}
+          formats={formats as unknown as string[]}
+          placeholder={placeholder}
+        />
+      ) : (
+        <div className={styles.quillLoading} aria-busy="true">
+          Загрузка редактора…
+        </div>
+      )}
     </div>
   );
 }

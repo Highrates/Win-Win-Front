@@ -1,12 +1,17 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
-import { ProductCard } from '@/components/ProductCard';
+import { notFound } from 'next/navigation';
+import { ProductCard } from '@/components/ProductCard/ProductCard';
 import {
   BRAND_CATEGORY_TABS,
-  getBrandBySlug,
-  PRODUCTS_POOL,
 } from '@/lib/public/brands';
+import {
+  brandCoverImageUrl,
+  fetchPublicBrandBySlug,
+  plainTextExcerptFromHtml,
+  productPriceToNumber,
+} from '@/lib/brandsPublic';
 import { MoreAboutBrandModal } from './MoreAboutBrandModal';
 import styles from './BrandPage.module.css';
 
@@ -16,11 +21,17 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const { name } = getBrandBySlug(slug);
-  return {
-    title: `${name} — Бренд — Win-Win`,
-    description: `Страница бренда ${name}`,
-  };
+  const row = await fetchPublicBrandBySlug(slug);
+  if (!row) {
+    return { title: 'Бренд — Win-Win' };
+  }
+  const title = row.seoTitle?.trim() || `${row.name} — Бренд — Win-Win`;
+  const desc =
+    row.seoDescription?.trim() ||
+    row.shortDescription?.trim() ||
+    plainTextExcerptFromHtml(row.description, 200) ||
+    `Страница бренда ${row.name}`;
+  return { title, description: desc };
 }
 
 export default async function BrandPage({
@@ -32,16 +43,31 @@ export default async function BrandPage({
 }) {
   const { slug } = await params;
   const { category: categoryParam } = await searchParams;
-  const currentCategory = categoryParam && BRAND_CATEGORY_TABS.some((t) => t.id === categoryParam) ? categoryParam : 'living';
-  const { name, description } = getBrandBySlug(slug);
+  const currentCategory =
+    categoryParam && BRAND_CATEGORY_TABS.some((t) => t.id === categoryParam) ? categoryParam : 'living';
 
-  const brandProducts = PRODUCTS_POOL.slice(0, 20).map((p, i) => ({ ...p, key: `${p.slug}-${i}` }));
+  const row = await fetchPublicBrandBySlug(slug);
+  if (!row) notFound();
+
+  const name = row.name;
+  const short = row.shortDescription?.trim() ?? '';
+  const excerpt = short || plainTextExcerptFromHtml(row.description, 280);
+  const heroSrc = brandCoverImageUrl(row) ?? '/images/placeholder.svg';
+  const richHtml = row.description?.trim() || '';
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
     { label: 'Бренды', href: '/brands', current: false },
     { label: name, href: '', current: true },
   ];
+
+  const brandProducts = row.products.map((p) => ({
+    key: p.slug,
+    slug: p.slug,
+    name: p.name,
+    price: productPriceToNumber(p.price),
+    imageUrl: p.images[0]?.url ?? '/images/placeholder.svg',
+  }));
 
   return (
     <main>
@@ -68,18 +94,21 @@ export default async function BrandPage({
                   <span className={styles.previewParentName}>БРЕНД</span>
                   <h1 className={styles.previewCurrentName}>{name}</h1>
                 </div>
-                <div className={styles.shortBrandDescriptionWrapper}>
-                  <p>{description}</p>
-                </div>
+                {excerpt ? (
+                  <div className={styles.shortBrandDescriptionWrapper}>
+                    <p>{excerpt}</p>
+                  </div>
+                ) : null}
                 <MoreAboutBrandModal
                   linkClassName={styles.moreAboutBrandLink}
                   textClassName={styles.moreAboutBrandText}
                   arrowClassName={styles.moreAboutBrandArrow}
+                  bodyHtml={richHtml}
                 />
               </div>
             </div>
             <img
-              src="/images/placeholder.svg"
+              src={heroSrc}
               alt=""
               width={768}
               height={393}
@@ -130,7 +159,13 @@ export default async function BrandPage({
             </div>
             <div className={styles.marketGrid}>
               {brandProducts.map((p) => (
-                <ProductCard key={p.key} slug={p.slug} name={p.name} price={p.price} />
+                <ProductCard
+                  key={p.key}
+                  slug={p.slug}
+                  name={p.name}
+                  price={p.price}
+                  imageUrl={p.imageUrl}
+                />
               ))}
             </div>
           </div>

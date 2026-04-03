@@ -5,6 +5,15 @@
   overflow: hidden;
   border: var(--account-hairline-width) solid var(--account-hairline-color);
 }
+
+.quillLoading {
+  min-height: 220px;
+  padding: 16px;
+  box-sizing: border-box;
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+  background: var(--color-white);
+}
 .richMediaToolbar {
   display: inline-flex;
   flex-wrap: wrap;
@@ -36,6 +45,15 @@
 .mediaStatusOff{color:var(--color-gray)}
 .richToolSep { width: 1px; height: 18px; background: var(--account-hairline-color); }
 .hiddenPicker { display: none; }
+
+.uploadError {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: var(--text-caption);
+  color: var(--color-red, #c53029);
+  background: #fdf5f5;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+}
 
 .richEditorWrap :global(.ql-toolbar.ql-snow) {
   border: none;
