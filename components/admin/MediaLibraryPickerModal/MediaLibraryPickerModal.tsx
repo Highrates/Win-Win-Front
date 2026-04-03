@@ -181,6 +181,15 @@ export function MediaLibraryPickerModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   function toggleFolderCollapse(id: string) {
     setCollapsedFolderIds((prev) => {
       const next = new Set(prev);
@@ -344,7 +353,10 @@ export function MediaLibraryPickerModal({
 
         <div className={pickStyles.body}>
           <div className={pickStyles.bodyInner}>
-            <aside className={libStyles.folderSidebar} aria-label="Папки">
+            <aside
+              className={`${libStyles.folderSidebar} ${pickStyles.pickerFolderColumn}`}
+              aria-label="Папки"
+            >
               <p className={libStyles.folderSidebarTitle}>Папки</p>
               <button
                 type="button"
@@ -356,7 +368,7 @@ export function MediaLibraryPickerModal({
               {renderFolderBranch(null, 0)}
             </aside>
 
-            <div className={libStyles.main}>
+            <div className={`${libStyles.main} ${pickStyles.pickerMainColumn}`}>
               <div className={catalogStyles.toolbar}>
                 <input
                   type="search"
