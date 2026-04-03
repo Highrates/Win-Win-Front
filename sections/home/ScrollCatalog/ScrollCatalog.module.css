@@ -171,6 +171,10 @@
     display: flex;
     padding-left: 16px;
     gap: 12px;
+    /* Как .mobileCardsWrapper на главной: нативный touch-scroll без JS, без цепочки к странице */
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
   }
 
   /* Размеры как у .mobileCard на главной */

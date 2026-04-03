@@ -67,8 +67,6 @@ export function CategoryCardsStrip({ items }: { items: CategoryCardItem[] }) {
       onMouseDown={handlePointerDown}
       onMouseMove={handlePointerMove}
       onMouseLeave={handlePointerMove}
-      onTouchStart={handlePointerDown}
-      onTouchMove={handlePointerMove}
     >
       {items.map((card, index) => (
         <Link

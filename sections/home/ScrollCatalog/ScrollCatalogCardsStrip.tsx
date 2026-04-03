@@ -72,8 +72,6 @@ export function ScrollCatalogCardsStrip() {
       onMouseDown={handlePointerDown}
       onMouseMove={handlePointerMove}
       onMouseLeave={handlePointerMove}
-      onTouchStart={handlePointerDown}
-      onTouchMove={handlePointerMove}
     >
       {catalogCards.map((card, index) => (
         <Link

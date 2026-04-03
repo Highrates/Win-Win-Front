@@ -66,6 +66,13 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
     setLocaleReady(true);
   }, []);
 
+  const inCatalog =
+    pathname.startsWith('/admin/catalog') || pathname.startsWith('/admin/collections');
+  const [catalogOpen, setCatalogOpen] = useState(inCatalog);
+  useEffect(() => {
+    if (inCatalog) setCatalogOpen(true);
+  }, [inCatalog]);
+
   function setAdminLocale(next: AdminLocale) {
     setLocale(next);
     try {
@@ -75,24 +82,18 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
-
   async function logout() {
     await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
     router.push('/admin/login');
     router.refresh();
   }
 
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
+
   const t = adminChromeStrings(locale);
   const navAria = locale === 'zh' ? '管理区' : 'Разделы админки';
-  const inCatalog =
-    pathname.startsWith('/admin/catalog') || pathname.startsWith('/admin/collections');
-  const [catalogOpen, setCatalogOpen] = useState(inCatalog);
-  useEffect(() => {
-    if (inCatalog) setCatalogOpen(true);
-  }, [inCatalog]);
 
   return (
     <div className={styles.shell}>
