@@ -100,3 +100,67 @@ export async function fetchCategoryBySlug(
     return null;
   }
 }
+
+/** Элемент выдачи `GET /catalog/products/search` (Meilisearch или Prisma). */
+export type CatalogProductSearchHit = {
+  id: string;
+  slug: string;
+  name: string;
+  price?: number;
+  thumbUrl?: string | null;
+  /** До 6 URL для мини-галереи в карточке (после реиндекса Meilisearch / актуального API). */
+  imageUrls?: string[];
+};
+
+export type CatalogProductSearchResponse = {
+  hits: CatalogProductSearchHit[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+export async function fetchProductsSearch(params: {
+  categoryId: string;
+  page?: number;
+  limit?: number;
+}): Promise<CatalogProductSearchResponse> {
+  const base = getServerApiBase();
+  const page = Math.max(1, params.page ?? 1);
+  const limit = Math.min(Math.max(1, params.limit ?? 20), 100);
+  const qs = new URLSearchParams({
+    categoryId: params.categoryId,
+    page: String(page),
+    limit: String(limit),
+  });
+  try {
+    const res = await fetch(`${base}/catalog/products/search?${qs}`, {
+      next: catalogPublicFetchNext(),
+    });
+    if (!res.ok) {
+      return { hits: [], total: 0, page, limit };
+    }
+    return await jsonFromResponse<CatalogProductSearchResponse>(res, {
+      hits: [],
+      total: 0,
+      page,
+      limit,
+    });
+  } catch {
+    return { hits: [], total: 0, page, limit };
+  }
+}
+
+/** `GET /catalog/products/:slug` — полная карточка для витрины. */
+export async function fetchPublicProductBySlug(slug: string): Promise<unknown | null> {
+  const base = getServerApiBase();
+  try {
+    const res = await fetch(`${base}/catalog/products/${encodeURIComponent(slug)}`, {
+      next: catalogPublicFetchNext(),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}

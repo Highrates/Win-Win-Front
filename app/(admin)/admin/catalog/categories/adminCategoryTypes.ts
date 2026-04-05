@@ -10,6 +10,6 @@ export type AdminCategoryRow = {
   sortOrder: number;
   isActive: boolean;
   parent: { id: string; name: string } | null;
-  _count: { products: number; children: number };
+  _count: { primaryProducts: number; productCategories: number; children: number };
   recursiveProductCount: number;
 };

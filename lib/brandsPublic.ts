@@ -1,4 +1,5 @@
 import { catalogPublicFetchNext } from './catalogCache';
+import { dedupeById } from './dedupeById';
 import { getServerApiBase } from './serverApiBase';
 
 /** Ответ `GET /brands` (элемент списка). */
@@ -17,6 +18,7 @@ export type PublicBrandListRow = {
 };
 
 export type PublicBrandProductRow = {
+  id: string;
   slug: string;
   name: string;
   price: unknown;
@@ -61,6 +63,9 @@ export async function fetchPublicBrandBySlug(slug: string): Promise<PublicBrandD
     if (!res.ok) return null;
     const data = (await res.json()) as PublicBrandDetailPayload | null;
     if (!data?.slug) return null;
+    if (data.products?.length) {
+      return { ...data, products: dedupeById(data.products) };
+    }
     return data;
   } catch {
     return null;

@@ -32,6 +32,8 @@ type CategoryDetail = {
   parent: { id: string; name: string; slug: string } | null;
   children: SubcatRow[];
   products: ProductBrief[];
+  /** 0 = корень, 1 = подкатегория, 2 = третий уровень (дальше создавать нельзя) */
+  depthFromRoot?: number;
 };
 
 function formatPrice(p: unknown, currency: string): string {
@@ -263,12 +265,18 @@ export function CategoryDetailClient({ id }: { id: string }) {
           <h2 id="subcat-heading" className={styles.sectionTitle}>
             Подкатегории
           </h2>
-          <Link
-            href={`/admin/catalog/categories/new?parentId=${data.id}`}
-            className={`${styles.btn} ${styles.btnPrimary}`}
-          >
-            Создать подкатегорию
-          </Link>
+          {(data.depthFromRoot ?? 0) < 2 ? (
+            <Link
+              href={`/admin/catalog/categories/new?parentId=${data.id}`}
+              className={`${styles.btn} ${styles.btnPrimary}`}
+            >
+              Создать подкатегорию
+            </Link>
+          ) : (
+            <span className={styles.muted} title="Максимум три уровня категорий">
+              Дочерних уровней больше нет
+            </span>
+          )}
         </div>
         {data.children.length === 0 ? (
           <p className={styles.muted}>Подкатегорий пока нет.</p>

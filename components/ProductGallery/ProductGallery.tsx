@@ -32,7 +32,15 @@ function ensureMinimumImages(images: string[], min: number): string[] {
 }
 
 export function ProductGallery({ images: rawImages, productName = 'Товар' }: ProductGalleryProps) {
-  const images = useMemo(() => ensureMinimumImages(rawImages, SLOTS), [rawImages]);
+  const { images, compactRight } = useMemo(() => {
+    const base = rawImages.length > 0 ? rawImages : [FALLBACK_IMG];
+    const compact = base.length <= 3;
+    const minSlots = compact ? Math.max(1, base.length) : SLOTS;
+    return {
+      images: ensureMinimumImages(base, minSlots),
+      compactRight: compact,
+    };
+  }, [rawImages]);
   const N = images.length;
 
   const [offset, setOffset] = useState(0);
@@ -349,34 +357,56 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
             </button>
           </div>
         </div>
-        <div className={styles.galleryColRight}>
-          <div className={styles.galleryThumbs}>
-            {[2, 3, 4, 5].map((slot) => (
-              <div
-                key={slot}
-                className={
-                  slot === 2
-                    ? `${styles.galleryThumbSlot} ${styles.galleryThumbSlotFirst}`
-                    : styles.galleryThumbSlot
-                }
-              >
-                {slot === 2 && (
-                  <button
-                    type="button"
-                    className={styles.thumbZoomBtn}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openFullscreen(2);
-                    }}
-                    aria-label="Открыть галерею во весь экран"
-                  >
-                    <img src="/icons/zoom-in.svg" alt="" aria-hidden />
-                  </button>
-                )}
-                {renderSlot(slot)}
+        <div
+          className={`${styles.galleryColRight} ${compactRight ? styles.galleryColRightCompact : ''}`}
+        >
+          <div
+            className={`${styles.galleryThumbs} ${compactRight ? styles.galleryThumbsCompact : ''}`}
+          >
+            {compactRight ? (
+              <div className={`${styles.galleryThumbSlot} ${styles.galleryThumbSlotFirst}`}>
+                <button
+                  type="button"
+                  className={styles.thumbZoomBtn}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openFullscreen(2);
+                  }}
+                  aria-label="Открыть галерею во весь экран"
+                >
+                  <img src="/icons/zoom-in.svg" alt="" aria-hidden />
+                </button>
+                {renderSlot(2)}
               </div>
-            ))}
+            ) : (
+              [2, 3, 4, 5].map((slot) => (
+                <div
+                  key={slot}
+                  className={
+                    slot === 2
+                      ? `${styles.galleryThumbSlot} ${styles.galleryThumbSlotFirst}`
+                      : styles.galleryThumbSlot
+                  }
+                >
+                  {slot === 2 && (
+                    <button
+                      type="button"
+                      className={styles.thumbZoomBtn}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openFullscreen(2);
+                      }}
+                      aria-label="Открыть галерею во весь экран"
+                    >
+                      <img src="/icons/zoom-in.svg" alt="" aria-hidden />
+                    </button>
+                  )}
+                  {renderSlot(slot)}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

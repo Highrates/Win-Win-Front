@@ -1,11 +1,20 @@
+'use client';
+
 import Link from 'next/link';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import styles from './ProductCard.module.css';
+
+const PLACEHOLDER = '/images/placeholder.svg';
+const SLIDE_MS = 380;
 
 export interface ProductCardProps {
   slug: string;
   name: string;
   price: number;
+  /** Одно превью (как раньше) */
   imageUrl?: string;
+  /** Несколько изображений для листания; если задано и непустое — имеет приоритет над imageUrl */
+  imageUrls?: string[];
   collections?: number;
   likes?: number;
   comments?: number;
@@ -18,21 +27,236 @@ function formatPrice(value: number): string {
   return `~${formatted} ₽`;
 }
 
+function normalizeImageUrls(imageUrl: string | undefined, imageUrls: string[] | undefined): string[] {
+  const fromList = (imageUrls ?? []).map((u) => u?.trim()).filter(Boolean) as string[];
+  if (fromList.length > 0) {
+    const seen = new Set<string>();
+    return fromList.filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
+  }
+  if (imageUrl?.trim()) return [imageUrl.trim()];
+  return [PLACEHOLDER];
+}
+
+function imgOnError(ev: React.SyntheticEvent<HTMLImageElement>) {
+  const el = ev.currentTarget;
+  if (el.src !== PLACEHOLDER && !el.src.endsWith(PLACEHOLDER)) {
+    el.src = PLACEHOLDER;
+  }
+}
+
 export function ProductCard({
   slug,
   name,
   price,
-  imageUrl = '/images/placeholder.svg',
+  imageUrl,
+  imageUrls,
   collections = 5,
   likes = 180,
   comments = 180,
   heartActive = false,
 }: ProductCardProps) {
+  const urls = useMemo(() => normalizeImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
+  const urlsKey = urls.join('\0');
+  const [index, setIndex] = useState(0);
+  const [slide, setSlide] = useState<null | { from: number; to: number; dir: 'next' | 'prev' }>(null);
+  const [slideRun, setSlideRun] = useState(false);
+  const [cardHovered, setCardHovered] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const blockLinkClickRef = useRef(false);
+
+  useEffect(() => {
+    setIndex(0);
+    setSlide(null);
+    setSlideRun(false);
+  }, [urlsKey]);
+
+  const startSlide = useCallback(
+    (delta: number) => {
+      if (urls.length <= 1) return;
+      if (slide !== null) return;
+      const N = urls.length;
+      const to = (index + delta + N) % N;
+      if (to === index) return;
+      setSlide({ from: index, to, dir: delta > 0 ? 'next' : 'prev' });
+      setSlideRun(false);
+    },
+    [urls.length, index, slide],
+  );
+
+  useLayoutEffect(() => {
+    if (!slide || slideRun) return;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setSlideRun(true));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [slide, slideRun]);
+
+  const handleSlideTransitionEnd = useCallback(
+    (e: React.TransitionEvent<HTMLDivElement>) => {
+      if (e.propertyName !== 'transform') return;
+      if (e.target !== e.currentTarget) return;
+      if (!slide) return;
+      setIndex(slide.to);
+      setSlide(null);
+      setSlideRun(false);
+    },
+    [slide],
+  );
+
+  const handleArrowClick = useCallback(
+    (e: React.MouseEvent, delta: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startSlide(delta);
+    },
+    [startSlide],
+  );
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartX.current == null || urls.length <= 1) {
+        touchStartX.current = null;
+        return;
+      }
+      const endX = e.changedTouches[0].clientX;
+      const dx = endX - touchStartX.current;
+      touchStartX.current = null;
+      const threshold = 40;
+      if (Math.abs(dx) < threshold) return;
+      blockLinkClickRef.current = true;
+      if (dx > 0) startSlide(-1);
+      else startSlide(1);
+      window.setTimeout(() => {
+        blockLinkClickRef.current = false;
+      }, SLIDE_MS + 80);
+    },
+    [startSlide, urls.length],
+  );
+
+  const handleImgAreaClickCapture = useCallback((e: React.MouseEvent) => {
+    if (blockLinkClickRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, []);
+
+  const cardClassName = [
+    styles.productCard,
+    cardHovered && urls.length > 1 ? styles.productCardHover : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const gallery = urls.length > 1;
+
   return (
-    <Link href={`/product/${slug}`} className={styles.productCard}>
+    <Link
+      href={`/product/${slug}`}
+      className={cardClassName}
+      onMouseEnter={() => setCardHovered(true)}
+      onMouseLeave={() => setCardHovered(false)}
+    >
       <div className={styles.productContent}>
-        <div className={styles.productImgWrapper}>
-          <img className={styles.productImg} src={imageUrl} alt="" />
+        <div
+          className={styles.productImgWrapper}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onClickCapture={handleImgAreaClickCapture}
+        >
+          {!gallery ? (
+            <img
+              className={styles.productImg}
+              src={urls[0]}
+              alt=""
+              draggable={false}
+              onError={imgOnError}
+            />
+          ) : !slide ? (
+            <img
+              className={styles.productImg}
+              src={urls[index]}
+              alt=""
+              draggable={false}
+              onError={imgOnError}
+            />
+          ) : (
+            <div className={styles.imgSlideWrap}>
+              <div
+                className={styles.imgSlideStrip}
+                data-dir={slide.dir}
+                data-run={slideRun ? '1' : undefined}
+                onTransitionEnd={handleSlideTransitionEnd}
+              >
+                {slide.dir === 'next' ? (
+                  <>
+                    <div className={styles.imgSlideCell}>
+                      <img
+                        className={styles.productImg}
+                        src={urls[slide.from]}
+                        alt=""
+                        draggable={false}
+                        onError={imgOnError}
+                      />
+                    </div>
+                    <div className={styles.imgSlideCell}>
+                      <img
+                        className={styles.productImg}
+                        src={urls[slide.to]}
+                        alt=""
+                        draggable={false}
+                        onError={imgOnError}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.imgSlideCell}>
+                      <img
+                        className={styles.productImg}
+                        src={urls[slide.to]}
+                        alt=""
+                        draggable={false}
+                        onError={imgOnError}
+                      />
+                    </div>
+                    <div className={styles.imgSlideCell}>
+                      <img
+                        className={styles.productImg}
+                        src={urls[slide.from]}
+                        alt=""
+                        draggable={false}
+                        onError={imgOnError}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {gallery ? (
+            <>
+              <button
+                type="button"
+                className={`${styles.galleryArrow} ${styles.galleryArrowPrev}`}
+                aria-label="Предыдущее изображение"
+                onClick={(e) => handleArrowClick(e, -1)}
+              >
+                <img src="/icons/arrow.svg" alt="" className={styles.galleryArrowIcon} aria-hidden />
+              </button>
+              <button
+                type="button"
+                className={`${styles.galleryArrow} ${styles.galleryArrowNext}`}
+                aria-label="Следующее изображение"
+                onClick={(e) => handleArrowClick(e, 1)}
+              >
+                <img src="/icons/arrow.svg" alt="" className={styles.galleryArrowIconNext} aria-hidden />
+              </button>
+            </>
+          ) : null}
         </div>
         <div className={styles.productTitles}>
           <span className={styles.productName}>{name}</span>

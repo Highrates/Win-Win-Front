@@ -43,6 +43,15 @@
   gap: 16px;
 }
 
+/* ≤3 исходных изображений: третья колонка — одна ячейка на всю высоту, как левая/центральная */
+.galleryColRightCompact {
+  gap: 0;
+}
+
+.galleryColRightCompact .galleryThumbs {
+  gap: 0;
+}
+
 .galleryImageSlot {
   display: block;
   width: 100%;
@@ -119,6 +128,11 @@
   gap: 16px;
   min-width: 0;
   align-self: stretch;
+}
+
+.galleryThumbsCompact {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
 }
 
 .galleryThumbSlot {

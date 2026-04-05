@@ -12,6 +12,7 @@ import {
   plainTextExcerptFromHtml,
   productPriceToNumber,
 } from '@/lib/brandsPublic';
+import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import { MoreAboutBrandModal } from './MoreAboutBrandModal';
 import styles from './BrandPage.module.css';
 
@@ -61,13 +62,19 @@ export default async function BrandPage({
     { label: name, href: '', current: true },
   ];
 
-  const brandProducts = row.products.map((p) => ({
-    key: p.slug,
-    slug: p.slug,
-    name: p.name,
-    price: productPriceToNumber(p.price),
-    imageUrl: p.images[0]?.url ?? '/images/placeholder.svg',
-  }));
+  const brandProducts = row.products.map((p) => {
+    const ordered = [...p.images].sort((a, b) => a.sortOrder - b.sortOrder);
+    const galleryUrls = ordered.map((im) => resolveMediaUrlForServer(im.url));
+    const useGallery = galleryUrls.length > 1;
+    return {
+      key: p.slug,
+      slug: p.slug,
+      name: p.name,
+      price: productPriceToNumber(p.price),
+      imageUrl: galleryUrls[0] ?? '/images/placeholder.svg',
+      imageUrls: useGallery ? galleryUrls : undefined,
+    };
+  });
 
   return (
     <main>
@@ -165,6 +172,7 @@ export default async function BrandPage({
                   name={p.name}
                   price={p.price}
                   imageUrl={p.imageUrl}
+                  imageUrls={p.imageUrls}
                 />
               ))}
             </div>

@@ -150,6 +150,13 @@
   cursor: not-allowed;
 }
 
+/** В колоночной форме кнопки по умолчанию тянутся на всю ширину — для действий «добавить…» */
+.btnAlignStart {
+  align-self: flex-start;
+  width: auto;
+  max-width: 100%;
+}
+
 .tableWrap {
   overflow-x: auto;
   border-radius: 10px;
@@ -183,6 +190,26 @@
 
 .table tbody tr:hover td {
   background: rgba(5, 24, 38, 0.02);
+}
+
+.productListThumb {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  background: var(--color-bright-snow, #f5f7f8);
+  vertical-align: middle;
+}
+
+.productListThumbPh {
+  width: 46px;
+  height: 46px;
+  border-radius: 6px;
+  border: 1px dashed var(--account-hairline-color, #e2e6e8);
+  background: var(--color-bright-snow, #f5f7f8);
+  box-sizing: border-box;
 }
 
 .table a {
@@ -278,6 +305,30 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.formWide {
+  max-width: min(1100px, 100%);
+}
+
+.modalCloseIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-gray, #9d9d9d);
+  cursor: pointer;
+}
+
+.modalCloseIconBtn:hover {
+  background: var(--color-bright-snow, #f5f7f8);
+  color: var(--color-ink-black, #051826);
 }
 
 .label {

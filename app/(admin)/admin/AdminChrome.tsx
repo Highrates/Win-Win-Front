@@ -19,6 +19,7 @@ const CATALOG_CHILDREN = [
   { href: '/admin/catalog/products', key: 'products' as const },
   { href: '/admin/catalog/categories', key: 'categories' as const },
   { href: '/admin/collections', key: 'collections' as const },
+  { href: '/admin/product-sets', key: 'productSets' as const },
 ];
 
 const NAV_HREFS = [
@@ -31,6 +32,7 @@ const NAV_HREFS = [
   '/admin/blog',
   '/admin/referrals',
   '/admin/pages',
+  '/admin/journal',
 ] as const;
 
 function CatalogChevron({ open }: { open: boolean }) {
@@ -67,7 +69,9 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
   }, []);
 
   const inCatalog =
-    pathname.startsWith('/admin/catalog') || pathname.startsWith('/admin/collections');
+    pathname.startsWith('/admin/catalog') ||
+    pathname.startsWith('/admin/collections') ||
+    pathname.startsWith('/admin/product-sets');
   const [catalogOpen, setCatalogOpen] = useState(inCatalog);
   useEffect(() => {
     if (inCatalog) setCatalogOpen(true);
@@ -138,7 +142,9 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                 </button>
                 <span
                   className={`${styles.navLink} ${styles.navGroupLink} ${styles.navGroupTitle} ${
-                    pathname.startsWith('/admin/catalog') || pathname.startsWith('/admin/collections')
+                    pathname.startsWith('/admin/catalog') ||
+                    pathname.startsWith('/admin/collections') ||
+                    pathname.startsWith('/admin/product-sets')
                       ? styles.navLinkActive
                       : ''
                   }`}
@@ -152,7 +158,9 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                     const active =
                       href === '/admin/collections'
                         ? pathname.startsWith('/admin/collections')
-                        : pathname === href || pathname.startsWith(`${href}/`);
+                        : href === '/admin/product-sets'
+                          ? pathname.startsWith('/admin/product-sets')
+                          : pathname === href || pathname.startsWith(`${href}/`);
                     return (
                       <Link
                         key={href}

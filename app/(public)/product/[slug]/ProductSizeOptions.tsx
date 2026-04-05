@@ -3,17 +3,18 @@
 import { useState } from 'react';
 import styles from './ProductPage.module.css';
 
-const SIZES = ['200 × 90 × 80 см', '220 × 95 × 85 см', '240 × 100 × 90 см'] as const;
+const DEFAULT_SIZES = ['200 × 90 × 80 см', '220 × 95 × 85 см', '240 × 100 × 90 см'] as const;
 
-export default function ProductSizeOptions() {
+export default function ProductSizeOptions({ items }: { items?: string[] }) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const list = items?.length ? items : [...DEFAULT_SIZES];
 
   return (
     <div className={styles.productSizeOptions}>
-      {SIZES.map((label, index) => (
+      {list.map((label, index) => (
         <button
           type="button"
-          key={label}
+          key={`${label}-${index}`}
           className={`${styles.productSizeOption} ${selectedIndex === index ? styles.productSizeOptionSelected : ''}`}
           aria-pressed={selectedIndex === index}
           onClick={() => setSelectedIndex(index)}

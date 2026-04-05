@@ -2,11 +2,10 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryCardsStrip, type CategoryCardItem } from './CategoryCardsStrip';
-import {
-  CATEGORY_PER_PAGE,
-  categoryCatalogPageHref,
-  getCategoryMarketProducts,
-} from './categoryCatalogData';
+import { CATEGORY_PER_PAGE, categoryCatalogPageHref } from './categoryCatalogData';
+import type { CatalogProductSearchHit } from '@/lib/catalogPublic';
+import { parseProductPriceFromApi } from '@/lib/productSpecsFromApi';
+import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import styles from './CategoryPage.module.css';
 
 export type CategoryBreadcrumb = {
@@ -23,7 +22,10 @@ type Props = {
   breadcrumbs: CategoryBreadcrumb[];
   /** База URL для пагинации: `/categories` или `/categories/<slug>` */
   paginationBasePath: string;
-  currentPage: number;
+  /** Текущая страница каталога (уже сжата к допустимому диапазону) */
+  catalogPage: number;
+  catalogHits: CatalogProductSearchHit[];
+  catalogTotal: number;
   /** Родительская категория: полоса карточек подкатегорий после превью */
   showSubcategoryCardsStrip?: boolean;
   previewImageSrc?: string;
@@ -35,16 +37,15 @@ export function CategoryCatalogContent({
   parentCategoryName,
   breadcrumbs,
   paginationBasePath,
-  currentPage,
+  catalogPage,
+  catalogHits,
+  catalogTotal,
   showSubcategoryCardsStrip = false,
   previewImageSrc = '/images/placeholder.svg',
   subcategoryItems,
 }: Props) {
-  const allProducts = getCategoryMarketProducts(60);
-  const totalPages = Math.ceil(allProducts.length / CATEGORY_PER_PAGE) || 1;
-  const page = Math.min(Math.max(1, currentPage), totalPages);
-  const start = (page - 1) * CATEGORY_PER_PAGE;
-  const marketProducts = allProducts.slice(start, start + CATEGORY_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(catalogTotal / CATEGORY_PER_PAGE));
+  const page = Math.min(Math.max(1, catalogPage), totalPages);
 
   return (
     <main>
@@ -110,13 +111,37 @@ export function CategoryCatalogContent({
               </div>
               <div className={styles.marketSectionRowResult}>
                 <span className={styles.marketSectionRowResultLabel}>Результат: </span>
-                <span className={styles.marketSectionRowResultValue}>{allProducts.length}</span>
+                <span className={styles.marketSectionRowResultValue}>{catalogTotal}</span>
               </div>
             </div>
             <div className={styles.marketGrid}>
-              {marketProducts.map((p) => (
-                <ProductCard key={p.key} slug={p.slug} name={p.name} price={p.price} />
-              ))}
+              {catalogHits.map((hit) => {
+                const thumb =
+                  typeof hit.thumbUrl === 'string' && hit.thumbUrl.trim()
+                    ? resolveMediaUrlForServer(hit.thumbUrl)
+                    : undefined;
+                const rawGallery =
+                  Array.isArray(hit.imageUrls) && hit.imageUrls.length > 0
+                    ? hit.imageUrls.filter(
+                        (u): u is string => typeof u === 'string' && Boolean(u.trim()),
+                      )
+                    : [];
+                const galleryResolved = Array.from(new Set(rawGallery.map((u) => u.trim()))).map((u) =>
+                  resolveMediaUrlForServer(u),
+                );
+                const price = parseProductPriceFromApi(hit.price);
+                const useGallery = galleryResolved.length > 1;
+                return (
+                  <ProductCard
+                    key={hit.id}
+                    slug={hit.slug}
+                    name={hit.name}
+                    price={price}
+                    imageUrl={useGallery ? galleryResolved[0] : thumb}
+                    imageUrls={useGallery ? galleryResolved : undefined}
+                  />
+                );
+              })}
             </div>
             <nav className={styles.paginationWrapper} aria-label="Пагинация">
               {page <= 1 ? (

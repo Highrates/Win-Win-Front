@@ -1,47 +1,24 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { ProductGallery } from '@/components/ProductGallery';
 import { Button } from '@/components/Button';
 import { Recommendations } from '@/sections/home';
+import { fetchPublicProductBySlug } from '@/lib/catalogPublic';
+import { parsePublicProduct } from '@/lib/publicProductFromApi';
+import {
+  formatProductPriceRub,
+  parseProductPriceFromApi,
+  parseProductSpecsFromApi,
+} from '@/lib/productSpecsFromApi';
+import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import ProductAccordions from './ProductAccordions';
 import ProductSizeOptions from './ProductSizeOptions';
 import ProductMaterialsOptions from './ProductMaterialsOptions';
+import ProductColorOptions from './ProductColorOptions';
 import { ProductDetailsStickyBar } from './ProductDetailsStickyBar';
 import styles from './ProductPage.module.css';
-
-/** Пул товаров для маппинга slug → данные (совпадает с categories) */
-const PRODUCTS_POOL = [
-  { slug: 'sofa-classic', name: 'Диван Classic', price: 135090 },
-  { slug: 'kreslo-lounge', name: 'Кресло Lounge', price: 45000 },
-  { slug: 'stolik-round', name: 'Столик Round', price: 28500 },
-  { slug: 'konsol-wood', name: 'Консоль Wood', price: 67200 },
-  { slug: 'stul-comfort', name: 'Стул Comfort', price: 19900 },
-  { slug: 'puf-velvet', name: 'Пуф Velvet', price: 12400 },
-  { slug: 'shkaf-modern', name: 'Шкаф Modern', price: 89000 },
-  { slug: 'lampa-arc', name: 'Лампа Arc', price: 35090 },
-  { slug: 'krovat-dream', name: 'Кровать Dream', price: 156000 },
-  { slug: 'tumba-night', name: 'Тумба Night', price: 24300 },
-  { slug: 'zerkalo-wall', name: 'Зеркало Wall', price: 31500 },
-  { slug: 'polka-open', name: 'Полка Open', price: 14700 },
-  { slug: 'stol-dining', name: 'Стол Dining', price: 78000 },
-  { slug: 'bra-minimal', name: 'Бра Minimal', price: 9800 },
-  { slug: 'komod-line', name: 'Комод Line', price: 54600 },
-  { slug: 'kreslo-relax', name: 'Кресло Relax', price: 62000 },
-  { slug: 'stol-coffee', name: 'Стол Coffee', price: 42000 },
-  { slug: 'kreslo-wing', name: 'Кресло Wing', price: 73500 },
-  { slug: 'svetilnik-spot', name: 'Светильник Spot', price: 11200 },
-  { slug: 'polka-wall', name: 'Полка Wall', price: 18900 },
-];
-
-function getProductBySlug(slug: string) {
-  return PRODUCTS_POOL.find((p) => p.slug === slug) ?? null;
-}
-
-function getProductName(slug: string): string {
-  const p = getProductBySlug(slug);
-  return p ? p.name : slug.replace(/-/g, ' ');
-}
 
 export async function generateMetadata({
   params,
@@ -49,11 +26,17 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const name = getProductName(slug);
-  return {
-    title: `${name} — Win-Win`,
-    description: `Товар: ${name}`,
-  };
+  const raw = await fetchPublicProductBySlug(slug);
+  const product = parsePublicProduct(raw);
+  if (!product) {
+    return { title: 'Товар — Win-Win' };
+  }
+  const title = product.seoTitle?.trim() || `${product.name} — Win-Win`;
+  const description =
+    product.seoDescription?.trim() ||
+    product.shortDescription?.trim() ||
+    `Товар: ${product.name}`;
+  return { title, description };
 }
 
 export default async function ProductPage({
@@ -62,15 +45,54 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
-  const productName = getProductName(slug);
+  const raw = await fetchPublicProductBySlug(slug);
+  const product = parsePublicProduct(raw);
+  if (!product) {
+    notFound();
+  }
 
-  const breadcrumbs = [
+  const priceNum = parseProductPriceFromApi(product.price);
+  const priceText = priceNum > 0 ? formatProductPriceRub(priceNum) : '—';
+  const specs = parseProductSpecsFromApi(product.specsJson);
+  const colorItems = specs.colors.map((c) => ({
+    name: c.name,
+    imageUrl: resolveMediaUrlForServer(c.imageUrl),
+  }));
+  const gallerySrcs =
+    product.images.length > 0
+      ? product.images.map((im) => resolveMediaUrlForServer(im.url))
+      : [resolveMediaUrlForServer(null)];
+
+  const category = product.category;
+  const breadcrumbs: { label: string; href: string; current: boolean }[] = [
     { label: 'Главная', href: '/', current: false },
-    { label: 'Гостиная', href: '/categories', current: false },
-    { label: 'Каталог', href: '/categories/divany', current: false },
-    { label: productName, href: '', current: true },
   ];
+  if (category) {
+    if (category.parent) {
+      breadcrumbs.push({
+        label: category.parent.name,
+        href: `/categories/${category.parent.slug}`,
+        current: false,
+      });
+    }
+    breadcrumbs.push({
+      label: category.name,
+      href: `/categories/${category.slug}`,
+      current: false,
+    });
+  }
+  breadcrumbs.push({ label: product.name, href: '', current: true });
+
+  const brand = product.brand;
+  const brandHref = brand ? `/brands/${brand.slug}` : null;
+  const brandDesc =
+    brand?.shortDescription?.trim() ||
+    'Продукция бренда представлена в нашем каталоге.';
+
+  const bodyText =
+    product.shortDescription?.trim() ||
+    product.description?.trim() ||
+    'Описание появится позже.';
 
   return (
     <main>
@@ -79,7 +101,7 @@ export default async function ProductPage({
           <div className={styles.productPageFlow}>
             <nav className={styles.breadcrumbs} aria-label="Хлебные крошки">
               {breadcrumbs.map((item, i) => (
-                <Fragment key={i}>
+                <Fragment key={`${item.label}-${i}`}>
                   {i > 0 && <span className={styles.breadcrumbsSep}>/</span>}
                   {item.current ? (
                     <span className={styles.breadcrumbsCurrent}>{item.label}</span>
@@ -92,54 +114,41 @@ export default async function ProductPage({
               ))}
             </nav>
             <div className={styles.productImgsWrapper}>
-              {product ? (
-                <ProductGallery
-                  images={[
-                    '/images/p-1.png',
-                    '/images/p-2.png',
-                    '/images/p-3.jpg',
-                    '/images/p-4.jpg',
-                    '/images/p-5.jpg',
-                    '/images/p-6.jpg',
-                  ]}
-                  productName={product.name}
-                />
-              ) : (
-                <div>
-                  <p>{productName}</p>
-                  <p>Товар не найден в каталоге.</p>
-                </div>
-              )}
+              <ProductGallery images={gallerySrcs} productName={product.name} />
             </div>
 
             <div className={styles.productDetails}>
               <div className={styles.productDetailsLeft}>
                 <div className={styles.productDetailsInner}>
                   <div className={styles.productTitles}>
-                    <span className={styles.productBrandName}>Glamor Master</span>
-                    <h1 className={styles.productName}>{productName}</h1>
+                    {brand ? (
+                      <Link href={brandHref!} className={styles.productBrandName}>
+                        {brand.name}
+                      </Link>
+                    ) : (
+                      <span className={styles.productBrandName}>Бренд не указан</span>
+                    )}
+                    <h1 className={styles.productName}>{product.name}</h1>
                   </div>
                   <div className={styles.productDetailsInteract}>
                     <div className={styles.productDetailsInteractItem}>
                       <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
-                      <span className={styles.productDetailsInteractValue}>{product ? 5 : 0}</span>
+                      <span className={styles.productDetailsInteractValue}>0</span>
                     </div>
                     <div className={styles.productDetailsInteractItem}>
                       <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
-                      <span className={styles.productDetailsInteractValue}>{product ? 180 : 0}</span>
+                      <span className={styles.productDetailsInteractValue}>0</span>
                     </div>
                     <div className={styles.productDetailsInteractItem}>
                       <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
-                      <span className={styles.productDetailsInteractValue}>{product ? 180 : 0}</span>
+                      <span className={styles.productDetailsInteractValue}>0</span>
                     </div>
                   </div>
                 </div>
               </div>
               <div className={styles.productDetailsRight}>
                 <div className={styles.productDetailsRightRow}>
-                  <span className={styles.productDetailsPrice}>
-                    {product ? `~${product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ₽` : '—'}
-                  </span>
+                  <span className={styles.productDetailsPrice}>{priceText}</span>
                   <div className={styles.productDetailsBtnsWrapper}>
                     <div className={styles.productDetailsBtnsSecondary}>
                       <Button
@@ -160,72 +169,69 @@ export default async function ProductPage({
                     </Button>
                   </div>
                 </div>
-                <ProductDetailsStickyBar
-                  priceText={product ? `~${product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ₽` : '—'}
-                />
+                <ProductDetailsStickyBar priceText={priceText} />
 
                 <div className={styles.descriptionWrapper}>
-                  <p className={styles.descriptionText}>
-                    {product
-                      ? 'Коллекция сочетает лаконичный силуэт и комфорт. Подходит для гостиной и зоны отдыха. Каркас из массива, обивка — ткань или кожа на выбор.'
-                      : 'Описание товара недоступно.'}
-                  </p>
+                  <p className={styles.descriptionText}>{bodyText}</p>
                 </div>
 
-                <div className={styles.productColorWrapper}>
-                  <span className={styles.productColorTitle}>Цвет</span>
-                    <div className={styles.productColorSelect} role="combobox" aria-expanded="false" aria-label="Выбор цвета">
-                    <div className={styles.productColorSelectInner}>
-                      <img
-                        src="/images/p-1.png"
-                        alt=""
-                        width={70}
-                        height={70}
-                        className={styles.productColorSwatch}
-                      />
-                      <span className={styles.productColorName}>Бежевый</span>
-                    </div>
-                    <span className={styles.productColorChevron} aria-hidden>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="9" height="5" viewBox="0 0 9 5" fill="none">
-                        <path d="M0 0L4.5 5L9 0" stroke="currentColor" strokeWidth="1.2" />
-                      </svg>
-                    </span>
+                {colorItems.length > 0 ? (
+                  <div className={styles.productColorWrapper}>
+                    <span className={styles.productColorTitle}>Цвет</span>
+                    <ProductColorOptions items={colorItems} />
                   </div>
-                </div>
+                ) : null}
 
                 <div className={styles.productMaterialsSelect}>
                   <span className={styles.productMaterialsTitle}>Материалы</span>
-                  <ProductMaterialsOptions />
+                  <ProductMaterialsOptions items={specs.materials.length ? specs.materials : undefined} />
                 </div>
 
                 <div className={styles.productSizeSelect}>
                   <span className={styles.productSizeTitle}>Размеры</span>
-                  <ProductSizeOptions />
+                  <ProductSizeOptions items={specs.sizes.length ? specs.sizes : undefined} />
                 </div>
 
                 <div className={styles.accordionsWrapper}>
-                  <ProductAccordions />
+                  <ProductAccordions
+                    deliveryText={product.deliveryText}
+                    technicalSpecs={product.technicalSpecs}
+                    additionalInfoHtml={product.additionalInfoHtml}
+                  />
                 </div>
 
-                <div className={styles.brandWrapper}>
-                  <h2 className={styles.brandTitle}>Бренд</h2>
-                  <Link
-                    href="/brands/glamor-master"
-                    className={styles.brandContent}
-                    aria-label="Перейти на страницу бренда Glamor Master"
-                  >
-                    <div className={styles.brandContentInner}>
-                      <div className={styles.brandLogo} aria-hidden />
-                      <div className={styles.brandShortDescription}>
-                        <span className={styles.brandName}>Glamor Master</span>
-                        <p className={styles.brandDescription}>
-                          Продукция компании охватывает все жилые зоны, такие как гостиная, чайная комната, столовая, спальня и кабинет и включает различные виды мебели, такие как диваны, чайные столики, обеденные столы и кровати.
-                        </p>
+                {brand && brandHref ? (
+                  <div className={styles.brandWrapper}>
+                    <h2 className={styles.brandTitle}>Бренд</h2>
+                    <Link
+                      href={brandHref}
+                      className={styles.brandContent}
+                      aria-label={`Перейти на страницу бренда ${brand.name}`}
+                    >
+                      <div className={styles.brandContentInner}>
+                        <div
+                          className={styles.brandLogo}
+                          style={
+                            brand.logoUrl
+                              ? {
+                                  backgroundImage: `url(${resolveMediaUrlForServer(brand.logoUrl)})`,
+                                  backgroundSize: 'contain',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundPosition: 'center',
+                                }
+                              : undefined
+                          }
+                          aria-hidden
+                        />
+                        <div className={styles.brandShortDescription}>
+                          <span className={styles.brandName}>{brand.name}</span>
+                          <p className={styles.brandDescription}>{brandDesc}</p>
+                        </div>
                       </div>
-                    </div>
-                    <img src="/icons/arrow.svg" alt="" width={22} height={22} className={styles.brandArrow} aria-hidden />
-                  </Link>
-                </div>
+                      <img src="/icons/arrow.svg" alt="" width={22} height={22} className={styles.brandArrow} aria-hidden />
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

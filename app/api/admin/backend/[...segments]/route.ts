@@ -4,7 +4,11 @@ import { ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/adminAuth';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
 function isAllowed(segments: string[]): boolean {
-  return segments.length >= 2 && segments[0] === 'catalog' && segments[1] === 'admin';
+  if (segments.length < 2) return false;
+  if (segments[0] === 'catalog' && segments[1] === 'admin') return true;
+  if (segments[0] === 'audit' && segments[1] === 'admin') return true;
+  if (segments[0] === 'orders' && segments[1] === 'admin') return true;
+  return false;
 }
 
 async function proxy(request: NextRequest, segments: string[], method: string) {

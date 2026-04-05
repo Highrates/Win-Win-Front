@@ -56,7 +56,11 @@ export function AdminCategorySearchTable({
                 <Link href={`/admin/catalog/categories/${r.id}`}>{r.name}</Link>
               </td>
               <td>{r.parent ? r.parent.name : '—'}</td>
-              <td title={`В этой категории: ${r._count.products}`}>{r.recursiveProductCount}</td>
+              <td
+                title={`Напрямую в узле: ${r._count.primaryProducts + r._count.productCategories}`}
+              >
+                {r.recursiveProductCount}
+              </td>
               <td>{r._count.children}</td>
             </tr>
           ))}

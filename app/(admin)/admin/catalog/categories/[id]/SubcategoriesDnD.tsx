@@ -26,7 +26,7 @@ export type SubcatRow = {
   name: string;
   slug: string;
   sortOrder: number;
-  _count: { products: number; children: number };
+  _count: { primaryProducts: number; productCategories: number; children: number };
 };
 
 function SortableSubRow({ row }: { row: SubcatRow }) {
@@ -46,7 +46,7 @@ function SortableSubRow({ row }: { row: SubcatRow }) {
       <td>
         <Link href={`/admin/catalog/categories/${row.id}`}>{row.name}</Link>
       </td>
-      <td>{row._count.products}</td>
+      <td>{row._count.primaryProducts + row._count.productCategories}</td>
       <td>{row._count.children}</td>
     </tr>
   );

@@ -233,7 +233,6 @@ export function MediaLibraryPickerModal({
               onClick={() => setFolderFilter(f.id)}
             >
               {f.name}
-              <span className={libStyles.cardMeta}> · {f._count.objects}</span>
             </button>
           </div>
           {hasKids && !isCollapsed ? renderFolderBranch(f.id, depth + 1) : null}

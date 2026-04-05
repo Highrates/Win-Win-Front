@@ -7,11 +7,6 @@
   gap: 12px;
   text-decoration: none;
   color: inherit;
-  transition: opacity 0.2s ease;
-}
-
-.productCard:hover {
-  opacity: 0.85;
 }
 
 .productContent {
@@ -29,6 +24,9 @@
   position: relative;
   border-radius: 10px;
   overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .productImg {
@@ -36,6 +34,118 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  pointer-events: none;
+}
+
+.imgSlideWrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.imgSlideStrip {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  will-change: transform;
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 0ms;
+}
+
+.imgSlideStrip[data-run='1'] {
+  transition-duration: 380ms;
+}
+
+.imgSlideStrip[data-dir='next'] {
+  transform: translateX(0);
+}
+
+.imgSlideStrip[data-dir='next'][data-run='1'] {
+  transform: translateX(-50%);
+}
+
+.imgSlideStrip[data-dir='prev'] {
+  transform: translateX(-50%);
+}
+
+.imgSlideStrip[data-dir='prev'][data-run='1'] {
+  transform: translateX(0);
+}
+
+.imgSlideCell {
+  flex: 0 0 50%;
+  width: 50%;
+  height: 100%;
+  min-width: 0;
+}
+
+.galleryArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+@supports (background: color-mix(in srgb, white 50%, transparent)) {
+  .galleryArrow {
+    background: color-mix(in srgb, var(--color-white) 90%, transparent);
+  }
+}
+
+.galleryArrow:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.galleryArrowPrev {
+  left: 8px;
+}
+
+.galleryArrowNext {
+  right: 8px;
+}
+
+.galleryArrowIcon,
+.galleryArrowIconNext {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.galleryArrowIcon {
+  transform: rotate(180deg);
+}
+
+@media (min-width: 769px) {
+  .galleryArrow {
+    display: inline-flex;
+  }
+
+  /* Ховер по карточке или только по превью (Link + классы из CSS Modules) */
+  .productCardHover .galleryArrow,
+  .productCard:hover .galleryArrow,
+  .productImgWrapper:hover .galleryArrow {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .productTitles {

@@ -9,6 +9,7 @@ const LINKS: { href: string; label: string; note: string }[] = [
   { href: '/admin/blog', label: 'Блог', note: 'Статьи' },
   { href: '/admin/referrals', label: 'Рефералы', note: 'Программа' },
   { href: '/admin/collections', label: 'Коллекции', note: 'Публичные подборки' },
+  { href: '/admin/product-sets', label: 'Наборы', note: 'Только товары' },
   { href: '/admin/pages', label: 'Страницы', note: 'Инфостраницы' },
   { href: '/admin/modeling', label: 'Моделирование', note: 'Сервис моделирования' },
 ];

@@ -14,6 +14,7 @@ const NAV_HREFS = [
   '/admin/blog',
   '/admin/referrals',
   '/admin/pages',
+  '/admin/journal',
 ] as const;
 
 const navRu: Record<(typeof NAV_HREFS)[number], string> = {
@@ -26,6 +27,7 @@ const navRu: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin/blog': 'Блог',
   '/admin/referrals': 'Рефералы',
   '/admin/pages': 'Страницы',
+  '/admin/journal': 'Журнал',
 };
 
 const navZh: Record<(typeof NAV_HREFS)[number], string> = {
@@ -38,6 +40,7 @@ const navZh: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin/blog': '博客',
   '/admin/referrals': '推荐',
   '/admin/pages': '页面',
+  '/admin/journal': '日志',
 };
 
 export function catalogGroupLabel(locale: AdminLocale): string {
@@ -46,10 +49,20 @@ export function catalogGroupLabel(locale: AdminLocale): string {
 
 export function catalogSubLabel(
   locale: AdminLocale,
-  key: 'products' | 'categories' | 'collections'
+  key: 'products' | 'categories' | 'collections' | 'productSets'
 ): string {
-  const ru = { products: 'Товары', categories: 'Категории', collections: 'Коллекции' };
-  const zh = { products: '商品', categories: '类别', collections: '集合' };
+  const ru = {
+    products: 'Товары',
+    categories: 'Категории',
+    collections: 'Коллекции',
+    productSets: 'Наборы',
+  };
+  const zh = {
+    products: '商品',
+    categories: '类别',
+    collections: '集合',
+    productSets: '套装',
+  };
   return locale === 'zh' ? zh[key] : ru[key];
 }
 

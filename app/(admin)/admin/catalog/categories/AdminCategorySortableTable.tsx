@@ -57,7 +57,11 @@ function SortableRow({
         <Link href={`/admin/catalog/categories/${row.id}`}>{row.name}</Link>
       </td>
       <td>{row.parent ? row.parent.name : '—'}</td>
-      <td title={`В этой категории: ${row._count.products}`}>{row.recursiveProductCount}</td>
+      <td
+        title={`Напрямую в узле: ${row._count.primaryProducts + row._count.productCategories}`}
+      >
+        {row.recursiveProductCount}
+      </td>
       <td>{row._count.children}</td>
     </tr>
   );

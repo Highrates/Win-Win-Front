@@ -31,8 +31,26 @@ function AccordionChevronIcon({ open }: { open: boolean }) {
   );
 }
 
-export default function ProductAccordions() {
+function EmptyAccordionBody() {
+  return <p className={styles.accordionEmpty}>Данные не указаны.</p>;
+}
+
+export type ProductAccordionsProps = {
+  deliveryText?: string | null;
+  technicalSpecs?: string | null;
+  additionalInfoHtml?: string | null;
+};
+
+export default function ProductAccordions({
+  deliveryText,
+  technicalSpecs,
+  additionalInfoHtml,
+}: ProductAccordionsProps) {
   const [openId, setOpenId] = useState<string | null>(null);
+
+  const deliveryTrim = deliveryText?.trim() ?? '';
+  const specsTrim = technicalSpecs?.trim() ?? '';
+  const extraTrim = additionalInfoHtml?.trim() ?? '';
 
   return (
     <>
@@ -62,32 +80,28 @@ export default function ProductAccordions() {
               data-open={isOpen || undefined}
             >
               <div className={`${styles.accordionContent} rich-content`}>
-                  {id === 'delivery' && (
-                    <>
-                      <h3>Способы доставки</h3>
-                      <p>Доставка по Москве и МО — 1–2 рабочих дня. Подъём на этаж и сборка оплачиваются отдельно.</p>
-                      <h3>Сроки</h3>
-                      <p>При наличии на складе отгрузка в течение 3 рабочих дней. Изготовление на заказ — от 14 дней.</p>
-                    </>
-                  )}
-                  {id === 'specs' && (
-                    <>
-                      <h3>Характеристики</h3>
-                      <ul>
-                        <li>Ширина: 200 см</li>
-                        <li>Глубина: 90 см</li>
-                        <li>Высота: 80 см</li>
-                        <li>Материал каркаса: массив бука</li>
-                        <li>Обивка: ткань / кожа</li>
-                      </ul>
-                    </>
-                  )}
-                  {id === 'extra' && (
-                    <>
-                      <p>Гарантия 24 месяца. Возврат и обмен в течение 14 дней при сохранении товарного вида.</p>
-                      <p>Возможна индивидуальная комплектация и выбор ткани из каталога.</p>
-                    </>
-                  )}
+                {id === 'delivery' &&
+                  (deliveryTrim ? (
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{deliveryTrim}</div>
+                  ) : (
+                    <EmptyAccordionBody />
+                  ))}
+                {id === 'specs' &&
+                  (specsTrim ? (
+                    specsTrim.includes('<') ? (
+                      <div dangerouslySetInnerHTML={{ __html: specsTrim }} />
+                    ) : (
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{specsTrim}</div>
+                    )
+                  ) : (
+                    <EmptyAccordionBody />
+                  ))}
+                {id === 'extra' &&
+                  (extraTrim ? (
+                    <div dangerouslySetInnerHTML={{ __html: extraTrim }} />
+                  ) : (
+                    <EmptyAccordionBody />
+                  ))}
               </div>
             </div>
           </div>
