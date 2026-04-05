@@ -31,6 +31,7 @@ import {
   adminUploadRichMedia,
   revalidatePublicCatalogCache,
 } from '@/lib/adminBackendFetch';
+import { createClientRandomId } from '@/lib/clientRandomId';
 import catalogStyles from '../../catalogAdmin.module.css';
 import pn from './productNew.module.css';
 
@@ -64,7 +65,7 @@ type MaterialItem = { id: string; name: string };
 type SizeItem = { id: string; value: string };
 
 function rowId() {
-  return crypto.randomUUID();
+  return createClientRandomId();
 }
 
 function parseSpecsJson(raw: unknown): {
