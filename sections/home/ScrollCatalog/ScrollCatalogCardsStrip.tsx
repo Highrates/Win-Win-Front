@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { animateScrollStripBy } from './scrollStripScroll';
 import styles from './ScrollCatalog.module.css';
 
 const catalogCards = [
@@ -20,12 +21,15 @@ const DRAG_THRESHOLD = 5;
 /** Только горизонтальная полоса карточек (`ScrollCatalog_cardsWrapper`), без табов — для страницы родительской категории. */
 export function ScrollCatalogCardsStrip() {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const scrollStripAnimCancelRef = useRef<(() => void) | null>(null);
   const didDragRef = useRef(false);
   const startXRef = useRef(0);
   const startScrollLeftRef = useRef(0);
   const lastXRef = useRef(0);
 
   const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+    scrollStripAnimCancelRef.current?.();
+    scrollStripAnimCancelRef.current = null;
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     didDragRef.current = false;
     startXRef.current = clientX;
@@ -85,11 +89,21 @@ export function ScrollCatalogCardsStrip() {
     };
   }, [updateScrollArrows]);
 
+  useEffect(
+    () => () => {
+      scrollStripAnimCancelRef.current?.();
+    },
+    []
+  );
+
   const scrollStrip = useCallback((dir: -1 | 1) => {
     const el = wrapperRef.current;
     if (!el) return;
-    const step = Math.max(280, Math.round(el.clientWidth * 0.72));
-    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+    scrollStripAnimCancelRef.current?.();
+    const anim = animateScrollStripBy(el, dir, () => {
+      scrollStripAnimCancelRef.current = null;
+    });
+    scrollStripAnimCancelRef.current = anim.cancel;
   }, []);
 
   return (

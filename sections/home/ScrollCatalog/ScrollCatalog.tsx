@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { homeRootsFromPublicTreeClient, type HomeCatalogRoot } from '@/lib/homeCatalog';
+import { animateScrollStripBy } from './scrollStripScroll';
 import styles from './ScrollCatalog.module.css';
 
 const DRAG_THRESHOLD = 5;
@@ -77,12 +78,15 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
   }, [roots, activeId]);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const scrollStripAnimCancelRef = useRef<(() => void) | null>(null);
   const didDragRef = useRef(false);
   const startXRef = useRef(0);
   const startScrollLeftRef = useRef(0);
   const lastXRef = useRef(0);
 
   const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+    scrollStripAnimCancelRef.current?.();
+    scrollStripAnimCancelRef.current = null;
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     didDragRef.current = false;
     startXRef.current = clientX;
@@ -144,11 +148,21 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     };
   }, [updateScrollArrows, stripCards.length]);
 
+  useEffect(
+    () => () => {
+      scrollStripAnimCancelRef.current?.();
+    },
+    []
+  );
+
   const scrollStrip = useCallback((dir: -1 | 1) => {
     const el = wrapperRef.current;
     if (!el) return;
-    const step = Math.max(280, Math.round(el.clientWidth * 0.72));
-    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+    scrollStripAnimCancelRef.current?.();
+    const anim = animateScrollStripBy(el, dir, () => {
+      scrollStripAnimCancelRef.current = null;
+    });
+    scrollStripAnimCancelRef.current = anim.cancel;
   }, []);
 
   if (!roots.length) {
