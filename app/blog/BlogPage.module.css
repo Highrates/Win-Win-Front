@@ -112,21 +112,16 @@
     padding-bottom: 0;
   }
 
-  /* Строка не уже контейнера; активный таб растягивается и заполняет оставшуюся ширину */
+  /* Горизонтальный скролл; все табы по ширине контента — без flex-grow у активного, иначе при клике прыгает размер */
   .blogMarketRoomGroup {
     display: flex;
     width: max-content;
     min-width: 100%;
   }
 
-  .blogMarketRoomGroup > a {
+  .blogMarketRoomGroup > a,
+  .blogMarketRoomGroup > span.blogTabActive {
     flex: 0 0 auto;
-  }
-
-  .blogMarketRoomGroup > span[role='tab'][aria-selected='true'] {
-    flex: 1 1 auto;
-    justify-content: center;
-    min-width: 0;
     white-space: nowrap;
   }
 

@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   description: 'Статьи, события и материалы Win-Win',
 };
 
+/** Список и ?category= должны всегда совпадать с URL (без устаревшего кэша RSC). */
+export const dynamic = 'force-dynamic';
+
 type Props = {
   searchParams: Promise<{ category?: string; page?: string }>;
 };
@@ -28,11 +31,19 @@ function parseBlogListPage(raw: string | undefined): number {
 
 export default async function BlogPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const categoryParam = sp.category;
+  const categoryParam = typeof sp.category === 'string' ? sp.category.trim() : '';
   const pageParam = parseBlogListPage(sp.page);
   const categories = await fetchBlogCategoriesPublic();
+  /**
+   * Раньше: только если slug есть в списке рубрик с API — иначе фильтр не передавался.
+   * Если список рубрик пустой/ошибка — табы не могли «фильтровать» ни при каком ?category=.
+   * Передаём slug в бэкенд, когда он есть и (нет списка для проверки или slug известен).
+   */
   const activeCategorySlug =
-    categoryParam && categories.some((c) => c.slug === categoryParam) ? categoryParam : undefined;
+    categoryParam &&
+    (categories.length === 0 || categories.some((c) => c.slug === categoryParam))
+      ? categoryParam
+      : undefined;
 
   const listing = await fetchBlogPostsThroughPages({
     categorySlug: activeCategorySlug,
@@ -88,8 +99,9 @@ export default async function BlogPage({ searchParams }: Props) {
                         <span
                           key={tab.isAll ? 'all' : tab.slug}
                           role="tab"
-                          aria-selected
-                          className={projectsStyles.marketRoomBtnActive}
+                          aria-selected={true}
+                          tabIndex={0}
+                          className={`${projectsStyles.marketRoomBtnActive} ${blogStyles.blogTabActive}`}
                         >
                           {tab.label}
                         </span>
@@ -116,6 +128,7 @@ export default async function BlogPage({ searchParams }: Props) {
               </p>
             ) : (
               <BlogPostsGridWithLoadMore
+                key={`blog-grid-${activeCategorySlug ?? 'all'}-${pageParam}`}
                 initialItems={listing.items}
                 total={listing.total}
                 limit={listing.limit}
