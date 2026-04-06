@@ -1,11 +1,15 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
-import brandsStyles from '../brands/BrandsPage.module.css';
-import projectsStyles from '../projects/ProjectsPage.module.css';
+import { BLOG_LIST_PAGE_SIZE } from '@/lib/blogPublic';
+import {
+  fetchBlogCategoriesPublic,
+  fetchBlogPostsThroughPages,
+} from '@/lib/blogPublicServer';
+import brandsStyles from '../(public)/brands/BrandsPage.module.css';
+import projectsStyles from '../(public)/projects/ProjectsPage.module.css';
 import blogStyles from './BlogPage.module.css';
-import { BLOG_CATEGORIES } from './blogCategories';
-import { BLOG_POSTS } from './blogPosts';
+import { BlogPostsGridWithLoadMore } from './BlogPostsGridWithLoadMore';
 
 export const metadata: Metadata = {
   title: 'Блог — Win-Win',
@@ -13,22 +17,37 @@ export const metadata: Metadata = {
 };
 
 type Props = {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; page?: string }>;
 };
 
-export default async function BlogPage({ searchParams }: Props) {
-  const { category: categoryParam } = await searchParams;
-  const currentCategory =
-    categoryParam && BLOG_CATEGORIES.some((c) => c.id === categoryParam) ? categoryParam : 'all';
+function parseBlogListPage(raw: string | undefined): number {
+  if (raw == null || raw === '') return 1;
+  const n = parseInt(String(raw), 10);
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+}
 
-  const filteredPosts =
-    currentCategory === 'all'
-      ? BLOG_POSTS
-      : BLOG_POSTS.filter((p) => p.category === currentCategory);
+export default async function BlogPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const categoryParam = sp.category;
+  const pageParam = parseBlogListPage(sp.page);
+  const categories = await fetchBlogCategoriesPublic();
+  const activeCategorySlug =
+    categoryParam && categories.some((c) => c.slug === categoryParam) ? categoryParam : undefined;
+
+  const listing = await fetchBlogPostsThroughPages({
+    categorySlug: activeCategorySlug,
+    throughPage: pageParam,
+    pageSize: BLOG_LIST_PAGE_SIZE,
+  });
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
     { label: 'Блог', href: '', current: true },
+  ];
+
+  const tabs: { slug: string; label: string; isAll: boolean }[] = [
+    { slug: '', label: 'Все статьи', isAll: true },
+    ...categories.map((c) => ({ slug: c.slug, label: c.name, isAll: false })),
   ];
 
   return (
@@ -59,13 +78,15 @@ export default async function BlogPage({ searchParams }: Props) {
                     role="tablist"
                     aria-label="Рубрики блога"
                   >
-                    {BLOG_CATEGORIES.map((tab) => {
-                      const isActive = tab.id === currentCategory;
-                      const href =
-                        tab.id === 'all' ? '/blog' : `/blog?category=${tab.id}`;
+                    {tabs.map((tab) => {
+                      const isActive = tab.isAll ? !activeCategorySlug : activeCategorySlug === tab.slug;
+                      const tabQs = new URLSearchParams();
+                      if (!tab.isAll) tabQs.set('category', tab.slug);
+                      const tabQuery = tabQs.toString();
+                      const href = tabQuery ? `/blog?${tabQuery}` : '/blog';
                       return isActive ? (
                         <span
-                          key={tab.id}
+                          key={tab.isAll ? 'all' : tab.slug}
                           role="tab"
                           aria-selected
                           className={projectsStyles.marketRoomBtnActive}
@@ -74,7 +95,7 @@ export default async function BlogPage({ searchParams }: Props) {
                         </span>
                       ) : (
                         <Link
-                          key={tab.id}
+                          key={tab.isAll ? 'all' : tab.slug}
                           href={href}
                           role="tab"
                           aria-selected={false}
@@ -89,21 +110,19 @@ export default async function BlogPage({ searchParams }: Props) {
               </div>
             </div>
 
-            <div className={blogStyles.articlesGrid}>
-              {filteredPosts.map((post) => (
-                <Link key={post.slug} href={`/blog/${post.slug}`} className={blogStyles.articleCard}>
-                  <img
-                    src="/images/placeholder.svg"
-                    alt=""
-                    className={blogStyles.articleCardCover}
-                    width={400}
-                    height={400}
-                  />
-                  <span className={blogStyles.articleCardMeta}>{post.date}</span>
-                  <h2 className={blogStyles.articleCardTitle}>{post.title}</h2>
-                </Link>
-              ))}
-            </div>
+            {listing.items.length === 0 ? (
+              <p className={brandsStyles.breadcrumbsCurrent} style={{ marginTop: 24 }}>
+                Пока нет статей в этой рубрике.
+              </p>
+            ) : (
+              <BlogPostsGridWithLoadMore
+                initialItems={listing.items}
+                total={listing.total}
+                limit={listing.limit}
+                loadedPages={listing.loadedPages}
+                categorySlug={activeCategorySlug}
+              />
+            )}
           </div>
         </div>
       </section>

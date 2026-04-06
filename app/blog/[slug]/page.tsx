@@ -1,10 +1,22 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getArticleCategoryIds, getBlogPostBySlug, getCategoryLabel } from '../blogPosts';
-import projectsStyles from '../../projects/ProjectsPage.module.css';
+import { formatBlogDateRu } from '@/lib/blogPublic';
+import { fetchBlogPostBySlugPublic } from '@/lib/blogPublicServer';
+import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
+import projectsStyles from '../../(public)/projects/ProjectsPage.module.css';
 import blogStyles from '../BlogPage.module.css';
 import articleStyles from './ArticlePage.module.css';
+
+export const dynamic = 'force-dynamic';
+
+function safeDecodeSlug(raw: string): string {
+  try {
+    return decodeURIComponent(raw).trim();
+  } catch {
+    return raw.trim();
+  }
+}
 
 function CategoryArrow({ className }: { className?: string }) {
   return (
@@ -33,24 +45,26 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const post = getBlogPostBySlug(slug);
+  const { slug: raw } = await params;
+  const slug = safeDecodeSlug(raw);
+  if (!slug) return { title: 'Статья — Win-Win' };
+  const post = await fetchBlogPostBySlugPublic(slug);
   if (!post) return { title: 'Статья — Win-Win' };
   return {
     title: `${post.title} — Блог — Win-Win`,
-    description: post.excerpt,
+    description: post.excerpt?.trim() || undefined,
   };
 }
 
 export default async function BlogArticlePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const post = getBlogPostBySlug(slug);
+  const { slug: raw } = await params;
+  const slug = safeDecodeSlug(raw);
+  if (!slug) notFound();
+  const post = await fetchBlogPostBySlugPublic(slug);
   if (!post) notFound();
 
-  const articleCategoryIds = getArticleCategoryIds(post);
-  const coverSrc = post.coverSrc ?? '/images/placeholder.svg';
-  const richIntro = post.richIntro ?? post.excerpt;
-  const richSections = post.richSections?.length ? post.richSections : [];
+  const coverSrc = resolveMediaUrlForServer(post.coverUrl);
+  const dateLine = formatBlogDateRu(post.publishedAt);
 
   return (
     <main>
@@ -67,43 +81,42 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
               />
               <span className={articleStyles.articleBackText}>Вернуться в блог</span>
             </Link>
-            <time className={articleStyles.articleDate}>{post.date}</time>
+            {dateLine ? <time className={articleStyles.articleDate}>{dateLine}</time> : null}
             <h1 className={articleStyles.articleTitle}>{post.title}</h1>
 
-            <div className={blogStyles.blogCategoryStrip}>
-              <div className={blogStyles.blogMarketRoomGroupDesktop}>
-                <div className={blogStyles.blogMarketRoomGroupWrap}>
-                  <div
-                    className={`${blogStyles.blogMarketRoomGroup} ${articleStyles.articleCategoryGroup}`}
-                    role="list"
-                    aria-label="Рубрики статьи"
-                  >
-                    {articleCategoryIds.map((catId) => (
+            {post.category ? (
+              <div className={blogStyles.blogCategoryStrip}>
+                <div className={blogStyles.blogMarketRoomGroupDesktop}>
+                  <div className={blogStyles.blogMarketRoomGroupWrap}>
+                    <div
+                      className={`${blogStyles.blogMarketRoomGroup} ${articleStyles.articleCategoryGroup}`}
+                      role="list"
+                      aria-label="Рубрика статьи"
+                    >
                       <Link
-                        key={catId}
-                        href={`/blog?category=${catId}`}
+                        href={`/blog?category=${encodeURIComponent(post.category.slug)}`}
                         role="listitem"
                         className={projectsStyles.marketRoomBtn}
                       >
                         <span className={articleStyles.categoryBtnInner}>
-                          {getCategoryLabel(catId)}
+                          {post.category.name}
                           <CategoryArrow className={articleStyles.categoryArrow} />
                         </span>
                       </Link>
-                    ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : null}
 
-            <p className={articleStyles.articleLead}>{post.excerpt}</p>
+            {post.excerpt?.trim() ? <p className={articleStyles.articleLead}>{post.excerpt.trim()}</p> : null}
           </header>
 
           <div className={articleStyles.articleHeroOuter}>
             <div className={articleStyles.articleHeroFrame}>
               <img
                 src={coverSrc}
-                alt={post.coverAlt ?? ''}
+                alt=""
                 width={800}
                 height={600}
                 className={articleStyles.articleHeroImage}
@@ -111,15 +124,12 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
             </div>
           </div>
 
-          <div className="rich-content">
-            <p>{richIntro}</p>
-            {richSections.map((section, i) => (
-              <div key={`${section.title}-${i}`}>
-                <h3>{section.title}</h3>
-                <p>{section.text}</p>
-              </div>
-            ))}
-          </div>
+          {/* HTML уже санитизирован на API (DOMPurify); повторная санитизация на клиенте не требуется. */}
+          <div
+            className="rich-content"
+            dangerouslySetInnerHTML={{ __html: post.body }}
+            suppressHydrationWarning
+          />
         </div>
       </section>
     </main>

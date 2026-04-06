@@ -1,14 +1,23 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { fetchBlogCategoriesPublic, fetchBlogPostsPublic } from '@/lib/blogPublicServer';
+import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import styles from './News.module.css';
 
-const posts = [
-  { slug: 'novaya-kollekciya', title: 'Новая коллекция 2025', date: '15 января 2025' },
-  { slug: 'trendy-interera', title: 'Тренды интерьера', date: '10 января 2025' },
-  { slug: 'sovety-dizajneram', title: 'Советы дизайнерам', date: '5 января 2025' },
-];
+export async function News() {
+  const [categories, postsRes] = await Promise.all([
+    fetchBlogCategoriesPublic(),
+    fetchBlogPostsPublic({ limit: 4, page: 1 }),
+  ]);
+  const posts = postsRes.items;
+  if (posts.length === 0) return null;
 
-export function News() {
+  const [featured, ...rest] = posts;
+  const side = rest.slice(0, 3);
+
+  const featuredCover = resolveMediaUrlForServer(featured.coverUrl);
+  const featuredCategory = featured.category?.name ?? '';
+
   return (
     <section className={styles.section}>
       <div className="padding-global">
@@ -22,9 +31,9 @@ export function News() {
               className={styles.logo}
             />
             <div className={styles.categoriesWrapper}>
-              {['События', 'Бренд', 'Интервью'].map((label) => (
-                <Link key={label} href={`/blog?category=${label.toLowerCase()}`} className={styles.categoryItem}>
-                  {label}
+              {categories.map((c) => (
+                <Link key={c.id} href={`/blog?category=${encodeURIComponent(c.slug)}`} className={styles.categoryItem}>
+                  {c.name}
                 </Link>
               ))}
               <Link href="/blog" className={styles.allNewsLink}>
@@ -35,32 +44,42 @@ export function News() {
           </div>
           <div className={styles.grid}>
             <div className={styles.leftCol}>
-              <Link href="/blog/novaya-kollekciya" className={styles.articleBigcard}>
+              <Link href={`/blog/${encodeURIComponent(featured.slug)}`} className={styles.articleBigcard}>
                 <div className={styles.articleTitles}>
-                  <span className={styles.articleCategory}>События</span>
-                  <span className={styles.articleTitle}>Новая коллекция мебели 2025 года уже в каталоге</span>
+                  {featuredCategory ? <span className={styles.articleCategory}>{featuredCategory}</span> : null}
+                  <span className={styles.articleTitle}>{featured.title}</span>
                   <span className={styles.newsLink}>
                     <span className={styles.newsLinkText}>Читать</span>
                     <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={styles.arrow} />
                   </span>
                 </div>
-                <img className={styles.articleCover} src="/images/placeholder.svg" alt="" width={340} height={516} />
+                <img
+                  className={styles.articleCover}
+                  src={featuredCover}
+                  alt=""
+                  width={340}
+                  height={516}
+                />
               </Link>
             </div>
             <div className={styles.rightCol}>
-              {posts.map((p) => (
-                <Link key={p.slug} href={`/blog/${p.slug}`} className={styles.articleCard}>
-                  <div className={styles.articleTitles}>
-                    <span className={styles.articleCategory}>События</span>
-                    <span className={styles.articleTitle}>{p.title}</span>
-                    <span className={styles.newsLink}>
-                      <span className={styles.newsLinkText}>Читать</span>
-                      <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={styles.arrow} />
-                    </span>
-                  </div>
-                  <img className={styles.articleCardCover} src="/images/placeholder.svg" alt="" width={140} height={140} />
-                </Link>
-              ))}
+              {side.map((p) => {
+                const cover = resolveMediaUrlForServer(p.coverUrl);
+                const cat = p.category?.name ?? '';
+                return (
+                  <Link key={p.id} href={`/blog/${encodeURIComponent(p.slug)}`} className={styles.articleCard}>
+                    <div className={styles.articleTitles}>
+                      {cat ? <span className={styles.articleCategory}>{cat}</span> : null}
+                      <span className={styles.articleTitle}>{p.title}</span>
+                      <span className={styles.newsLink}>
+                        <span className={styles.newsLinkText}>Читать</span>
+                        <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={styles.arrow} />
+                      </span>
+                    </div>
+                    <img className={styles.articleCardCover} src={cover} alt="" width={140} height={140} />
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>

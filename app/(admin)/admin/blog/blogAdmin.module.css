@@ -1,0 +1,129 @@
+.categoryPanel {
+  margin-bottom: 28px;
+  padding: 16px 18px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 10px;
+  background: var(--color-bright-snow, #f7f8fa);
+}
+
+.categoryPanelTitle {
+  margin: 0 0 12px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-ink-black, #051826);
+}
+
+.categoryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.875rem;
+}
+
+.categoryRow:last-child {
+  border-bottom: none;
+}
+
+.categoryName {
+  flex: 1;
+  min-width: 120px;
+  font-weight: 500;
+}
+
+.categoryMeta {
+  color: var(--color-gray, #9d9d9d);
+  font-size: 0.8125rem;
+}
+
+.categoryAddRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.categoryAddInput {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 200px;
+  max-width: 320px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.categoryAddBtn {
+  align-self: stretch;
+  min-height: 42px;
+}
+
+.paginationRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 0.875rem;
+  color: var(--color-gray, #9d9d9d);
+}
+
+.editorField {
+  margin-bottom: 18px;
+}
+
+.editorLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-black, #051826);
+}
+
+.editorInput,
+.editorSelect,
+.editorTextarea {
+  width: 100%;
+  max-width: 720px;
+  padding: 10px 12px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.editorTextarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.editorActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.coverPreview {
+  display: block;
+  width: min(100%, 320px);
+  height: 192px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+}
+
+.reorderHint {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  color: var(--color-gray, #9d9d9d);
+}
