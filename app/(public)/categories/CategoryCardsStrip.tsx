@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { animateScrollStripBy } from '@/sections/home/ScrollCatalog/scrollStripScroll';
 import styles from '@/sections/home/ScrollCatalog/ScrollCatalog.module.css';
+import { useMatchMinWidth } from '@/sections/home/ScrollCatalog/useMatchMinWidth';
 
 export type CategoryCardItem = { slug: string; name: string; imageSrc: string };
 
@@ -18,26 +19,26 @@ export function CategoryCardsStrip({ items }: { items: CategoryCardItem[] }) {
   const startScrollLeftRef = useRef(0);
   const lastXRef = useRef(0);
 
-  const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+  const desktopStrip = useMatchMinWidth(769);
+
+  const handlePointerDown = (e: React.MouseEvent) => {
     scrollStripAnimCancelRef.current?.();
     scrollStripAnimCancelRef.current = null;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     didDragRef.current = false;
-    startXRef.current = clientX;
-    lastXRef.current = clientX;
+    startXRef.current = e.clientX;
+    lastXRef.current = e.clientX;
     if (wrapperRef.current) {
       startScrollLeftRef.current = wrapperRef.current.scrollLeft;
     }
   };
 
-  const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+  const handlePointerMove = (e: React.MouseEvent) => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-    if ('touches' in e === false && (e as React.MouseEvent).buttons !== 1) return;
+    if (e.buttons !== 1) return;
 
-    const dx = lastXRef.current - clientX;
-    lastXRef.current = clientX;
+    const dx = lastXRef.current - e.clientX;
+    lastXRef.current = e.clientX;
     wrapper.scrollLeft += dx;
 
     if (Math.abs(wrapper.scrollLeft - startScrollLeftRef.current) > DRAG_THRESHOLD) {
@@ -76,10 +77,11 @@ export function CategoryCardsStrip({ items }: { items: CategoryCardItem[] }) {
   useLayoutEffect(() => {
     const el = wrapperRef.current;
     if (el) el.scrollLeft = 0;
-    updateScrollArrows();
-  }, [itemsKey, updateScrollArrows]);
+    if (desktopStrip) updateScrollArrows();
+  }, [itemsKey, desktopStrip, updateScrollArrows]);
 
   useEffect(() => {
+    if (!desktopStrip) return;
     const el = wrapperRef.current;
     if (!el) return;
     updateScrollArrows();
@@ -90,7 +92,7 @@ export function CategoryCardsStrip({ items }: { items: CategoryCardItem[] }) {
       el.removeEventListener('scroll', updateScrollArrows);
       ro.disconnect();
     };
-  }, [updateScrollArrows, itemsKey]);
+  }, [desktopStrip, updateScrollArrows, itemsKey]);
 
   useEffect(
     () => () => {
@@ -123,8 +125,6 @@ export function CategoryCardsStrip({ items }: { items: CategoryCardItem[] }) {
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
           onMouseLeave={handlePointerMove}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handlePointerMove}
         >
           {items.map((card, index) => (
             <Link

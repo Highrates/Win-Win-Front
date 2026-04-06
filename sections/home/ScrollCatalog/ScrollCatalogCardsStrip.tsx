@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { animateScrollStripBy } from './scrollStripScroll';
 import styles from './ScrollCatalog.module.css';
+import { useMatchMinWidth } from './useMatchMinWidth';
 
 const catalogCards = [
   { slug: 'divany', name: 'Диваны' },
@@ -27,26 +28,26 @@ export function ScrollCatalogCardsStrip() {
   const startScrollLeftRef = useRef(0);
   const lastXRef = useRef(0);
 
-  const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+  const desktopStrip = useMatchMinWidth(769);
+
+  const handlePointerDown = (e: React.MouseEvent) => {
     scrollStripAnimCancelRef.current?.();
     scrollStripAnimCancelRef.current = null;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     didDragRef.current = false;
-    startXRef.current = clientX;
-    lastXRef.current = clientX;
+    startXRef.current = e.clientX;
+    lastXRef.current = e.clientX;
     if (wrapperRef.current) {
       startScrollLeftRef.current = wrapperRef.current.scrollLeft;
     }
   };
 
-  const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+  const handlePointerMove = (e: React.MouseEvent) => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-    if ('touches' in e === false && (e as React.MouseEvent).buttons !== 1) return;
+    if (e.buttons !== 1) return;
 
-    const dx = lastXRef.current - clientX;
-    lastXRef.current = clientX;
+    const dx = lastXRef.current - e.clientX;
+    lastXRef.current = e.clientX;
     wrapper.scrollLeft += dx;
 
     if (Math.abs(wrapper.scrollLeft - startScrollLeftRef.current) > DRAG_THRESHOLD) {
@@ -73,10 +74,11 @@ export function ScrollCatalogCardsStrip() {
   }, []);
 
   useLayoutEffect(() => {
-    updateScrollArrows();
-  }, [updateScrollArrows]);
+    if (desktopStrip) updateScrollArrows();
+  }, [desktopStrip, updateScrollArrows]);
 
   useEffect(() => {
+    if (!desktopStrip) return;
     const el = wrapperRef.current;
     if (!el) return;
     updateScrollArrows();
@@ -87,7 +89,7 @@ export function ScrollCatalogCardsStrip() {
       el.removeEventListener('scroll', updateScrollArrows);
       ro.disconnect();
     };
-  }, [updateScrollArrows]);
+  }, [desktopStrip, updateScrollArrows]);
 
   useEffect(
     () => () => {

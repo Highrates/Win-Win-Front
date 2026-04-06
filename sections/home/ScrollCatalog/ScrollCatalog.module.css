@@ -275,7 +275,9 @@
     padding-right: 16px;
     gap: 12px;
     /* Как .mobileCardsWrapper на главной: нативный touch-scroll без JS, без цепочки к странице */
+    overflow-x: auto;
     overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
     touch-action: pan-x;
   }
