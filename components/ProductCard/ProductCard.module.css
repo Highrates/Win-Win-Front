@@ -139,10 +139,13 @@
     display: inline-flex;
   }
 
-  /* Ховер по карточке или только по превью (Link + классы из CSS Modules) */
+  /*
+   * Видимость стрелок: класс с JS (onMouseEnter/Leave на Link) + :focus-within для клавиатуры.
+   * Не полагаемся на .productCard:hover: внутри ссылки вложен <button> (невалидная вёрстка) —
+   * в части браузеров чистый :hover на <a> при наведении на зону стрелок ведёт себя нестабильно.
+   */
   .productCardHover .galleryArrow,
-  .productCard:hover .galleryArrow,
-  .productImgWrapper:hover .galleryArrow {
+  .productCard:focus-within .galleryArrow {
     opacity: 1;
     pointer-events: auto;
   }

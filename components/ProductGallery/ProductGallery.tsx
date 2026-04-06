@@ -46,9 +46,10 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
   const [offset, setOffset] = useState(0);
   const [prevOffset, setPrevOffset] = useState(0);
   const [slideActive, setSlideActive] = useState(false);
+  /** next: 0 → -50 (контент уходит влево); prev: -50 → 0 (контент приходит слева) */
+  const [slideDirection, setSlideDirection] = useState<'next' | 'prev'>('next');
   const [slideTranslate, setSlideTranslate] = useState(0);
   const galleryRef = useRef<HTMLDivElement>(null);
-  const slideTargetRef = useRef<number>(0);
   const transitionMsRef = useRef<number>(TRANSITION_MS);
 
   const dataSource = useMemo(
@@ -61,17 +62,17 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
     [images]
   );
 
-  /* Один эффект для обоих направлений: текущее уходит влево, новое приходит справа → strip [старое, новое], анимация 0% → -50%. */
   const go = useCallback(
     (delta: number) => {
       if (slideActive) return;
       const nextOffset = (offset + delta + N) % N;
-      slideTargetRef.current = -50;
+      const direction: 'next' | 'prev' = delta > 0 ? 'next' : 'prev';
       transitionMsRef.current = TRANSITION_MS;
       flushSync(() => {
         setPrevOffset(offset);
         setOffset(nextOffset);
-        setSlideTranslate(0);
+        setSlideDirection(direction);
+        setSlideTranslate(direction === 'next' ? 0 : -50);
         setSlideActive(true);
       });
     },
@@ -80,13 +81,23 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
 
   useLayoutEffect(() => {
     if (!slideActive) return;
-    const rafId = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setSlideTranslate(slideTargetRef.current);
+    const target = slideDirection === 'next' ? -50 : 0;
+    let cancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      if (cancelled) return;
+      raf2 = requestAnimationFrame(() => {
+        if (cancelled) return;
+        setSlideTranslate(target);
       });
     });
-    return () => cancelAnimationFrame(rafId);
-  }, [slideActive]);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [slideActive, slideDirection]);
 
   useEffect(() => {
     if (!slideActive) return;
@@ -105,16 +116,19 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
   const goToIndex = useCallback(
     (index: number) => {
       if (index === offset || slideActive) return;
-      slideTargetRef.current = -50;
+      const forward = (index - offset + N) % N;
+      const backward = (offset - index + N) % N;
+      const direction: 'next' | 'prev' = forward <= backward ? 'next' : 'prev';
       transitionMsRef.current = TRANSITION_MS;
       flushSync(() => {
         setPrevOffset(offset);
         setOffset(index);
-        setSlideTranslate(0);
+        setSlideDirection(direction);
+        setSlideTranslate(direction === 'next' ? 0 : -50);
         setSlideActive(true);
       });
     },
-    [offset, slideActive]
+    [offset, slideActive, N]
   );
 
   const dotTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -237,16 +251,17 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
     [prevOffset, N]
   );
 
-  function renderSlotImage(slotIndex: number, imgIndex: number) {
-    const isLazy = slotIndex >= 2;
+  function renderSlotImage(slotIndex: number, imgIndex: number, cell: 'a' | 'b') {
     return (
       <img
+        key={`${slotIndex}-${cell}-${imgIndex}`}
         src={images[imgIndex]}
         alt=""
         width={IMG_WIDTH}
         height={IMG_HEIGHT}
         className={styles.galleryImg}
-        loading={isLazy ? 'lazy' : undefined}
+        loading="eager"
+        decoding="async"
         onError={(e) => {
           const el = e.currentTarget;
           if (el.src !== FALLBACK_IMG) el.src = FALLBACK_IMG;
@@ -257,9 +272,17 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
 
   function renderSlot(slotIndex: number) {
     const isSliding = slideActive;
-    /* Один эффект: strip [старое, новое], анимация 0% → -50%. */
-    const firstIndex = isSliding ? prevIndices[slotIndex] : indices[slotIndex];
-    const secondIndex = isSliding ? indices[slotIndex] : null;
+    let firstIndex: number;
+    let secondIndex: number | null = null;
+    if (!isSliding) {
+      firstIndex = indices[slotIndex];
+    } else if (slideDirection === 'next') {
+      firstIndex = prevIndices[slotIndex];
+      secondIndex = indices[slotIndex];
+    } else {
+      firstIndex = indices[slotIndex];
+      secondIndex = prevIndices[slotIndex];
+    }
 
     return (
       <button
@@ -279,14 +302,17 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
                 ? {
                     ['--slot-duration' as string]: `${TRANSITION_MS}ms`,
                     ['--slot-easing' as string]: EASING,
-                    transform: `translateX(${slideTranslate}%)`,
+                    transform: `translate3d(${slideTranslate}%, 0, 0)`,
+                    /* Иначе браузер анимирует idle → -50% как «вперёд» и ломает «Назад» */
+                    transition:
+                      slideDirection === 'prev' && slideTranslate === -50 ? 'none' : undefined,
                   }
                 : undefined
             }
           >
-            <div className={styles.slotStripCell}>{renderSlotImage(slotIndex, firstIndex)}</div>
+            <div className={styles.slotStripCell}>{renderSlotImage(slotIndex, firstIndex, 'a')}</div>
             {secondIndex !== null && (
-              <div className={styles.slotStripCell}>{renderSlotImage(slotIndex, secondIndex)}</div>
+              <div className={styles.slotStripCell}>{renderSlotImage(slotIndex, secondIndex, 'b')}</div>
             )}
           </div>
         </div>

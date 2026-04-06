@@ -34,14 +34,107 @@
   color: var(--color-ink-black);
 }
 
+/*
+ * Полоса карточек на главной живёт внутри .padding-global (как табы) — та же ширина колонки.
+ * Стрелки позиционируются относительно .stripPanel (вьюпорт прокрутки = catalog-cards-panel).
+ */
+.stripHostFlex {
+  margin-top: 40px;
+}
+
+.stripHostFlexTightTop {
+  margin-top: 0;
+}
+
+.stripPanel {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  /* Главная: мобильная сетка вместо десктопной полосы */
+  .stripHostFlexHome {
+    display: none;
+  }
+
+  .stripArrow {
+    display: none;
+  }
+}
+
+/* Стрелки как в ProductCard (.galleryArrow): left/right 8px, по центру ряда превью 220px */
+.stripArrow {
+  position: absolute;
+  top: 110px;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  transition: opacity 0.2s ease;
+}
+
+@media (min-width: 769px) {
+  .stripArrow {
+    display: inline-flex;
+  }
+}
+
+.stripArrowPrev {
+  left: 8px;
+}
+
+.stripArrowNext {
+  right: 8px;
+}
+
+@supports (background: color-mix(in srgb, white 50%, transparent)) {
+  .stripArrow {
+    background: color-mix(in srgb, var(--color-white) 90%, transparent);
+  }
+}
+
+.stripArrow:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.stripArrow:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.stripArrowIcon,
+.stripArrowIconNext {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.stripArrowIcon {
+  transform: rotate(180deg);
+}
+
 .cardsWrapper {
   display: flex;
+  width: 100%;
+  min-width: 0;
   gap: 24px;
   overflow-x: auto;
   padding-bottom: 8px;
   -webkit-overflow-scrolling: touch;
-  padding-left: max(2rem, calc((100vw - 1536px) / 2 + 2rem));
-  margin-top: 40px;
+  margin-top: 0;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -170,6 +263,7 @@
   .cardsWrapper.cardsWrapperOnCategoryParent {
     display: flex;
     padding-left: 16px;
+    padding-right: 16px;
     gap: 12px;
     /* Как .mobileCardsWrapper на главной: нативный touch-scroll без JS, без цепочки к странице */
     overflow-y: hidden;

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { homeRootsFromPublicTreeClient, type HomeCatalogRoot } from '@/lib/homeCatalog';
 import styles from './ScrollCatalog.module.css';
 
@@ -62,6 +62,20 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     [roots, activeId]
   );
 
+  const stripCards = useMemo(() => {
+    if (!roots.length) return [];
+    const root = roots.find((r) => r.id === activeId) ?? roots[0];
+    if (!root) return [];
+    if (root.children.length > 0) {
+      return root.children.map((c) => ({
+        slug: c.slug,
+        name: c.name,
+        image: c.cardImageUrl,
+      }));
+    }
+    return [{ slug: root.slug, name: root.name, image: root.cardImageUrl }];
+  }, [roots, activeId]);
+
   const wrapperRef = useRef<HTMLDivElement>(null);
   const didDragRef = useRef(false);
   const startXRef = useRef(0);
@@ -99,24 +113,47 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     }
   };
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-    if (el.scrollWidth <= el.clientWidth) return;
-    el.scrollLeft += e.deltaY;
-    e.preventDefault();
-  };
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const updateScrollArrows = useCallback(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setCanScrollPrev(scrollLeft > 2);
+    setCanScrollNext(maxScroll > 2 && scrollLeft < maxScroll - 2);
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (el) el.scrollLeft = 0;
+    updateScrollArrows();
+  }, [activeId, stripCards.length, updateScrollArrows]);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    updateScrollArrows();
+    el.addEventListener('scroll', updateScrollArrows, { passive: true });
+    const ro = new ResizeObserver(updateScrollArrows);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', updateScrollArrows);
+      ro.disconnect();
+    };
+  }, [updateScrollArrows, stripCards.length]);
+
+  const scrollStrip = useCallback((dir: -1 | 1) => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const step = Math.max(280, Math.round(el.clientWidth * 0.72));
+    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  }, []);
 
   if (!roots.length) {
     return null;
   }
-
-  const stripCards =
-    activeRoot && activeRoot.children.length > 0
-      ? activeRoot.children.map((c) => ({ slug: c.slug, name: c.name, image: c.cardImageUrl }))
-      : activeRoot
-        ? [{ slug: activeRoot.slug, name: activeRoot.name, image: activeRoot.cardImageUrl }]
-        : [];
 
   return (
     <section className={styles.section}>
@@ -137,45 +174,74 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
             </button>
           ))}
         </div>
-      </div>
-      <div
-        id="catalog-cards-panel"
-        role="tabpanel"
-        aria-labelledby={activeRoot ? `catalog-tab-${activeRoot.id}` : undefined}
-        ref={wrapperRef}
-        className={styles.cardsWrapper}
-        onWheel={handleWheel}
-        onMouseDown={handlePointerDown}
-        onMouseMove={handlePointerMove}
-        onMouseLeave={handlePointerMove}
-        onTouchStart={handlePointerDown}
-        onTouchMove={handlePointerMove}
-      >
-        {stripCards.map((card, index) => (
-          <Link
-            key={card.slug}
-            href={`/categories/${card.slug}`}
-            className={styles.card}
-            onClick={handleLinkClick}
-          >
+        <div className={`${styles.stripHostFlex} ${styles.stripHostFlexHome}`}>
+          <div className={styles.stripPanel}>
             <div
-              className={
-                index === 0 || index === 3
-                  ? `${styles.imgWrap} ${styles.imgWrapWide}`
-                  : styles.imgWrap
-              }
+              id="catalog-cards-panel"
+              role="tabpanel"
+              aria-labelledby={activeRoot ? `catalog-tab-${activeRoot.id}` : undefined}
+              ref={wrapperRef}
+              className={styles.cardsWrapper}
+              onMouseDown={handlePointerDown}
+              onMouseMove={handlePointerMove}
+              onMouseLeave={handlePointerMove}
+              onTouchStart={handlePointerDown}
+              onTouchMove={handlePointerMove}
             >
-              <img
-                src={card.image}
-                alt=""
-                width={index === 0 || index === 3 ? 306 : 242}
-                height={220}
-                className={styles.imgCover}
-              />
+              {stripCards.map((card, index) => (
+                <Link
+                  key={card.slug}
+                  href={`/categories/${card.slug}`}
+                  className={styles.card}
+                  onClick={handleLinkClick}
+                >
+                  <div
+                    className={
+                      index === 0 || index === 3
+                        ? `${styles.imgWrap} ${styles.imgWrapWide}`
+                        : styles.imgWrap
+                    }
+                  >
+                    <img
+                      src={card.image}
+                      alt=""
+                      width={index === 0 || index === 3 ? 306 : 242}
+                      height={220}
+                      className={styles.imgCover}
+                    />
+                  </div>
+                  <span className={styles.cardTitle}>{card.name}</span>
+                </Link>
+              ))}
             </div>
-            <span className={styles.cardTitle}>{card.name}</span>
-          </Link>
-        ))}
+            <button
+              type="button"
+              className={`${styles.stripArrow} ${styles.stripArrowPrev}`}
+              aria-label="Прокрутить каталог влево"
+              disabled={!canScrollPrev}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                scrollStrip(-1);
+              }}
+            >
+              <img src="/icons/arrow.svg" alt="" className={styles.stripArrowIcon} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={`${styles.stripArrow} ${styles.stripArrowNext}`}
+              aria-label="Прокрутить каталог вправо"
+              disabled={!canScrollNext}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                scrollStrip(1);
+              }}
+            >
+              <img src="/icons/arrow.svg" alt="" className={styles.stripArrowIconNext} aria-hidden />
+            </button>
+          </div>
+        </div>
       </div>
       <div className={styles.mobileWrapper}>
         <div className={styles.mobileCardsWrapper}>

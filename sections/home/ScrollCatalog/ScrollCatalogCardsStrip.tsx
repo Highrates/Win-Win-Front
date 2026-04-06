@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styles from './ScrollCatalog.module.css';
 
 const catalogCards = [
@@ -56,48 +56,105 @@ export function ScrollCatalogCardsStrip() {
     }
   };
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-    if (el.scrollWidth <= el.clientWidth) return;
-    el.scrollLeft += e.deltaY;
-    e.preventDefault();
-  };
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const updateScrollArrows = useCallback(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setCanScrollPrev(scrollLeft > 2);
+    setCanScrollNext(maxScroll > 2 && scrollLeft < maxScroll - 2);
+  }, []);
+
+  useLayoutEffect(() => {
+    updateScrollArrows();
+  }, [updateScrollArrows]);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    updateScrollArrows();
+    el.addEventListener('scroll', updateScrollArrows, { passive: true });
+    const ro = new ResizeObserver(updateScrollArrows);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', updateScrollArrows);
+      ro.disconnect();
+    };
+  }, [updateScrollArrows]);
+
+  const scrollStrip = useCallback((dir: -1 | 1) => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const step = Math.max(280, Math.round(el.clientWidth * 0.72));
+    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  }, []);
 
   return (
-    <div
-      ref={wrapperRef}
-      className={`${styles.cardsWrapper} ${styles.cardsWrapperOnCategoryParent} ${styles.cardsWrapperTightTop}`}
-      onWheel={handleWheel}
-      onMouseDown={handlePointerDown}
-      onMouseMove={handlePointerMove}
-      onMouseLeave={handlePointerMove}
-    >
-      {catalogCards.map((card, index) => (
-        <Link
-          key={card.slug}
-          href={`/categories/${card.slug}`}
-          className={styles.card}
-          onClick={handleLinkClick}
+    <div className={`${styles.stripHostFlex} ${styles.stripHostFlexTightTop}`}>
+      <div className={styles.stripPanel}>
+        <div
+          ref={wrapperRef}
+          className={`${styles.cardsWrapper} ${styles.cardsWrapperOnCategoryParent} ${styles.cardsWrapperTightTop}`}
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseLeave={handlePointerMove}
         >
-          <div
-            className={
-              index === 0 || index === 3
-                ? `${styles.imgWrap} ${styles.imgWrapWide}`
-                : styles.imgWrap
-            }
-          >
-            <img
-              src="/images/placeholder.svg"
-              alt=""
-              width={index === 0 || index === 3 ? 306 : 242}
-              height={220}
-              className={styles.imgCover}
-            />
-          </div>
-          <span className={styles.cardTitle}>{card.name}</span>
-        </Link>
-      ))}
+          {catalogCards.map((card, index) => (
+            <Link
+              key={card.slug}
+              href={`/categories/${card.slug}`}
+              className={styles.card}
+              onClick={handleLinkClick}
+            >
+              <div
+                className={
+                  index === 0 || index === 3
+                    ? `${styles.imgWrap} ${styles.imgWrapWide}`
+                    : styles.imgWrap
+                }
+              >
+                <img
+                  src="/images/placeholder.svg"
+                  alt=""
+                  width={index === 0 || index === 3 ? 306 : 242}
+                  height={220}
+                  className={styles.imgCover}
+                />
+              </div>
+              <span className={styles.cardTitle}>{card.name}</span>
+            </Link>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={`${styles.stripArrow} ${styles.stripArrowPrev}`}
+          aria-label="Прокрутить каталог влево"
+          disabled={!canScrollPrev}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            scrollStrip(-1);
+          }}
+        >
+          <img src="/icons/arrow.svg" alt="" className={styles.stripArrowIcon} aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={`${styles.stripArrow} ${styles.stripArrowNext}`}
+          aria-label="Прокрутить каталог вправо"
+          disabled={!canScrollNext}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            scrollStrip(1);
+          }}
+        >
+          <img src="/icons/arrow.svg" alt="" className={styles.stripArrowIconNext} aria-hidden />
+        </button>
+      </div>
     </div>
   );
 }

@@ -78,6 +78,8 @@
   object-fit: cover;
   border-radius: 10px;
   display: block;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .slotStripWrap {
@@ -91,6 +93,7 @@
 .slotStripIdle {
   display: flex;
   height: 100%;
+  backface-visibility: hidden;
 }
 
 .slotStrip {
