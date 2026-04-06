@@ -34,6 +34,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [logoUrl, setLogoUrl] = useState('');
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
   const [gallery, setGallery] = useState<[string, string, string]>(['', '', '']);
   const [shortDescription, setShortDescription] = useState('');
@@ -46,7 +47,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     null | { filter: 'image' | 'video' | 'all'; title?: string }
   >(null);
   const richPickResolver = useRef<((url: string | null) => void) | null>(null);
-  const brandTargetRef = useRef<'background' | number | null>(null);
+  const brandTargetRef = useRef<'logo' | 'background' | number | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -58,6 +59,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setName(row.name);
       setSlug(row.slug);
       setIsActive(row.isActive);
+      setLogoUrl(row.logoUrl ?? '');
       setBackgroundImageUrl(row.backgroundImageUrl ?? '');
       setGallery(parseGallery(row.galleryImageUrls));
       setShortDescription(row.shortDescription ?? '');
@@ -88,6 +90,13 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     [],
   );
 
+  function openLogoPicker() {
+    richPickResolver.current = null;
+    brandTargetRef.current = 'logo';
+    setSaveMsg(null);
+    setPicker({ filter: 'image', title: 'Логотип бренда' });
+  }
+
   function openBackgroundPicker() {
     richPickResolver.current = null;
     brandTargetRef.current = 'background';
@@ -112,7 +121,9 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     }
     const t = brandTargetRef.current;
     brandTargetRef.current = null;
-    if (t === 'background') {
+    if (t === 'logo') {
+      setLogoUrl(sel.url);
+    } else if (t === 'background') {
       setBackgroundImageUrl(sel.url);
     } else if (typeof t === 'number') {
       setGallery((prev) => {
@@ -132,6 +143,10 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     }
     brandTargetRef.current = null;
     setPicker(null);
+  }
+
+  function clearLogo() {
+    setLogoUrl('');
   }
 
   function clearCoverImage() {
@@ -155,7 +170,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       name: name.trim(),
       slug: slug.trim() || undefined,
       isActive,
-      coverImageUrl: null,
+      logoUrl: logoUrl.trim() || null,
       backgroundImageUrl: backgroundImageUrl.trim() || null,
       galleryImageUrls: galleryUrls,
       shortDescription: shortDescription.trim().slice(0, 280) || null,
@@ -169,17 +184,16 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
           method: 'PATCH',
           body: JSON.stringify(body),
         });
-        setSaveMsg('Сохранено');
         await revalidatePublicCatalogCache();
-        await load();
+        router.push('/admin/brands');
         router.refresh();
       } else {
-        const created = await adminBackendJson<{ id: string }>('catalog/admin/brands', {
+        await adminBackendJson<{ id: string }>('catalog/admin/brands', {
           method: 'POST',
           body: JSON.stringify(body),
         });
         await revalidatePublicCatalogCache();
-        router.push(`/admin/brands/${created.id}`);
+        router.push('/admin/brands');
         router.refresh();
       }
     } catch (err) {
@@ -284,6 +298,35 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
             {shortDescription.length}/280
           </span>
         </label>
+
+        <div className={styles.section} style={{ marginTop: 4 }}>
+          <h2 className={styles.sectionTitle}>Логотип</h2>
+          <div className={styles.fileRow}>
+            <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={openLogoPicker}>
+              Выбрать из медиатеки
+            </button>
+            {logoUrl ? (
+              <button type="button" className={styles.btn} onClick={clearLogo}>
+                Убрать логотип
+              </button>
+            ) : null}
+          </div>
+          {logoUrl ? (
+            <div
+              className={styles.bgPreview}
+              style={{
+                marginTop: 10,
+                maxWidth: 200,
+                aspectRatio: '1',
+                borderRadius: 8,
+                overflow: 'hidden',
+                background: 'var(--color-bright-snow, #f5f5f5)',
+              }}
+            >
+              <img src={logoUrl} alt="" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+            </div>
+          ) : null}
+        </div>
 
         <div className={styles.label}>
           <div className={styles.labelCheckboxRow}>

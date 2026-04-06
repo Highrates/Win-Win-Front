@@ -101,7 +101,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
     setSaving(true);
     setSaveMsg(null);
     try {
-      const updated = await adminBackendJson<CategoryDetail>(`catalog/admin/categories/${id}`, {
+      await adminBackendJson<CategoryDetail>(`catalog/admin/categories/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           name: name.trim(),
@@ -113,10 +113,8 @@ export function CategoryDetailClient({ id }: { id: string }) {
           backgroundMediaObjectId: bgTrim ? backgroundMediaObjectId ?? null : null,
         }),
       });
-      setData(updated);
-      setBackgroundMediaObjectId(updated.backgroundMediaObjectId ?? null);
-      setSaveMsg('Сохранено');
       await revalidatePublicCatalogCache();
+      router.push('/admin/catalog/categories');
       router.refresh();
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : 'Ошибка сохранения');

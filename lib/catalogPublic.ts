@@ -150,6 +150,67 @@ export async function fetchProductsSearch(params: {
   }
 }
 
+/** `GET /catalog/curated-collections/:slug` — коллекция брендов для витрины. */
+export type PublicBrandCollectionBrand = {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  shortDescription: string | null;
+  galleryMain: string | null;
+  gallerySide1: string | null;
+  gallerySide2: string | null;
+};
+
+export type PublicBrandCollectionPayload = {
+  slug: string;
+  name: string;
+  kind: 'BRAND';
+  brands: PublicBrandCollectionBrand[];
+};
+
+export async function fetchCuratedBrandCollectionBySlug(
+  slug: string,
+): Promise<PublicBrandCollectionPayload | null> {
+  const base = getServerApiBase();
+  try {
+    const res = await fetch(
+      `${base}/catalog/curated-collections/${encodeURIComponent(slug)}`,
+      { next: catalogPublicFetchNext() },
+    );
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return await jsonFromResponse<PublicBrandCollectionPayload | null>(res, null);
+  } catch {
+    return null;
+  }
+}
+
+/** `GET /catalog/products/:slug/set-siblings` — соседи по кураторским наборам. */
+export type PublicSetSiblingProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  price: unknown;
+  thumbUrl: string | null;
+  imageUrls: string[];
+};
+
+export async function fetchProductSetSiblingsBySlug(
+  slug: string,
+): Promise<{ items: PublicSetSiblingProduct[] }> {
+  const base = getServerApiBase();
+  try {
+    const res = await fetch(
+      `${base}/catalog/products/${encodeURIComponent(slug)}/set-siblings`,
+      { next: catalogPublicFetchNext() },
+    );
+    if (!res.ok) return { items: [] };
+    return await jsonFromResponse<{ items: PublicSetSiblingProduct[] }>(res, { items: [] });
+  } catch {
+    return { items: [] };
+  }
+}
+
 /** `GET /catalog/products/:slug` — полная карточка для витрины. */
 export async function fetchPublicProductBySlug(slug: string): Promise<unknown | null> {
   const base = getServerApiBase();

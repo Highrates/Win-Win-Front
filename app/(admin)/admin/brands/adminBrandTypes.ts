@@ -14,6 +14,7 @@ export type BrandAdminDetail = {
   isActive: boolean;
   shortDescription: string | null;
   description: string | null;
+  logoUrl: string | null;
   coverImageUrl: string | null;
   backgroundImageUrl: string | null;
   galleryImageUrls: unknown;

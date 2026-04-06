@@ -620,13 +620,13 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
           body: JSON.stringify(payload),
         });
       } else {
-        const created = await adminBackendJson<{ id: string }>('catalog/admin/products', {
+        await adminBackendJson<{ id: string }>('catalog/admin/products', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
-        router.push(`/admin/catalog/products/${created.id}`);
       }
       await revalidatePublicCatalogCache();
+      router.push('/admin/catalog/products');
       router.refresh();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');

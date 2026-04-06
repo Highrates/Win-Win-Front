@@ -48,12 +48,12 @@ function NewCategoryForm() {
         body.backgroundImageUrl = bgTrim;
         if (backgroundMediaObjectId) body.backgroundMediaObjectId = backgroundMediaObjectId;
       }
-      const created = await adminBackendJson<{ id: string }>('catalog/admin/categories', {
+      await adminBackendJson<{ id: string }>('catalog/admin/categories', {
         method: 'POST',
         body: JSON.stringify(body),
       });
       await revalidatePublicCatalogCache();
-      router.push(`/admin/catalog/categories/${created.id}`);
+      router.push('/admin/catalog/categories');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось создать');

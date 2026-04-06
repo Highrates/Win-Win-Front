@@ -38,13 +38,22 @@ function generateItems(count: number) {
   });
 }
 
+export type RecommendationsStaticItem = {
+  slug: string;
+  name: string;
+  price: number;
+  imageUrls?: string[];
+};
+
 type RecommendationsProps = {
   title?: string;
   /** Опциональный id секции (например для скрытия sticky-панели при скролле) */
   id?: string;
+  /** Фиксированный список: без моков и без «Загрузить ещё» (например, наборы на карточке товара). */
+  staticItems?: RecommendationsStaticItem[];
 };
 
-export function Recommendations({ title = 'Рекомендации', id }: RecommendationsProps) {
+export function Recommendations({ title = 'Рекомендации', id, staticItems }: RecommendationsProps) {
   const [items, setItems] = useState(() => generateItems(ITEMS_PER_LOAD));
 
   const handleLoadMore = useCallback(() => {
@@ -53,6 +62,27 @@ export function Recommendations({ title = 'Рекомендации', id }: Reco
       return next;
     });
   }, []);
+
+  if (staticItems?.length) {
+    return (
+      <section id={id} className={styles.section}>
+        <div className="padding-global">
+          <h5 className={styles.title}>{title}</h5>
+          <div className={styles.grid}>
+            {staticItems.map((p) => (
+              <ProductCard
+                key={p.slug}
+                slug={p.slug}
+                name={p.name}
+                price={p.price}
+                imageUrls={p.imageUrls}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id={id} className={styles.section}>

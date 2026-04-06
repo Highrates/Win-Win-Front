@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { ProductGallery } from '@/components/ProductGallery';
 import { Button } from '@/components/Button';
 import { Recommendations } from '@/sections/home';
-import { fetchPublicProductBySlug } from '@/lib/catalogPublic';
+import { fetchProductSetSiblingsBySlug, fetchPublicProductBySlug } from '@/lib/catalogPublic';
 import { parsePublicProduct } from '@/lib/publicProductFromApi';
 import {
   formatProductPriceRub,
@@ -45,11 +45,24 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const raw = await fetchPublicProductBySlug(slug);
+  const [raw, siblingsRes] = await Promise.all([
+    fetchPublicProductBySlug(slug),
+    fetchProductSetSiblingsBySlug(slug),
+  ]);
   const product = parsePublicProduct(raw);
   if (!product) {
     notFound();
   }
+
+  const setSiblingCards =
+    siblingsRes.items.length > 0
+      ? siblingsRes.items.map((it) => ({
+          slug: it.slug,
+          name: it.name,
+          price: parseProductPriceFromApi(it.price),
+          imageUrls: it.imageUrls.map((u) => resolveMediaUrlForServer(u)),
+        }))
+      : [];
 
   const priceNum = parseProductPriceFromApi(product.price);
   const priceText = priceNum > 0 ? formatProductPriceRub(priceNum) : '—';
@@ -237,7 +250,13 @@ export default async function ProductPage({
           </div>
         </div>
       </section>
-      <Recommendations id="product-recommendations" title="Похожие товары" />
+      {setSiblingCards.length > 0 ? (
+        <Recommendations
+          id="product-recommendations"
+          title="Наборы"
+          staticItems={setSiblingCards}
+        />
+      ) : null}
     </main>
   );
 }
