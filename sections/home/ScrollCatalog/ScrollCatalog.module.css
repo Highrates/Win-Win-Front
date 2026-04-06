@@ -35,8 +35,8 @@
 }
 
 /*
- * Полоса карточек на главной живёт внутри .padding-global (как табы) — та же ширина колонки.
- * Стрелки позиционируются относительно .stripPanel (вьюпорт прокрутки = catalog-cards-panel).
+ * Десктоп: полоса на всю ширину вьюпорта (карточки уходят вправо до края экрана), левый край
+ * совпадает с табами в .padding-global. Табы остаются внутри padding-global.
  */
 .stripHostFlex {
   margin-top: 40px;
@@ -85,6 +85,15 @@
 }
 
 @media (min-width: 769px) {
+  .stripHostFlexHome,
+  .stripHostFlexTightTop {
+    margin-left: calc(50% - 50vw);
+    width: 100vw;
+    max-width: none;
+    padding-left: max(2rem, calc((100vw - 1536px) / 2 + 2rem));
+    box-sizing: border-box;
+  }
+
   .stripArrow {
     display: inline-flex;
   }
