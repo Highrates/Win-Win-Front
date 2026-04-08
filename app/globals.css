@@ -351,36 +351,42 @@ body.header-super-menu-open {
   object-fit: cover;
 }
 
-/* Пресеты RichBlock (data-align/data-size сохраняются через санитайз на бэке). */
+/* Пресеты RichBlock: data-* и классы case-media-* (дубль в HTML для витрины). */
 .rich-content img[data-size='small'],
+.rich-content img.case-media-small,
 .rich-content video[data-size='small'] {
   width: min(35%, 220px);
 }
 
 .rich-content img[data-size='medium'],
+.rich-content img.case-media-medium,
 .rich-content video[data-size='medium'] {
   width: min(65%, 520px);
 }
 
 .rich-content img[data-size='full'],
+.rich-content img.case-media-full,
 .rich-content video[data-size='full'] {
   width: 100%;
 }
 
 /* Выравнивание: родитель — на всю ширину (align-items:stretch), картинка уже — через margin */
 .rich-content img[data-align='center'],
+.rich-content img.case-media-center,
 .rich-content video[data-align='center'] {
   margin-left: auto;
   margin-right: auto;
 }
 
 .rich-content img[data-align='left'],
+.rich-content img.case-media-left,
 .rich-content video[data-align='left'] {
   margin-right: auto;
   margin-left: 0;
 }
 
 .rich-content img[data-align='right'],
+.rich-content img.case-media-right,
 .rich-content video[data-align='right'] {
   margin-left: auto;
   margin-right: 0;
@@ -388,6 +394,7 @@ body.header-super-menu-open {
 
 /* float в flex-контейнере игнорируется — обводка текста как в редакторе через те же отступы */
 .rich-content img[data-align='wrap'],
+.rich-content img.case-media-wrap,
 .rich-content video[data-align='wrap'] {
   float: none;
   width: min(45%, 340px);

@@ -70,27 +70,34 @@
 .richEditorWrap :global(.ql-editor img),
 .richEditorWrap :global(.ql-editor video) { max-width: 100%; height: auto; display: block; }
 
-/* Пресеты как на фронте: только data-* в HTML — Delta и санитайз сохраняют атрибуты; inline style Quill сбрасывает. */
-.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='small']) {
+/* Пресеты: data-* + классы case-media-* (как кнопки тулбара). */
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='small']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-small) {
   width: min(35%, 220px);
 }
-.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='medium']) {
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='medium']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-medium) {
   width: min(65%, 520px);
 }
-.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='full']) {
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='full']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-full) {
   width: 100%;
 }
-.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='center']) {
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='center']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-center) {
   margin-left: auto;
   margin-right: auto;
 }
-.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='left']) {
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='left']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-left) {
   margin-right: auto;
 }
-.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='right']) {
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='right']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-right) {
   margin-left: auto;
 }
-.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap']) {
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap) {
   float: left;
   width: min(45%, 340px);
   margin-right: 16px;

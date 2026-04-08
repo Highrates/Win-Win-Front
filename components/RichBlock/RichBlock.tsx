@@ -38,6 +38,39 @@ function getImageBlotIndex(quill: { constructor: any; getIndex: (b: unknown) => 
   }
 }
 
+/** Совпадают с классами кнопок тулбара — дублируют data-* в DOM: надёжнее для innerHTML и публичного CSS. */
+const RICH_IMG_SIZE_CLASSES = ['case-media-small', 'case-media-medium', 'case-media-full'] as const;
+const RICH_IMG_ALIGN_CLASSES = ['case-media-left', 'case-media-center', 'case-media-right', 'case-media-wrap'] as const;
+
+function syncRichImagePresetClasses(img: HTMLImageElement, align?: string, size?: string) {
+  for (const c of RICH_IMG_SIZE_CLASSES) img.classList.remove(c);
+  for (const c of RICH_IMG_ALIGN_CLASSES) img.classList.remove(c);
+  if (size === 'small') img.classList.add('case-media-small');
+  else if (size === 'medium') img.classList.add('case-media-medium');
+  else if (size === 'full') img.classList.add('case-media-full');
+  if (align === 'left') img.classList.add('case-media-left');
+  else if (align === 'center') img.classList.add('case-media-center');
+  else if (align === 'right') img.classList.add('case-media-right');
+  else if (align === 'wrap') img.classList.add('case-media-wrap');
+}
+
+function readAlignSizeFromRichImage(img: HTMLImageElement): { align?: string; size?: string } {
+  let align = img.getAttribute('data-align')?.trim() || undefined;
+  let size = img.getAttribute('data-size')?.trim() || undefined;
+  if (!size) {
+    if (img.classList.contains('case-media-small')) size = 'small';
+    else if (img.classList.contains('case-media-medium')) size = 'medium';
+    else if (img.classList.contains('case-media-full')) size = 'full';
+  }
+  if (!align) {
+    if (img.classList.contains('case-media-left')) align = 'left';
+    else if (img.classList.contains('case-media-center')) align = 'center';
+    else if (img.classList.contains('case-media-right')) align = 'right';
+    else if (img.classList.contains('case-media-wrap')) align = 'wrap';
+  }
+  return { align, size };
+}
+
 type RichBlockProps = {
   value: string;
   onChange: (value: string) => void;
@@ -107,12 +140,12 @@ export function RichBlock({
             node.classList.add('case-rich-media-image');
             if (v.align) node.setAttribute('data-align', v.align);
             if (v.size) node.setAttribute('data-size', v.size);
+            syncRichImagePresetClasses(node, v.align, v.size);
             return node;
           }
           static value(node: HTMLImageElement) {
             const src = (super.value(node) as string) || node.getAttribute('src') || '';
-            const align = node.getAttribute('data-align') || undefined;
-            const size = node.getAttribute('data-size') || undefined;
+            const { align, size } = readAlignSizeFromRichImage(node);
             if (align || size) return { src, align, size };
             return src;
           }
@@ -184,8 +217,7 @@ export function RichBlock({
           const el = node as HTMLImageElement;
           const src = el.getAttribute('src') || '';
           if (!src) return delta;
-          const align = el.getAttribute('data-align') || undefined;
-          const size = el.getAttribute('data-size') || undefined;
+          const { align, size } = readAlignSizeFromRichImage(el);
           const embedVal = align || size ? { src, align, size } : src;
           return new Delta().insert({ image: embedVal }) as DeltaStatic;
         });
@@ -284,6 +316,13 @@ export function RichBlock({
       );
     }
     selectedMediaEl.removeAttribute('style');
+    if (selectedMediaEl.tagName === 'IMG') {
+      syncRichImagePresetClasses(
+        selectedMediaEl as HTMLImageElement,
+        selectedMediaEl.getAttribute('data-align') || undefined,
+        selectedMediaEl.getAttribute('data-size') || undefined
+      );
+    }
 
     const quill = getQuillEditor();
     if (quill) {
