@@ -269,19 +269,14 @@ body.header-super-menu-open {
 
 /* Unified rich content styles across pages and modals */
 .rich-content {
-  display: flex;
-  flex-direction: column;
+  /* flow-root: блочный контекст + удержание float (как .ql-editor), без flex — иначе float у img игнорируется */
+  display: flow-root;
   margin-left: auto;
   margin-right: auto;
   max-width: 48rem;
   width: 100%;
   padding-top: 16px;
   padding-bottom: 16px;
-  /**
-   * stretch: каждый блок (p, img, ul…) занимает всю ширину колонки.
-   * С flex-start flex-item сжимался по ширине картинки — margin:auto на img не центрировал.
-   */
-  align-items: stretch;
   text-align: left;
   color: var(--color-black);
 }
@@ -370,10 +365,11 @@ body.header-super-menu-open {
   width: 100%;
 }
 
-/* Выравнивание: родитель — на всю ширину (align-items:stretch), картинка уже — через margin */
+/* Выравнивание без float: margin; wrap — float как в RichBlock (обтекание следующим текстом) */
 .rich-content img[data-align='center'],
 .rich-content img.case-media-center,
 .rich-content video[data-align='center'] {
+  float: none;
   margin-left: auto;
   margin-right: auto;
 }
@@ -381,6 +377,7 @@ body.header-super-menu-open {
 .rich-content img[data-align='left'],
 .rich-content img.case-media-left,
 .rich-content video[data-align='left'] {
+  float: none;
   margin-right: auto;
   margin-left: 0;
 }
@@ -388,19 +385,61 @@ body.header-super-menu-open {
 .rich-content img[data-align='right'],
 .rich-content img.case-media-right,
 .rich-content video[data-align='right'] {
+  float: none;
   margin-left: auto;
   margin-right: 0;
 }
 
-/* float в flex-контейнере игнорируется — обводка текста как в редакторе через те же отступы */
 .rich-content img[data-align='wrap'],
 .rich-content img.case-media-wrap,
 .rich-content video[data-align='wrap'] {
-  float: none;
+  float: left;
   width: min(45%, 340px);
-  margin-right: 16px;
+  margin-right: 24px;
   margin-bottom: 12px;
   margin-left: 0;
+}
+
+.rich-content img[data-align='wrap-end'],
+.rich-content img.case-media-wrap-end,
+.rich-content video[data-align='wrap-end'] {
+  float: right;
+  width: min(45%, 340px);
+  margin-left: 24px;
+  margin-bottom: 12px;
+  margin-right: 0;
+}
+
+/* wrap / wrap-end + размер */
+.rich-content img[data-align='wrap'][data-size='small'],
+.rich-content img.case-media-wrap.case-media-small,
+.rich-content video[data-align='wrap'][data-size='small'],
+.rich-content img[data-align='wrap-end'][data-size='small'],
+.rich-content img.case-media-wrap-end.case-media-small,
+.rich-content video[data-align='wrap-end'][data-size='small'] {
+  width: min(35%, 220px);
+}
+
+.rich-content img[data-align='wrap'][data-size='medium'],
+.rich-content img.case-media-wrap.case-media-medium,
+.rich-content video[data-align='wrap'][data-size='medium'],
+.rich-content img[data-align='wrap-end'][data-size='medium'],
+.rich-content img.case-media-wrap-end.case-media-medium,
+.rich-content video[data-align='wrap-end'][data-size='medium'] {
+  width: min(65%, 520px);
+}
+
+.rich-content img[data-align='wrap'][data-size='full'],
+.rich-content img.case-media-wrap.case-media-full,
+.rich-content video[data-align='wrap'][data-size='full'],
+.rich-content img[data-align='wrap-end'][data-size='full'],
+.rich-content img.case-media-wrap-end.case-media-full,
+.rich-content video[data-align='wrap-end'][data-size='full'] {
+  float: none;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 12px;
 }
 
 /* Картинка/видео внутри p (если так в HTML): блок на всю ширину — иначе margin на медиа не центрирует */
@@ -423,19 +462,29 @@ body.header-super-menu-open {
 }
 
 .rich-content p.case-rich-image-caption[data-align='center'] {
-  align-self: center;
   margin-left: auto;
   margin-right: auto;
 }
 
 .rich-content p.case-rich-image-caption[data-align='left'] {
-  align-self: flex-start;
   margin-right: auto;
+  margin-left: 0;
 }
 
 .rich-content p.case-rich-image-caption[data-align='right'] {
-  align-self: flex-end;
   margin-left: auto;
+  margin-right: 0;
+}
+
+/* подпись после wrap: не обтекать float — полоса на всю ширину под блоком с картинкой + текстом */
+.rich-content p.case-rich-image-caption[data-align='wrap'],
+.rich-content p.case-rich-image-caption[data-align='wrap-end'] {
+  clear: both;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  text-align: center;
 }
 
 .rich-content figure {
@@ -455,11 +504,11 @@ body.header-super-menu-open {
 }
 
 .rich-content p.case-rich-image-caption {
+  clear: both;
   margin: 8px 0 0;
   margin-left: auto;
   margin-right: auto;
   max-width: 100%;
-  align-self: center;
   text-align: center;
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);

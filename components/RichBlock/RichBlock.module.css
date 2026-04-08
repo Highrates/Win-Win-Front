@@ -100,11 +100,46 @@
 .richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap) {
   float: left;
   width: min(45%, 340px);
-  margin-right: 16px;
+  margin-right: 24px;
   margin-bottom: 12px;
+  margin-left: 0;
+}
+
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap-end']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap-end) {
+  float: right;
+  width: min(45%, 340px);
+  margin-left: 24px;
+  margin-bottom: 12px;
+  margin-right: 0;
+}
+
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap'][data-size='small']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap.case-media-small),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap-end'][data-size='small']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap-end.case-media-small) {
+  width: min(35%, 220px);
+}
+
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap'][data-size='medium']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap.case-media-medium),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap-end'][data-size='medium']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap-end.case-media-medium) {
+  width: min(65%, 520px);
+}
+
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap'][data-size='full']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap.case-media-full),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap-end'][data-size='full']),
+.richEditorWrap :global(.ql-editor img.case-rich-media-image.case-media-wrap-end.case-media-full) {
+  float: none;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .richEditorWrap :global(.ql-editor p.case-rich-image-caption) {
+  clear: both;
   margin: 8px 0 0;
   margin-left: auto;
   margin-right: auto;
@@ -114,6 +149,16 @@
   font-weight: var(--text-caption-weight);
   line-height: 1.25;
   color: var(--color-gray);
+}
+
+.richEditorWrap :global(.ql-editor p.case-rich-image-caption[data-align='wrap']),
+.richEditorWrap :global(.ql-editor p.case-rich-image-caption[data-align='wrap-end']) {
+  clear: both;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  text-align: center;
 }
 
 /* Placeholder: Quill держит пустой параграф как <p><br></p> */

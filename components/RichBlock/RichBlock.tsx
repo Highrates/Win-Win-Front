@@ -40,7 +40,26 @@ function getImageBlotIndex(quill: { constructor: any; getIndex: (b: unknown) => 
 
 /** Совпадают с классами кнопок тулбара — дублируют data-* в DOM: надёжнее для innerHTML и публичного CSS. */
 const RICH_IMG_SIZE_CLASSES = ['case-media-small', 'case-media-medium', 'case-media-full'] as const;
-const RICH_IMG_ALIGN_CLASSES = ['case-media-left', 'case-media-center', 'case-media-right', 'case-media-wrap'] as const;
+const RICH_IMG_ALIGN_CLASSES = [
+  'case-media-left',
+  'case-media-center',
+  'case-media-right',
+  'case-media-wrap',
+  'case-media-wrap-end',
+] as const;
+
+function dataAlignFromToolbarCls(cls: string): 'left' | 'center' | 'right' | 'wrap' | 'wrap-end' {
+  if (cls === 'case-media-left') return 'left';
+  if (cls === 'case-media-center') return 'center';
+  if (cls === 'case-media-right') return 'right';
+  if (cls === 'case-media-wrap-end') return 'wrap-end';
+  if (cls === 'case-media-wrap') return 'wrap';
+  return 'left';
+}
+
+function isWrapFlowAlign(align: string | null | undefined): boolean {
+  return align === 'wrap' || align === 'wrap-end';
+}
 
 function syncRichImagePresetClasses(img: HTMLImageElement, align?: string, size?: string) {
   for (const c of RICH_IMG_SIZE_CLASSES) img.classList.remove(c);
@@ -51,6 +70,7 @@ function syncRichImagePresetClasses(img: HTMLImageElement, align?: string, size?
   if (align === 'left') img.classList.add('case-media-left');
   else if (align === 'center') img.classList.add('case-media-center');
   else if (align === 'right') img.classList.add('case-media-right');
+  else if (align === 'wrap-end') img.classList.add('case-media-wrap-end');
   else if (align === 'wrap') img.classList.add('case-media-wrap');
 }
 
@@ -66,6 +86,7 @@ function readAlignSizeFromRichImage(img: HTMLImageElement): { align?: string; si
     if (img.classList.contains('case-media-left')) align = 'left';
     else if (img.classList.contains('case-media-center')) align = 'center';
     else if (img.classList.contains('case-media-right')) align = 'right';
+    else if (img.classList.contains('case-media-wrap-end')) align = 'wrap-end';
     else if (img.classList.contains('case-media-wrap')) align = 'wrap';
   }
   return { align, size };
@@ -97,7 +118,7 @@ export function RichBlock({
 
   const [selectedMediaEl, setSelectedMediaEl] = useState<HTMLElement | null>(null);
   const [activeSizePreset, setActiveSizePreset] = useState<'small' | 'medium' | 'full' | null>(null);
-  const [activeAlignPreset, setActiveAlignPreset] = useState<'left' | 'center' | 'right' | 'wrap' | null>(null);
+  const [activeAlignPreset, setActiveAlignPreset] = useState<'left' | 'center' | 'right' | 'wrap' | 'wrap-end' | null>(null);
   const [uploadBusy, setUploadBusy] = useState<'image' | 'video' | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const reactQuillRef = useRef<any>(null);
@@ -261,7 +282,9 @@ export function RichBlock({
       return;
     }
     setActiveSizePreset((el.getAttribute('data-size') as 'small' | 'medium' | 'full' | null) ?? null);
-    setActiveAlignPreset((el.getAttribute('data-align') as 'left' | 'center' | 'right' | 'wrap' | null) ?? null);
+    setActiveAlignPreset(
+      (el.getAttribute('data-align') as 'left' | 'center' | 'right' | 'wrap' | 'wrap-end' | null) ?? null
+    );
   };
 
   const applyMediaPreset = (cls: string, group: 'size' | 'align') => {
@@ -288,13 +311,18 @@ export function RichBlock({
         if (cls === 'case-media-wrap') {
           selectedMediaEl.style.float = 'left';
           selectedMediaEl.style.width = 'min(45%, 340px)';
-          selectedMediaEl.style.marginRight = '16px';
+          selectedMediaEl.style.marginRight = '24px';
+          selectedMediaEl.style.marginLeft = '0';
           selectedMediaEl.style.marginBottom = '12px';
         }
-        selectedMediaEl.setAttribute(
-          'data-align',
-          cls === 'case-media-left' ? 'left' : cls === 'case-media-center' ? 'center' : cls === 'case-media-right' ? 'right' : 'wrap'
-        );
+        if (cls === 'case-media-wrap-end') {
+          selectedMediaEl.style.float = 'right';
+          selectedMediaEl.style.width = 'min(45%, 340px)';
+          selectedMediaEl.style.marginLeft = '24px';
+          selectedMediaEl.style.marginRight = '0';
+          selectedMediaEl.style.marginBottom = '12px';
+        }
+        selectedMediaEl.setAttribute('data-align', dataAlignFromToolbarCls(cls));
       }
       readMediaPresetState(selectedMediaEl);
       syncHtmlFromQuill();
@@ -310,10 +338,7 @@ export function RichBlock({
     if (group === 'size') {
       selectedMediaEl.setAttribute('data-size', cls === 'case-media-small' ? 'small' : cls === 'case-media-medium' ? 'medium' : 'full');
     } else {
-      selectedMediaEl.setAttribute(
-        'data-align',
-        cls === 'case-media-left' ? 'left' : cls === 'case-media-center' ? 'center' : cls === 'case-media-right' ? 'right' : 'wrap'
-      );
+      selectedMediaEl.setAttribute('data-align', dataAlignFromToolbarCls(cls));
     }
     selectedMediaEl.removeAttribute('style');
     if (selectedMediaEl.tagName === 'IMG') {
@@ -477,20 +502,48 @@ export function RichBlock({
           return;
         }
 
-        quill.insertText(captionBlockIndex, '\n', 'user');
-        quill.formatLine(captionBlockIndex, 1, 'caseImageCaption', true, 'user');
+        const imgAlign = imgEl.getAttribute('data-align');
+        const flowWrap = isWrapFlowAlign(imgAlign);
 
-        const [line] = quill.getLine(captionBlockIndex);
-        const lineDom = (line as { domNode?: HTMLElement } | undefined)?.domNode;
-        if (lineDom?.tagName === 'P') {
-          lineDom.classList.add('case-rich-image-caption');
-          lineDom.setAttribute('data-placeholder', 'Подпись к изображению…');
-          const size = imgEl.getAttribute('data-size');
-          const align = imgEl.getAttribute('data-align');
-          if (size) lineDom.setAttribute('data-size', size);
-          if (align) lineDom.setAttribute('data-align', align);
+        if (flowWrap) {
+          /**
+           * Обтекание: сначала обычный абзац (текст набирается рядом с float), затем подпись с clear.
+           * Иначе подпись шла сразу под img, и текста «справа/слева» от картинки не было.
+           */
+          quill.insertText(captionBlockIndex, '\n', 'user');
+          const bodyLine = quill.getLine(captionBlockIndex)[0];
+          const bodyBlot = bodyLine as { length?: () => number } | undefined;
+          if (!bodyBlot || typeof bodyBlot.length !== 'function') return;
+          const captionInsertAt = quill.getIndex(bodyBlot as Parameters<typeof quill.getIndex>[0]) + bodyBlot.length();
+          quill.insertText(captionInsertAt, '\n', 'user');
+          quill.formatLine(captionInsertAt, 1, 'caseImageCaption', true, 'user');
+          const [capLine] = quill.getLine(captionInsertAt);
+          const lineDom = (capLine as { domNode?: HTMLElement } | undefined)?.domNode;
+          if (lineDom?.tagName === 'P') {
+            lineDom.classList.add('case-rich-image-caption');
+            lineDom.setAttribute('data-placeholder', 'Подпись к изображению…');
+            const size = imgEl.getAttribute('data-size');
+            const align = imgEl.getAttribute('data-align');
+            if (size) lineDom.setAttribute('data-size', size);
+            if (align) lineDom.setAttribute('data-align', align);
+          }
+          quill.setSelection(captionBlockIndex, 0, 'silent');
+        } else {
+          quill.insertText(captionBlockIndex, '\n', 'user');
+          quill.formatLine(captionBlockIndex, 1, 'caseImageCaption', true, 'user');
+
+          const [line] = quill.getLine(captionBlockIndex);
+          const lineDom = (line as { domNode?: HTMLElement } | undefined)?.domNode;
+          if (lineDom?.tagName === 'P') {
+            lineDom.classList.add('case-rich-image-caption');
+            lineDom.setAttribute('data-placeholder', 'Подпись к изображению…');
+            const size = imgEl.getAttribute('data-size');
+            const align = imgEl.getAttribute('data-align');
+            if (size) lineDom.setAttribute('data-size', size);
+            if (align) lineDom.setAttribute('data-align', align);
+          }
+          quill.setSelection(captionBlockIndex, 0, 'silent');
         }
-        quill.setSelection(captionBlockIndex, 0, 'silent');
       });
     }
   };
@@ -621,7 +674,22 @@ export function RichBlock({
         <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'left' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-left', 'align')}>left</button>
         <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'center' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-center', 'align')}>center</button>
         <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'right' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-right', 'align')}>right</button>
-        <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'wrap' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-wrap', 'align')}>wrap</button>
+        <button
+          type="button"
+          className={`${styles.richToolBtn} ${activeAlignPreset === 'wrap' ? styles.richToolBtnActive : ''}`}
+          title="Картинка слева — текст справа (обтекание)"
+          onClick={() => applyMediaPreset('case-media-wrap', 'align')}
+        >
+          wrap
+        </button>
+        <button
+          type="button"
+          className={`${styles.richToolBtn} ${activeAlignPreset === 'wrap-end' ? styles.richToolBtnActive : ''}`}
+          title="Картинка справа — текст слева (обтекание)"
+          onClick={() => applyMediaPreset('case-media-wrap-end', 'align')}
+        >
+          wrap-r
+        </button>
       </div>
       {uploadError ? (
         <p className={styles.uploadError} role="alert">
