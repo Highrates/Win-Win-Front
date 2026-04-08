@@ -277,7 +277,11 @@ body.header-super-menu-open {
   width: 100%;
   padding-top: 16px;
   padding-bottom: 16px;
-  align-items: flex-start;
+  /**
+   * stretch: каждый блок (p, img, ul…) занимает всю ширину колонки.
+   * С flex-start flex-item сжимался по ширине картинки — margin:auto на img не центрировал.
+   */
+  align-items: stretch;
   text-align: left;
   color: var(--color-black);
 }
@@ -363,33 +367,40 @@ body.header-super-menu-open {
   width: 100%;
 }
 
+/* Выравнивание: родитель — на всю ширину (align-items:stretch), картинка уже — через margin */
 .rich-content img[data-align='center'],
 .rich-content video[data-align='center'] {
-  align-self: center;
   margin-left: auto;
   margin-right: auto;
 }
 
 .rich-content img[data-align='left'],
 .rich-content video[data-align='left'] {
-  align-self: flex-start;
   margin-right: auto;
+  margin-left: 0;
 }
 
 .rich-content img[data-align='right'],
 .rich-content video[data-align='right'] {
-  align-self: flex-end;
   margin-left: auto;
+  margin-right: 0;
 }
 
 /* float в flex-контейнере игнорируется — обводка текста как в редакторе через те же отступы */
 .rich-content img[data-align='wrap'],
 .rich-content video[data-align='wrap'] {
   float: none;
-  align-self: flex-start;
   width: min(45%, 340px);
   margin-right: 16px;
   margin-bottom: 12px;
+  margin-left: 0;
+}
+
+/* Картинка/видео внутри p (если так в HTML): блок на всю ширину — иначе margin на медиа не центрирует */
+.rich-content p:has(> img.case-rich-media-image),
+.rich-content p:has(> video.case-rich-media-video) {
+  width: 100%;
+  max-width: 100%;
 }
 
 .rich-content p.case-rich-image-caption[data-size='small'] {
