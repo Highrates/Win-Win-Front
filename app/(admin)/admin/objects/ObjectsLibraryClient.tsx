@@ -369,17 +369,33 @@ export function ObjectsLibraryClient() {
   }, [detail, detailLoading, detailSaving, detailDeleting]);
 
   async function onPickUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = e.target.files;
     e.target.value = '';
-    if (!file) return;
+    if (!files?.length) return;
+    const list = Array.from(files);
     setUploading(true);
     setError(null);
+    const errors: string[] = [];
     try {
-      await adminUploadMediaLibrary(file, folderFilter);
-      await loadObjects();
-      await loadFolders();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+      for (const file of list) {
+        try {
+          await adminUploadMediaLibrary(file, folderFilter);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Ошибка загрузки';
+          errors.push(`${file.name}: ${msg}`);
+        }
+      }
+      if (errors.length) {
+        setError(
+          errors.length === list.length
+            ? errors.join('\n')
+            : `Не удалось загрузить ${errors.length} из ${list.length}:\n${errors.join('\n')}`
+        );
+      }
+      if (errors.length < list.length) {
+        await loadObjects();
+        await loadFolders();
+      }
     } finally {
       setUploading(false);
     }
@@ -420,7 +436,11 @@ export function ObjectsLibraryClient() {
 
   return (
     <>
-      {error ? <p className={catalogStyles.error}>{error}</p> : null}
+      {error ? (
+        <p className={catalogStyles.error} style={{ whiteSpace: 'pre-line' }}>
+          {error}
+        </p>
+      ) : null}
 
       <div className={styles.layout}>
         <aside className={styles.folderSidebar} aria-label="Папки">
@@ -458,6 +478,7 @@ export function ObjectsLibraryClient() {
               ref={fileInputRef}
               id={uploadInputId}
               type="file"
+              multiple
               className={styles.hiddenInput}
               onChange={onPickUpload}
             />
@@ -469,7 +490,7 @@ export function ObjectsLibraryClient() {
               onClick={() => fileInputRef.current?.click()}
             >
               <img src="/icons/document-download.svg" alt="" width={20} height={20} />
-              {uploading ? 'Загрузка…' : 'Загрузить файл'}
+              {uploading ? 'Загрузка…' : 'Загрузить файлы'}
             </TBtn>
           </div>
 

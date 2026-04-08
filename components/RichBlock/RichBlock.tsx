@@ -1,6 +1,7 @@
 'use client';
 
 import type { ComponentType } from 'react';
+import type { DeltaStatic } from 'quill';
 import { useEffect, useId, useRef, useState } from 'react';
 import styles from './RichBlock.module.css';
 import 'react-quill/dist/quill.snow.css';
@@ -11,6 +12,31 @@ export type RichBlockUploadMedia = (file: File, type: 'image' | 'video') => Prom
 
 /** Выбор уже загруженного файла из медиатеки (админ). Возвращает публичный URL или null при отмене. */
 export type RichBlockPickMediaFromLibrary = (kind: 'image' | 'video') => Promise<string | null>;
+
+/** `import('react-quill')` в Next даёт `{ default: ReactQuill }`; `Quill` висит на `default`, не на корне модуля. */
+function getQuillFromReactQuillModule(mod: { default?: { Quill?: unknown }; Quill?: unknown }): unknown {
+  return mod.default?.Quill ?? mod.Quill;
+}
+
+/** Индекс embed-картинки в документе Quill (find по DOM надёжнее, чем getLeaf от selection). */
+function getImageBlotIndex(quill: { constructor: any; getIndex: (b: unknown) => number }, img: HTMLImageElement): number | null {
+  const Q = quill.constructor;
+  let blot: unknown = typeof Q.find === 'function' ? Q.find(img) : null;
+  if (!blot) {
+    try {
+      const Parchment = Q.import('parchment');
+      blot = typeof Parchment.find === 'function' ? Parchment.find(img) : null;
+    } catch {
+      blot = null;
+    }
+  }
+  if (!blot) return null;
+  try {
+    return quill.getIndex(blot as Parameters<typeof quill.getIndex>[0]);
+  } catch {
+    return null;
+  }
+}
 
 type RichBlockProps = {
   value: string;
@@ -46,15 +72,53 @@ export function RichBlock({
 
   const getQuillEditor = () => reactQuillRef.current?.getEditor?.() ?? null;
 
+  /** После правок DOM (пресеты) ReactQuill может не вызвать onChange — иначе в родителе остаётся старый HTML без data-align. */
+  const syncHtmlFromQuill = () => {
+    const quill = getQuillEditor();
+    const html = quill?.root?.innerHTML;
+    if (typeof html === 'string') onChange(html);
+  };
+
   useEffect(() => {
     let mounted = true;
     void (async () => {
       const rq = await import('react-quill');
       if (!mounted) return;
-      const Quill = rq.Quill;
+      const Quill = getQuillFromReactQuillModule(rq as { default?: { Quill?: unknown }; Quill?: unknown }) as
+        | { import: (name: string) => unknown; register: (def: unknown, overwrite?: boolean) => void }
+        | null;
       if (Quill) {
-        const Block = Quill.import('blots/block');
-        const BlockEmbed = Quill.import('blots/block/embed');
+        const Block = Quill.import('blots/block') as any;
+        const BlockEmbed = Quill.import('blots/block/embed') as any;
+        /** Как встроенный `formats/image`: `Parchment.Embed`, не `BlockEmbed` — для `<img>` иначе Parchment не создаёт blot. */
+        const BaseImage = Quill.import('formats/image') as any;
+
+        class RichImageBlot extends BaseImage {
+          static blotName = 'image';
+          static create(value: unknown) {
+            const v =
+              typeof value === 'string'
+                ? { src: value }
+                : value && typeof value === 'object' && value !== null && 'src' in value
+                  ? (value as { src: string; align?: string; size?: string })
+                  : { src: '' };
+            const src = typeof v.src === 'string' ? v.src : '';
+            const node = super.create(src) as HTMLImageElement;
+            node.classList.add('case-rich-media-image');
+            if (v.align) node.setAttribute('data-align', v.align);
+            if (v.size) node.setAttribute('data-size', v.size);
+            return node;
+          }
+          static value(node: HTMLImageElement) {
+            const src = (super.value(node) as string) || node.getAttribute('src') || '';
+            const align = node.getAttribute('data-align') || undefined;
+            const size = node.getAttribute('data-size') || undefined;
+            if (align || size) return { src, align, size };
+            return src;
+          }
+        }
+        Quill.register(RichImageBlot, true);
+
         class CaseVideoBlot extends BlockEmbed {
           static blotName = 'caseVideo';
           static tagName = 'video';
@@ -96,6 +160,36 @@ export function RichBlock({
     };
   }, []);
 
+  /** При загрузке HTML в редактор clipboard по умолчанию кладёт в delta только src — data-align/data-size теряются. */
+  useEffect(() => {
+    if (!QuillEditor) return;
+    const raf = requestAnimationFrame(() => {
+      const quill = reactQuillRef.current?.getEditor?.();
+      if (!quill) return;
+      const tag = '__winWinRichImgMatcher';
+      if ((quill as unknown as Record<string, boolean>)[tag]) return;
+      (quill as unknown as Record<string, boolean>)[tag] = true;
+      void import('react-quill').then((rq) => {
+        const Quill = getQuillFromReactQuillModule(rq as { default?: { Quill?: unknown }; Quill?: unknown }) as {
+          import: (name: string) => new () => { insert: (v: unknown, k?: unknown) => unknown };
+        } | null;
+        if (!Quill?.import) return;
+        const Delta = Quill.import('delta') as new () => { insert: (v: unknown, k?: unknown) => unknown };
+        quill.clipboard.addMatcher('IMG', (node: Node, delta: DeltaStatic): DeltaStatic => {
+          if (node.nodeName !== 'IMG') return delta;
+          const el = node as HTMLImageElement;
+          const src = el.getAttribute('src') || '';
+          if (!src) return delta;
+          const align = el.getAttribute('data-align') || undefined;
+          const size = el.getAttribute('data-size') || undefined;
+          const embedVal = align || size ? { src, align, size } : src;
+          return new Delta().insert({ image: embedVal }) as DeltaStatic;
+        });
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [QuillEditor]);
+
   const modules = {
     toolbar: [
       [{ header: [2, 3, false] }],
@@ -136,41 +230,97 @@ export function RichBlock({
 
   const applyMediaPreset = (cls: string, group: 'size' | 'align') => {
     if (!selectedMediaEl) return;
+
+    /** Видео: по-прежнему только DOM + синк HTML (отдельный embed). */
+    if (selectedMediaEl.tagName === 'VIDEO') {
+      if (group === 'size') {
+        selectedMediaEl.style.maxWidth = '100%';
+        selectedMediaEl.style.height = 'auto';
+        selectedMediaEl.style.width =
+          cls === 'case-media-small' ? 'min(35%, 220px)' : cls === 'case-media-medium' ? 'min(65%, 520px)' : '100%';
+        selectedMediaEl.setAttribute('data-size', cls === 'case-media-small' ? 'small' : cls === 'case-media-medium' ? 'medium' : 'full');
+      } else {
+        selectedMediaEl.style.display = 'block';
+        selectedMediaEl.style.float = 'none';
+        selectedMediaEl.style.margin = '0';
+        if (cls === 'case-media-left') selectedMediaEl.style.marginRight = 'auto';
+        if (cls === 'case-media-center') {
+          selectedMediaEl.style.marginLeft = 'auto';
+          selectedMediaEl.style.marginRight = 'auto';
+        }
+        if (cls === 'case-media-right') selectedMediaEl.style.marginLeft = 'auto';
+        if (cls === 'case-media-wrap') {
+          selectedMediaEl.style.float = 'left';
+          selectedMediaEl.style.width = 'min(45%, 340px)';
+          selectedMediaEl.style.marginRight = '16px';
+          selectedMediaEl.style.marginBottom = '12px';
+        }
+        selectedMediaEl.setAttribute(
+          'data-align',
+          cls === 'case-media-left' ? 'left' : cls === 'case-media-center' ? 'center' : cls === 'case-media-right' ? 'right' : 'wrap'
+        );
+      }
+      readMediaPresetState(selectedMediaEl);
+      syncHtmlFromQuill();
+      return;
+    }
+
+    if (selectedMediaEl.tagName !== 'IMG') return;
+
+    /**
+     * Quill держит истину в Delta. Только data-* в DOM недостаточно — при следующем цикле модель снова { image: url }.
+     * Пересобираем embed в Delta с { src, align, size }, чтобы сохранение и перезагрузка не теряли пресеты.
+     */
     if (group === 'size') {
-      selectedMediaEl.style.maxWidth = '100%';
-      selectedMediaEl.style.height = 'auto';
-      selectedMediaEl.style.width =
-        cls === 'case-media-small' ? 'min(35%, 220px)' : cls === 'case-media-medium' ? 'min(65%, 520px)' : '100%';
       selectedMediaEl.setAttribute('data-size', cls === 'case-media-small' ? 'small' : cls === 'case-media-medium' ? 'medium' : 'full');
     } else {
-      selectedMediaEl.style.display = 'block';
-      selectedMediaEl.style.float = 'none';
-      selectedMediaEl.style.margin = '0';
-      if (cls === 'case-media-left') selectedMediaEl.style.marginRight = 'auto';
-      if (cls === 'case-media-center') {
-        selectedMediaEl.style.marginLeft = 'auto';
-        selectedMediaEl.style.marginRight = 'auto';
-      }
-      if (cls === 'case-media-right') selectedMediaEl.style.marginLeft = 'auto';
-      if (cls === 'case-media-wrap') {
-        selectedMediaEl.style.float = 'left';
-        selectedMediaEl.style.width = 'min(45%, 340px)';
-        selectedMediaEl.style.marginRight = '16px';
-        selectedMediaEl.style.marginBottom = '12px';
-      }
       selectedMediaEl.setAttribute(
         'data-align',
         cls === 'case-media-left' ? 'left' : cls === 'case-media-center' ? 'center' : cls === 'case-media-right' ? 'right' : 'wrap'
       );
     }
+    selectedMediaEl.removeAttribute('style');
+
+    const quill = getQuillEditor();
+    if (quill) {
+      const Q = quill.constructor as { import: (n: string) => any; find: (n: Node) => unknown };
+      const Delta = Q.import('delta');
+      const blot = Q.find(selectedMediaEl) as { offset?: (root: unknown) => number } | null;
+      if (blot) {
+        const index = quill.getIndex(blot as Parameters<typeof quill.getIndex>[0]);
+        const src = selectedMediaEl.getAttribute('src') || '';
+        const align = selectedMediaEl.getAttribute('data-align') || undefined;
+        const size = selectedMediaEl.getAttribute('data-size') || undefined;
+        const embedVal = align || size ? { src, align, size } : src;
+        quill.updateContents(new Delta().retain(index).delete(1).insert({ image: embedVal }), 'user');
+
+        const [leaf] = quill.getLeaf(index);
+        const newImg = (leaf as { domNode?: HTMLElement })?.domNode;
+        if (newImg?.tagName === 'IMG') {
+          setSelectedMediaEl(newImg);
+          /** Embed = 1 + перевод строки конца блока = 1 → следующая строка с index + 2. */
+          const [capLine] = quill.getLine(index + 2);
+          const capDom = (capLine as { domNode?: HTMLElement })?.domNode;
+          if (capDom?.tagName === 'P' && capDom.classList.contains('case-rich-image-caption')) {
+            if (size) capDom.setAttribute('data-size', size);
+            if (align) capDom.setAttribute('data-align', align);
+          }
+          readMediaPresetState(newImg);
+          syncHtmlFromQuill();
+          return;
+        }
+      }
+    }
+
     readMediaPresetState(selectedMediaEl);
+    syncHtmlFromQuill();
   };
 
   function insertSrcAtCursor(src: string, kind: 'image' | 'video') {
     const quill = getQuillEditor();
     if (!quill) {
       if (kind === 'image') {
-        onChange(`${value}<p><img src="${src}" alt="" /></p>`);
+        onChange(`${value}<p><img class="case-rich-media-image" src="${src}" alt="" /></p>`);
       } else {
         onChange(`${value}<p><video class="case-rich-media-video" controls src="${src}"></video></p>`);
       }
@@ -179,6 +329,7 @@ export function RichBlock({
     const range = quill.getSelection(true);
     const index = range ? range.index : quill.getLength();
     if (kind === 'image') {
+      /** Quill ожидает строку URL; объект ломает insert/update delta в части сборок. */
       quill.insertEmbed(index, 'image', src, 'user');
     } else {
       quill.insertEmbed(index, 'caseVideo', src, 'user');
@@ -255,42 +406,49 @@ export function RichBlock({
     readMediaPresetState(media ?? null);
 
     if (media?.tagName === 'IMG') {
-      // После клика Quill выставляет selection на embed-картинке — ждём тик и вставляем строку подписи под ней.
-      setTimeout(() => {
+      const imgEl = media as HTMLImageElement;
+      /**
+       * Не вызывать syncHtmlFromQuill здесь: лишний onChange → родитель обновляет value → ReactQuill
+       * делает setContents(clipboard.convert) → сброс скролла и «прыжок» к началу. insertText/formatLine сами дают onChange.
+       */
+      queueMicrotask(() => {
         const quill = getQuillEditor();
         if (!quill) return;
-        const range = quill.getSelection(true);
-        if (!range) return;
+        const index = getImageBlotIndex(quill, imgEl);
+        if (index == null) return;
 
-        // Если клик по картинке — selection обычно указывает на неё (leaf domNode === img).
-        const [leaf] = quill.getLeaf(range.index);
-        const leafDom = (leaf as any)?.domNode as HTMLElement | undefined;
-        if (!leafDom || leafDom.tagName !== 'IMG') return;
-
-        const index = range.index;
-        const [nextLeaf] = quill.getLeaf(index + 1);
-        const nextDom = (nextLeaf as any)?.domNode as HTMLElement | undefined;
+        /** В Delta: embed = 1 символ, затем перевод строки конца блока = ещё 1 → следующая строка начинается с index + 2. */
+        const captionBlockIndex = index + 2;
+        const nextSibling = imgEl.nextElementSibling;
+        const alreadyCaptionByDom =
+          nextSibling?.tagName === 'P' && nextSibling.classList.contains('case-rich-image-caption');
+        const [lineAfter] = quill.getLine(captionBlockIndex);
+        const lineAfterDom = (lineAfter as { domNode?: HTMLElement } | undefined)?.domNode;
         const alreadyCaption =
-          nextDom?.tagName === 'P' && nextDom.classList?.contains('case-rich-image-caption');
+          alreadyCaptionByDom ||
+          (lineAfterDom?.tagName === 'P' && lineAfterDom.classList.contains('case-rich-image-caption'));
         if (alreadyCaption) {
-          // Курсор в подпись
-          nextDom?.setAttribute('data-placeholder', 'Подпись к изображению…');
-          quill.setSelection(index + 2, 0, 'user');
+          const dom = (alreadyCaptionByDom ? nextSibling : lineAfterDom) as HTMLElement | undefined;
+          dom?.setAttribute('data-placeholder', 'Подпись к изображению…');
+          quill.setSelection(captionBlockIndex, 0, 'silent');
           return;
         }
 
-        quill.insertText(index + 1, '\n', 'user');
-        quill.formatLine(index + 1, 1, 'caseImageCaption', true, 'user');
+        quill.insertText(captionBlockIndex, '\n', 'user');
+        quill.formatLine(captionBlockIndex, 1, 'caseImageCaption', true, 'user');
 
-        // Гарантируем, что это именно caption-строка (класс + placeholder попадут в сохранённый HTML).
-        const [line] = quill.getLine(index + 1);
-        const lineDom = (line as any)?.domNode as HTMLElement | undefined;
+        const [line] = quill.getLine(captionBlockIndex);
+        const lineDom = (line as { domNode?: HTMLElement } | undefined)?.domNode;
         if (lineDom?.tagName === 'P') {
           lineDom.classList.add('case-rich-image-caption');
           lineDom.setAttribute('data-placeholder', 'Подпись к изображению…');
+          const size = imgEl.getAttribute('data-size');
+          const align = imgEl.getAttribute('data-align');
+          if (size) lineDom.setAttribute('data-size', size);
+          if (align) lineDom.setAttribute('data-align', align);
         }
-        quill.setSelection(index + 2, 0, 'user');
-      }, 0);
+        quill.setSelection(captionBlockIndex, 0, 'silent');
+      });
     }
   };
 

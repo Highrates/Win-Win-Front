@@ -70,6 +70,33 @@
 .richEditorWrap :global(.ql-editor img),
 .richEditorWrap :global(.ql-editor video) { max-width: 100%; height: auto; display: block; }
 
+/* Пресеты как на фронте: только data-* в HTML — Delta и санитайз сохраняют атрибуты; inline style Quill сбрасывает. */
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='small']) {
+  width: min(35%, 220px);
+}
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='medium']) {
+  width: min(65%, 520px);
+}
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-size='full']) {
+  width: 100%;
+}
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='center']) {
+  margin-left: auto;
+  margin-right: auto;
+}
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='left']) {
+  margin-right: auto;
+}
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='right']) {
+  margin-left: auto;
+}
+.richEditorWrap :global(.ql-editor img.case-rich-media-image[data-align='wrap']) {
+  float: left;
+  width: min(45%, 340px);
+  margin-right: 16px;
+  margin-bottom: 12px;
+}
+
 .richEditorWrap :global(.ql-editor p.case-rich-image-caption) {
   margin: 8px 0 0;
   margin-left: auto;
