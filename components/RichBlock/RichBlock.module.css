@@ -69,3 +69,21 @@
 .richEditorWrap :global(.ql-editor) { min-height: 220px; }
 .richEditorWrap :global(.ql-editor img),
 .richEditorWrap :global(.ql-editor video) { max-width: 100%; height: auto; display: block; }
+
+.richEditorWrap :global(.ql-editor p.case-rich-image-caption) {
+  margin: 8px 0 0;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+  text-align: center;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+}
+
+/* Placeholder: Quill держит пустой параграф как <p><br></p> */
+.richEditorWrap :global(.ql-editor p.case-rich-image-caption:empty:before),
+.richEditorWrap :global(.ql-editor p.case-rich-image-caption:has(br):before) {
+  content: attr(data-placeholder);
+  opacity: 0.75;
+}

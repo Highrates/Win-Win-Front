@@ -9,7 +9,7 @@
   align-items: flex-start;
   text-align: left;
   gap: 24px;
-  max-width: 42rem;
+  max-width: 48rem;
   width: 100%;
   margin-left: auto;
   margin-right: auto;
@@ -87,14 +87,15 @@
   justify-content: center;
   width: 100%;
   margin-top: 32px;
+  margin-bottom: 32px;
 }
 
 /* 800×600: высоту задаёт aspect-ratio у рамки */
 .articleHeroFrame {
   display: grid;
-  width: 800px;
+  width: 892px;
   max-width: 100%;
-  aspect-ratio: 800 / 600;
+  aspect-ratio: 892 / 600;
   border-radius: 10px;
   overflow: hidden;
   flex-shrink: 0;

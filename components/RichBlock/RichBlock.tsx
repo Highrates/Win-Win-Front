@@ -51,6 +51,7 @@ export function RichBlock({
       if (!mounted) return;
       const Quill = rq.Quill;
       if (Quill) {
+        const Block = Quill.import('blots/block');
         const BlockEmbed = Quill.import('blots/block/embed');
         class CaseVideoBlot extends BlockEmbed {
           static blotName = 'caseVideo';
@@ -69,6 +70,22 @@ export function RichBlock({
           }
         }
         Quill.register(CaseVideoBlot, true);
+
+        /**
+         * Подпись к изображению как обычная строка под embed-картинкой.
+         * Так Quill не ломает разметку (в отличие от figure/figcaption).
+         */
+        class CaseImageCaptionBlot extends Block {
+          static blotName = 'caseImageCaption';
+          static tagName = 'p';
+          static className = 'case-rich-image-caption';
+          static create(value: unknown) {
+            const node = super.create(value) as HTMLParagraphElement;
+            node.setAttribute('data-placeholder', 'Подпись к изображению…');
+            return node;
+          }
+        }
+        Quill.register(CaseImageCaptionBlot, true);
       }
       setQuillEditor(() => rq.default as ComponentType<Record<string, unknown>>);
     })();
@@ -102,7 +119,10 @@ export function RichBlock({
     'image',
     'video',
     'caseVideo',
+    'caseImageCaption',
   ] as const;
+
+  const getQuillEditor = () => reactQuillRef.current?.getEditor?.() ?? null;
 
   const readMediaPresetState = (el: HTMLElement | null) => {
     if (!el) {
@@ -145,8 +165,6 @@ export function RichBlock({
     }
     readMediaPresetState(selectedMediaEl);
   };
-
-  const getQuillEditor = () => reactQuillRef.current?.getEditor?.() ?? null;
 
   function insertSrcAtCursor(src: string, kind: 'image' | 'video') {
     const quill = getQuillEditor();
@@ -235,6 +253,45 @@ export function RichBlock({
     const media = target?.closest('img,video,iframe') as HTMLElement | null;
     setSelectedMediaEl(media ?? null);
     readMediaPresetState(media ?? null);
+
+    if (media?.tagName === 'IMG') {
+      // После клика Quill выставляет selection на embed-картинке — ждём тик и вставляем строку подписи под ней.
+      setTimeout(() => {
+        const quill = getQuillEditor();
+        if (!quill) return;
+        const range = quill.getSelection(true);
+        if (!range) return;
+
+        // Если клик по картинке — selection обычно указывает на неё (leaf domNode === img).
+        const [leaf] = quill.getLeaf(range.index);
+        const leafDom = (leaf as any)?.domNode as HTMLElement | undefined;
+        if (!leafDom || leafDom.tagName !== 'IMG') return;
+
+        const index = range.index;
+        const [nextLeaf] = quill.getLeaf(index + 1);
+        const nextDom = (nextLeaf as any)?.domNode as HTMLElement | undefined;
+        const alreadyCaption =
+          nextDom?.tagName === 'P' && nextDom.classList?.contains('case-rich-image-caption');
+        if (alreadyCaption) {
+          // Курсор в подпись
+          nextDom?.setAttribute('data-placeholder', 'Подпись к изображению…');
+          quill.setSelection(index + 2, 0, 'user');
+          return;
+        }
+
+        quill.insertText(index + 1, '\n', 'user');
+        quill.formatLine(index + 1, 1, 'caseImageCaption', true, 'user');
+
+        // Гарантируем, что это именно caption-строка (класс + placeholder попадут в сохранённый HTML).
+        const [line] = quill.getLine(index + 1);
+        const lineDom = (line as any)?.domNode as HTMLElement | undefined;
+        if (lineDom?.tagName === 'P') {
+          lineDom.classList.add('case-rich-image-caption');
+          lineDom.setAttribute('data-placeholder', 'Подпись к изображению…');
+        }
+        quill.setSelection(index + 2, 0, 'user');
+      }, 0);
+    }
   };
 
   function pickImageFromLibrary() {
