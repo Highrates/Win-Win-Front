@@ -44,6 +44,8 @@ export function RichBlock({
   const reactQuillRef = useRef<any>(null);
   const [QuillEditor, setQuillEditor] = useState<ComponentType<Record<string, unknown>> | null>(null);
 
+  const getQuillEditor = () => reactQuillRef.current?.getEditor?.() ?? null;
+
   useEffect(() => {
     let mounted = true;
     void (async () => {
@@ -121,8 +123,6 @@ export function RichBlock({
     'caseVideo',
     'caseImageCaption',
   ] as const;
-
-  const getQuillEditor = () => reactQuillRef.current?.getEditor?.() ?? null;
 
   const readMediaPresetState = (el: HTMLElement | null) => {
     if (!el) {
@@ -294,6 +294,39 @@ export function RichBlock({
     }
   };
 
+  const handleEditorKeyDownCapture = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Enter') return;
+    const target = e.target as HTMLElement | null;
+    if (!target?.closest('.ql-editor')) return;
+    const quill = getQuillEditor();
+    if (!quill) return;
+    const range = quill.getSelection(true);
+    if (!range) return;
+    const [line] = quill.getLine(range.index);
+    const lineDom = (line as any)?.domNode as HTMLElement | undefined;
+    const isCaption = !!lineDom?.classList?.contains('case-rich-image-caption');
+    if (!isCaption) return;
+
+    // Завершаем caption: создаём новую строку без caption-формата.
+    e.preventDefault();
+    const nextIndex = range.index + 1;
+    quill.insertText(range.index, '\n', 'user');
+    // Переводим курсор на новую строку и принудительно снимаем формат/класс подписи.
+    quill.setSelection(nextIndex, 0, 'silent');
+    quill.formatLine(nextIndex, 1, 'caseImageCaption', false, 'user');
+    try {
+      const [newLine] = quill.getLine(nextIndex);
+      const newLineDom = (newLine as any)?.domNode as HTMLElement | undefined;
+      if (newLineDom?.classList?.contains('case-rich-image-caption')) {
+        newLineDom.classList.remove('case-rich-image-caption');
+        newLineDom.removeAttribute('data-placeholder');
+      }
+    } catch {
+      // no-op
+    }
+    quill.setSelection(nextIndex, 0, 'user');
+  };
+
   function pickImageFromLibrary() {
     if (!pickMediaFromLibrary) return;
     setUploadError(null);
@@ -334,7 +367,7 @@ export function RichBlock({
   const useLibraryPicker = !!pickMediaFromLibrary;
 
   return (
-    <div className={styles.richEditorWrap} onClickCapture={handleEditorClickCapture}>
+    <div className={styles.richEditorWrap} onClickCapture={handleEditorClickCapture} onKeyDownCapture={handleEditorKeyDownCapture}>
       <div className={styles.richMediaToolbar}>
         <span className={selectedMediaEl ? styles.mediaStatusOn : styles.mediaStatusOff}>
           {selectedMediaEl ? 'Выбрано медиа' : 'Не выбрано медиа'}

@@ -347,6 +347,38 @@ body.header-super-menu-open {
   object-fit: cover;
 }
 
+/* Пресеты RichBlock (data-align/data-size сохраняются через санитайз на бэке). */
+.rich-content img[data-size='small'],
+.rich-content video[data-size='small'] {
+  width: min(35%, 220px);
+}
+
+.rich-content img[data-size='medium'],
+.rich-content video[data-size='medium'] {
+  width: min(65%, 520px);
+}
+
+.rich-content img[data-size='full'],
+.rich-content video[data-size='full'] {
+  width: 100%;
+}
+
+.rich-content img[data-align='center'],
+.rich-content video[data-align='center'] {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.rich-content img[data-align='left'],
+.rich-content video[data-align='left'] {
+  margin-right: auto;
+}
+
+.rich-content img[data-align='right'],
+.rich-content video[data-align='right'] {
+  margin-left: auto;
+}
+
 .rich-content figure {
   margin: 0;
   width: 100%;
@@ -371,6 +403,7 @@ body.header-super-menu-open {
   text-align: center;
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
+  line-height: 1.25;
   color: var(--color-gray);
 }
 
