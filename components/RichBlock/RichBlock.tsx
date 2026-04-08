@@ -145,6 +145,10 @@ export function RichBlock({
           static blotName = 'caseImageCaption';
           static tagName = 'p';
           static className = 'case-rich-image-caption';
+          /** Нужен для clipboard.convert: иначе matchBlot не вешает формат на строку при загрузке HTML из БД. */
+          static formats() {
+            return true;
+          }
           static create(value: unknown) {
             const node = super.create(value) as HTMLParagraphElement;
             node.setAttribute('data-placeholder', 'Подпись к изображению…');
