@@ -1,31 +1,42 @@
-'use client';
+"use client";
 
-import type { ComponentType } from 'react';
-import type { DeltaStatic } from 'quill';
-import { useEffect, useId, useRef, useState } from 'react';
-import styles from './RichBlock.module.css';
-import 'react-quill/dist/quill.snow.css';
+import type { ComponentType } from "react";
+import type { DeltaStatic } from "quill";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import styles from "./RichBlock.module.css";
+import "react-quill/dist/quill.snow.css";
 
 /** Без next/dynamic: Loadable не пробрасывает ref на классовый ReactQuill → warning в консоли. */
 
-export type RichBlockUploadMedia = (file: File, type: 'image' | 'video') => Promise<string>;
+export type RichBlockUploadMedia = (
+  file: File,
+  type: "image" | "video",
+) => Promise<string>;
 
 /** Выбор уже загруженного файла из медиатеки (админ). Возвращает публичный URL или null при отмене. */
-export type RichBlockPickMediaFromLibrary = (kind: 'image' | 'video') => Promise<string | null>;
+export type RichBlockPickMediaFromLibrary = (
+  kind: "image" | "video",
+) => Promise<string | null>;
 
 /** `import('react-quill')` в Next даёт `{ default: ReactQuill }`; `Quill` висит на `default`, не на корне модуля. */
-function getQuillFromReactQuillModule(mod: { default?: { Quill?: unknown }; Quill?: unknown }): unknown {
+function getQuillFromReactQuillModule(mod: {
+  default?: { Quill?: unknown };
+  Quill?: unknown;
+}): unknown {
   return mod.default?.Quill ?? mod.Quill;
 }
 
 /** Индекс embed-картинки в документе Quill (find по DOM надёжнее, чем getLeaf от selection). */
-function getImageBlotIndex(quill: { constructor: any; getIndex: (b: unknown) => number }, img: HTMLImageElement): number | null {
+function getImageBlotIndex(
+  quill: { constructor: any; getIndex: (b: unknown) => number },
+  img: HTMLImageElement,
+): number | null {
   const Q = quill.constructor;
-  let blot: unknown = typeof Q.find === 'function' ? Q.find(img) : null;
+  let blot: unknown = typeof Q.find === "function" ? Q.find(img) : null;
   if (!blot) {
     try {
-      const Parchment = Q.import('parchment');
-      blot = typeof Parchment.find === 'function' ? Parchment.find(img) : null;
+      const Parchment = Q.import("parchment");
+      blot = typeof Parchment.find === "function" ? Parchment.find(img) : null;
     } catch {
       blot = null;
     }
@@ -39,55 +50,68 @@ function getImageBlotIndex(quill: { constructor: any; getIndex: (b: unknown) => 
 }
 
 /** Совпадают с классами кнопок тулбара — дублируют data-* в DOM: надёжнее для innerHTML и публичного CSS. */
-const RICH_IMG_SIZE_CLASSES = ['case-media-small', 'case-media-medium', 'case-media-full'] as const;
+const RICH_IMG_SIZE_CLASSES = [
+  "case-media-small",
+  "case-media-medium",
+  "case-media-full",
+] as const;
 const RICH_IMG_ALIGN_CLASSES = [
-  'case-media-left',
-  'case-media-center',
-  'case-media-right',
-  'case-media-wrap',
-  'case-media-wrap-end',
+  "case-media-left",
+  "case-media-center",
+  "case-media-right",
+  "case-media-wrap",
+  "case-media-wrap-end",
 ] as const;
 
-function dataAlignFromToolbarCls(cls: string): 'left' | 'center' | 'right' | 'wrap' | 'wrap-end' {
-  if (cls === 'case-media-left') return 'left';
-  if (cls === 'case-media-center') return 'center';
-  if (cls === 'case-media-right') return 'right';
-  if (cls === 'case-media-wrap-end') return 'wrap-end';
-  if (cls === 'case-media-wrap') return 'wrap';
-  return 'left';
+function dataAlignFromToolbarCls(
+  cls: string,
+): "left" | "center" | "right" | "wrap" | "wrap-end" {
+  if (cls === "case-media-left") return "left";
+  if (cls === "case-media-center") return "center";
+  if (cls === "case-media-right") return "right";
+  if (cls === "case-media-wrap-end") return "wrap-end";
+  if (cls === "case-media-wrap") return "wrap";
+  return "left";
 }
 
 function isWrapFlowAlign(align: string | null | undefined): boolean {
-  return align === 'wrap' || align === 'wrap-end';
+  return align === "wrap" || align === "wrap-end";
 }
 
-function syncRichImagePresetClasses(img: HTMLImageElement, align?: string, size?: string) {
+function syncRichImagePresetClasses(
+  img: HTMLImageElement,
+  align?: string,
+  size?: string,
+) {
   for (const c of RICH_IMG_SIZE_CLASSES) img.classList.remove(c);
   for (const c of RICH_IMG_ALIGN_CLASSES) img.classList.remove(c);
-  if (size === 'small') img.classList.add('case-media-small');
-  else if (size === 'medium') img.classList.add('case-media-medium');
-  else if (size === 'full') img.classList.add('case-media-full');
-  if (align === 'left') img.classList.add('case-media-left');
-  else if (align === 'center') img.classList.add('case-media-center');
-  else if (align === 'right') img.classList.add('case-media-right');
-  else if (align === 'wrap-end') img.classList.add('case-media-wrap-end');
-  else if (align === 'wrap') img.classList.add('case-media-wrap');
+  if (size === "small") img.classList.add("case-media-small");
+  else if (size === "medium") img.classList.add("case-media-medium");
+  else if (size === "full") img.classList.add("case-media-full");
+  if (align === "left") img.classList.add("case-media-left");
+  else if (align === "center") img.classList.add("case-media-center");
+  else if (align === "right") img.classList.add("case-media-right");
+  else if (align === "wrap-end") img.classList.add("case-media-wrap-end");
+  else if (align === "wrap") img.classList.add("case-media-wrap");
 }
 
-function readAlignSizeFromRichImage(img: HTMLImageElement): { align?: string; size?: string } {
-  let align = img.getAttribute('data-align')?.trim() || undefined;
-  let size = img.getAttribute('data-size')?.trim() || undefined;
+function readAlignSizeFromRichImage(img: HTMLImageElement): {
+  align?: string;
+  size?: string;
+} {
+  let align = img.getAttribute("data-align")?.trim() || undefined;
+  let size = img.getAttribute("data-size")?.trim() || undefined;
   if (!size) {
-    if (img.classList.contains('case-media-small')) size = 'small';
-    else if (img.classList.contains('case-media-medium')) size = 'medium';
-    else if (img.classList.contains('case-media-full')) size = 'full';
+    if (img.classList.contains("case-media-small")) size = "small";
+    else if (img.classList.contains("case-media-medium")) size = "medium";
+    else if (img.classList.contains("case-media-full")) size = "full";
   }
   if (!align) {
-    if (img.classList.contains('case-media-left')) align = 'left';
-    else if (img.classList.contains('case-media-center')) align = 'center';
-    else if (img.classList.contains('case-media-right')) align = 'right';
-    else if (img.classList.contains('case-media-wrap-end')) align = 'wrap-end';
-    else if (img.classList.contains('case-media-wrap')) align = 'wrap';
+    if (img.classList.contains("case-media-left")) align = "left";
+    else if (img.classList.contains("case-media-center")) align = "center";
+    else if (img.classList.contains("case-media-right")) align = "right";
+    else if (img.classList.contains("case-media-wrap-end")) align = "wrap-end";
+    else if (img.classList.contains("case-media-wrap")) align = "wrap";
   }
   return { align, size };
 }
@@ -116,13 +140,40 @@ export function RichBlock({
   const imageInputId = `${fieldId}-rich-img`;
   const videoInputId = `${fieldId}-rich-vid`;
 
-  const [selectedMediaEl, setSelectedMediaEl] = useState<HTMLElement | null>(null);
-  const [activeSizePreset, setActiveSizePreset] = useState<'small' | 'medium' | 'full' | null>(null);
-  const [activeAlignPreset, setActiveAlignPreset] = useState<'left' | 'center' | 'right' | 'wrap' | 'wrap-end' | null>(null);
-  const [uploadBusy, setUploadBusy] = useState<'image' | 'video' | null>(null);
+  const [selectedMediaEl, setSelectedMediaEl] = useState<HTMLElement | null>(
+    null,
+  );
+  const [activeSizePreset, setActiveSizePreset] = useState<
+    "small" | "medium" | "full" | null
+  >(null);
+  const [activeAlignPreset, setActiveAlignPreset] = useState<
+    "left" | "center" | "right" | "wrap" | "wrap-end" | null
+  >(null);
+  const [uploadBusy, setUploadBusy] = useState<"image" | "video" | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const reactQuillRef = useRef<any>(null);
-  const [QuillEditor, setQuillEditor] = useState<ComponentType<Record<string, unknown>> | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const toolbarStackRef = useRef<HTMLDivElement>(null);
+  const [QuillEditor, setQuillEditor] = useState<ComponentType<
+    Record<string, unknown>
+  > | null>(null);
+
+  /** Высота блока «медиа-тулбар + ошибка» для `top` у sticky ql-toolbar (оба ряда липнут подряд). */
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const stack = toolbarStackRef.current;
+    if (!wrap || !stack) return;
+    const update = () => {
+      wrap.style.setProperty(
+        "--rich-block-toolbar-stack-height",
+        `${stack.offsetHeight}px`,
+      );
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(stack);
+    return () => ro.disconnect();
+  }, [uploadError]);
 
   const getQuillEditor = () => reactQuillRef.current?.getEditor?.() ?? null;
 
@@ -130,42 +181,49 @@ export function RichBlock({
   const syncHtmlFromQuill = () => {
     const quill = getQuillEditor();
     const html = quill?.root?.innerHTML;
-    if (typeof html === 'string') onChange(html);
+    if (typeof html === "string") onChange(html);
   };
 
   useEffect(() => {
     let mounted = true;
     void (async () => {
-      const rq = await import('react-quill');
+      const rq = await import("react-quill");
       if (!mounted) return;
-      const Quill = getQuillFromReactQuillModule(rq as { default?: { Quill?: unknown }; Quill?: unknown }) as
-        | { import: (name: string) => unknown; register: (def: unknown, overwrite?: boolean) => void }
-        | null;
+      const Quill = getQuillFromReactQuillModule(
+        rq as { default?: { Quill?: unknown }; Quill?: unknown },
+      ) as {
+        import: (name: string) => unknown;
+        register: (def: unknown, overwrite?: boolean) => void;
+      } | null;
       if (Quill) {
-        const Block = Quill.import('blots/block') as any;
-        const BlockEmbed = Quill.import('blots/block/embed') as any;
+        const Block = Quill.import("blots/block") as any;
+        const BlockEmbed = Quill.import("blots/block/embed") as any;
         /** Как встроенный `formats/image`: `Parchment.Embed`, не `BlockEmbed` — для `<img>` иначе Parchment не создаёт blot. */
-        const BaseImage = Quill.import('formats/image') as any;
+        const BaseImage = Quill.import("formats/image") as any;
 
         class RichImageBlot extends BaseImage {
-          static blotName = 'image';
+          static blotName = "image";
           static create(value: unknown) {
             const v =
-              typeof value === 'string'
+              typeof value === "string"
                 ? { src: value }
-                : value && typeof value === 'object' && value !== null && 'src' in value
+                : value &&
+                    typeof value === "object" &&
+                    value !== null &&
+                    "src" in value
                   ? (value as { src: string; align?: string; size?: string })
-                  : { src: '' };
-            const src = typeof v.src === 'string' ? v.src : '';
+                  : { src: "" };
+            const src = typeof v.src === "string" ? v.src : "";
             const node = super.create(src) as HTMLImageElement;
-            node.classList.add('case-rich-media-image');
-            if (v.align) node.setAttribute('data-align', v.align);
-            if (v.size) node.setAttribute('data-size', v.size);
+            node.classList.add("case-rich-media-image");
+            if (v.align) node.setAttribute("data-align", v.align);
+            if (v.size) node.setAttribute("data-size", v.size);
             syncRichImagePresetClasses(node, v.align, v.size);
             return node;
           }
           static value(node: HTMLImageElement) {
-            const src = (super.value(node) as string) || node.getAttribute('src') || '';
+            const src =
+              (super.value(node) as string) || node.getAttribute("src") || "";
             const { align, size } = readAlignSizeFromRichImage(node);
             if (align || size) return { src, align, size };
             return src;
@@ -174,19 +232,19 @@ export function RichBlock({
         Quill.register(RichImageBlot, true);
 
         class CaseVideoBlot extends BlockEmbed {
-          static blotName = 'caseVideo';
-          static tagName = 'video';
-          static className = 'case-rich-media-video';
+          static blotName = "caseVideo";
+          static tagName = "video";
+          static className = "case-rich-media-video";
           static create(src: string) {
             const node = super.create() as HTMLVideoElement;
-            node.setAttribute('src', src);
-            node.setAttribute('controls', 'true');
-            node.setAttribute('playsinline', 'true');
-            node.setAttribute('preload', 'metadata');
+            node.setAttribute("src", src);
+            node.setAttribute("controls", "true");
+            node.setAttribute("playsinline", "true");
+            node.setAttribute("preload", "metadata");
             return node;
           }
           static value(node: HTMLVideoElement) {
-            return node.getAttribute('src') || '';
+            return node.getAttribute("src") || "";
           }
         }
         Quill.register(CaseVideoBlot, true);
@@ -196,22 +254,24 @@ export function RichBlock({
          * Так Quill не ломает разметку (в отличие от figure/figcaption).
          */
         class CaseImageCaptionBlot extends Block {
-          static blotName = 'caseImageCaption';
-          static tagName = 'p';
-          static className = 'case-rich-image-caption';
+          static blotName = "caseImageCaption";
+          static tagName = "p";
+          static className = "case-rich-image-caption";
           /** Нужен для clipboard.convert: иначе matchBlot не вешает формат на строку при загрузке HTML из БД. */
           static formats() {
             return true;
           }
           static create(value: unknown) {
             const node = super.create(value) as HTMLParagraphElement;
-            node.setAttribute('data-placeholder', 'Подпись к изображению…');
+            node.setAttribute("data-placeholder", "Подпись к изображению…");
             return node;
           }
         }
         Quill.register(CaseImageCaptionBlot, true);
       }
-      setQuillEditor(() => rq.default as ComponentType<Record<string, unknown>>);
+      setQuillEditor(
+        () => rq.default as ComponentType<Record<string, unknown>>,
+      );
     })();
     return () => {
       mounted = false;
@@ -224,24 +284,33 @@ export function RichBlock({
     const raf = requestAnimationFrame(() => {
       const quill = reactQuillRef.current?.getEditor?.();
       if (!quill) return;
-      const tag = '__winWinRichImgMatcher';
+      const tag = "__winWinRichImgMatcher";
       if ((quill as unknown as Record<string, boolean>)[tag]) return;
       (quill as unknown as Record<string, boolean>)[tag] = true;
-      void import('react-quill').then((rq) => {
-        const Quill = getQuillFromReactQuillModule(rq as { default?: { Quill?: unknown }; Quill?: unknown }) as {
-          import: (name: string) => new () => { insert: (v: unknown, k?: unknown) => unknown };
+      void import("react-quill").then((rq) => {
+        const Quill = getQuillFromReactQuillModule(
+          rq as { default?: { Quill?: unknown }; Quill?: unknown },
+        ) as {
+          import: (
+            name: string,
+          ) => new () => { insert: (v: unknown, k?: unknown) => unknown };
         } | null;
         if (!Quill?.import) return;
-        const Delta = Quill.import('delta') as new () => { insert: (v: unknown, k?: unknown) => unknown };
-        quill.clipboard.addMatcher('IMG', (node: Node, delta: DeltaStatic): DeltaStatic => {
-          if (node.nodeName !== 'IMG') return delta;
-          const el = node as HTMLImageElement;
-          const src = el.getAttribute('src') || '';
-          if (!src) return delta;
-          const { align, size } = readAlignSizeFromRichImage(el);
-          const embedVal = align || size ? { src, align, size } : src;
-          return new Delta().insert({ image: embedVal }) as DeltaStatic;
-        });
+        const Delta = Quill.import("delta") as new () => {
+          insert: (v: unknown, k?: unknown) => unknown;
+        };
+        quill.clipboard.addMatcher(
+          "IMG",
+          (node: Node, delta: DeltaStatic): DeltaStatic => {
+            if (node.nodeName !== "IMG") return delta;
+            const el = node as HTMLImageElement;
+            const src = el.getAttribute("src") || "";
+            if (!src) return delta;
+            const { align, size } = readAlignSizeFromRichImage(el);
+            const embedVal = align || size ? { src, align, size } : src;
+            return new Delta().insert({ image: embedVal }) as DeltaStatic;
+          },
+        );
       });
     });
     return () => cancelAnimationFrame(raf);
@@ -250,29 +319,29 @@ export function RichBlock({
   const modules = {
     toolbar: [
       [{ header: [2, 3, false] }],
-      ['blockquote'],
-      ['bold', 'italic', 'underline'],
+      ["blockquote"],
+      ["bold", "italic", "underline"],
       [{ align: [] }],
-      [{ list: 'ordered' }, { list: 'bullet' }],
-      ['link'],
-      ['clean'],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link"],
+      ["clean"],
     ],
   } as const;
 
   const formats = [
-    'header',
-    'blockquote',
-    'bold',
-    'italic',
-    'underline',
-    'align',
-    'list',
-    'bullet',
-    'link',
-    'image',
-    'video',
-    'caseVideo',
-    'caseImageCaption',
+    "header",
+    "blockquote",
+    "bold",
+    "italic",
+    "underline",
+    "align",
+    "list",
+    "bullet",
+    "link",
+    "image",
+    "video",
+    "caseVideo",
+    "caseImageCaption",
   ] as const;
 
   const readMediaPresetState = (el: HTMLElement | null) => {
@@ -281,97 +350,142 @@ export function RichBlock({
       setActiveAlignPreset(null);
       return;
     }
-    setActiveSizePreset((el.getAttribute('data-size') as 'small' | 'medium' | 'full' | null) ?? null);
+    setActiveSizePreset(
+      (el.getAttribute("data-size") as "small" | "medium" | "full" | null) ??
+        null,
+    );
     setActiveAlignPreset(
-      (el.getAttribute('data-align') as 'left' | 'center' | 'right' | 'wrap' | 'wrap-end' | null) ?? null
+      (el.getAttribute("data-align") as
+        | "left"
+        | "center"
+        | "right"
+        | "wrap"
+        | "wrap-end"
+        | null) ?? null,
     );
   };
 
-  const applyMediaPreset = (cls: string, group: 'size' | 'align') => {
+  const applyMediaPreset = (cls: string, group: "size" | "align") => {
     if (!selectedMediaEl) return;
 
     /** Видео: по-прежнему только DOM + синк HTML (отдельный embed). */
-    if (selectedMediaEl.tagName === 'VIDEO') {
-      if (group === 'size') {
-        selectedMediaEl.style.maxWidth = '100%';
-        selectedMediaEl.style.height = 'auto';
+    if (selectedMediaEl.tagName === "VIDEO") {
+      if (group === "size") {
+        selectedMediaEl.style.maxWidth = "100%";
+        selectedMediaEl.style.height = "auto";
         selectedMediaEl.style.width =
-          cls === 'case-media-small' ? 'min(35%, 220px)' : cls === 'case-media-medium' ? 'min(65%, 520px)' : '100%';
-        selectedMediaEl.setAttribute('data-size', cls === 'case-media-small' ? 'small' : cls === 'case-media-medium' ? 'medium' : 'full');
+          cls === "case-media-small"
+            ? "min(35%, 220px)"
+            : cls === "case-media-medium"
+              ? "min(65%, 520px)"
+              : "100%";
+        selectedMediaEl.setAttribute(
+          "data-size",
+          cls === "case-media-small"
+            ? "small"
+            : cls === "case-media-medium"
+              ? "medium"
+              : "full",
+        );
       } else {
-        selectedMediaEl.style.display = 'block';
-        selectedMediaEl.style.float = 'none';
-        selectedMediaEl.style.margin = '0';
-        if (cls === 'case-media-left') selectedMediaEl.style.marginRight = 'auto';
-        if (cls === 'case-media-center') {
-          selectedMediaEl.style.marginLeft = 'auto';
-          selectedMediaEl.style.marginRight = 'auto';
+        selectedMediaEl.style.display = "block";
+        selectedMediaEl.style.float = "none";
+        selectedMediaEl.style.margin = "0";
+        if (cls === "case-media-left")
+          selectedMediaEl.style.marginRight = "auto";
+        if (cls === "case-media-center") {
+          selectedMediaEl.style.marginLeft = "auto";
+          selectedMediaEl.style.marginRight = "auto";
         }
-        if (cls === 'case-media-right') selectedMediaEl.style.marginLeft = 'auto';
-        if (cls === 'case-media-wrap') {
-          selectedMediaEl.style.float = 'left';
-          selectedMediaEl.style.width = 'min(45%, 340px)';
-          selectedMediaEl.style.marginRight = '24px';
-          selectedMediaEl.style.marginLeft = '0';
-          selectedMediaEl.style.marginBottom = '12px';
+        if (cls === "case-media-right")
+          selectedMediaEl.style.marginLeft = "auto";
+        if (cls === "case-media-wrap") {
+          selectedMediaEl.style.float = "left";
+          selectedMediaEl.style.width = "min(45%, 340px)";
+          selectedMediaEl.style.marginRight = "24px";
+          selectedMediaEl.style.marginLeft = "0";
+          selectedMediaEl.style.marginBottom = "12px";
         }
-        if (cls === 'case-media-wrap-end') {
-          selectedMediaEl.style.float = 'right';
-          selectedMediaEl.style.width = 'min(45%, 340px)';
-          selectedMediaEl.style.marginLeft = '24px';
-          selectedMediaEl.style.marginRight = '0';
-          selectedMediaEl.style.marginBottom = '12px';
+        if (cls === "case-media-wrap-end") {
+          selectedMediaEl.style.float = "right";
+          selectedMediaEl.style.width = "min(45%, 340px)";
+          selectedMediaEl.style.marginLeft = "24px";
+          selectedMediaEl.style.marginRight = "0";
+          selectedMediaEl.style.marginBottom = "12px";
         }
-        selectedMediaEl.setAttribute('data-align', dataAlignFromToolbarCls(cls));
+        selectedMediaEl.setAttribute(
+          "data-align",
+          dataAlignFromToolbarCls(cls),
+        );
       }
       readMediaPresetState(selectedMediaEl);
       syncHtmlFromQuill();
       return;
     }
 
-    if (selectedMediaEl.tagName !== 'IMG') return;
+    if (selectedMediaEl.tagName !== "IMG") return;
 
     /**
      * Quill держит истину в Delta. Только data-* в DOM недостаточно — при следующем цикле модель снова { image: url }.
      * Пересобираем embed в Delta с { src, align, size }, чтобы сохранение и перезагрузка не теряли пресеты.
      */
-    if (group === 'size') {
-      selectedMediaEl.setAttribute('data-size', cls === 'case-media-small' ? 'small' : cls === 'case-media-medium' ? 'medium' : 'full');
+    if (group === "size") {
+      selectedMediaEl.setAttribute(
+        "data-size",
+        cls === "case-media-small"
+          ? "small"
+          : cls === "case-media-medium"
+            ? "medium"
+            : "full",
+      );
     } else {
-      selectedMediaEl.setAttribute('data-align', dataAlignFromToolbarCls(cls));
+      selectedMediaEl.setAttribute("data-align", dataAlignFromToolbarCls(cls));
     }
-    selectedMediaEl.removeAttribute('style');
-    if (selectedMediaEl.tagName === 'IMG') {
+    selectedMediaEl.removeAttribute("style");
+    if (selectedMediaEl.tagName === "IMG") {
       syncRichImagePresetClasses(
         selectedMediaEl as HTMLImageElement,
-        selectedMediaEl.getAttribute('data-align') || undefined,
-        selectedMediaEl.getAttribute('data-size') || undefined
+        selectedMediaEl.getAttribute("data-align") || undefined,
+        selectedMediaEl.getAttribute("data-size") || undefined,
       );
     }
 
     const quill = getQuillEditor();
     if (quill) {
-      const Q = quill.constructor as { import: (n: string) => any; find: (n: Node) => unknown };
-      const Delta = Q.import('delta');
-      const blot = Q.find(selectedMediaEl) as { offset?: (root: unknown) => number } | null;
+      const Q = quill.constructor as {
+        import: (n: string) => any;
+        find: (n: Node) => unknown;
+      };
+      const Delta = Q.import("delta");
+      const blot = Q.find(selectedMediaEl) as {
+        offset?: (root: unknown) => number;
+      } | null;
       if (blot) {
-        const index = quill.getIndex(blot as Parameters<typeof quill.getIndex>[0]);
-        const src = selectedMediaEl.getAttribute('src') || '';
-        const align = selectedMediaEl.getAttribute('data-align') || undefined;
-        const size = selectedMediaEl.getAttribute('data-size') || undefined;
+        const index = quill.getIndex(
+          blot as Parameters<typeof quill.getIndex>[0],
+        );
+        const src = selectedMediaEl.getAttribute("src") || "";
+        const align = selectedMediaEl.getAttribute("data-align") || undefined;
+        const size = selectedMediaEl.getAttribute("data-size") || undefined;
         const embedVal = align || size ? { src, align, size } : src;
-        quill.updateContents(new Delta().retain(index).delete(1).insert({ image: embedVal }), 'user');
+        quill.updateContents(
+          new Delta().retain(index).delete(1).insert({ image: embedVal }),
+          "user",
+        );
 
         const [leaf] = quill.getLeaf(index);
         const newImg = (leaf as { domNode?: HTMLElement })?.domNode;
-        if (newImg?.tagName === 'IMG') {
+        if (newImg?.tagName === "IMG") {
           setSelectedMediaEl(newImg);
           /** Embed = 1 + перевод строки конца блока = 1 → следующая строка с index + 2. */
           const [capLine] = quill.getLine(index + 2);
           const capDom = (capLine as { domNode?: HTMLElement })?.domNode;
-          if (capDom?.tagName === 'P' && capDom.classList.contains('case-rich-image-caption')) {
-            if (size) capDom.setAttribute('data-size', size);
-            if (align) capDom.setAttribute('data-align', align);
+          if (
+            capDom?.tagName === "P" &&
+            capDom.classList.contains("case-rich-image-caption")
+          ) {
+            if (size) capDom.setAttribute("data-size", size);
+            if (align) capDom.setAttribute("data-align", align);
           }
           readMediaPresetState(newImg);
           syncHtmlFromQuill();
@@ -384,23 +498,27 @@ export function RichBlock({
     syncHtmlFromQuill();
   };
 
-  function insertSrcAtCursor(src: string, kind: 'image' | 'video') {
+  function insertSrcAtCursor(src: string, kind: "image" | "video") {
     const quill = getQuillEditor();
     if (!quill) {
-      if (kind === 'image') {
-        onChange(`${value}<p><img class="case-rich-media-image" src="${src}" alt="" /></p>`);
+      if (kind === "image") {
+        onChange(
+          `${value}<p><img class="case-rich-media-image" src="${src}" alt="" /></p>`,
+        );
       } else {
-        onChange(`${value}<p><video class="case-rich-media-video" controls src="${src}"></video></p>`);
+        onChange(
+          `${value}<p><video class="case-rich-media-video" controls src="${src}"></video></p>`,
+        );
       }
       return;
     }
     const range = quill.getSelection(true);
     const index = range ? range.index : quill.getLength();
-    if (kind === 'image') {
+    if (kind === "image") {
       /** Quill ожидает строку URL; объект ломает insert/update delta в части сборок. */
-      quill.insertEmbed(index, 'image', src, 'user');
+      quill.insertEmbed(index, "image", src, "user");
     } else {
-      quill.insertEmbed(index, 'caseVideo', src, 'user');
+      quill.insertEmbed(index, "caseVideo", src, "user");
     }
     quill.setSelection(index + 1, 0);
   }
@@ -410,13 +528,14 @@ export function RichBlock({
     setUploadError(null);
 
     if (uploadMedia && !pickMediaFromLibrary) {
-      setUploadBusy('image');
+      setUploadBusy("image");
       void (async () => {
         try {
-          const url = await uploadMedia(file, 'image');
-          insertSrcAtCursor(url, 'image');
+          const url = await uploadMedia(file, "image");
+          insertSrcAtCursor(url, "image");
         } catch (e) {
-          const msg = e instanceof Error ? e.message : 'Не удалось загрузить изображение';
+          const msg =
+            e instanceof Error ? e.message : "Не удалось загрузить изображение";
           setUploadError(msg);
           onUploadError?.(msg);
         } finally {
@@ -428,9 +547,9 @@ export function RichBlock({
 
     const reader = new FileReader();
     reader.onload = () => {
-      const src = typeof reader.result === 'string' ? reader.result : '';
+      const src = typeof reader.result === "string" ? reader.result : "";
       if (!src) return;
-      insertSrcAtCursor(src, 'image');
+      insertSrcAtCursor(src, "image");
     };
     reader.readAsDataURL(file);
   };
@@ -440,13 +559,14 @@ export function RichBlock({
     setUploadError(null);
 
     if (uploadMedia && !pickMediaFromLibrary) {
-      setUploadBusy('video');
+      setUploadBusy("video");
       void (async () => {
         try {
-          const url = await uploadMedia(file, 'video');
-          insertSrcAtCursor(url, 'video');
+          const url = await uploadMedia(file, "video");
+          insertSrcAtCursor(url, "video");
         } catch (e) {
-          const msg = e instanceof Error ? e.message : 'Не удалось загрузить видео';
+          const msg =
+            e instanceof Error ? e.message : "Не удалось загрузить видео";
           setUploadError(msg);
           onUploadError?.(msg);
         } finally {
@@ -458,22 +578,26 @@ export function RichBlock({
 
     const reader = new FileReader();
     reader.onload = () => {
-      const src = typeof reader.result === 'string' ? reader.result : '';
+      const src = typeof reader.result === "string" ? reader.result : "";
       if (!src) return;
-      insertSrcAtCursor(src, 'video');
+      insertSrcAtCursor(src, "video");
     };
     reader.readAsDataURL(file);
   };
 
   const handleEditorClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement | null;
-    if (target?.closest(`.${styles.richMediaToolbar}`) || target?.closest('.ql-toolbar')) return;
-    if (!target?.closest('.ql-editor')) return;
-    const media = target?.closest('img,video,iframe') as HTMLElement | null;
+    if (
+      target?.closest(`.${styles.richMediaToolbar}`) ||
+      target?.closest(".ql-toolbar")
+    )
+      return;
+    if (!target?.closest(".ql-editor")) return;
+    const media = target?.closest("img,video,iframe") as HTMLElement | null;
     setSelectedMediaEl(media ?? null);
     readMediaPresetState(media ?? null);
 
-    if (media?.tagName === 'IMG') {
+    if (media?.tagName === "IMG") {
       const imgEl = media as HTMLImageElement;
       /**
        * Не вызывать syncHtmlFromQuill здесь: лишний onChange → родитель обновляет value → ReactQuill
@@ -489,20 +613,26 @@ export function RichBlock({
         const captionBlockIndex = index + 2;
         const nextSibling = imgEl.nextElementSibling;
         const alreadyCaptionByDom =
-          nextSibling?.tagName === 'P' && nextSibling.classList.contains('case-rich-image-caption');
+          nextSibling?.tagName === "P" &&
+          nextSibling.classList.contains("case-rich-image-caption");
         const [lineAfter] = quill.getLine(captionBlockIndex);
-        const lineAfterDom = (lineAfter as { domNode?: HTMLElement } | undefined)?.domNode;
+        const lineAfterDom = (
+          lineAfter as { domNode?: HTMLElement } | undefined
+        )?.domNode;
         const alreadyCaption =
           alreadyCaptionByDom ||
-          (lineAfterDom?.tagName === 'P' && lineAfterDom.classList.contains('case-rich-image-caption'));
+          (lineAfterDom?.tagName === "P" &&
+            lineAfterDom.classList.contains("case-rich-image-caption"));
         if (alreadyCaption) {
-          const dom = (alreadyCaptionByDom ? nextSibling : lineAfterDom) as HTMLElement | undefined;
-          dom?.setAttribute('data-placeholder', 'Подпись к изображению…');
-          quill.setSelection(captionBlockIndex, 0, 'silent');
+          const dom = (alreadyCaptionByDom ? nextSibling : lineAfterDom) as
+            | HTMLElement
+            | undefined;
+          dom?.setAttribute("data-placeholder", "Подпись к изображению…");
+          quill.setSelection(captionBlockIndex, 0, "silent");
           return;
         }
 
-        const imgAlign = imgEl.getAttribute('data-align');
+        const imgAlign = imgEl.getAttribute("data-align");
         const flowWrap = isWrapFlowAlign(imgAlign);
 
         if (flowWrap) {
@@ -510,87 +640,106 @@ export function RichBlock({
            * Обтекание: сначала обычный абзац (текст набирается рядом с float), затем подпись с clear.
            * Иначе подпись шла сразу под img, и текста «справа/слева» от картинки не было.
            */
-          quill.insertText(captionBlockIndex, '\n', 'user');
+          quill.insertText(captionBlockIndex, "\n", "user");
           const bodyLine = quill.getLine(captionBlockIndex)[0];
           const bodyBlot = bodyLine as { length?: () => number } | undefined;
-          if (!bodyBlot || typeof bodyBlot.length !== 'function') return;
-          const captionInsertAt = quill.getIndex(bodyBlot as Parameters<typeof quill.getIndex>[0]) + bodyBlot.length();
-          quill.insertText(captionInsertAt, '\n', 'user');
-          quill.formatLine(captionInsertAt, 1, 'caseImageCaption', true, 'user');
+          if (!bodyBlot || typeof bodyBlot.length !== "function") return;
+          const captionInsertAt =
+            quill.getIndex(bodyBlot as Parameters<typeof quill.getIndex>[0]) +
+            bodyBlot.length();
+          quill.insertText(captionInsertAt, "\n", "user");
+          quill.formatLine(
+            captionInsertAt,
+            1,
+            "caseImageCaption",
+            true,
+            "user",
+          );
           const [capLine] = quill.getLine(captionInsertAt);
-          const lineDom = (capLine as { domNode?: HTMLElement } | undefined)?.domNode;
-          if (lineDom?.tagName === 'P') {
-            lineDom.classList.add('case-rich-image-caption');
-            lineDom.setAttribute('data-placeholder', 'Подпись к изображению…');
-            const size = imgEl.getAttribute('data-size');
-            const align = imgEl.getAttribute('data-align');
-            if (size) lineDom.setAttribute('data-size', size);
-            if (align) lineDom.setAttribute('data-align', align);
+          const lineDom = (capLine as { domNode?: HTMLElement } | undefined)
+            ?.domNode;
+          if (lineDom?.tagName === "P") {
+            lineDom.classList.add("case-rich-image-caption");
+            lineDom.setAttribute("data-placeholder", "Подпись к изображению…");
+            const size = imgEl.getAttribute("data-size");
+            const align = imgEl.getAttribute("data-align");
+            if (size) lineDom.setAttribute("data-size", size);
+            if (align) lineDom.setAttribute("data-align", align);
           }
-          quill.setSelection(captionBlockIndex, 0, 'silent');
+          quill.setSelection(captionBlockIndex, 0, "silent");
         } else {
-          quill.insertText(captionBlockIndex, '\n', 'user');
-          quill.formatLine(captionBlockIndex, 1, 'caseImageCaption', true, 'user');
+          quill.insertText(captionBlockIndex, "\n", "user");
+          quill.formatLine(
+            captionBlockIndex,
+            1,
+            "caseImageCaption",
+            true,
+            "user",
+          );
 
           const [line] = quill.getLine(captionBlockIndex);
-          const lineDom = (line as { domNode?: HTMLElement } | undefined)?.domNode;
-          if (lineDom?.tagName === 'P') {
-            lineDom.classList.add('case-rich-image-caption');
-            lineDom.setAttribute('data-placeholder', 'Подпись к изображению…');
-            const size = imgEl.getAttribute('data-size');
-            const align = imgEl.getAttribute('data-align');
-            if (size) lineDom.setAttribute('data-size', size);
-            if (align) lineDom.setAttribute('data-align', align);
+          const lineDom = (line as { domNode?: HTMLElement } | undefined)
+            ?.domNode;
+          if (lineDom?.tagName === "P") {
+            lineDom.classList.add("case-rich-image-caption");
+            lineDom.setAttribute("data-placeholder", "Подпись к изображению…");
+            const size = imgEl.getAttribute("data-size");
+            const align = imgEl.getAttribute("data-align");
+            if (size) lineDom.setAttribute("data-size", size);
+            if (align) lineDom.setAttribute("data-align", align);
           }
-          quill.setSelection(captionBlockIndex, 0, 'silent');
+          quill.setSelection(captionBlockIndex, 0, "silent");
         }
       });
     }
   };
 
-  const handleEditorKeyDownCapture = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== 'Enter') return;
+  const handleEditorKeyDownCapture = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (e.key !== "Enter") return;
     const target = e.target as HTMLElement | null;
-    if (!target?.closest('.ql-editor')) return;
+    if (!target?.closest(".ql-editor")) return;
     const quill = getQuillEditor();
     if (!quill) return;
     const range = quill.getSelection(true);
     if (!range) return;
     const [line] = quill.getLine(range.index);
     const lineDom = (line as any)?.domNode as HTMLElement | undefined;
-    const isCaption = !!lineDom?.classList?.contains('case-rich-image-caption');
+    const isCaption = !!lineDom?.classList?.contains("case-rich-image-caption");
     if (!isCaption) return;
 
     // Завершаем caption: создаём новую строку без caption-формата.
     e.preventDefault();
     const nextIndex = range.index + 1;
-    quill.insertText(range.index, '\n', 'user');
+    quill.insertText(range.index, "\n", "user");
     // Переводим курсор на новую строку и принудительно снимаем формат/класс подписи.
-    quill.setSelection(nextIndex, 0, 'silent');
-    quill.formatLine(nextIndex, 1, 'caseImageCaption', false, 'user');
+    quill.setSelection(nextIndex, 0, "silent");
+    quill.formatLine(nextIndex, 1, "caseImageCaption", false, "user");
     try {
       const [newLine] = quill.getLine(nextIndex);
       const newLineDom = (newLine as any)?.domNode as HTMLElement | undefined;
-      if (newLineDom?.classList?.contains('case-rich-image-caption')) {
-        newLineDom.classList.remove('case-rich-image-caption');
-        newLineDom.removeAttribute('data-placeholder');
+      if (newLineDom?.classList?.contains("case-rich-image-caption")) {
+        newLineDom.classList.remove("case-rich-image-caption");
+        newLineDom.removeAttribute("data-placeholder");
       }
     } catch {
       // no-op
     }
-    quill.setSelection(nextIndex, 0, 'user');
+    quill.setSelection(nextIndex, 0, "user");
   };
 
   function pickImageFromLibrary() {
     if (!pickMediaFromLibrary) return;
     setUploadError(null);
-    setUploadBusy('image');
+    setUploadBusy("image");
     void (async () => {
       try {
-        const url = await pickMediaFromLibrary('image');
-        if (url) insertSrcAtCursor(url, 'image');
+        const url = await pickMediaFromLibrary("image");
+        if (url) insertSrcAtCursor(url, "image");
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Не удалось выбрать изображение';
+        const msg =
+          e instanceof Error ? e.message : "Не удалось выбрать изображение";
         setUploadError(msg);
         onUploadError?.(msg);
       } finally {
@@ -602,13 +751,13 @@ export function RichBlock({
   function pickVideoFromLibrary() {
     if (!pickMediaFromLibrary) return;
     setUploadError(null);
-    setUploadBusy('video');
+    setUploadBusy("video");
     void (async () => {
       try {
-        const url = await pickMediaFromLibrary('video');
-        if (url) insertSrcAtCursor(url, 'video');
+        const url = await pickMediaFromLibrary("video");
+        if (url) insertSrcAtCursor(url, "video");
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Не удалось выбрать видео';
+        const msg = e instanceof Error ? e.message : "Не удалось выбрать видео";
         setUploadError(msg);
         onUploadError?.(msg);
       } finally {
@@ -621,81 +770,138 @@ export function RichBlock({
   const useLibraryPicker = !!pickMediaFromLibrary;
 
   return (
-    <div className={styles.richEditorWrap} onClickCapture={handleEditorClickCapture} onKeyDownCapture={handleEditorKeyDownCapture}>
-      <div className={styles.richMediaToolbar}>
-        <span className={selectedMediaEl ? styles.mediaStatusOn : styles.mediaStatusOff}>
-          {selectedMediaEl ? 'Выбрано медиа' : 'Не выбрано медиа'}
-        </span>
-        {uploadMedia && !useLibraryPicker ? (
-          <span className={styles.richToolBtn} style={{ opacity: 0.85, cursor: 'default' }} title="Файлы загружаются на сервер">
-            (облако)
+    <div
+      ref={wrapRef}
+      className={styles.richEditorWrap}
+      onClickCapture={handleEditorClickCapture}
+      onKeyDownCapture={handleEditorKeyDownCapture}
+    >
+      <div ref={toolbarStackRef} className={styles.richEditorStickyToolbars}>
+        <div className={styles.richMediaToolbar}>
+          <span
+            className={
+              selectedMediaEl ? styles.mediaStatusOn : styles.mediaStatusOff
+            }
+          >
+            {selectedMediaEl ? "Выбрано медиа" : "Не выбрано медиа"}
           </span>
-        ) : null}
-        {useLibraryPicker ? (
-          <span className={styles.richToolBtn} style={{ opacity: 0.85, cursor: 'default' }} title="Выбор из медиатеки">
-            (объекты)
-          </span>
-        ) : null}
-        {busy ? <span className={styles.mediaStatusOn}>Загрузка…</span> : null}
-        {useLibraryPicker ? (
-          <>
-            <button
-              type="button"
+          {uploadMedia && !useLibraryPicker ? (
+            <span
               className={styles.richToolBtn}
-              disabled={busy}
-              onClick={pickImageFromLibrary}
+              style={{ opacity: 0.85, cursor: "default" }}
+              title="Файлы загружаются на сервер"
             >
-              + Изображение
-            </button>
-            <button
-              type="button"
+              (облако)
+            </span>
+          ) : null}
+          {useLibraryPicker ? (
+            <span
               className={styles.richToolBtn}
-              disabled={busy}
-              onClick={pickVideoFromLibrary}
+              style={{ opacity: 0.85, cursor: "default" }}
+              title="Выбор из медиатеки"
             >
-              + Видео
-            </button>
-          </>
-        ) : (
-          <>
-            <label className={styles.richToolBtn} htmlFor={imageInputId}>
-              + Изображение
-            </label>
-            <label className={styles.richToolBtn} htmlFor={videoInputId}>
-              + Видео
-            </label>
-          </>
-        )}
-        <span className={styles.richToolSep} />
-        <button type="button" className={`${styles.richToolBtn} ${activeSizePreset === 'small' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-small', 'size')}>small</button>
-        <button type="button" className={`${styles.richToolBtn} ${activeSizePreset === 'medium' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-medium', 'size')}>medium</button>
-        <button type="button" className={`${styles.richToolBtn} ${activeSizePreset === 'full' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-full', 'size')}>full</button>
-        <span className={styles.richToolSep} />
-        <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'left' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-left', 'align')}>left</button>
-        <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'center' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-center', 'align')}>center</button>
-        <button type="button" className={`${styles.richToolBtn} ${activeAlignPreset === 'right' ? styles.richToolBtnActive : ''}`} onClick={() => applyMediaPreset('case-media-right', 'align')}>right</button>
-        <button
-          type="button"
-          className={`${styles.richToolBtn} ${activeAlignPreset === 'wrap' ? styles.richToolBtnActive : ''}`}
-          title="Картинка слева — текст справа (обтекание)"
-          onClick={() => applyMediaPreset('case-media-wrap', 'align')}
-        >
-          wrap
-        </button>
-        <button
-          type="button"
-          className={`${styles.richToolBtn} ${activeAlignPreset === 'wrap-end' ? styles.richToolBtnActive : ''}`}
-          title="Картинка справа — текст слева (обтекание)"
-          onClick={() => applyMediaPreset('case-media-wrap-end', 'align')}
-        >
-          wrap-r
-        </button>
+              (объекты)
+            </span>
+          ) : null}
+          {busy ? (
+            <span className={styles.mediaStatusOn}>Загрузка…</span>
+          ) : null}
+          {useLibraryPicker ? (
+            <>
+              <button
+                type="button"
+                className={styles.richToolBtn}
+                disabled={busy}
+                onClick={pickImageFromLibrary}
+              >
+                + Изображение
+              </button>
+              <button
+                type="button"
+                className={styles.richToolBtn}
+                disabled={busy}
+                onClick={pickVideoFromLibrary}
+              >
+                + Видео
+              </button>
+            </>
+          ) : (
+            <>
+              <label className={styles.richToolBtn} htmlFor={imageInputId}>
+                + Изображение
+              </label>
+              <label className={styles.richToolBtn} htmlFor={videoInputId}>
+                + Видео
+              </label>
+            </>
+          )}
+          <span className={styles.richToolSep} />
+          <button
+            type="button"
+            className={`${styles.richToolBtn} ${activeSizePreset === "small" ? styles.richToolBtnActive : ""}`}
+            onClick={() => applyMediaPreset("case-media-small", "size")}
+          >
+            small
+          </button>
+          <button
+            type="button"
+            className={`${styles.richToolBtn} ${activeSizePreset === "medium" ? styles.richToolBtnActive : ""}`}
+            onClick={() => applyMediaPreset("case-media-medium", "size")}
+          >
+            medium
+          </button>
+          <button
+            type="button"
+            className={`${styles.richToolBtn} ${activeSizePreset === "full" ? styles.richToolBtnActive : ""}`}
+            onClick={() => applyMediaPreset("case-media-full", "size")}
+          >
+            full
+          </button>
+          <span className={styles.richToolSep} />
+          <button
+            type="button"
+            className={`${styles.richToolBtn} ${activeAlignPreset === "left" ? styles.richToolBtnActive : ""}`}
+            onClick={() => applyMediaPreset("case-media-left", "align")}
+          >
+            left
+          </button>
+          <button
+            type="button"
+            className={`${styles.richToolBtn} ${activeAlignPreset === "center" ? styles.richToolBtnActive : ""}`}
+            onClick={() => applyMediaPreset("case-media-center", "align")}
+          >
+            center
+          </button>
+          <button
+            type="button"
+            className={`${styles.richToolBtn} ${activeAlignPreset === "right" ? styles.richToolBtnActive : ""}`}
+            onClick={() => applyMediaPreset("case-media-right", "align")}
+          >
+            right
+          </button>
+          <button
+            type="button"
+            className={`${styles.richToolBtn} ${activeAlignPreset === "wrap" ? styles.richToolBtnActive : ""}`}
+            title="Картинка слева — текст справа (обтекание)"
+            onClick={() => applyMediaPreset("case-media-wrap", "align")}
+          >
+            wrap
+          </button>
+          <button
+            type="button"
+            className={`${styles.richToolBtn} ${activeAlignPreset === "wrap-end" ? styles.richToolBtnActive : ""}`}
+            title="Картинка справа — текст слева (обтекание)"
+            onClick={() => applyMediaPreset("case-media-wrap-end", "align")}
+          >
+            wrap-r
+          </button>
+        </div>
+        {uploadError ? (
+          <p className={styles.uploadError} role="alert">
+            {uploadError}
+          </p>
+        ) : null}
       </div>
-      {uploadError ? (
-        <p className={styles.uploadError} role="alert">
-          {uploadError}
-        </p>
-      ) : null}
       {!useLibraryPicker ? (
         <>
           <input
@@ -706,7 +912,7 @@ export function RichBlock({
             disabled={busy}
             onChange={(e) => {
               insertImage(e.target.files?.[0] ?? null);
-              e.currentTarget.value = '';
+              e.currentTarget.value = "";
             }}
           />
           <input
@@ -717,7 +923,7 @@ export function RichBlock({
             disabled={busy}
             onChange={(e) => {
               insertVideo(e.target.files?.[0] ?? null);
-              e.currentTarget.value = '';
+              e.currentTarget.value = "";
             }}
           />
         </>

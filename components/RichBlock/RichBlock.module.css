@@ -2,8 +2,19 @@
   align-self: stretch;
   width: 100%;
   border-radius: 8px;
-  overflow: hidden;
+  /* visible — иначе position: sticky у тулбаров не прилипает к области прокрутки страницы */
+  overflow: visible;
   border: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+
+/* Медиа-тулбар + строка ошибки: один sticky-блок над Quill.
+   При фиксированном хедере над формой задайте на предке, например: --rich-block-sticky-top: 56px; */
+.richEditorStickyToolbars {
+  position: sticky;
+  top: var(--rich-block-sticky-top, 0px);
+  z-index: 11;
+  background: var(--color-bright-snow);
+  border-radius: 8px 8px 0 0;
 }
 
 .quillLoading {
@@ -59,12 +70,17 @@
   border: none;
   border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
   background: var(--color-bright-snow);
+  position: sticky;
+  top: calc(var(--rich-block-sticky-top, 0px) + var(--rich-block-toolbar-stack-height, 0px));
+  z-index: 10;
 }
 .richEditorWrap :global(.ql-container.ql-snow) {
   border: none;
   min-height: 220px;
   font-family: inherit;
   font-size: var(--text-body);
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
 }
 .richEditorWrap :global(.ql-editor) { min-height: 220px; }
 .richEditorWrap :global(.ql-editor img),
