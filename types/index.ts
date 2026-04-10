@@ -97,7 +97,8 @@ export interface Designer {
 }
 
 export interface Favorite {
-  product: Product;
+  productVariantId: string;
+  productVariant: { product: Product };
 }
 
 export interface CartItem {

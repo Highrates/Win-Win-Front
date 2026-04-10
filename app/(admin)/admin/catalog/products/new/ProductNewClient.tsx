@@ -188,7 +188,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [picker, setPicker] = useState<
-    null | { filter: 'image' | 'video' | 'all'; title: string }
+    null | { filter: 'image' | 'video' | 'all'; title: string; multi?: boolean }
   >(null);
   const pickTarget = useRef<
     null | { kind: 'gallery'; id: string } | { kind: 'mcShellColor'; materialId: string; colorId: string } | { kind: 'rich' }
@@ -324,10 +324,22 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     setPicker({ filter: 'image', title: 'Изображение галереи' });
   }
 
+  function openGalleryPickerMulti() {
+    richPickResolver.current = null;
+    pickTarget.current = null;
+    setPicker({ filter: 'image', title: 'Несколько изображений галереи', multi: true });
+  }
+
   function openMcShellColorPicker(materialId: string, colorId: string) {
     richPickResolver.current = null;
     pickTarget.current = { kind: 'mcShellColor', materialId, colorId };
     setPicker({ filter: 'image', title: 'Изображение цвета (витрина)' });
+  }
+
+  function handlePickerPickBatch(items: { url: string; id: string }[]) {
+    if (!items.length) return;
+    setGallery((prev) => [...prev, ...items.map((s) => ({ id: rowId(), url: s.url }))]);
+    setPicker(null);
   }
 
   function handlePickerPick(sel: { url: string; id: string }) {
@@ -644,9 +656,14 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
               </div>
             </SortableContext>
           </DndContext>
-          <button type="button" className={catalogStyles.btn} onClick={addGalleryRow}>
-            + Добавить кадр
-          </button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <button type="button" className={catalogStyles.btn} onClick={addGalleryRow}>
+              + Добавить кадр
+            </button>
+            <button type="button" className={catalogStyles.btn} onClick={openGalleryPickerMulti}>
+              + Несколько из медиатеки
+            </button>
+          </div>
         </div>
 
         <div className={pn.section}>
@@ -1135,7 +1152,8 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             pickTarget.current = null;
             setPicker(null);
           }}
-          onPick={handlePickerPick}
+          onPick={picker.multi ? undefined : handlePickerPick}
+          onPickBatch={picker.multi ? handlePickerPickBatch : undefined}
         />
       ) : null}
     </>

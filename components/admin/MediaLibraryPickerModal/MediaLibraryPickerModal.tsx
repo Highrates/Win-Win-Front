@@ -25,7 +25,10 @@ type MediaLibraryPickerModalProps = {
   /** Ограничение списка: только изображения, только видео или вся медиатека с вкладками */
   mediaFilter: 'image' | 'video' | 'all';
   onClose: () => void;
-  onPick: (sel: MediaLibraryPickResult) => void;
+  /** Один объект (кнопка «Выбрать» или двойной клик по карточке) */
+  onPick?: (sel: MediaLibraryPickResult) => void;
+  /** Несколько объектов: выбор кадров в сетке и «Добавить выбранные» */
+  onPickBatch?: (items: MediaLibraryPickResult[]) => void;
 };
 
 function formatBytes(n: number): string {
@@ -86,9 +89,12 @@ export function MediaLibraryPickerModal({
   mediaFilter,
   onClose,
   onPick,
+  onPickBatch,
 }: MediaLibraryPickerModalProps) {
   const uploadInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const multiMode = typeof onPickBatch === 'function';
 
   const [tab, setTab] = useState<MediaLibraryTab>(() => tabForFilter(mediaFilter));
   const [q, setQ] = useState('');
@@ -101,6 +107,8 @@ export function MediaLibraryPickerModal({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Режим `onPickBatch`: id выбранных карточек */
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
 
@@ -124,6 +132,7 @@ export function MediaLibraryPickerModal({
     setDebouncedQ('');
     setFolderFilter(null);
     setSelectedId(null);
+    setSelectedIds([]);
     setError(null);
     setCollapsedFolderIds(new Set());
   }, [open, mediaFilter]);
@@ -258,26 +267,51 @@ export function MediaLibraryPickerModal({
   }
 
   async function onPickUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = e.target.files;
     e.target.value = '';
-    if (!file) return;
+    if (!files?.length) return;
+    const list = Array.from(files);
     setUploading(true);
     setError(null);
+    const errors: string[] = [];
+    let lastOk: MediaObjectRow | null = null;
     try {
-      const row = await adminUploadMediaLibrary(file, folderFilter);
-      await loadObjects();
-      await loadFolders();
-      if (selectionAllowed(mediaFilter, row)) {
-        setSelectedId(row.id);
+      for (const file of list) {
+        try {
+          const row = await adminUploadMediaLibrary(file, folderFilter);
+          lastOk = row;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Ошибка загрузки';
+          errors.push(`${file.name}: ${msg}`);
+        }
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+      if (errors.length) {
+        setError(
+          errors.length === list.length
+            ? errors.join('\n')
+            : `Не удалось загрузить ${errors.length} из ${list.length}:\n${errors.join('\n')}`,
+        );
+      }
+      if (errors.length < list.length) {
+        await loadObjects();
+        await loadFolders();
+        if (lastOk && selectionAllowed(mediaFilter, lastOk)) {
+          if (multiMode) {
+            setSelectedIds((prev) =>
+              prev.includes(lastOk!.id) ? prev : [...prev, lastOk!.id],
+            );
+          } else {
+            setSelectedId(lastOk.id);
+          }
+        }
+      }
     } finally {
       setUploading(false);
     }
   }
 
   function confirmSelection() {
+    if (!onPick) return;
     if (!selectedId) return;
     const row = objects.find((o) => o.id === selectedId);
     if (!row) return;
@@ -294,9 +328,35 @@ export function MediaLibraryPickerModal({
     onPick({ url: row.publicUrl, id: row.id });
   }
 
+  function confirmBatch() {
+    if (!onPickBatch) return;
+    const rows = objects.filter(
+      (o) => selectedIds.includes(o.id) && selectionAllowed(mediaFilter, o),
+    );
+    if (!rows.length) return;
+    onPickBatch(rows.map((r) => ({ url: r.publicUrl, id: r.id })));
+  }
+
+  function toggleCardSelection(row: MediaObjectRow) {
+    if (!selectionAllowed(mediaFilter, row)) return;
+    setSelectedIds((prev) =>
+      prev.includes(row.id) ? prev.filter((x) => x !== row.id) : [...prev, row.id],
+    );
+  }
+
   const selectedRow = selectedId ? objects.find((o) => o.id === selectedId) : undefined;
   const canConfirm =
-    !!selectedRow && selectionAllowed(mediaFilter, selectedRow) && !loading && !uploading;
+    !multiMode &&
+    !!onPick &&
+    !!selectedRow &&
+    selectionAllowed(mediaFilter, selectedRow) &&
+    !loading &&
+    !uploading;
+  const batchCount = objects.filter(
+    (o) => selectedIds.includes(o.id) && selectionAllowed(mediaFilter, o),
+  ).length;
+  const canConfirmBatch =
+    multiMode && batchCount > 0 && !loading && !uploading;
 
   const tabs: { key: MediaLibraryTab; label: string }[] = [
     { key: 'all', label: 'Все объекты' },
@@ -321,6 +381,10 @@ export function MediaLibraryPickerModal({
         : undefined;
 
   if (!open) return null;
+
+  if (!onPick && !onPickBatch) {
+    return null;
+  }
 
   return (
     <div
@@ -381,6 +445,7 @@ export function MediaLibraryPickerModal({
                   ref={fileInputRef}
                   id={uploadInputId}
                   type="file"
+                  multiple
                   accept={uploadAccept}
                   className={pickStyles.hiddenInput}
                   onChange={onPickUpload}
@@ -396,6 +461,13 @@ export function MediaLibraryPickerModal({
                   {uploading ? 'Загрузка…' : 'Загрузить в библиотеку'}
                 </TBtn>
               </div>
+
+              {multiMode ? (
+                <p className={pickStyles.filterHint}>
+                  Выберите один или несколько кадров в списке и нажмите «Добавить выбранные», либо загрузите
+                  несколько файлов сразу.
+                </p>
+              ) : null}
 
               {filterHint ? (
                 <p className={pickStyles.filterHint}>{filterHint}</p>
@@ -427,7 +499,9 @@ export function MediaLibraryPickerModal({
                   <ul className={libStyles.grid}>
                     {objects.map((row) => {
                       const allowed = selectionAllowed(mediaFilter, row);
-                      const selected = row.id === selectedId;
+                      const selected = multiMode
+                        ? selectedIds.includes(row.id)
+                        : row.id === selectedId;
                       return (
                         <li key={row.id} className={libStyles.objectCard}>
                           <button
@@ -444,11 +518,19 @@ export function MediaLibraryPickerModal({
                             aria-label={row.originalName}
                             onClick={() => {
                               if (!allowed) return;
-                              setSelectedId((cur) => (cur === row.id ? null : row.id));
+                              if (multiMode) {
+                                toggleCardSelection(row);
+                              } else {
+                                setSelectedId((cur) => (cur === row.id ? null : row.id));
+                              }
                             }}
                             onDoubleClick={() => {
                               if (!allowed) return;
-                              onPick({ url: row.publicUrl, id: row.id });
+                              if (multiMode) {
+                                toggleCardSelection(row);
+                              } else if (onPick) {
+                                onPick({ url: row.publicUrl, id: row.id });
+                              }
                             }}
                           >
                             {renderThumb(row)}
@@ -496,15 +578,27 @@ export function MediaLibraryPickerModal({
             >
               Отмена
             </TBtn>
-            <Button
-              variant="primary"
-              type="button"
-              className={pickStyles.footerActionBtn}
-              disabled={!canConfirm}
-              onClick={() => confirmSelection()}
-            >
-              Выбрать
-            </Button>
+            {multiMode ? (
+              <Button
+                variant="primary"
+                type="button"
+                className={pickStyles.footerActionBtn}
+                disabled={!canConfirmBatch}
+                onClick={() => confirmBatch()}
+              >
+                {batchCount > 0 ? `Добавить выбранные (${batchCount})` : 'Добавить выбранные'}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                type="button"
+                className={pickStyles.footerActionBtn}
+                disabled={!canConfirm}
+                onClick={() => confirmSelection()}
+              >
+                Выбрать
+              </Button>
+            )}
           </div>
         </footer>
       </div>

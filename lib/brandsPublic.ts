@@ -21,6 +21,10 @@ export type PublicBrandProductRow = {
   id: string;
   slug: string;
   name: string;
+  /** Подпись варианта для витрины; если нет — совпадает с `name`. */
+  displayName?: string;
+  /** Вариант по умолчанию (или первый активный) для ссылки `?v=`. */
+  variantId?: string | null;
   price: unknown;
   currency: string;
   images: { url: string; sortOrder: number }[];

@@ -103,8 +103,10 @@ export async function fetchCategoryBySlug(
 
 /** Элемент выдачи `GET /catalog/products/search` (Meilisearch или Prisma). */
 export type CatalogProductSearchHit = {
+  /** id варианта (документ в Meilisearch — одна карточка = один вариант) */
   id: string;
   slug: string;
+  /** Подпись варианта или название товара после переиндексации */
   name: string;
   price?: number;
   thumbUrl?: string | null;
@@ -187,6 +189,7 @@ export async function fetchCuratedBrandCollectionBySlug(
 
 /** `GET /catalog/products/:slug/set-siblings` — соседи по кураторским наборам. */
 export type PublicSetSiblingProduct = {
+  /** id варианта по умолчанию (для `?v=` на карточке) */
   id: string;
   slug: string;
   name: string;

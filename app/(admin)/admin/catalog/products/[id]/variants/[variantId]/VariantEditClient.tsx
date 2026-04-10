@@ -31,6 +31,7 @@ import {
   revalidatePublicCatalogCache,
 } from '@/lib/adminBackendFetch';
 import { createClientRandomId } from '@/lib/clientRandomId';
+import { slugifyVariantLabel } from '@win-win/catalog-slug';
 import catalogStyles from '../../../../catalogAdmin.module.css';
 import pn from '../../../new/productNew.module.css';
 import { parseSpecsJson } from '../../../new/ProductNewClient';
@@ -63,57 +64,6 @@ type SizeItem = { id: string; value: string };
 
 function rowId() {
   return createClientRandomId();
-}
-
-/** Латиница для ?vs=; по смыслу близко к серверному slugify. */
-const CYR_TO_LAT: Record<string, string> = {
-  а: 'a',
-  б: 'b',
-  в: 'v',
-  г: 'g',
-  д: 'd',
-  е: 'e',
-  ё: 'e',
-  ж: 'zh',
-  з: 'z',
-  и: 'i',
-  й: 'y',
-  к: 'k',
-  л: 'l',
-  м: 'm',
-  н: 'n',
-  о: 'o',
-  п: 'p',
-  р: 'r',
-  с: 's',
-  т: 't',
-  у: 'u',
-  ф: 'f',
-  х: 'h',
-  ц: 'ts',
-  ч: 'ch',
-  ш: 'sh',
-  щ: 'sch',
-  ъ: '',
-  ы: 'y',
-  ь: '',
-  э: 'e',
-  ю: 'yu',
-  я: 'ya',
-};
-
-/** Согласовано по смыслу с `backend/src/modules/catalog/slug-transliteration.ts` (лимит 80 для slug варианта). */
-function slugifyVariantName(name: string): string {
-  const raw = name.trim().toLowerCase();
-  if (!raw) return '';
-  let s = '';
-  for (const ch of raw) {
-    const lower = ch.toLowerCase();
-    if (CYR_TO_LAT[lower]) s += CYR_TO_LAT[lower];
-    else if (/[a-z0-9]/.test(ch)) s += ch;
-    else if (/\s/.test(ch) || ch === '-' || ch === '_') s += '-';
-  }
-  return s.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
 }
 
 function SortableGalleryRow({
@@ -263,7 +213,9 @@ export function VariantEditClient({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [siblingVariants, setSiblingVariants] = useState<AdminProductVariantSummary[]>([]);
-  const [picker, setPicker] = useState<null | { filter: 'image' | 'video' | 'all'; title: string }>(null);
+  const [picker, setPicker] = useState<
+    null | { filter: 'image' | 'video' | 'all'; title: string; multi?: boolean }
+  >(null);
   const pickTarget = useRef<null | { kind: 'gallery'; id: string } | { kind: 'model3d' } | { kind: 'drawing' }>(null);
   /** После правки slug вручную не перезаписываем его из названия. */
   const variantSlugManuallyEditedRef = useRef(false);
@@ -275,7 +227,7 @@ export function VariantEditClient({
     const looksLikeDefaultSlug = /^v-\d+(?:-\d+)?$/i.test(slugTrim);
     variantSlugManuallyEditedRef.current =
       slugTrim !== '' &&
-      slugifyVariantName(labelTrim) !== slugTrim &&
+      slugifyVariantLabel(labelTrim) !== slugTrim &&
       !looksLikeDefaultSlug;
     setVariantLabel(labelTrim);
     setVariantSlug(slugTrim);
@@ -437,6 +389,11 @@ export function VariantEditClient({
     setPicker({ filter: 'image', title: 'Изображение галереи варианта' });
   }
 
+  function openGalleryPickerMulti() {
+    pickTarget.current = null;
+    setPicker({ filter: 'image', title: 'Несколько изображений галереи варианта', multi: true });
+  }
+
   function openModel3dPicker() {
     pickTarget.current = { kind: 'model3d' };
     setPicker({ filter: 'all', title: '3D-модель' });
@@ -445,6 +402,12 @@ export function VariantEditClient({
   function openDrawingPicker() {
     pickTarget.current = { kind: 'drawing' };
     setPicker({ filter: 'all', title: 'Чертёж' });
+  }
+
+  function handlePickerPickBatch(items: { url: string; id: string }[]) {
+    if (!items.length) return;
+    setGallery((prev) => [...prev, ...items.map((s) => ({ id: rowId(), url: s.url }))]);
+    setPicker(null);
   }
 
   function handlePickerPick(sel: { url: string; id: string }) {
@@ -613,7 +576,7 @@ export function VariantEditClient({
       );
       applyVariant(updated);
       await revalidatePublicCatalogCache();
-      router.refresh();
+      router.push(`/admin/catalog/products/${productId}`);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
     } finally {
@@ -816,9 +779,14 @@ export function VariantEditClient({
                   </div>
                 </SortableContext>
               </DndContext>
-              <button type="button" className={catalogStyles.btn} onClick={addGalleryRow}>
-                + Добавить кадр
-              </button>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <button type="button" className={catalogStyles.btn} onClick={addGalleryRow}>
+                  + Добавить кадр
+                </button>
+                <button type="button" className={catalogStyles.btn} onClick={openGalleryPickerMulti}>
+                  + Несколько из медиатеки
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -844,7 +812,7 @@ export function VariantEditClient({
                   const next = e.target.value;
                   setVariantLabel(next);
                   if (!variantSlugManuallyEditedRef.current) {
-                    setVariantSlug(slugifyVariantName(next));
+                    setVariantSlug(slugifyVariantLabel(next));
                   }
                 }}
                 placeholder="Необязательно"
@@ -1328,7 +1296,8 @@ export function VariantEditClient({
             pickTarget.current = null;
             setPicker(null);
           }}
-          onPick={handlePickerPick}
+          onPick={picker.multi ? undefined : handlePickerPick}
+          onPickBatch={picker.multi ? handlePickerPickBatch : undefined}
         />
       ) : null}
     </>
