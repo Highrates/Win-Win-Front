@@ -31,7 +31,7 @@ import {
   revalidatePublicCatalogCache,
 } from '@/lib/adminBackendFetch';
 import { createClientRandomId } from '@/lib/clientRandomId';
-import { slugifyVariantLabel } from '@win-win/catalog-slug';
+import { slugifyVariantLabel } from '@/lib/slugifyVariantLabel';
 import catalogStyles from '../../../../catalogAdmin.module.css';
 import pn from '../../../new/productNew.module.css';
 import { parseSpecsJson } from '../../../new/ProductNewClient';

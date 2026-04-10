@@ -7,7 +7,6 @@
  * попробуйте `npm run dev:turbo` или Chrome. Явный `allowedDevOrigins` в Next включает строгий block-режим — не добавляем без необходимости.
  */
 const nextConfig = {
-  transpilePackages: ['@win-win/catalog-slug'],
   reactStrictMode: true,
   async rewrites() {
     return [{ source: '/favicon.ico', destination: '/images/favicon.svg' }];
