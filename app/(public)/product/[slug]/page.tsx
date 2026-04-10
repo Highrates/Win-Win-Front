@@ -6,17 +6,19 @@ import { ProductGallery } from '@/components/ProductGallery';
 import { Button } from '@/components/Button';
 import { Recommendations } from '@/sections/home';
 import { fetchProductSetSiblingsBySlug, fetchPublicProductBySlug } from '@/lib/catalogPublic';
-import { parsePublicProduct } from '@/lib/publicProductFromApi';
+import { parsePublicProduct, pickPublicProductVariant } from '@/lib/publicProductFromApi';
 import {
   formatProductPriceRub,
   parseProductPriceFromApi,
   parseProductSpecsFromApi,
 } from '@/lib/productSpecsFromApi';
+import { buildMaterialChoiceGroups } from '@/lib/productMaterialChoiceGroups';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import ProductAccordions from './ProductAccordions';
 import ProductSizeOptions from './ProductSizeOptions';
 import ProductMaterialsOptions from './ProductMaterialsOptions';
 import ProductColorOptions from './ProductColorOptions';
+import ProductMaterialChoice from './ProductMaterialChoice';
 import { ProductDetailsStickyBar } from './ProductDetailsStickyBar';
 import styles from './ProductPage.module.css';
 
@@ -41,10 +43,13 @@ export async function generateMetadata({
 
 export default async function ProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ v?: string; vs?: string }>;
 }) {
   const { slug } = await params;
+  const { v: variantQuery, vs: variantSlugQuery } = await searchParams;
   const [raw, siblingsRes] = await Promise.all([
     fetchPublicProductBySlug(slug),
     fetchProductSetSiblingsBySlug(slug),
@@ -54,6 +59,18 @@ export default async function ProductPage({
     notFound();
   }
 
+  const { variant: selectedVariant } = pickPublicProductVariant(
+    product,
+    variantQuery,
+    variantSlugQuery,
+  );
+  const displayPrice = selectedVariant?.price ?? product.price;
+  const displaySpecsJson = selectedVariant?.specsJson ?? product.specsJson;
+  const displayImages =
+    selectedVariant && selectedVariant.images.length > 0
+      ? selectedVariant.images
+      : product.images;
+
   const setSiblingCards =
     siblingsRes.items.length > 0
       ? siblingsRes.items.map((it) => ({
@@ -61,19 +78,21 @@ export default async function ProductPage({
           name: it.name,
           price: parseProductPriceFromApi(it.price),
           imageUrls: it.imageUrls.map((u) => resolveMediaUrlForServer(u)),
+          variantId: it.id,
         }))
       : [];
 
-  const priceNum = parseProductPriceFromApi(product.price);
+  const priceNum = parseProductPriceFromApi(displayPrice);
   const priceText = priceNum > 0 ? formatProductPriceRub(priceNum) : '—';
-  const specs = parseProductSpecsFromApi(product.specsJson);
+  const specs = parseProductSpecsFromApi(displaySpecsJson);
+  const materialChoiceGroups = buildMaterialChoiceGroups(product, resolveMediaUrlForServer);
   const colorItems = specs.colors.map((c) => ({
     name: c.name,
     imageUrl: resolveMediaUrlForServer(c.imageUrl),
   }));
   const gallerySrcs =
-    product.images.length > 0
-      ? product.images.map((im) => resolveMediaUrlForServer(im.url))
+    displayImages.length > 0
+      ? displayImages.map((im) => resolveMediaUrlForServer(im.url))
       : [resolveMediaUrlForServer(null)];
 
   const category = product.category;
@@ -107,6 +126,10 @@ export default async function ProductPage({
     product.description?.trim() ||
     'Описание появится позже.';
 
+  const variantLabel = selectedVariant?.variantLabel?.trim() ?? '';
+  /** В заголовке карточки — только название варианта; без подписи остаётся название товара. */
+  const productTitleText = variantLabel || product.name;
+
   return (
     <main>
       <section className={styles.productSection}>
@@ -127,7 +150,7 @@ export default async function ProductPage({
               ))}
             </nav>
             <div className={styles.productImgsWrapper}>
-              <ProductGallery images={gallerySrcs} productName={product.name} />
+              <ProductGallery images={gallerySrcs} productName={productTitleText} />
             </div>
 
             <div className={styles.productDetails}>
@@ -141,7 +164,7 @@ export default async function ProductPage({
                     ) : (
                       <span className={styles.productBrandName}>Бренд не указан</span>
                     )}
-                    <h1 className={styles.productName}>{product.name}</h1>
+                    <h1 className={styles.productName}>{productTitleText}</h1>
                   </div>
                   <div className={styles.productDetailsInteract}>
                     <div className={styles.productDetailsInteractItem}>
@@ -188,17 +211,27 @@ export default async function ProductPage({
                   <p className={styles.descriptionText}>{bodyText}</p>
                 </div>
 
-                {colorItems.length > 0 ? (
-                  <div className={styles.productColorWrapper}>
-                    <span className={styles.productColorTitle}>Цвет</span>
-                    <ProductColorOptions items={colorItems} />
-                  </div>
-                ) : null}
+                {materialChoiceGroups ? (
+                  <ProductMaterialChoice
+                    productPath={`/product/${slug}`}
+                    groups={materialChoiceGroups}
+                    selectedVariantId={selectedVariant?.id ?? null}
+                  />
+                ) : (
+                  <>
+                    {colorItems.length > 0 ? (
+                      <div className={styles.productColorWrapper}>
+                        <span className={styles.productColorTitle}>Цвет</span>
+                        <ProductColorOptions items={colorItems} />
+                      </div>
+                    ) : null}
 
-                <div className={styles.productMaterialsSelect}>
-                  <span className={styles.productMaterialsTitle}>Материалы</span>
-                  <ProductMaterialsOptions items={specs.materials.length ? specs.materials : undefined} />
-                </div>
+                    <div className={styles.productMaterialsSelect}>
+                      <span className={styles.productMaterialsTitle}>Материалы</span>
+                      <ProductMaterialsOptions items={specs.materials.length ? specs.materials : undefined} />
+                    </div>
+                  </>
+                )}
 
                 <div className={styles.productSizeSelect}>
                   <span className={styles.productSizeTitle}>Размеры</span>

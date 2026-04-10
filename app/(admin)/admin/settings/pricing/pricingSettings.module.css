@@ -1,0 +1,222 @@
+.layout {
+  max-width: 1200px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.listPanel {
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--color-white, #fff);
+}
+
+.listHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.profileList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profileList li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profileItem {
+  text-align: left;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 6px;
+  background: var(--color-off-white, #f8f9fa);
+  cursor: pointer;
+  font: inherit;
+}
+
+.profileItem:hover {
+  border-color: #c5cdd1;
+}
+
+.profileItemActive {
+  border-color: var(--color-ink-black, #051826);
+  background: #fff;
+}
+
+.profileName {
+  display: block;
+  font-weight: 600;
+}
+
+.profileMeta {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-gray, #9d9d9d);
+  margin-top: 4px;
+}
+
+.btnDelete {
+  align-self: flex-start;
+}
+
+.formPanel {
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 8px;
+  padding: 16px 20px;
+  background: var(--color-white, #fff);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fieldset {
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 8px;
+}
+
+.fieldset legend {
+  padding: 0 6px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.row3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.catBox {
+  max-height: 220px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.catRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.catRow input {
+  margin-top: 3px;
+}
+
+.formActions {
+  margin-top: 8px;
+}
+
+.containerTypeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.containerParamsLink {
+  margin: 0 0 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--color-ink-black, #051826);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.containerParamsLink:hover {
+  opacity: 0.85;
+}
+
+.markupBlock {
+  max-width: 280px;
+}
+
+.chipConflict {
+  border-color: #c62828 !important;
+  background: #fff5f5 !important;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(5, 24, 38, 0.45);
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 440px;
+  max-height: min(90vh, 640px);
+  overflow: auto;
+  padding: 20px 22px;
+  border-radius: 12px;
+  background: var(--color-white, #fff);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.modalTitle {
+  margin: 0 0 10px;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.modalActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}

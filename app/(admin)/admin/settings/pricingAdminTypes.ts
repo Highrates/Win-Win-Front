@@ -1,0 +1,23 @@
+export type PricingProfileRow = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  containerType: string;
+  containerMaxWeightKg: string | null;
+  containerMaxVolumeM3: string | null;
+  cnyRate: string;
+  usdRate: string;
+  eurRate: string;
+  transferCommissionPct: string;
+  customsAdValoremPct: string;
+  customsWeightPct: string;
+  vatPct: string;
+  markupPct: string;
+  agentRub: string;
+  warehousePortUsd: string;
+  fobUsd: string;
+  portMskRub: string;
+  extraLogisticsRub: string;
+  categoryIds: string[];
+  updatedAt: string;
+};

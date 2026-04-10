@@ -43,6 +43,7 @@ export type RecommendationsStaticItem = {
   name: string;
   price: number;
   imageUrls?: string[];
+  variantId?: string;
 };
 
 type RecommendationsProps = {
@@ -71,10 +72,11 @@ export function Recommendations({ title = 'Рекомендации', id, static
           <div className={styles.grid}>
             {staticItems.map((p) => (
               <ProductCard
-                key={p.slug}
+                key={p.variantId ?? p.slug}
                 slug={p.slug}
                 name={p.name}
                 price={p.price}
+                variantId={p.variantId}
                 imageUrls={p.imageUrls}
               />
             ))}

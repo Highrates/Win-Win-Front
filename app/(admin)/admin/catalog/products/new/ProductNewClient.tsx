@@ -24,7 +24,11 @@ import type { AdminCuratedCollectionRow } from '../../../collections/collections
 import type { AdminProductSetRow } from '../../../product-sets/productSetsAdminTypes';
 import type { AdminBrandRow } from '../../../brands/adminBrandTypes';
 import type { AdminCategoryRow } from '../../categories/adminCategoryTypes';
-import type { ProductAdminDetail } from '../adminProductTypes';
+import type {
+  AdminProductVariantSummary,
+  ProductAdminDetail,
+  ProductMaterialColorShell,
+} from '../adminProductTypes';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import {
   adminBackendJson,
@@ -35,40 +39,23 @@ import { createClientRandomId } from '@/lib/clientRandomId';
 import catalogStyles from '../../catalogAdmin.module.css';
 import pn from './productNew.module.css';
 
-/** См → мм (округление), для отправки в API. */
-function parseCmInputToMm(s: string): number | null {
-  const t = s.trim().replace(',', '.');
-  if (!t) return null;
-  const n = Number(t);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return Math.round(n * 10);
-}
-
-/** м³ из трёх сторон в см (для подсказки в форме). */
-function volumeCubicMetersFromCmInputs(lcm: string, wcm: string, hcm: string): number | null {
-  const parse = (x: string) => {
-    const t = x.trim().replace(',', '.');
-    if (!t) return null;
-    const n = Number(t);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  };
-  const L = parse(lcm);
-  const W = parse(wcm);
-  const H = parse(hcm);
-  if (L == null || W == null || H == null) return null;
-  return (L * W * H) / 1_000_000;
-}
-
-type GalleryItem = { id: string; url: string };
-type ColorItem = { id: string; name: string; imageUrl: string };
-type MaterialItem = { id: string; name: string };
-type SizeItem = { id: string; value: string };
-
+type GalleryItem = { id: string; url: string; serverId?: string };
+type MaterialShellRow = {
+  id: string;
+  serverId?: string;
+  name: string;
+  colors: {
+    id: string;
+    serverId?: string;
+    name: string;
+    imageUrl: string;
+  }[];
+};
 function rowId() {
   return createClientRandomId();
 }
 
-function parseSpecsJson(raw: unknown): {
+export function parseSpecsJson(raw: unknown): {
   colors: { name: string; imageUrl: string }[];
   materials: { name: string }[];
   sizes: { value: string }[];
@@ -160,67 +147,10 @@ function SortableGalleryRow({
   );
 }
 
-function SortableColorRow({
-  item,
-  onNameChange,
-  onPick,
-  onRemove,
-}: {
-  item: ColorItem;
-  onNameChange: (name: string) => void;
-  onPick: () => void;
-  onRemove: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.7 : 1,
-  };
-  return (
-    <div ref={setNodeRef} style={style} className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
-      <button
-        type="button"
-        className={pn.dragHandle}
-        {...attributes}
-        {...listeners}
-        title="Перетащить"
-        aria-label="Перетащить"
-      >
-        ⋮⋮
-      </button>
-      {item.imageUrl ? (
-        <img className={pn.colorPreview} src={item.imageUrl} alt="" />
-      ) : (
-        <div className={pn.colorPreview} aria-hidden />
-      )}
-      <input
-        type="text"
-        className={catalogStyles.input}
-        style={{ flex: 1, minWidth: 160 }}
-        value={item.name}
-        onChange={(e) => onNameChange(e.target.value)}
-        placeholder="Название цвета"
-      />
-      <div className={pn.rowActions}>
-        <button type="button" className={catalogStyles.btn} onClick={onPick}>
-          Медиатека
-        </button>
-        <button type="button" className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`} onClick={onRemove}>
-          Удалить
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const router = useRouter();
   const isEdit = !!productId;
   const gallerySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-  const colorSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [productLoaded, setProductLoaded] = useState(!productId);
@@ -242,31 +172,18 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [shortDescription, setShortDescription] = useState('');
-  const [price, setPrice] = useState('0');
-  const [currency, setCurrency] = useState('RUB');
   const [isActive, setIsActive] = useState(true);
 
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [colors, setColors] = useState<ColorItem[]>([]);
-  const [materials, setMaterials] = useState<MaterialItem[]>([]);
-  const [sizes, setSizes] = useState<SizeItem[]>([]);
-  const [labels, setLabels] = useState<string[]>(['']);
+  const [materialColorShell, setMaterialColorShell] = useState<MaterialShellRow[]>([]);
   const [deliveryText, setDeliveryText] = useState('');
   const [technicalSpecs, setTechnicalSpecs] = useState('');
   const [additionalInfoHtml, setAdditionalInfoHtml] = useState('');
-  const [model3dUrl, setModel3dUrl] = useState('');
-  const [drawingUrl, setDrawingUrl] = useState('');
-  const [sku, setSku] = useState('');
-  const [lengthCm, setLengthCm] = useState('');
-  const [widthCm, setWidthCm] = useState('');
-  const [heightCm, setHeightCm] = useState('');
-  const [weightKg, setWeightKg] = useState('');
-  const [netLengthCm, setNetLengthCm] = useState('');
-  const [netWidthCm, setNetWidthCm] = useState('');
-  const [netHeightCm, setNetHeightCm] = useState('');
-  const [netWeightKg, setNetWeightKg] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
+
+  const [variants, setVariants] = useState<AdminProductVariantSummary[]>([]);
+  const [variantActionBusy, setVariantActionBusy] = useState(false);
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -274,12 +191,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     null | { filter: 'image' | 'video' | 'all'; title: string }
   >(null);
   const pickTarget = useRef<
-    | null
-    | { kind: 'gallery'; id: string }
-    | { kind: 'color'; id: string }
-    | { kind: 'rich' }
-    | { kind: 'model3d' }
-    | { kind: 'drawing' }
+    null | { kind: 'gallery'; id: string } | { kind: 'mcShellColor'; materialId: string; colorId: string } | { kind: 'rich' }
   >(null);
   const richPickResolver = useRef<((url: string | null) => void) | null>(null);
 
@@ -312,29 +224,31 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
           setCuratedProductSetIds(new Set(p.curatedProductSetIds ?? []));
           setBrandId(p.brandId ?? '');
           setShortDescription(p.shortDescription ?? '');
-          setPrice(p.price);
-          setCurrency(p.currency || 'RUB');
           setIsActive(p.isActive);
-          setGallery(p.images.map((img) => ({ id: rowId(), url: img.url })));
-          const specs = parseSpecsJson(p.specsJson);
-          setColors(specs.colors.map((c) => ({ id: rowId(), name: c.name, imageUrl: c.imageUrl })));
-          setMaterials(specs.materials.map((m) => ({ id: rowId(), name: m.name })));
-          setSizes(specs.sizes.map((s) => ({ id: rowId(), value: s.value })));
-          setLabels(specs.labels.length ? specs.labels : ['']);
+          setGallery(
+            p.images.map((img) => ({
+              id: rowId(),
+              url: img.url,
+              serverId: img.id,
+            })),
+          );
+          setMaterialColorShell(
+            (p.materialColorOptions ?? []).map((m: ProductMaterialColorShell) => ({
+              id: rowId(),
+              serverId: m.id,
+              name: m.name,
+              colors: m.colors.map((c) => ({
+                id: rowId(),
+                serverId: c.id,
+                name: c.name,
+                imageUrl: c.imageUrl,
+              })),
+            })),
+          );
+          setVariants(p.variants ?? []);
           setDeliveryText(p.deliveryText ?? '');
           setTechnicalSpecs(p.technicalSpecs ?? '');
           setAdditionalInfoHtml(p.additionalInfoHtml ?? '');
-          setModel3dUrl(p.model3dUrl ?? '');
-          setDrawingUrl(p.drawingUrl ?? '');
-          setSku(p.sku ?? '');
-          setLengthCm(p.lengthMm != null ? String(p.lengthMm / 10) : '');
-          setWidthCm(p.widthMm != null ? String(p.widthMm / 10) : '');
-          setHeightCm(p.heightMm != null ? String(p.heightMm / 10) : '');
-          setWeightKg(p.weightKg ?? '');
-          setNetLengthCm(p.netLengthMm != null ? String(p.netLengthMm / 10) : '');
-          setNetWidthCm(p.netWidthMm != null ? String(p.netWidthMm / 10) : '');
-          setNetHeightCm(p.netHeightMm != null ? String(p.netHeightMm / 10) : '');
-          setNetWeightKg(p.netWeightKg ?? '');
           setSeoTitle(p.seoTitle ?? '');
           setSeoDescription(p.seoDescription ?? '');
         }
@@ -391,16 +305,6 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     [productSets, curatedProductSetIds],
   );
 
-  const previewVolumeM3 = useMemo(
-    () => volumeCubicMetersFromCmInputs(lengthCm, widthCm, heightCm),
-    [lengthCm, widthCm, heightCm],
-  );
-
-  const previewNetVolumeM3 = useMemo(
-    () => volumeCubicMetersFromCmInputs(netLengthCm, netWidthCm, netHeightCm),
-    [netLengthCm, netWidthCm, netHeightCm],
-  );
-
   const pickMediaFromLibrary = useCallback(
     (kind: 'image' | 'video') =>
       new Promise<string | null>((resolve) => {
@@ -420,22 +324,10 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     setPicker({ filter: 'image', title: 'Изображение галереи' });
   }
 
-  function openColorPicker(id: string) {
+  function openMcShellColorPicker(materialId: string, colorId: string) {
     richPickResolver.current = null;
-    pickTarget.current = { kind: 'color', id };
-    setPicker({ filter: 'image', title: 'Изображение цвета' });
-  }
-
-  function openModel3dPicker() {
-    richPickResolver.current = null;
-    pickTarget.current = { kind: 'model3d' };
-    setPicker({ filter: 'all', title: '3D-модель' });
-  }
-
-  function openDrawingPicker() {
-    richPickResolver.current = null;
-    pickTarget.current = { kind: 'drawing' };
-    setPicker({ filter: 'all', title: 'Чертёж' });
+    pickTarget.current = { kind: 'mcShellColor', materialId, colorId };
+    setPicker({ filter: 'image', title: 'Изображение цвета (витрина)' });
   }
 
   function handlePickerPick(sel: { url: string; id: string }) {
@@ -453,12 +345,19 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     if (!t) return;
     if (t.kind === 'gallery') {
       setGallery((prev) => prev.map((g) => (g.id === t.id ? { ...g, url: sel.url } : g)));
-    } else if (t.kind === 'color') {
-      setColors((prev) => prev.map((c) => (c.id === t.id ? { ...c, imageUrl: sel.url } : c)));
-    } else if (t.kind === 'model3d') {
-      setModel3dUrl(sel.url);
-    } else if (t.kind === 'drawing') {
-      setDrawingUrl(sel.url);
+    } else if (t.kind === 'mcShellColor') {
+      setMaterialColorShell((prev) =>
+        prev.map((m) =>
+          m.id !== t.materialId
+            ? m
+            : {
+                ...m,
+                colors: m.colors.map((c) =>
+                  c.id === t.colorId ? { ...c, imageUrl: sel.url } : c,
+                ),
+              },
+        ),
+      );
     }
   }
 
@@ -471,33 +370,36 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     setGallery((g) => arrayMove(g, oldIndex, newIndex));
   }
 
-  function onColorsDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const oldIndex = colors.findIndex((c) => c.id === active.id);
-    const newIndex = colors.findIndex((c) => c.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    setColors((c) => arrayMove(c, oldIndex, newIndex));
-  }
-
   function addGalleryRow() {
     setGallery((g) => [...g, { id: rowId(), url: '' }]);
   }
 
-  function addColorRow() {
-    setColors((c) => [...c, { id: rowId(), name: '', imageUrl: '' }]);
+  function addMaterialShellRow() {
+    setMaterialColorShell((prev) => [...prev, { id: rowId(), name: '', colors: [] }]);
   }
 
-  function addMaterialRow() {
-    setMaterials((m) => [...m, { id: rowId(), name: '' }]);
+  function removeMaterialShellRow(mid: string) {
+    setMaterialColorShell((prev) => prev.filter((m) => m.id !== mid));
   }
 
-  function addSizeRow() {
-    setSizes((s) => [...s, { id: rowId(), value: '' }]);
+  function addColorShellRow(materialId: string) {
+    setMaterialColorShell((prev) =>
+      prev.map((m) =>
+        m.id !== materialId
+          ? m
+          : { ...m, colors: [...m.colors, { id: rowId(), name: '', imageUrl: '' }] },
+      ),
+    );
   }
 
-  function addLabelRow() {
-    setLabels((l) => [...l, '']);
+  function removeColorShellRow(materialId: string, colorId: string) {
+    setMaterialColorShell((prev) =>
+      prev.map((m) =>
+        m.id !== materialId
+          ? m
+          : { ...m, colors: m.colors.filter((c) => c.id !== colorId) },
+      ),
+    );
   }
 
   function addAdditionalCategoryFromDropdown(catId: string) {
@@ -558,20 +460,61 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       setSaveError('Укажите название');
       return;
     }
-    const priceNum = Number(price.replace(',', '.'));
-    if (!Number.isFinite(priceNum) || priceNum < 0) {
-      setSaveError('Укажите корректную цену');
+
+    if (productId) {
+      setSaving(true);
+      try {
+        const shellPayload = {
+          categoryId,
+          additionalCategoryIds: Array.from(additionalCategoryIds),
+          curatedCollectionIds: Array.from(curatedCollectionIds),
+          curatedProductSetIds: Array.from(curatedProductSetIds),
+          brandId: brandId || null,
+          name: nameTrim,
+          slug: slug.trim() || undefined,
+          shortDescription: shortDescription.trim() || null,
+          gallery: gallery
+            .filter((g) => g.url.trim())
+            .map((g) => ({
+              ...(g.serverId ? { id: g.serverId } : {}),
+              url: g.url.trim(),
+              alt: null,
+            })),
+          materialColorOptions: materialColorShell.map((m, mi) => ({
+            ...(m.serverId ? { id: m.serverId } : {}),
+            name: m.name.trim(),
+            sortOrder: mi,
+            colors: m.colors.map((c, ci) => ({
+              ...(c.serverId ? { id: c.serverId } : {}),
+              name: c.name.trim(),
+              imageUrl: c.imageUrl.trim(),
+              sortOrder: ci,
+            })),
+          })),
+          deliveryText: deliveryText.trim() || null,
+          technicalSpecs: technicalSpecs.trim() || null,
+          additionalInfoHtml: additionalInfoHtml.trim() || null,
+          seoTitle: seoTitle.trim() || null,
+          seoDescription: seoDescription.trim() || null,
+          isActive,
+        };
+        const updated = await adminBackendJson<ProductAdminDetail>(
+          `catalog/admin/products/${productId}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify(shellPayload),
+          },
+        );
+        setVariants(updated.variants ?? []);
+        await revalidatePublicCatalogCache();
+        router.refresh();
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
+      } finally {
+        setSaving(false);
+      }
       return;
     }
-
-    const lm = parseCmInputToMm(lengthCm);
-    const wm = parseCmInputToMm(widthCm);
-    const hm = parseCmInputToMm(heightCm);
-    const wkg = weightKg.trim() ? Number(weightKg.replace(',', '.')) : null;
-    const nlm = parseCmInputToMm(netLengthCm);
-    const nwm = parseCmInputToMm(netWidthCm);
-    const nhm = parseCmInputToMm(netHeightCm);
-    const nwkg = netWeightKg.trim() ? Number(netWeightKg.replace(',', '.')) : null;
 
     setSaving(true);
     try {
@@ -587,46 +530,36 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         gallery: gallery
           .filter((g) => g.url.trim())
           .map((g) => ({ url: g.url.trim(), alt: null })),
-        colors: colors
-          .filter((c) => c.name.trim() && c.imageUrl.trim())
-          .map((c) => ({ name: c.name.trim(), imageUrl: c.imageUrl.trim() })),
-        materials: materials.filter((m) => m.name.trim()).map((m) => ({ name: m.name.trim() })),
-        sizes: sizes.filter((s) => s.value.trim()).map((s) => ({ value: s.value.trim() })),
-        labels: labels.map((l) => l.trim()).filter(Boolean),
+        materialColorOptions: materialColorShell
+          .filter((m) => m.name.trim())
+          .map((m, mi) => ({
+            name: m.name.trim(),
+            sortOrder: mi,
+            colors: m.colors
+              .filter((c) => c.name.trim() && c.imageUrl.trim())
+              .map((c, ci) => ({
+                name: c.name.trim(),
+                imageUrl: c.imageUrl.trim(),
+                sortOrder: ci,
+              })),
+          })),
         deliveryText: deliveryText.trim() || null,
         technicalSpecs: technicalSpecs.trim() || null,
         additionalInfoHtml: additionalInfoHtml.trim() || null,
-        model3dUrl: model3dUrl.trim() || null,
-        drawingUrl: drawingUrl.trim() || null,
-        sku: sku.trim() || null,
-        lengthMm: lm,
-        widthMm: wm,
-        heightMm: hm,
-        weightKg: wkg !== null && Number.isFinite(wkg) ? wkg : null,
-        netLengthMm: nlm,
-        netWidthMm: nwm,
-        netHeightMm: nhm,
-        netWeightKg: nwkg !== null && Number.isFinite(nwkg) ? nwkg : null,
         seoTitle: seoTitle.trim() || null,
         seoDescription: seoDescription.trim() || null,
-        price: priceNum,
-        currency,
+        price: 0,
+        priceMode: 'manual' as const,
+        currency: 'RUB',
         isActive,
       };
 
-      if (productId) {
-        await adminBackendJson(`catalog/admin/products/${productId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
-      } else {
-        await adminBackendJson<{ id: string }>('catalog/admin/products', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-      }
+      const created = await adminBackendJson<{ id: string }>('catalog/admin/products', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
       await revalidatePublicCatalogCache();
-      router.push('/admin/catalog/products');
+      router.push(`/admin/catalog/products/${created.id}`);
       router.refresh();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
@@ -690,34 +623,12 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
           </select>
         </label>
 
-        <label className={catalogStyles.label}>
-          Валюта
-          <input
-            className={catalogStyles.input}
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value.toUpperCase().slice(0, 8))}
-            placeholder="RUB"
-            maxLength={8}
-          />
-        </label>
-
-        <label className={catalogStyles.label}>
-          Цена ({currency})
-          <input
-            type="text"
-            inputMode="decimal"
-            className={catalogStyles.input}
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            required
-          />
-        </label>
-
         <div className={pn.section}>
           <h2 className={pn.sectionTitle}>Галерея изображений</h2>
           <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
             Крупное превью, порядок — перетаскиванием за ⋮⋮. Подписи к файлам настраиваются в объектах
             медиатеки.
+            {isEdit ? ' Для варианта без своих кадров на витрине используется эта галерея.' : null}
           </p>
           <DndContext sensors={gallerySensors} collisionDetection={closestCenter} onDragEnd={onGalleryDragEnd}>
             <SortableContext items={gallery.map((g) => g.id)} strategy={verticalListSortingStrategy}>
@@ -739,93 +650,103 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Атрибуты: цвета</h2>
-          <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-            Сначала изображение, затем название. Порядок вариантов — перетаскиванием за ⋮⋮.
-          </p>
-          <DndContext sensors={colorSensors} collisionDetection={closestCenter} onDragEnd={onColorsDragEnd}>
-            <SortableContext items={colors.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-              <div className={pn.repeatList}>
-                {colors.map((c) => (
-                  <SortableColorRow
-                    key={c.id}
-                    item={c}
-                    onNameChange={(name) =>
-                      setColors((prev) => prev.map((x) => (x.id === c.id ? { ...x, name } : x)))
-                    }
-                    onPick={() => openColorPicker(c.id)}
-                    onRemove={() => setColors((prev) => prev.filter((x) => x.id !== c.id))}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-          <button type="button" className={catalogStyles.btn} onClick={addColorRow}>
-            + Цвет
-          </button>
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Материалы</h2>
-          <div className={pn.repeatList}>
-            {materials.map((m) => (
-              <div key={m.id} className={pn.repeatRow}>
-                <input
-                  type="text"
-                  className={catalogStyles.input}
-                  style={{ flex: 1, minWidth: 200 }}
-                  value={m.name}
-                  onChange={(e) =>
-                    setMaterials((prev) =>
-                      prev.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)),
-                    )
-                  }
-                  placeholder="Название материала"
-                />
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setMaterials((prev) => prev.filter((x) => x.id !== m.id))}
+            <h2 className={pn.sectionTitle}>Материалы и цвета</h2>
+            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
+              {isEdit
+                ? 'Группы материалов и карточки цветов с превью — для витрины и привязки к вариантам SKU в карточке варианта.'
+                : 'Заведите группы и цвета здесь; сочетание материал+цвет для каждого SKU задаётся в карточке варианта.'}
+            </p>
+            <div className={pn.repeatList}>
+              {materialColorShell.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    border: '1px solid #e2e6e8',
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 12,
+                  }}
                 >
-                  Удалить
-                </button>
-              </div>
-            ))}
+                  <div className={pn.repeatRow}>
+                    <input
+                      type="text"
+                      className={catalogStyles.input}
+                      style={{ flex: 1, minWidth: 200 }}
+                      value={m.name}
+                      onChange={(e) =>
+                        setMaterialColorShell((prev) =>
+                          prev.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)),
+                        )
+                      }
+                      placeholder="Название группы (материал)"
+                    />
+                    <button
+                      type="button"
+                      className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+                      onClick={() => removeMaterialShellRow(m.id)}
+                    >
+                      Удалить группу
+                    </button>
+                  </div>
+                  <div style={{ marginTop: 10, paddingLeft: 8 }}>
+                    {m.colors.map((c) => (
+                      <div key={c.id} className={`${pn.repeatRow} ${pn.galleryRowLayout}`} style={{ marginBottom: 8 }}>
+                        {c.imageUrl ? (
+                          <img className={pn.colorPreview} src={c.imageUrl} alt="" />
+                        ) : (
+                          <div className={pn.colorPreview} aria-hidden />
+                        )}
+                        <input
+                          type="text"
+                          className={catalogStyles.input}
+                          style={{ flex: 1, minWidth: 160 }}
+                          value={c.name}
+                          onChange={(e) =>
+                            setMaterialColorShell((prev) =>
+                              prev.map((mat) =>
+                                mat.id !== m.id
+                                  ? mat
+                                  : {
+                                      ...mat,
+                                      colors: mat.colors.map((col) =>
+                                        col.id === c.id ? { ...col, name: e.target.value } : col,
+                                      ),
+                                    },
+                              ),
+                            )
+                          }
+                          placeholder="Название цвета"
+                        />
+                        <div className={pn.rowActions}>
+                          <button
+                            type="button"
+                            className={catalogStyles.btn}
+                            onClick={() => openMcShellColorPicker(m.id, c.id)}
+                          >
+                            Медиатека
+                          </button>
+                          <button
+                            type="button"
+                            className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+                            onClick={() => removeColorShellRow(m.id, c.id)}
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" className={catalogStyles.btn} onClick={() => addColorShellRow(m.id)}>
+                      + Цвет в группе
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button type="button" className={catalogStyles.btn} onClick={addMaterialShellRow}>
+              + Группа материала
+            </button>
           </div>
-          <button type="button" className={catalogStyles.btn} onClick={addMaterialRow}>
-            + Материал
-          </button>
-        </div>
 
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Размеры</h2>
-          <div className={pn.repeatList}>
-            {sizes.map((s) => (
-              <div key={s.id} className={pn.repeatRow}>
-                <input
-                  type="text"
-                  className={catalogStyles.input}
-                  style={{ flex: 1, minWidth: 200 }}
-                  value={s.value}
-                  onChange={(e) =>
-                    setSizes((prev) => prev.map((x) => (x.id === s.id ? { ...x, value: e.target.value } : x)))
-                  }
-                  placeholder="Напр. 200×90 см"
-                />
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setSizes((prev) => prev.filter((x) => x.id !== s.id))}
-                >
-                  Удалить
-                </button>
-              </div>
-            ))}
-          </div>
-          <button type="button" className={catalogStyles.btn} onClick={addSizeRow}>
-            + Размер
-          </button>
-        </div>
 
         <div className={pn.section}>
           <h2 className={pn.sectionTitle}>Доставка</h2>
@@ -850,41 +771,6 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Лейблы</h2>
-          <div className={pn.repeatList}>
-            {labels.map((label, idx) => (
-              <div key={idx} className={pn.repeatRow}>
-                <input
-                  type="text"
-                  className={catalogStyles.input}
-                  style={{ flex: 1, minWidth: 200 }}
-                  value={label}
-                  onChange={(e) =>
-                    setLabels((prev) => {
-                      const next = [...prev];
-                      next[idx] = e.target.value;
-                      return next;
-                    })
-                  }
-                  placeholder="Напр. Новинка"
-                />
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setLabels((prev) => prev.filter((_, i) => i !== idx))}
-                  disabled={labels.length <= 1}
-                >
-                  Удалить
-                </button>
-              </div>
-            ))}
-          </div>
-          <button type="button" className={catalogStyles.btn} onClick={addLabelRow}>
-            + Лейбл
-          </button>
-        </div>
-
-        <div className={pn.section}>
           <h2 className={pn.sectionTitle}>Дополнительная информация</h2>
           <RichBlock
             value={additionalInfoHtml}
@@ -894,204 +780,6 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             pickMediaFromLibrary={pickMediaFromLibrary}
             onUploadError={(msg) => setSaveError(msg)}
           />
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>3D-модель и чертёж</h2>
-          <p className={catalogStyles.muted} style={{ marginTop: 0, marginBottom: 12 }}>
-            Файлы из медиатеки: например GLB / GLTF для модели, PDF или изображение для чертежа.
-          </p>
-          <div className={pn.repeatList} style={{ marginBottom: 0 }}>
-            <div className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Загрузить 3D модель</div>
-                {model3dUrl.trim() ? (
-                  <a
-                    href={model3dUrl.trim()}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={catalogStyles.muted}
-                    style={{ wordBreak: 'break-all' }}
-                  >
-                    {model3dUrl.trim()}
-                  </a>
-                ) : (
-                  <span className={catalogStyles.muted}>Файл не выбран</span>
-                )}
-              </div>
-              <div className={pn.rowActions}>
-                <button type="button" className={catalogStyles.btn} onClick={openModel3dPicker}>
-                  Медиатека
-                </button>
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setModel3dUrl('')}
-                  disabled={!model3dUrl.trim()}
-                >
-                  Очистить
-                </button>
-              </div>
-            </div>
-            <div className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Загрузить чертёж</div>
-                {drawingUrl.trim() ? (
-                  <a
-                    href={drawingUrl.trim()}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={catalogStyles.muted}
-                    style={{ wordBreak: 'break-all' }}
-                  >
-                    {drawingUrl.trim()}
-                  </a>
-                ) : (
-                  <span className={catalogStyles.muted}>Файл не выбран</span>
-                )}
-              </div>
-              <div className={pn.rowActions}>
-                <button type="button" className={catalogStyles.btn} onClick={openDrawingPicker}>
-                  Медиатека
-                </button>
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setDrawingUrl('')}
-                  disabled={!drawingUrl.trim()}
-                >
-                  Очистить
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Артикул</h2>
-          <label className={catalogStyles.label}>
-            SKU
-            <input
-              className={catalogStyles.input}
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              autoComplete="off"
-            />
-          </label>
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Габариты брутто</h2>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              gap: 12,
-            }}
-          >
-            <label className={catalogStyles.label}>
-              Длина, см
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={lengthCm}
-                onChange={(e) => setLengthCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label className={catalogStyles.label}>
-              Ширина, см
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={widthCm}
-                onChange={(e) => setWidthCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label className={catalogStyles.label}>
-              Высота, см
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-          </div>
-          <p className={catalogStyles.muted} style={{ marginBottom: 12 }}>
-            Объём:{' '}
-            {previewVolumeM3 != null
-              ? `${previewVolumeM3.toLocaleString('ru-RU', { maximumFractionDigits: 6 })} м³`
-              : '— (нужны все три размера)'}
-          </p>
-          <label className={catalogStyles.label} style={{ maxWidth: 280 }}>
-            Вес, кг
-            <input
-              className={catalogStyles.input}
-              inputMode="decimal"
-              value={weightKg}
-              onChange={(e) => setWeightKg(e.target.value)}
-            />
-          </label>
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Габариты нетто</h2>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              gap: 12,
-            }}
-          >
-            <label className={catalogStyles.label}>
-              Длина, см
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={netLengthCm}
-                onChange={(e) => setNetLengthCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label className={catalogStyles.label}>
-              Ширина, см
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={netWidthCm}
-                onChange={(e) => setNetWidthCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label className={catalogStyles.label}>
-              Высота, см
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={netHeightCm}
-                onChange={(e) => setNetHeightCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-          </div>
-          <p className={catalogStyles.muted} style={{ marginBottom: 12 }}>
-            Объём:{' '}
-            {previewNetVolumeM3 != null
-              ? `${previewNetVolumeM3.toLocaleString('ru-RU', { maximumFractionDigits: 6 })} м³`
-              : '— (нужны все три размера)'}
-          </p>
-          <label className={catalogStyles.label} style={{ maxWidth: 280 }}>
-            Вес, кг
-            <input
-              className={catalogStyles.input}
-              inputMode="decimal"
-              value={netWeightKg}
-              onChange={(e) => setNetWeightKg(e.target.value)}
-            />
-          </label>
         </div>
 
         <div className={pn.section}>
@@ -1340,6 +1028,76 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             </div>
           </aside>
         </div>
+
+        {isEdit ? (
+          <div className={pn.section}>
+            <h2 className={pn.sectionTitle}>Варианты</h2>
+            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
+              Цена, габариты, SKU, 3D/чертёж, цвета и галерея варианта — в карточке варианта. Если у варианта
+              нет своих фото, подставляется общая галерея товара.
+            </p>
+            <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
+              Удалить вариант можно в его карточке (кнопка «Удалить вариант»), если вариантов больше одного.
+            </p>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e6e8' }}>
+                    <th style={{ padding: '8px 6px' }}>Название варианта</th>
+                    <th style={{ padding: '8px 6px' }}>Цена</th>
+                    <th style={{ padding: '8px 6px' }}>Доступность</th>
+                    <th style={{ padding: '8px 6px', width: 56 }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {variants.map((v) => (
+                    <tr key={v.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <td style={{ padding: '8px 6px' }}>{v.displayName}</td>
+                      <td style={{ padding: '8px 6px' }}>
+                        {Number(v.price).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} {v.currency}
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>{v.isActive ? 'Да' : 'Нет'}</td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <Link
+                          href={`/admin/catalog/products/${productId}/variants/${v.id}`}
+                          aria-label="Редактировать вариант"
+                          style={{ display: 'inline-flex', padding: 4 }}
+                        >
+                          <img src="/icons/edit.svg" alt="" width={20} height={20} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button
+              type="button"
+              className={catalogStyles.btn}
+              style={{ marginTop: 12 }}
+              disabled={variantActionBusy || !productId}
+              onClick={() => {
+                void (async () => {
+                  if (!productId) return;
+                  setVariantActionBusy(true);
+                  try {
+                    const { id } = await adminBackendJson<{ id: string }>(
+                      `catalog/admin/products/${productId}/variants`,
+                      { method: 'POST', body: '{}' },
+                    );
+                    router.push(`/admin/catalog/products/${productId}/variants/${id}`);
+                  } catch (e) {
+                    setSaveError(e instanceof Error ? e.message : 'Не удалось создать вариант');
+                  } finally {
+                    setVariantActionBusy(false);
+                  }
+                })();
+              }}
+            >
+              {variantActionBusy ? '…' : '+ Добавить вариант'}
+            </button>
+          </div>
+        ) : null}
 
         {saveError ? <p className={catalogStyles.error}>{saveError}</p> : null}
 

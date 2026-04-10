@@ -1,4 +1,4 @@
-import { catalogPublicFetchNext } from './catalogCache';
+import { CATALOG_PUBLIC_TAG, catalogPublicFetchNext } from './catalogCache';
 import { jsonFromResponse } from './jsonFromResponse';
 import { getServerApiBase } from './serverApiBase';
 
@@ -216,7 +216,8 @@ export async function fetchPublicProductBySlug(slug: string): Promise<unknown | 
   const base = getServerApiBase();
   try {
     const res = await fetch(`${base}/catalog/products/${encodeURIComponent(slug)}`, {
-      next: catalogPublicFetchNext(),
+      /* PDP: свежие варианты/опции после правок в админке (тег всё ещё инвалидируется). */
+      next: { revalidate: 0, tags: [CATALOG_PUBLIC_TAG] },
     });
     if (res.status === 404) return null;
     if (!res.ok) return null;

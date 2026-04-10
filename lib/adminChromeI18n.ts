@@ -12,7 +12,6 @@ const NAV_HREFS = [
   '/admin/brands',
   '/admin/objects',
   '/admin/blog',
-  '/admin/referrals',
   '/admin/pages',
   '/admin/journal',
 ] as const;
@@ -25,7 +24,6 @@ const navRu: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin/brands': 'Бренды',
   '/admin/objects': 'Объекты',
   '/admin/blog': 'Блог',
-  '/admin/referrals': 'Рефералы',
   '/admin/pages': 'Страницы',
   '/admin/journal': 'Журнал',
 };
@@ -38,13 +36,35 @@ const navZh: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin/brands': '品牌',
   '/admin/objects': '对象',
   '/admin/blog': '博客',
-  '/admin/referrals': '推荐',
   '/admin/pages': '页面',
   '/admin/journal': '日志',
 };
 
 export function catalogGroupLabel(locale: AdminLocale): string {
   return locale === 'zh' ? '目录' : 'Каталог';
+}
+
+export function settingsGroupLabel(locale: AdminLocale): string {
+  return locale === 'zh' ? '设置' : 'Настройки';
+}
+
+export function settingsSubLabel(
+  locale: AdminLocale,
+  key: 'pricing' | 'staff' | 'referrals' | 'site',
+): string {
+  const ru = {
+    pricing: 'Ценообразование',
+    staff: 'Сотрудники',
+    referrals: 'Реферальная программа',
+    site: 'Настройки сайта',
+  };
+  const zh = {
+    pricing: '定价',
+    staff: '员工',
+    referrals: '推荐计划',
+    site: '网站设置',
+  };
+  return locale === 'zh' ? zh[key] : ru[key];
 }
 
 export function catalogSubLabel(

@@ -11,14 +11,15 @@ import type { AdminProductRow } from './adminProductTypes';
 function formatPrice(amount: string, currency: string): string {
   const n = Number(amount);
   if (!Number.isFinite(n)) return amount;
+  const cur = currency || 'RUB';
   try {
     return new Intl.NumberFormat('ru-RU', {
       style: 'currency',
-      currency: currency || 'RUB',
-      maximumFractionDigits: 2,
+      currency: cur,
+      maximumFractionDigits: cur === 'RUB' ? 0 : 2,
     }).format(n);
   } catch {
-    return `${amount} ${currency}`;
+    return `${amount} ${cur}`;
   }
 }
 

@@ -19,6 +19,19 @@ export type PublicProductImageApi = {
   alt?: string | null;
 };
 
+/** Вариант на витрине (`GET /catalog/products/:slug`). */
+export type PublicProductVariantApi = {
+  id: string;
+  variantSlug?: string | null;
+  variantLabel?: string | null;
+  price: unknown;
+  sku: string | null;
+  specsJson: unknown;
+  optionAttributes: unknown;
+  isDefault: boolean;
+  images: PublicProductImageApi[];
+};
+
 export type PublicProductFromApi = {
   slug: string;
   name: string;
@@ -34,6 +47,8 @@ export type PublicProductFromApi = {
   category: PublicProductCategoryApi | null;
   brand: PublicProductBrandApi | null;
   images: PublicProductImageApi[];
+  variants: PublicProductVariantApi[];
+  defaultVariantId: string | null;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -76,9 +91,63 @@ function parseImages(raw: unknown): PublicProductImageApi[] {
   return out;
 }
 
+function parseVariants(raw: unknown): PublicProductVariantApi[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PublicProductVariantApi[] = [];
+  for (const x of raw) {
+    if (!isRecord(x)) continue;
+    if (typeof x.id !== 'string' || !x.id.trim()) continue;
+    out.push({
+      id: x.id.trim(),
+      variantSlug: typeof x.variantSlug === 'string' ? x.variantSlug : null,
+      variantLabel: typeof x.variantLabel === 'string' ? x.variantLabel : null,
+      price: x.price,
+      sku: typeof x.sku === 'string' ? x.sku : null,
+      specsJson: x.specsJson,
+      optionAttributes: x.optionAttributes,
+      isDefault: x.isDefault === true,
+      images: parseImages(x.images),
+    });
+  }
+  return out;
+}
+
+/** Выбор варианта по `?vs=` (slug), затем `?v=` (id), иначе дефолтный. */
+export function pickPublicProductVariant(
+  product: PublicProductFromApi,
+  variantIdFromQuery: string | undefined,
+  variantSlugFromQuery?: string | undefined,
+): { variant: PublicProductVariantApi | null; resolvedVariantId: string | null } {
+  const variants = product.variants;
+  if (!variants.length) {
+    return { variant: null, resolvedVariantId: null };
+  }
+  const vs = variantSlugFromQuery?.trim();
+  if (vs) {
+    const bySlug = variants.find((x) => x.variantSlug === vs);
+    if (bySlug) {
+      return { variant: bySlug, resolvedVariantId: bySlug.id };
+    }
+  }
+  const q = variantIdFromQuery?.trim();
+  if (q && variants.some((x) => x.id === q)) {
+    const variant = variants.find((x) => x.id === q)!;
+    return { variant, resolvedVariantId: variant.id };
+  }
+  const defId = product.defaultVariantId;
+  const byDef = defId ? variants.find((x) => x.id === defId) : undefined;
+  const variant = byDef ?? variants[0];
+  return { variant, resolvedVariantId: variant.id };
+}
+
 export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
   if (!isRecord(raw)) return null;
   if (typeof raw.slug !== 'string' || typeof raw.name !== 'string') return null;
+  const variants = parseVariants(raw.variants);
+  const defaultVariantId =
+    typeof raw.defaultVariantId === 'string' && raw.defaultVariantId.trim()
+      ? raw.defaultVariantId.trim()
+      : variants.find((v) => v.isDefault)?.id ?? variants[0]?.id ?? null;
   return {
     slug: raw.slug,
     name: raw.name,
@@ -94,5 +163,7 @@ export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
     category: parseCategory(raw.category),
     brand: raw.brand == null ? null : parseBrand(raw.brand),
     images: parseImages(raw.images),
+    variants,
+    defaultVariantId,
   };
 }

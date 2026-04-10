@@ -11,6 +11,8 @@ import {
   catalogSubLabel,
   defaultAdminLocale,
   getNavLabel,
+  settingsGroupLabel,
+  settingsSubLabel,
   type AdminLocale,
 } from '@/lib/adminChromeI18n';
 import styles from './layout.module.css';
@@ -22,6 +24,13 @@ const CATALOG_CHILDREN = [
   { href: '/admin/product-sets', key: 'productSets' as const },
 ];
 
+const SETTINGS_CHILDREN = [
+  { href: '/admin/settings/pricing', key: 'pricing' as const },
+  { href: '/admin/settings/staff', key: 'staff' as const },
+  { href: '/admin/referrals', key: 'referrals' as const },
+  { href: '/admin/settings/site', key: 'site' as const },
+];
+
 const NAV_HREFS = [
   '/admin',
   '/admin/modeling',
@@ -30,7 +39,6 @@ const NAV_HREFS = [
   '/admin/brands',
   '/admin/objects',
   '/admin/blog',
-  '/admin/referrals',
   '/admin/pages',
   '/admin/journal',
 ] as const;
@@ -76,6 +84,13 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (inCatalog) setCatalogOpen(true);
   }, [inCatalog]);
+
+  const inSettings =
+    pathname.startsWith('/admin/settings') || pathname.startsWith('/admin/referrals');
+  const [settingsOpen, setSettingsOpen] = useState(inSettings);
+  useEffect(() => {
+    if (inSettings) setSettingsOpen(true);
+  }, [inSettings]);
 
   function setAdminLocale(next: AdminLocale) {
     setLocale(next);
@@ -170,6 +185,48 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
                         }`}
                       >
                         {catalogSubLabel(localeReady ? locale : defaultAdminLocale, key)}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+            <div className={styles.navGroup}>
+              <div className={styles.navGroupRow}>
+                <button
+                  type="button"
+                  className={styles.navChevronBtn}
+                  aria-expanded={settingsOpen}
+                  aria-controls="admin-nav-settings-sub"
+                  onClick={() => setSettingsOpen((o) => !o)}
+                  title={locale === 'zh' ? '展开或折叠' : 'Развернуть или свернуть'}
+                >
+                  <CatalogChevron open={settingsOpen} />
+                </button>
+                <span
+                  className={`${styles.navLink} ${styles.navGroupLink} ${styles.navGroupTitle} ${
+                    inSettings ? styles.navLinkActive : ''
+                  }`}
+                >
+                  {settingsGroupLabel(localeReady ? locale : defaultAdminLocale)}
+                </span>
+              </div>
+              {settingsOpen ? (
+                <div id="admin-nav-settings-sub" className={styles.navSub}>
+                  {SETTINGS_CHILDREN.map(({ href, key }) => {
+                    const active =
+                      key === 'referrals'
+                        ? pathname.startsWith('/admin/referrals')
+                        : pathname === href || pathname.startsWith(`${href}/`);
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={`${styles.navLink} ${styles.navSublink} ${
+                          active ? styles.navLinkActive : ''
+                        }`}
+                      >
+                        {settingsSubLabel(localeReady ? locale : defaultAdminLocale, key)}
                       </Link>
                     );
                   })}

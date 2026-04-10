@@ -11,6 +11,8 @@ export interface ProductCardProps {
   slug: string;
   name: string;
   price: number;
+  /** ID варианта (выдача поиска): ссылка на карточку с `?v=` */
+  variantId?: string;
   /** Одно превью (как раньше) */
   imageUrl?: string;
   /** Несколько изображений для листания; если задано и непустое — имеет приоритет над imageUrl */
@@ -48,6 +50,7 @@ export function ProductCard({
   slug,
   name,
   price,
+  variantId,
   imageUrl,
   imageUrls,
   collections = 5,
@@ -153,9 +156,14 @@ export function ProductCard({
 
   const gallery = urls.length > 1;
 
+  const productHref =
+    variantId != null && String(variantId).trim()
+      ? `/product/${encodeURIComponent(slug)}?v=${encodeURIComponent(String(variantId).trim())}`
+      : `/product/${encodeURIComponent(slug)}`;
+
   return (
     <Link
-      href={`/product/${slug}`}
+      href={productHref}
       className={cardClassName}
       onMouseEnter={() => setCardHovered(true)}
       onMouseLeave={() => setCardHovered(false)}

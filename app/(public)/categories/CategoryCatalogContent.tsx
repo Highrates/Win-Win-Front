@@ -137,6 +137,7 @@ export function CategoryCatalogContent({
                     slug={hit.slug}
                     name={hit.name}
                     price={price}
+                    variantId={hit.id}
                     imageUrl={useGallery ? galleryResolved[0] : thumb}
                     imageUrls={useGallery ? galleryResolved : undefined}
                   />

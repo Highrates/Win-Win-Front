@@ -80,6 +80,12 @@
   color: var(--color-ink-black, #051826);
 }
 
+.labelCheckboxRow input[type='checkbox'] {
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0;
+}
+
 .adminCheckboxForm {
   margin-top: 0;
   flex-shrink: 0;
