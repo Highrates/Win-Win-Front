@@ -24,20 +24,25 @@ import styles from './ProductPage.module.css';
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ v?: string; vs?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const raw = await fetchPublicProductBySlug(slug);
+  const { v, vs } = await searchParams;
+  const raw = await fetchPublicProductBySlug(slug, { v, vs });
   const product = parsePublicProduct(raw);
   if (!product) {
     return { title: 'Товар — Win-Win' };
   }
-  const title = product.seoTitle?.trim() || `${product.name} — Win-Win`;
+  const { variant } = pickPublicProductVariant(product, v, vs);
+  const label = variant?.variantLabel?.trim() || product.name;
+  const title = product.seoTitle?.trim() || `${label} — Win-Win`;
   const description =
     product.seoDescription?.trim() ||
     product.shortDescription?.trim() ||
-    `Товар: ${product.name}`;
+    `Товар: ${label}`;
   return { title, description };
 }
 
@@ -51,7 +56,7 @@ export default async function ProductPage({
   const { slug } = await params;
   const { v: variantQuery, vs: variantSlugQuery } = await searchParams;
   const [raw, siblingsRes] = await Promise.all([
-    fetchPublicProductBySlug(slug),
+    fetchPublicProductBySlug(slug, { v: variantQuery, vs: variantSlugQuery }),
     fetchProductSetSiblingsBySlug(slug),
   ]);
   const product = parsePublicProduct(raw);
@@ -70,6 +75,9 @@ export default async function ProductPage({
     selectedVariant && selectedVariant.images.length > 0
       ? selectedVariant.images
       : product.images;
+
+  const variantLabel = selectedVariant?.variantLabel?.trim() ?? '';
+  const productTitleText = variantLabel || product.name;
 
   const setSiblingCards =
     siblingsRes.items.length > 0
@@ -113,7 +121,7 @@ export default async function ProductPage({
       current: false,
     });
   }
-  breadcrumbs.push({ label: product.name, href: '', current: true });
+  breadcrumbs.push({ label: productTitleText, href: '', current: true });
 
   const brand = product.brand;
   const brandHref = brand ? `/brands/${brand.slug}` : null;
@@ -125,10 +133,6 @@ export default async function ProductPage({
     product.shortDescription?.trim() ||
     product.description?.trim() ||
     'Описание появится позже.';
-
-  const variantLabel = selectedVariant?.variantLabel?.trim() ?? '';
-  /** В заголовке карточки — только название варианта; без подписи остаётся название товара. */
-  const productTitleText = variantLabel || product.name;
 
   return (
     <main>

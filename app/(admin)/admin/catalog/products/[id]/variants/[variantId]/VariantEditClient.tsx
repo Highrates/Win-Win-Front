@@ -102,6 +102,7 @@ const CYR_TO_LAT: Record<string, string> = {
   я: 'ya',
 };
 
+/** Согласовано по смыслу с `backend/src/modules/catalog/slug-transliteration.ts` (лимит 80 для slug варианта). */
 function slugifyVariantName(name: string): string {
   const raw = name.trim().toLowerCase();
   if (!raw) return '';

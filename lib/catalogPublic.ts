@@ -211,11 +211,19 @@ export async function fetchProductSetSiblingsBySlug(
   }
 }
 
-/** `GET /catalog/products/:slug` — полная карточка для витрины. */
-export async function fetchPublicProductBySlug(slug: string): Promise<unknown | null> {
+/** Query `vs` / `v` должны совпадать с URL страницы — тогда корневые поля ответа (цена, картинки, specsJson) совпадают с выбранным вариантом на SSR. */
+export async function fetchPublicProductBySlug(
+  slug: string,
+  options?: { vs?: string; v?: string },
+): Promise<unknown | null> {
   const base = getServerApiBase();
+  const sp = new URLSearchParams();
+  if (options?.vs?.trim()) sp.set('vs', options.vs.trim());
+  if (options?.v?.trim()) sp.set('v', options.v.trim());
+  const qs = sp.toString();
+  const url = `${base}/catalog/products/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`;
   try {
-    const res = await fetch(`${base}/catalog/products/${encodeURIComponent(slug)}`, {
+    const res = await fetch(url, {
       /* PDP: свежие варианты/опции после правок в админке (тег всё ещё инвалидируется). */
       next: { revalidate: 0, tags: [CATALOG_PUBLIC_TAG] },
     });
