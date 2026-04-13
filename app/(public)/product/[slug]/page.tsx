@@ -8,6 +8,7 @@ import { Recommendations } from '@/sections/home';
 import { fetchProductSetSiblingsBySlug, fetchPublicProductBySlug } from '@/lib/catalogPublic';
 import { parsePublicProduct, pickPublicProductVariant } from '@/lib/publicProductFromApi';
 import {
+  formatProductPriceRangeRub,
   formatProductPriceRub,
   parseProductPriceFromApi,
   parseProductSpecsFromApi,
@@ -27,7 +28,7 @@ export async function generateMetadata({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ v?: string; vs?: string }>;
+  searchParams: Promise<{ v?: string; vs?: string; sz?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
   const { v, vs } = await searchParams;
@@ -51,12 +52,16 @@ export default async function ProductPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ v?: string; vs?: string }>;
+  searchParams: Promise<{ v?: string; vs?: string; sz?: string }>;
 }) {
   const { slug } = await params;
-  const { v: variantQuery, vs: variantSlugQuery } = await searchParams;
+  const { v: variantQuery, vs: variantSlugQuery, sz: sizeQuery } = await searchParams;
   const [raw, siblingsRes] = await Promise.all([
-    fetchPublicProductBySlug(slug, { v: variantQuery, vs: variantSlugQuery }),
+    fetchPublicProductBySlug(slug, {
+      v: variantQuery,
+      vs: variantSlugQuery,
+      sz: sizeQuery,
+    }),
     fetchProductSetSiblingsBySlug(slug),
   ]);
   const product = parsePublicProduct(raw);
@@ -69,12 +74,8 @@ export default async function ProductPage({
     variantQuery,
     variantSlugQuery,
   );
-  const displayPrice = selectedVariant?.price ?? product.price;
   const displaySpecsJson = selectedVariant?.specsJson ?? product.specsJson;
-  const displayImages =
-    selectedVariant && selectedVariant.images.length > 0
-      ? selectedVariant.images
-      : product.images;
+  const displayImages = product.images;
 
   const variantLabel = selectedVariant?.variantLabel?.trim() ?? '';
   const productTitleText = variantLabel || product.name;
@@ -86,14 +87,26 @@ export default async function ProductPage({
           name: it.name,
           price: parseProductPriceFromApi(it.price),
           imageUrls: it.imageUrls.map((u) => resolveMediaUrlForServer(u)),
-          variantId: it.id,
         }))
       : [];
 
-  const priceNum = parseProductPriceFromApi(displayPrice);
-  const priceText = priceNum > 0 ? formatProductPriceRub(priceNum) : '—';
+  const priceMinNum = parseProductPriceFromApi(product.priceMin);
+  const priceMaxNum = parseProductPriceFromApi(product.priceMax);
+  let priceText: string;
+  if (selectedVariant) {
+    const priceNum = parseProductPriceFromApi(selectedVariant.price);
+    priceText = priceNum > 0 ? formatProductPriceRub(priceNum) : '—';
+  } else if (priceMinNum > 0 && priceMaxNum > 0 && priceMaxNum > priceMinNum) {
+    priceText = formatProductPriceRangeRub(priceMinNum, priceMaxNum);
+  } else if (priceMinNum > 0) {
+    priceText = formatProductPriceRub(priceMinNum);
+  } else {
+    priceText = '—';
+  }
   const specs = parseProductSpecsFromApi(displaySpecsJson);
   const materialChoiceGroups = buildMaterialChoiceGroups(product, resolveMediaUrlForServer);
+  const sizeFilterForMaterials =
+    selectedVariant?.sizeOptionId ?? product.selectedSizeOptionId ?? null;
   const colorItems = specs.colors.map((c) => ({
     name: c.name,
     imageUrl: resolveMediaUrlForServer(c.imageUrl),
@@ -215,11 +228,24 @@ export default async function ProductPage({
                   <p className={styles.descriptionText}>{bodyText}</p>
                 </div>
 
+                {product.sizeOptions && product.sizeOptions.length > 1 ? (
+                  <ProductSizeOptions
+                    productPath={`/product/${slug}`}
+                    sizes={product.sizeOptions.map((s) => ({
+                      id: s.id,
+                      name: s.name,
+                      sizeSlug: s.sizeSlug,
+                    }))}
+                    selectedSizeOptionId={product.selectedSizeOptionId ?? null}
+                  />
+                ) : null}
+
                 {materialChoiceGroups ? (
                   <ProductMaterialChoice
                     productPath={`/product/${slug}`}
                     groups={materialChoiceGroups}
                     selectedVariantId={selectedVariant?.id ?? null}
+                    selectedSizeOptionId={selectedVariant ? null : sizeFilterForMaterials}
                   />
                 ) : (
                   <>
@@ -237,10 +263,18 @@ export default async function ProductPage({
                   </>
                 )}
 
-                <div className={styles.productSizeSelect}>
-                  <span className={styles.productSizeTitle}>Размеры</span>
-                  <ProductSizeOptions items={specs.sizes.length ? specs.sizes : undefined} />
-                </div>
+                {product.sizeOptions && product.sizeOptions.length <= 1 && specs.sizes.length > 0 ? (
+                  <div className={styles.productSizeSelect}>
+                    <span className={styles.productSizeTitle}>Размеры</span>
+                    <div className={styles.productSizeOptions}>
+                      {specs.sizes.map((s, i) => (
+                        <span key={`${s}-${i}`} className={styles.productSizeOption}>
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className={styles.accordionsWrapper}>
                   <ProductAccordions

@@ -28,6 +28,7 @@ import type {
   AdminProductVariantSummary,
   ProductAdminDetail,
   ProductMaterialColorShell,
+  ProductSizeOptionShell,
 } from '../adminProductTypes';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import {
@@ -40,17 +41,58 @@ import catalogStyles from '../../catalogAdmin.module.css';
 import pn from './productNew.module.css';
 
 type GalleryItem = { id: string; url: string; serverId?: string };
+
 type MaterialShellRow = {
   id: string;
   serverId?: string;
   name: string;
-  colors: {
-    id: string;
-    serverId?: string;
-    name: string;
-    imageUrl: string;
-  }[];
 };
+
+type ColorShellRow = {
+  id: string;
+  serverId?: string;
+  /** Каким материалам в этом размере доступен цвет (client id). */
+  materialIds: string[];
+  name: string;
+  imageUrl: string;
+};
+
+type SizeShellRow = {
+  id: string;
+  serverId?: string;
+  name: string;
+  sizeSlug?: string | null;
+  materials: MaterialShellRow[];
+  colors: ColorShellRow[];
+};
+
+function sizeShellToSizeOption(sz: SizeShellRow, sortOrder: number) {
+  const namedMaterials = sz.materials.filter((m) => m.name.trim());
+  return {
+    ...(sz.serverId ? { id: sz.serverId } : {}),
+    name: sz.name.trim(),
+    sortOrder,
+    ...(sz.sizeSlug !== undefined ? { sizeSlug: sz.sizeSlug } : {}),
+    materials: namedMaterials.map((m, mi) => ({
+      ...(m.serverId ? { id: m.serverId } : {}),
+      ref: m.id,
+      name: m.name.trim(),
+      sortOrder: mi,
+    })),
+    colorOptions: sz.colors
+      .filter((c) => c.name.trim() && c.imageUrl.trim() && c.materialIds.length > 0)
+      .map((c, ci) => ({
+        ...(c.serverId ? { id: c.serverId } : {}),
+        name: c.name.trim(),
+        imageUrl: c.imageUrl.trim(),
+        sortOrder: ci,
+        materialIds: c.materialIds.map((mid) => {
+          const row = sz.materials.find((m) => m.id === mid);
+          return row?.serverId ?? row?.id ?? mid;
+        }),
+      })),
+  };
+}
 function rowId() {
   return createClientRandomId();
 }
@@ -175,7 +217,9 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const [isActive, setIsActive] = useState(true);
 
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [materialColorShell, setMaterialColorShell] = useState<MaterialShellRow[]>([]);
+  const [sizeMaterialShell, setSizeMaterialShell] = useState<SizeShellRow[]>(() => [
+    { id: rowId(), name: '', sizeSlug: null, materials: [{ id: rowId(), name: '' }], colors: [] },
+  ]);
   const [deliveryText, setDeliveryText] = useState('');
   const [technicalSpecs, setTechnicalSpecs] = useState('');
   const [additionalInfoHtml, setAdditionalInfoHtml] = useState('');
@@ -191,7 +235,10 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     null | { filter: 'image' | 'video' | 'all'; title: string; multi?: boolean }
   >(null);
   const pickTarget = useRef<
-    null | { kind: 'gallery'; id: string } | { kind: 'mcShellColor'; materialId: string; colorId: string } | { kind: 'rich' }
+    | null
+    | { kind: 'gallery'; id: string }
+    | { kind: 'mcShellColor'; sizeId: string; colorId: string }
+    | { kind: 'rich' }
   >(null);
   const richPickResolver = useRef<((url: string | null) => void) | null>(null);
 
@@ -232,18 +279,71 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
               serverId: img.id,
             })),
           );
-          setMaterialColorShell(
-            (p.materialColorOptions ?? []).map((m: ProductMaterialColorShell) => ({
-              id: rowId(),
-              serverId: m.id,
-              name: m.name,
-              colors: m.colors.map((c) => ({
+          setSizeMaterialShell(
+            (p.sizeOptions?.length
+              ? p.sizeOptions
+              : [
+                  {
+                    id: '',
+                    name: 'Стандарт',
+                    sizeSlug: null,
+                    sortOrder: 0,
+                    materialColorOptions: p.materialColorOptions ?? [],
+                  },
+                ]
+            ).map((sz: ProductSizeOptionShell) => {
+              let materials: MaterialShellRow[];
+              let colors: ColorShellRow[];
+
+              if (sz.colorOptions?.length) {
+                materials =
+                  sz.materials?.length ?
+                    sz.materials.map((m) => ({
+                      id: rowId(),
+                      serverId: m.id,
+                      name: m.name,
+                    }))
+                  : sz.materialColorOptions.map((m: ProductMaterialColorShell) => ({
+                      id: rowId(),
+                      serverId: m.id,
+                      name: m.name,
+                    }));
+                if (!materials.length) materials = [{ id: rowId(), name: '' }];
+                colors = sz.colorOptions.map((c) => ({
+                  id: rowId(),
+                  serverId: c.id,
+                  materialIds:
+                    c.materialIds?.length ? [...c.materialIds] : [materials[0]!.id],
+                  name: c.name,
+                  imageUrl: c.imageUrl,
+                }));
+              } else {
+                const rawMaterials = sz.materialColorOptions.map((m: ProductMaterialColorShell) => ({
+                  id: rowId(),
+                  serverId: m.id,
+                  name: m.name,
+                }));
+                materials = rawMaterials.length ? rawMaterials : [{ id: rowId(), name: '' }];
+                colors = sz.materialColorOptions.flatMap((m: ProductMaterialColorShell, mi: number) =>
+                  m.colors.map((c) => ({
+                    id: rowId(),
+                    serverId: c.id,
+                    materialIds: [rawMaterials[mi]?.id ?? materials[0]!.id],
+                    name: c.name,
+                    imageUrl: c.imageUrl,
+                  })),
+                );
+              }
+
+              return {
                 id: rowId(),
-                serverId: c.id,
-                name: c.name,
-                imageUrl: c.imageUrl,
-              })),
-            })),
+                serverId: sz.id?.trim() ? sz.id : undefined,
+                sizeSlug: sz.sizeSlug ?? null,
+                name: sz.name,
+                materials,
+                colors,
+              };
+            }),
           );
           setVariants(p.variants ?? []);
           setDeliveryText(p.deliveryText ?? '');
@@ -330,9 +430,9 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     setPicker({ filter: 'image', title: 'Несколько изображений галереи', multi: true });
   }
 
-  function openMcShellColorPicker(materialId: string, colorId: string) {
+  function openMcShellColorPicker(sizeId: string, colorId: string) {
     richPickResolver.current = null;
-    pickTarget.current = { kind: 'mcShellColor', materialId, colorId };
+    pickTarget.current = { kind: 'mcShellColor', sizeId, colorId };
     setPicker({ filter: 'image', title: 'Изображение цвета (витрина)' });
   }
 
@@ -358,13 +458,13 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     if (t.kind === 'gallery') {
       setGallery((prev) => prev.map((g) => (g.id === t.id ? { ...g, url: sel.url } : g)));
     } else if (t.kind === 'mcShellColor') {
-      setMaterialColorShell((prev) =>
-        prev.map((m) =>
-          m.id !== t.materialId
-            ? m
+      setSizeMaterialShell((prev) =>
+        prev.map((sz) =>
+          sz.id !== t.sizeId
+            ? sz
             : {
-                ...m,
-                colors: m.colors.map((c) =>
+                ...sz,
+                colors: sz.colors.map((c) =>
                   c.id === t.colorId ? { ...c, imageUrl: sel.url } : c,
                 ),
               },
@@ -386,30 +486,94 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     setGallery((g) => [...g, { id: rowId(), url: '' }]);
   }
 
-  function addMaterialShellRow() {
-    setMaterialColorShell((prev) => [...prev, { id: rowId(), name: '', colors: [] }]);
+  function addSizeShellRow() {
+    setSizeMaterialShell((prev) => [
+      ...prev,
+      { id: rowId(), name: '', sizeSlug: null, materials: [{ id: rowId(), name: '' }], colors: [] },
+    ]);
   }
 
-  function removeMaterialShellRow(mid: string) {
-    setMaterialColorShell((prev) => prev.filter((m) => m.id !== mid));
+  function removeSizeShellRow(sid: string) {
+    setSizeMaterialShell((prev) => prev.filter((s) => s.id !== sid));
   }
 
-  function addColorShellRow(materialId: string) {
-    setMaterialColorShell((prev) =>
-      prev.map((m) =>
-        m.id !== materialId
-          ? m
-          : { ...m, colors: [...m.colors, { id: rowId(), name: '', imageUrl: '' }] },
+  function addMaterialShellRow(sizeId: string) {
+    setSizeMaterialShell((prev) =>
+      prev.map((sz) =>
+        sz.id !== sizeId
+          ? sz
+          : { ...sz, materials: [...sz.materials, { id: rowId(), name: '' }] },
       ),
     );
   }
 
-  function removeColorShellRow(materialId: string, colorId: string) {
-    setMaterialColorShell((prev) =>
-      prev.map((m) =>
-        m.id !== materialId
-          ? m
-          : { ...m, colors: m.colors.filter((c) => c.id !== colorId) },
+  function removeMaterialShellRow(sizeId: string, mid: string) {
+    setSizeMaterialShell((prev) =>
+      prev.map((sz) => {
+        if (sz.id !== sizeId) return sz;
+        if (sz.materials.length <= 1) return sz;
+        const nextMats = sz.materials.filter((m) => m.id !== mid);
+        const fallback = nextMats[0]?.id;
+        if (!fallback) return sz;
+        const nextColors = sz.colors.map((c) => {
+          const nextIds = c.materialIds.filter((x) => x !== mid);
+          const fixed =
+            nextIds.length > 0 ? nextIds : fallback ? [fallback] : [];
+          return { ...c, materialIds: fixed };
+        });
+        return { ...sz, materials: nextMats, colors: nextColors };
+      }),
+    );
+  }
+
+  function toggleColorMaterial(sizeId: string, colorId: string, materialId: string, checked: boolean) {
+    setSizeMaterialShell((prev) =>
+      prev.map((sz) => {
+        if (sz.id !== sizeId) return sz;
+        return {
+          ...sz,
+          colors: sz.colors.map((c) => {
+            if (c.id !== colorId) return c;
+            const set = new Set(c.materialIds);
+            if (checked) set.add(materialId);
+            else set.delete(materialId);
+            let next = Array.from(set);
+            if (next.length === 0 && sz.materials[0]) next = [sz.materials[0].id];
+            return { ...c, materialIds: next };
+          }),
+        };
+      }),
+    );
+  }
+
+  function addColorShellRow(sizeId: string) {
+    setSizeMaterialShell((prev) =>
+      prev.map((sz) => {
+        if (sz.id !== sizeId) return sz;
+        let materials = sz.materials;
+        if (!materials.length) {
+          const nm = { id: rowId(), name: '' };
+          materials = [nm];
+        }
+        const first = materials[0];
+        return {
+          ...sz,
+          materials,
+          colors: [
+            ...sz.colors,
+            { id: rowId(), materialIds: [first.id], name: '', imageUrl: '' },
+          ],
+        };
+      }),
+    );
+  }
+
+  function removeColorShellRow(sizeId: string, colorId: string) {
+    setSizeMaterialShell((prev) =>
+      prev.map((sz) =>
+        sz.id !== sizeId
+          ? sz
+          : { ...sz, colors: sz.colors.filter((c) => c.id !== colorId) },
       ),
     );
   }
@@ -492,17 +656,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
               url: g.url.trim(),
               alt: null,
             })),
-          materialColorOptions: materialColorShell.map((m, mi) => ({
-            ...(m.serverId ? { id: m.serverId } : {}),
-            name: m.name.trim(),
-            sortOrder: mi,
-            colors: m.colors.map((c, ci) => ({
-              ...(c.serverId ? { id: c.serverId } : {}),
-              name: c.name.trim(),
-              imageUrl: c.imageUrl.trim(),
-              sortOrder: ci,
-            })),
-          })),
+          sizeOptions: sizeMaterialShell.map((sz, si) => sizeShellToSizeOption(sz, si)),
           deliveryText: deliveryText.trim() || null,
           technicalSpecs: technicalSpecs.trim() || null,
           additionalInfoHtml: additionalInfoHtml.trim() || null,
@@ -542,19 +696,12 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         gallery: gallery
           .filter((g) => g.url.trim())
           .map((g) => ({ url: g.url.trim(), alt: null })),
-        materialColorOptions: materialColorShell
-          .filter((m) => m.name.trim())
-          .map((m, mi) => ({
-            name: m.name.trim(),
-            sortOrder: mi,
-            colors: m.colors
-              .filter((c) => c.name.trim() && c.imageUrl.trim())
-              .map((c, ci) => ({
-                name: c.name.trim(),
-                imageUrl: c.imageUrl.trim(),
-                sortOrder: ci,
-              })),
-          })),
+        sizeOptions: sizeMaterialShell.map((sz, si) => ({
+          ...sizeShellToSizeOption(
+            { ...sz, name: sz.name.trim() || 'Стандарт' },
+            si,
+          ),
+        })),
         deliveryText: deliveryText.trim() || null,
         technicalSpecs: technicalSpecs.trim() || null,
         additionalInfoHtml: additionalInfoHtml.trim() || null,
@@ -667,21 +814,21 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         </div>
 
         <div className={pn.section}>
-            <h2 className={pn.sectionTitle}>Материалы и цвета</h2>
+            <h2 className={pn.sectionTitle}>Размеры, материалы и цвета</h2>
             <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-              {isEdit
-                ? 'Группы материалов и карточки цветов с превью — для витрины и привязки к вариантам SKU в карточке варианта.'
-                : 'Заведите группы и цвета здесь; сочетание материал+цвет для каждого SKU задаётся в карточке варианта.'}
+              Сначала задаётся размер (конфигурация), внутри — отдельно материалы (название) и цвета (превью и
+              название; при необходимости укажите материал для цвета). SKU в карточке варианта привязывается к
+              размеру, материалу и цвету.
             </p>
             <div className={pn.repeatList}>
-              {materialColorShell.map((m) => (
+              {sizeMaterialShell.map((sz) => (
                 <div
-                  key={m.id}
+                  key={sz.id}
                   style={{
-                    border: '1px solid #e2e6e8',
+                    border: '1px solid #c5d4e0',
                     borderRadius: 8,
                     padding: 12,
-                    marginBottom: 12,
+                    marginBottom: 14,
                   }}
                 >
                   <div className={pn.repeatRow}>
@@ -689,25 +836,71 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                       type="text"
                       className={catalogStyles.input}
                       style={{ flex: 1, minWidth: 200 }}
-                      value={m.name}
+                      value={sz.name}
                       onChange={(e) =>
-                        setMaterialColorShell((prev) =>
-                          prev.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)),
+                        setSizeMaterialShell((prev) =>
+                          prev.map((x) => (x.id === sz.id ? { ...x, name: e.target.value } : x)),
                         )
                       }
-                      placeholder="Название группы (материал)"
                     />
                     <button
                       type="button"
                       className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                      onClick={() => removeMaterialShellRow(m.id)}
+                      onClick={() => removeSizeShellRow(sz.id)}
                     >
-                      Удалить группу
+                      Удалить размер
                     </button>
                   </div>
-                  <div style={{ marginTop: 10, paddingLeft: 8 }}>
-                    {m.colors.map((c) => (
-                      <div key={c.id} className={`${pn.repeatRow} ${pn.galleryRowLayout}`} style={{ marginBottom: 8 }}>
+                  <div style={{ marginTop: 12, paddingLeft: 8 }}>
+                    <p className={catalogStyles.muted} style={{ margin: '0 0 8px' }}>
+                      Материалы
+                    </p>
+                    {sz.materials.map((m) => (
+                      <div key={m.id} className={pn.repeatRow} style={{ marginBottom: 8 }}>
+                        <input
+                          type="text"
+                          className={catalogStyles.input}
+                          style={{ flex: 1, minWidth: 200 }}
+                          value={m.name}
+                          onChange={(e) =>
+                            setSizeMaterialShell((prev) =>
+                              prev.map((row) =>
+                                row.id !== sz.id
+                                  ? row
+                                  : {
+                                      ...row,
+                                      materials: row.materials.map((mat) =>
+                                        mat.id === m.id ? { ...mat, name: e.target.value } : mat,
+                                      ),
+                                    },
+                              ),
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+                          disabled={sz.materials.length <= 1}
+                          onClick={() => removeMaterialShellRow(sz.id, m.id)}
+                          title={sz.materials.length <= 1 ? 'Нужен хотя бы один материал' : undefined}
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" className={catalogStyles.btn} onClick={() => addMaterialShellRow(sz.id)}>
+                      + Материал
+                    </button>
+
+                    <p className={catalogStyles.muted} style={{ margin: '16px 0 8px' }}>
+                      Цвета
+                    </p>
+                    {sz.colors.map((c) => (
+                      <div
+                        key={c.id}
+                        className={`${pn.repeatRow} ${pn.galleryRowLayout}`}
+                        style={{ marginBottom: 8 }}
+                      >
                         {c.imageUrl ? (
                           <img className={pn.colorPreview} src={c.imageUrl} alt="" />
                         ) : (
@@ -719,48 +912,78 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                           style={{ flex: 1, minWidth: 160 }}
                           value={c.name}
                           onChange={(e) =>
-                            setMaterialColorShell((prev) =>
-                              prev.map((mat) =>
-                                mat.id !== m.id
-                                  ? mat
+                            setSizeMaterialShell((prev) =>
+                              prev.map((row) =>
+                                row.id !== sz.id
+                                  ? row
                                   : {
-                                      ...mat,
-                                      colors: mat.colors.map((col) =>
+                                      ...row,
+                                      colors: row.colors.map((col) =>
                                         col.id === c.id ? { ...col, name: e.target.value } : col,
                                       ),
                                     },
                               ),
                             )
                           }
-                          placeholder="Название цвета"
                         />
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '8px 14px',
+                            alignItems: 'center',
+                            flex: 1,
+                            minWidth: 200,
+                          }}
+                        >
+                          <span
+                            className={catalogStyles.muted}
+                            style={{ margin: 0, flexShrink: 0, alignSelf: 'center' }}
+                          >
+                            Материалы для этого цвета:
+                          </span>
+                          {sz.materials.map((m) => (
+                            <label
+                              key={m.id}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                            >
+                              <AccountCheckbox
+                                checked={c.materialIds.includes(m.id)}
+                                onChange={(e) =>
+                                  toggleColorMaterial(sz.id, c.id, m.id, e.target.checked)
+                                }
+                              />
+                              <span>{m.name.trim() || 'Материал'}</span>
+                            </label>
+                          ))}
+                        </div>
                         <div className={pn.rowActions}>
                           <button
                             type="button"
                             className={catalogStyles.btn}
-                            onClick={() => openMcShellColorPicker(m.id, c.id)}
+                            onClick={() => openMcShellColorPicker(sz.id, c.id)}
                           >
                             Медиатека
                           </button>
                           <button
                             type="button"
                             className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                            onClick={() => removeColorShellRow(m.id, c.id)}
+                            onClick={() => removeColorShellRow(sz.id, c.id)}
                           >
                             Удалить
                           </button>
                         </div>
                       </div>
                     ))}
-                    <button type="button" className={catalogStyles.btn} onClick={() => addColorShellRow(m.id)}>
-                      + Цвет в группе
+                    <button type="button" className={catalogStyles.btn} onClick={() => addColorShellRow(sz.id)}>
+                      + Цвет
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-            <button type="button" className={catalogStyles.btn} onClick={addMaterialShellRow}>
-              + Группа материала
+            <button type="button" className={catalogStyles.btn} onClick={addSizeShellRow}>
+              + Размер
             </button>
           </div>
 

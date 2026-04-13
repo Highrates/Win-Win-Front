@@ -24,6 +24,7 @@ export type PublicProductVariantApi = {
   id: string;
   variantSlug?: string | null;
   variantLabel?: string | null;
+  sizeOptionId?: string | null;
   price: unknown;
   sku: string | null;
   specsJson: unknown;
@@ -32,10 +33,27 @@ export type PublicProductVariantApi = {
   images: PublicProductImageApi[];
 };
 
+export type PublicProductSizeOptionApi = {
+  id: string;
+  name: string;
+  sizeSlug: string | null;
+  sortOrder: number;
+  materials: {
+    id: string;
+    name: string;
+    sortOrder: number;
+    colors: { id: string; name: string; imageUrl: string; sortOrder: number }[];
+  }[];
+};
+
 export type PublicProductFromApi = {
   slug: string;
   name: string;
+  /** Задано только при выбранном SKU (`?v` / `?vs`) */
   price: unknown;
+  /** Диапазон без выбранного SKU */
+  priceMin?: unknown;
+  priceMax?: unknown;
   shortDescription: string | null;
   description: string | null;
   seoTitle: string | null;
@@ -49,6 +67,9 @@ export type PublicProductFromApi = {
   images: PublicProductImageApi[];
   variants: PublicProductVariantApi[];
   defaultVariantId: string | null;
+  sizeOptions?: PublicProductSizeOptionApi[];
+  /** Выбранный размер из `?sz=` (без SKU) */
+  selectedSizeOptionId?: string | null;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -101,6 +122,7 @@ function parseVariants(raw: unknown): PublicProductVariantApi[] {
       id: x.id.trim(),
       variantSlug: typeof x.variantSlug === 'string' ? x.variantSlug : null,
       variantLabel: typeof x.variantLabel === 'string' ? x.variantLabel : null,
+      sizeOptionId: typeof x.sizeOptionId === 'string' ? x.sizeOptionId : null,
       price: x.price,
       sku: typeof x.sku === 'string' ? x.sku : null,
       specsJson: x.specsJson,
@@ -112,7 +134,7 @@ function parseVariants(raw: unknown): PublicProductVariantApi[] {
   return out;
 }
 
-/** Выбор варианта по `?vs=` (slug), затем `?v=` (id), иначе дефолтный. */
+/** Выбор варианта по `?vs=` (slug), затем `?v=` (id). Без `?v`/`?vs` — SKU не выбран. */
 export function pickPublicProductVariant(
   product: PublicProductFromApi,
   variantIdFromQuery: string | undefined,
@@ -134,10 +156,7 @@ export function pickPublicProductVariant(
     const variant = variants.find((x) => x.id === q)!;
     return { variant, resolvedVariantId: variant.id };
   }
-  const defId = product.defaultVariantId;
-  const byDef = defId ? variants.find((x) => x.id === defId) : undefined;
-  const variant = byDef ?? variants[0];
-  return { variant, resolvedVariantId: variant.id };
+  return { variant: null, resolvedVariantId: null };
 }
 
 export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
@@ -147,11 +166,13 @@ export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
   const defaultVariantId =
     typeof raw.defaultVariantId === 'string' && raw.defaultVariantId.trim()
       ? raw.defaultVariantId.trim()
-      : variants.find((v) => v.isDefault)?.id ?? variants[0]?.id ?? null;
+      : null;
   return {
     slug: raw.slug,
     name: raw.name,
     price: raw.price,
+    priceMin: raw.priceMin,
+    priceMax: raw.priceMax,
     shortDescription: typeof raw.shortDescription === 'string' ? raw.shortDescription : null,
     description: typeof raw.description === 'string' ? raw.description : null,
     seoTitle: typeof raw.seoTitle === 'string' ? raw.seoTitle : null,
@@ -165,5 +186,54 @@ export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
     images: parseImages(raw.images),
     variants,
     defaultVariantId,
+    sizeOptions: parseSizeOptions(raw.sizeOptions),
+    selectedSizeOptionId:
+      typeof raw.selectedSizeOptionId === 'string' && raw.selectedSizeOptionId.trim()
+        ? raw.selectedSizeOptionId.trim()
+        : raw.selectedSizeOptionId === null
+          ? null
+          : undefined,
   };
+}
+
+function parseSizeOptions(raw: unknown): PublicProductSizeOptionApi[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: PublicProductSizeOptionApi[] = [];
+  for (const x of raw) {
+    if (!isRecord(x)) continue;
+    if (typeof x.id !== 'string' || typeof x.name !== 'string') continue;
+    const materials: PublicProductSizeOptionApi['materials'] = [];
+    if (Array.isArray(x.materials)) {
+      for (const m of x.materials) {
+        if (!isRecord(m) || typeof m.id !== 'string' || typeof m.name !== 'string') continue;
+        const colors: PublicProductSizeOptionApi['materials'][0]['colors'] = [];
+        if (Array.isArray(m.colors)) {
+          for (const c of m.colors) {
+            if (!isRecord(c) || typeof c.id !== 'string' || typeof c.name !== 'string') continue;
+            const imageUrl = typeof c.imageUrl === 'string' ? c.imageUrl : '';
+            colors.push({
+              id: c.id,
+              name: c.name,
+              imageUrl,
+              sortOrder: typeof c.sortOrder === 'number' ? c.sortOrder : 0,
+            });
+          }
+        }
+        materials.push({
+          id: m.id,
+          name: m.name,
+          sortOrder: typeof m.sortOrder === 'number' ? m.sortOrder : 0,
+          colors,
+        });
+      }
+    }
+    out.push({
+      id: x.id,
+      name: x.name,
+      sizeSlug: typeof x.sizeSlug === 'string' ? x.sizeSlug : null,
+      sortOrder: typeof x.sortOrder === 'number' ? x.sortOrder : 0,
+      materials,
+    });
+  }
+  return out.length ? out : undefined;
 }

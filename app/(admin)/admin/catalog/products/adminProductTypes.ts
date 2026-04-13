@@ -37,6 +37,35 @@ export type ProductMaterialColorShell = {
   }[];
 };
 
+export type ProductMaterialShell = {
+  id: string;
+  name: string;
+  sortOrder: number;
+};
+
+/** Цвет в размере с привязкой к одному или нескольким материалам. */
+export type ProductColorShell = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  sortOrder: number;
+  materialIds: string[];
+};
+
+/** Размер и вложенные материалы/цвета (GET/PATCH товара). */
+export type ProductSizeOptionShell = {
+  id: string;
+  name: string;
+  sizeSlug: string | null;
+  sortOrder: number;
+  /** Плоский список материалов (предпочтительно). */
+  materials?: ProductMaterialShell[];
+  /** Плоский список цветов с materialIds (предпочтительно). */
+  colorOptions?: ProductColorShell[];
+  /** Вычисляемое: материалы с вложенными цветами (вариант SKU, PDP). */
+  materialColorOptions: ProductMaterialColorShell[];
+};
+
 /** Ответ GET catalog/admin/products/:id — оболочка товара + список вариантов */
 export type ProductAdminDetail = {
   id: string;
@@ -50,6 +79,9 @@ export type ProductAdminDetail = {
   shortDescription: string | null;
   isActive: boolean;
   images: { id?: string; url: string; alt: string | null; sortOrder: number }[];
+  /** Размеры; внутри — материалы и цвета */
+  sizeOptions?: ProductSizeOptionShell[];
+  /** @deprecated Используйте sizeOptions */
   materialColorOptions?: ProductMaterialColorShell[];
   additionalInfoHtml: string | null;
   deliveryText: string | null;
@@ -69,8 +101,10 @@ export type ProductVariantAdminDetail = {
   displayName: string;
   variantLabel?: string | null;
   variantSlug?: string | null;
+  sizeOptionId?: string | null;
   materialOptionId?: string | null;
   colorOptionId?: string | null;
+  sizeOptions?: ProductSizeOptionShell[];
   materialColorOptions?: ProductMaterialColorShell[];
   productGalleryImages?: { id: string; url: string; alt: string | null; sortOrder: number }[];
   galleryProductImageIds?: string[];

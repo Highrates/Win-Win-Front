@@ -1,27 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
 import styles from './ProductPage.module.css';
 
-const DEFAULT_SIZES = ['200 × 90 × 80 см', '220 × 95 × 85 см', '240 × 100 × 90 см'] as const;
+export type ProductSizeOptionItem = {
+  id: string;
+  name: string;
+  sizeSlug: string | null;
+};
 
-export default function ProductSizeOptions({ items }: { items?: string[] }) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const list = items?.length ? items : [...DEFAULT_SIZES];
+type Props = {
+  productPath: string;
+  sizes: ProductSizeOptionItem[];
+  /** Выбранный размер (`?sz=`) */
+  selectedSizeOptionId: string | null;
+};
+
+/** Кнопки размеров с `?sz=`; при одном размере блок не показывается на странице-родителе. */
+export default function ProductSizeOptions({ productPath, sizes, selectedSizeOptionId }: Props) {
+  if (sizes.length <= 1) return null;
 
   return (
-    <div className={styles.productSizeOptions}>
-      {list.map((label, index) => (
-        <button
-          type="button"
-          key={`${label}-${index}`}
-          className={`${styles.productSizeOption} ${selectedIndex === index ? styles.productSizeOptionSelected : ''}`}
-          aria-pressed={selectedIndex === index}
-          onClick={() => setSelectedIndex(index)}
-        >
-          {label}
-        </button>
-      ))}
+    <div className={styles.productSizeSelect}>
+      <span className={styles.productSizeTitle}>Размеры</span>
+      <div className={styles.productSizeOptions} role="list">
+        {sizes.map((s) => {
+          const param = encodeURIComponent(s.sizeSlug?.trim() || s.id);
+          const href = `${productPath}?sz=${param}`;
+          const selected = selectedSizeOptionId === s.id;
+          return (
+            <Link
+              key={s.id}
+              href={href}
+              scroll={false}
+              role="listitem"
+              className={`${styles.productSizeOption} ${selected ? styles.productSizeOptionSelected : ''}`}
+              aria-current={selected ? 'true' : undefined}
+            >
+              {s.name}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

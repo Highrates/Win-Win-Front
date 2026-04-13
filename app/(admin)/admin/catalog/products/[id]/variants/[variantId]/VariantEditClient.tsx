@@ -17,12 +17,13 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import type {
   AdminProductVariantSummary,
   ProductAdminDetail,
   ProductMaterialColorShell,
+  ProductSizeOptionShell,
   ProductVariantAdminDetail,
 } from '../../../adminProductTypes';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
@@ -60,7 +61,6 @@ function mmToCmInput(mm: number | null | undefined): string {
 
 type GalleryItem = { id: string; url: string };
 type GalleryMode = 'product' | 'legacy';
-type SizeItem = { id: string; value: string };
 
 function rowId() {
   return createClientRandomId();
@@ -172,8 +172,9 @@ export function VariantEditClient({
   const [productName, setProductName] = useState('');
 
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [sizes, setSizes] = useState<SizeItem[]>([]);
   const [labels, setLabels] = useState<string[]>(['']);
+  /** Размеры из specsJson только для сохранения (редактирование — на карточке товара). */
+  const specsSizesRef = useRef<{ value: string }[]>([]);
 
   const [sku, setSku] = useState('');
   const [lengthCm, setLengthCm] = useState('');
@@ -198,7 +199,8 @@ export function VariantEditClient({
   const [drawingUrl, setDrawingUrl] = useState('');
   const [variantLabel, setVariantLabel] = useState('');
   const [variantSlug, setVariantSlug] = useState('');
-  const [materialColorOptions, setMaterialColorOptions] = useState<ProductMaterialColorShell[]>([]);
+  const [sizeOptions, setSizeOptions] = useState<ProductSizeOptionShell[]>([]);
+  const [sizeOptionId, setSizeOptionId] = useState('');
   const [materialOptionId, setMaterialOptionId] = useState('');
   const [colorOptionId, setColorOptionId] = useState('');
   const [productGalleryImages, setProductGalleryImages] = useState<
@@ -220,6 +222,11 @@ export function VariantEditClient({
   /** После правки slug вручную не перезаписываем его из названия. */
   const variantSlugManuallyEditedRef = useRef(false);
 
+  const materialsForSize = useMemo((): ProductMaterialColorShell[] => {
+    if (!sizeOptionId) return [];
+    return sizeOptions.find((s) => s.id === sizeOptionId)?.materialColorOptions ?? [];
+  }, [sizeOptions, sizeOptionId]);
+
   const applyVariant = useCallback((v: ProductVariantAdminDetail) => {
     setProductName(v.productName);
     const labelTrim = v.variantLabel?.trim() ?? '';
@@ -231,7 +238,8 @@ export function VariantEditClient({
       !looksLikeDefaultSlug;
     setVariantLabel(labelTrim);
     setVariantSlug(slugTrim);
-    setMaterialColorOptions(v.materialColorOptions ?? []);
+    setSizeOptions(v.sizeOptions ?? []);
+    setSizeOptionId(v.sizeOptionId ?? '');
     setMaterialOptionId(v.materialOptionId ?? '');
     setColorOptionId(v.colorOptionId ?? '');
 
@@ -260,7 +268,7 @@ export function VariantEditClient({
     }
 
     const specs = parseSpecsJson(v.specsJson);
-    setSizes(specs.sizes.map((s) => ({ id: rowId(), value: s.value })));
+    specsSizesRef.current = specs.sizes.map((s) => ({ value: s.value }));
     setLabels(specs.labels.length ? specs.labels : ['']);
     setSku(v.sku ?? '');
     setLengthCm(mmToCmInput(v.lengthMm));
@@ -451,9 +459,6 @@ export function VariantEditClient({
   function addGalleryRow() {
     setGallery((g) => [...g, { id: rowId(), url: '' }]);
   }
-  function addSizeRow() {
-    setSizes((s) => [...s, { id: rowId(), value: '' }]);
-  }
   function addLabelRow() {
     setLabels((l) => [...l, '']);
   }
@@ -492,7 +497,11 @@ export function VariantEditClient({
     const cnyTrim = costPriceCny.trim().replace(',', '.');
     const costCnyNum = cnyTrim ? Number(cnyTrim) : null;
 
-    if (materialColorOptions.length > 0) {
+    if (sizeOptions.length > 0 && !sizeOptionId.trim()) {
+      setSaveError('Выберите размер');
+      return;
+    }
+    if (materialsForSize.length > 0) {
       if (
         (materialOptionId && !colorOptionId) ||
         (!materialOptionId && colorOptionId)
@@ -529,7 +538,9 @@ export function VariantEditClient({
       const payload: Record<string, unknown> = {
         variantLabel: variantLabel.trim() || null,
         variantSlug: variantSlug.trim() || null,
-        sizes: sizes.filter((s) => s.value.trim()).map((s) => ({ value: s.value.trim() })),
+        sizes: specsSizesRef.current
+          .filter((s) => s.value.trim())
+          .map((s) => ({ value: s.value.trim() })),
         labels: labels.map((l) => l.trim()).filter(Boolean),
         sku: sku.trim() || null,
         lengthMm: lm,
@@ -546,7 +557,10 @@ export function VariantEditClient({
         model3dUrl: model3dUrl.trim() || null,
         drawingUrl: drawingUrl.trim() || null,
       };
-      if (materialColorOptions.length > 0) {
+      if (sizeOptions.length > 0) {
+        payload.sizeOptionId = sizeOptionId.trim();
+      }
+      if (materialsForSize.length > 0) {
         if (materialOptionId && colorOptionId) {
           payload.materialOptionId = materialOptionId;
           payload.colorOptionId = colorOptionId;
@@ -845,7 +859,28 @@ export function VariantEditClient({
               marginTop: 16,
             }}
           >
-            {materialColorOptions.length > 0 ? (
+            {sizeOptions.length > 0 ? (
+              <label className={catalogStyles.label} style={{ gridColumn: '1 / -1' }}>
+                Размер
+                <select
+                  className={catalogStyles.input}
+                  value={sizeOptionId}
+                  onChange={(e) => {
+                    setSizeOptionId(e.target.value);
+                    setMaterialOptionId('');
+                    setColorOptionId('');
+                  }}
+                >
+                  <option value="">— выберите —</option>
+                  {sizeOptions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {materialsForSize.length > 0 ? (
               <>
                 <label className={catalogStyles.label}>
                   Материал (группа)
@@ -858,7 +893,7 @@ export function VariantEditClient({
                     }}
                   >
                     <option value="">— не выбрано —</option>
-                    {materialColorOptions.map((m) => (
+                    {materialsForSize.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
                       </option>
@@ -874,7 +909,7 @@ export function VariantEditClient({
                     onChange={(e) => setColorOptionId(e.target.value)}
                   >
                     <option value="">— не выбрано —</option>
-                    {(materialColorOptions.find((m) => m.id === materialOptionId)?.colors ?? []).map((c) => (
+                    {(materialsForSize.find((m) => m.id === materialOptionId)?.colors ?? []).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
@@ -882,10 +917,14 @@ export function VariantEditClient({
                   </select>
                 </label>
               </>
+            ) : sizeOptions.length > 0 ? (
+              <p className={catalogStyles.muted} style={{ gridColumn: '1 / -1' }}>
+                Для выбранного размера не заданы материалы и цвета (или размер не выбран).
+              </p>
             ) : (
               <p className={catalogStyles.muted} style={{ gridColumn: '1 / -1' }}>
-                На товаре не заведены материалы и цвета. Добавьте их в форме редактирования товара (блок «Материалы и
-                цвета»).
+                На товаре не заведены размеры и материалы. Добавьте их в форме редактирования товара (блок «Размеры,
+                материалы и цвета»).
               </p>
             )}
           </div>
@@ -1110,36 +1149,6 @@ export function VariantEditClient({
               />
             </label>
           )}
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Размеры</h2>
-          <div className={pn.repeatList}>
-            {sizes.map((s) => (
-              <div key={s.id} className={pn.repeatRow}>
-                <input
-                  type="text"
-                  className={catalogStyles.input}
-                  style={{ flex: 1, minWidth: 200 }}
-                  value={s.value}
-                  onChange={(e) =>
-                    setSizes((prev) => prev.map((x) => (x.id === s.id ? { ...x, value: e.target.value } : x)))
-                  }
-                  placeholder="Напр. 200×90 см"
-                />
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setSizes((prev) => prev.filter((x) => x.id !== s.id))}
-                >
-                  Удалить
-                </button>
-              </div>
-            ))}
-          </div>
-          <button type="button" className={catalogStyles.btn} onClick={addSizeRow}>
-            + Размер
-          </button>
         </div>
 
         <div className={pn.section}>

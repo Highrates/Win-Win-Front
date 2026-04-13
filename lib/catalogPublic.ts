@@ -103,12 +103,13 @@ export async function fetchCategoryBySlug(
 
 /** Элемент выдачи `GET /catalog/products/search` (Meilisearch или Prisma). */
 export type CatalogProductSearchHit = {
-  /** id варианта (документ в Meilisearch — одна карточка = один вариант) */
+  /** id товара */
   id: string;
   slug: string;
-  /** Подпись варианта или название товара после переиндексации */
   name: string;
   price?: number;
+  priceMin?: number;
+  priceMax?: number;
   thumbUrl?: string | null;
   /** До 6 URL для мини-галереи в карточке (после реиндекса Meilisearch / актуального API). */
   imageUrls?: string[];
@@ -214,15 +215,16 @@ export async function fetchProductSetSiblingsBySlug(
   }
 }
 
-/** Query `vs` / `v` должны совпадать с URL страницы — тогда корневые поля ответа (цена, картинки, specsJson) совпадают с выбранным вариантом на SSR. */
+/** Query `vs` / `v` — выбранный SKU; `sz` — размер без SKU. */
 export async function fetchPublicProductBySlug(
   slug: string,
-  options?: { vs?: string; v?: string },
+  options?: { vs?: string; v?: string; sz?: string },
 ): Promise<unknown | null> {
   const base = getServerApiBase();
   const sp = new URLSearchParams();
   if (options?.vs?.trim()) sp.set('vs', options.vs.trim());
   if (options?.v?.trim()) sp.set('v', options.v.trim());
+  if (options?.sz?.trim()) sp.set('sz', options.sz.trim());
   const qs = sp.toString();
   const url = `${base}/catalog/products/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`;
   try {

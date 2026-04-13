@@ -9,6 +9,7 @@ export type MaterialChoiceCard = {
   variantId: string;
   /** Ссылка `?vs=` вместо `?v=` когда задан. */
   variantSlug: string | null;
+  sizeOptionId: string | null;
   colorLabel: string;
   imageUrl: string;
   price: number;
@@ -94,6 +95,7 @@ export function buildMaterialChoiceGroups(
       cards.push({
         variantId: v.id,
         variantSlug: v.variantSlug ?? null,
+        sizeOptionId: v.sizeOptionId ?? null,
         colorLabel: r.color,
         imageUrl: pickVariantCardImageUrl(v, r.color, product, resolveMedia),
         price,

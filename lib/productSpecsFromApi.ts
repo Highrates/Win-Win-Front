@@ -47,7 +47,21 @@ export function parseProductPriceFromApi(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function formatRubDigits(price: number): string {
+  return Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+/** Диапазон цен: «~» только перед первой суммой. */
+export function formatProductPriceRangeRub(min: number, max: number): string {
+  return `~${formatRubDigits(min)} ₽ - ${formatRubDigits(max)} ₽`;
+}
+
+/** Сумма в ₽ с разрядами, без знака «~» (для второго числа в диапазоне и т.п.). */
+export function formatPriceRubPlain(price: number): string {
+  return `${formatRubDigits(price)} ₽`;
+}
+
+/** Цена с приблизительным знаком «~» (одна сумма). */
 export function formatProductPriceRub(price: number): string {
-  const formatted = Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return `~${formatted} ₽`;
+  return `~${formatRubDigits(price)} ₽`;
 }

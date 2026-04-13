@@ -130,6 +130,8 @@ export function CategoryCatalogContent({
                   resolveMediaUrlForServer(u),
                 );
                 const price = parseProductPriceFromApi(hit.price);
+                const priceMin = parseProductPriceFromApi(hit.priceMin ?? hit.price);
+                const priceMax = parseProductPriceFromApi(hit.priceMax ?? hit.price);
                 const useGallery = galleryResolved.length > 1;
                 return (
                   <ProductCard
@@ -137,7 +139,8 @@ export function CategoryCatalogContent({
                     slug={hit.slug}
                     name={hit.name}
                     price={price}
-                    variantId={hit.id}
+                    priceMin={priceMin}
+                    priceMax={priceMax}
                     imageUrl={useGallery ? galleryResolved[0] : thumb}
                     imageUrls={useGallery ? galleryResolved : undefined}
                   />

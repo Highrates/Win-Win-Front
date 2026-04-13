@@ -11,7 +11,10 @@ export interface ProductCardProps {
   slug: string;
   name: string;
   price: number;
-  /** ID варианта (выдача поиска): ссылка на карточку с `?v=` */
+  /** Диапазон цен (каталог / поиск по товару) */
+  priceMin?: number;
+  priceMax?: number;
+  /** @deprecated Ссылка ведёт на товар без query */
   variantId?: string;
   /** Одно превью (как раньше) */
   imageUrl?: string;
@@ -24,9 +27,20 @@ export interface ProductCardProps {
   heartActive?: boolean;
 }
 
-function formatPrice(value: number): string {
-  const formatted = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return `~${formatted} ₽`;
+function formatCardPrice(value: number, priceMin?: number, priceMax?: number): string {
+  const fmt = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  if (
+    priceMin != null &&
+    priceMax != null &&
+    Number.isFinite(priceMin) &&
+    Number.isFinite(priceMax) &&
+    priceMax > priceMin
+  ) {
+    return `~${fmt(Math.round(priceMin))} ₽`;
+  }
+  const p = value > 0 ? value : priceMin ?? 0;
+  if (p <= 0) return '—';
+  return `~${fmt(Math.round(p))} ₽`;
 }
 
 function normalizeImageUrls(imageUrl: string | undefined, imageUrls: string[] | undefined): string[] {
@@ -50,6 +64,8 @@ export function ProductCard({
   slug,
   name,
   price,
+  priceMin,
+  priceMax,
   variantId,
   imageUrl,
   imageUrls,
@@ -156,10 +172,7 @@ export function ProductCard({
 
   const gallery = urls.length > 1;
 
-  const productHref =
-    variantId != null && String(variantId).trim()
-      ? `/product/${encodeURIComponent(slug)}?v=${encodeURIComponent(String(variantId).trim())}`
-      : `/product/${encodeURIComponent(slug)}`;
+  const productHref = `/product/${encodeURIComponent(slug)}`;
 
   return (
     <Link
@@ -268,7 +281,7 @@ export function ProductCard({
         </div>
         <div className={styles.productTitles}>
           <span className={styles.productName}>{name}</span>
-          <span className={styles.productPrice}>{formatPrice(price)}</span>
+          <span className={styles.productPrice}>{formatCardPrice(price, priceMin, priceMax)}</span>
         </div>
       </div>
       <div className={styles.productInteract}>

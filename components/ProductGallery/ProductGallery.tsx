@@ -51,6 +51,23 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
   const [slideTranslate, setSlideTranslate] = useState(0);
   const galleryRef = useRef<HTMLDivElement>(null);
   const transitionMsRef = useRef<number>(TRANSITION_MS);
+  const galleryImagesSignature = useMemo(() => JSON.stringify(rawImages), [rawImages]);
+  const prevGalleryImagesSigRef = useRef<string | null>(null);
+
+  /** После смены варианта/размера (другой набор URL) — прокрутка к галерее */
+  useEffect(() => {
+    if (prevGalleryImagesSigRef.current === null) {
+      prevGalleryImagesSigRef.current = galleryImagesSignature;
+      return;
+    }
+    if (prevGalleryImagesSigRef.current === galleryImagesSignature) return;
+    prevGalleryImagesSigRef.current = galleryImagesSignature;
+    const el = galleryRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [galleryImagesSignature]);
 
   const dataSource = useMemo(
     () =>

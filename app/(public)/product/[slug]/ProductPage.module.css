@@ -188,7 +188,7 @@ a.productBrandName:hover {
   align-self: stretch;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 12px;
 }
 
 .productMaterialChoiceHeading {
@@ -196,6 +196,20 @@ a.productBrandName:hover {
   font-size: var(--text-card-16-400);
   font-weight: 400;
   text-transform: uppercase;
+}
+
+/* Не выше ~двух групп материала; остальное — вертикальный скролл */
+.productMaterialChoiceGroupsScroll {
+  padding: 20px 16px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: min(52vh, 31rem);
+  min-height: 0;
 }
 
 .productMaterialChoiceGroup {
@@ -206,8 +220,8 @@ a.productBrandName:hover {
 
 .productMaterialChoiceMaterialTitle {
   margin: 0;
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
   color: var(--color-ink-black);
 }
 
@@ -246,8 +260,19 @@ a.productBrandName:hover {
 }
 
 .productMaterialChoiceCardSelected {
-  border-color: var(--color-ink-black);
+  border: 1px solid var(--color-black);
   background: var(--color-bright-snow);
+}
+
+.productMaterialChoiceCardSelected:hover {
+  border: 1px solid var(--color-black);
+  background: var(--color-bright-snow);
+}
+
+.productMaterialChoiceCardDisabled {
+  opacity: 0.45;
+  pointer-events: none;
+  filter: grayscale(0.35);
 }
 
 .productMaterialChoiceCardImg {
@@ -268,7 +293,7 @@ a.productBrandName:hover {
 
 .productMaterialChoicePrice {
   font-size: var(--text-caption);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-ink-black);
 }
 
@@ -452,6 +477,7 @@ a.productBrandName:hover {
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
   color: var(--color-ink-black);
+  text-decoration: none;
 }
 
 .productSizeOption:hover {
@@ -461,9 +487,16 @@ a.productBrandName:hover {
 
 .productSizeOption[aria-pressed="true"],
 .productSizeOptionSelected {
-  border-width: var(--account-hairline-width);
-  border-color: var(--color-ink-black);
+  border: 1px solid var(--color-black);
   background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+}
+
+.productSizeOption[aria-pressed="true"]:hover,
+.productSizeOptionSelected:hover {
+  border: 1px solid var(--color-black);
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
 }
 
 .productSizeOption:focus-visible {

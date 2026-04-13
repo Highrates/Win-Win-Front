@@ -68,10 +68,9 @@ export default async function BrandPage({
     const useGallery = galleryUrls.length > 1;
     const title = (p.displayName ?? p.name).trim() || p.name;
     return {
-      key: p.slug + (p.variantId ?? ''),
+      key: p.slug,
       slug: p.slug,
       name: title,
-      variantId: p.variantId?.trim() || undefined,
       price: productPriceToNumber(p.price),
       imageUrl: galleryUrls[0] ?? '/images/placeholder.svg',
       imageUrls: useGallery ? galleryUrls : undefined,
@@ -173,7 +172,6 @@ export default async function BrandPage({
                   slug={p.slug}
                   name={p.name}
                   price={p.price}
-                  variantId={p.variantId}
                   imageUrl={p.imageUrl}
                   imageUrls={p.imageUrls}
                 />
