@@ -1284,6 +1284,8 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                 <thead>
                   <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e6e8' }}>
                     <th style={{ padding: '8px 6px' }}>Название варианта</th>
+                    <th style={{ padding: '8px 6px' }}>Размер</th>
+                    <th style={{ padding: '8px 6px' }}>Цвет — материал</th>
                     <th style={{ padding: '8px 6px' }}>Цена</th>
                     <th style={{ padding: '8px 6px' }}>Доступность</th>
                     <th style={{ padding: '8px 6px', width: 56 }} />
@@ -1293,6 +1295,8 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                   {variants.map((v) => (
                     <tr key={v.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <td style={{ padding: '8px 6px' }}>{v.displayName}</td>
+                      <td style={{ padding: '8px 6px' }}>{v.sizeLabel?.trim() || '—'}</td>
+                      <td style={{ padding: '8px 6px' }}>{v.colorMaterialLabel?.trim() || '—'}</td>
                       <td style={{ padding: '8px 6px' }}>
                         {Number(v.price).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} {v.currency}
                       </td>

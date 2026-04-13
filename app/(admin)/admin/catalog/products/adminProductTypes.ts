@@ -22,6 +22,10 @@ export type AdminProductVariantSummary = {
   currency: string;
   isActive: boolean;
   isDefault: boolean;
+  /** Название размера из опции товара */
+  sizeLabel?: string | null;
+  /** «Цвет — материал» из опций и/или optionAttributes */
+  colorMaterialLabel?: string | null;
 };
 
 /** Материал и цвета на карточке товара (админка / витрина). */
