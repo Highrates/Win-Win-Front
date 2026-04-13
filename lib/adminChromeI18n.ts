@@ -19,7 +19,7 @@ const NAV_HREFS = [
 const navRu: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin': 'Дашборд',
   '/admin/modeling': 'Моделирование',
-  '/admin/clients': 'Клиенты',
+  '/admin/clients': 'Пользователи',
   '/admin/orders': 'Заказы',
   '/admin/brands': 'Бренды',
   '/admin/objects': 'Объекты',
@@ -31,7 +31,7 @@ const navRu: Record<(typeof NAV_HREFS)[number], string> = {
 const navZh: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin': '仪表板',
   '/admin/modeling': '建模',
-  '/admin/clients': '客户',
+  '/admin/clients': '用户',
   '/admin/orders': '订单',
   '/admin/brands': '品牌',
   '/admin/objects': '对象',

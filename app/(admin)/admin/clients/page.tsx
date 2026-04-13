@@ -1,9 +1,5 @@
-/** Этап 3 (часть 1), 6 (часть 2), 8 (часть 3), 10 (часть 4): Управление клиентами */
+import { AdminClientsClient } from './AdminClientsClient';
+
 export default function AdminClientsPage() {
-  return (
-    <main>
-      <h1>Управление клиентами</h1>
-      <p>Части 1–4 по этапам</p>
-    </main>
-  );
+  return <AdminClientsClient />;
 }

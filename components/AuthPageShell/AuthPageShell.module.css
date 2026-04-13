@@ -46,6 +46,15 @@
   opacity: 0.85;
 }
 
+button.authBack {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
 .authBackText {
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);

@@ -8,6 +8,8 @@ export interface AuthPageShellProps {
   subtitle?: ReactNode;
   /** Куда ведёт «Назад» (по умолчанию главная) */
   backHref?: string;
+  /** Если задано, подменяет стандартную ссылку «Назад» (например, шаг мастера без перезагрузки). */
+  backSlot?: ReactNode;
   children: ReactNode;
 }
 
@@ -16,23 +18,30 @@ export function AuthPageShell({
   title,
   subtitle,
   backHref = '/',
+  backSlot,
   children,
 }: AuthPageShellProps) {
+  const back =
+    backSlot ??
+    (
+      <Link href={backHref} className={styles.authBack}>
+        <img
+          src="/icons/arrow-right.svg"
+          alt=""
+          width={12}
+          height={7}
+          className={styles.authBackArrow}
+        />
+        <span className={styles.authBackText}>Назад</span>
+      </Link>
+    );
+
   return (
     <main>
       <section className={styles.authSection} aria-label={sectionAriaLabel}>
         <div className="padding-global">
           <div className={styles.authDetailsWrapper}>
-            <Link href={backHref} className={styles.authBack}>
-              <img
-                src="/icons/arrow-right.svg"
-                alt=""
-                width={12}
-                height={7}
-                className={styles.authBackArrow}
-              />
-              <span className={styles.authBackText}>Назад</span>
-            </Link>
+            {back}
 
             <div className={styles.authIntro}>
               <h1 className={styles.authTitle}>{title}</h1>
