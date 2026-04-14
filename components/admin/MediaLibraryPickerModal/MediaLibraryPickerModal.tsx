@@ -267,10 +267,9 @@ export function MediaLibraryPickerModal({
   }
 
   async function onPickUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
+    const list = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (!files?.length) return;
-    const list = Array.from(files);
+    if (!list.length) return;
     setUploading(true);
     setError(null);
     const errors: string[] = [];

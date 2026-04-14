@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/adminAuth';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
+export const runtime = 'nodejs';
+
 function isAllowed(segments: string[]): boolean {
   if (segments.length < 2) return false;
   if (segments[0] === 'catalog' && segments[1] === 'admin') return true;
@@ -30,11 +32,20 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
   const init: RequestInit = { method, headers, cache: 'no-store' };
 
   if (!['GET', 'HEAD'].includes(method)) {
-    const body = await request.arrayBuffer();
-    if (body.byteLength > 0) {
-      const ct = request.headers.get('content-type');
-      if (ct) headers['Content-Type'] = ct;
-      init.body = body;
+    const ct = request.headers.get('content-type') ?? '';
+    /**
+     * Multipart: парсим FormData и пересобираем на стороне Node fetch.
+     * Иначе `arrayBuffer()` у NextRequest часто даёт пустое/битое тело → Nest/Multer: «Файл не передан».
+     */
+    if (ct.includes('multipart/form-data')) {
+      const fd = await request.formData();
+      init.body = fd;
+    } else {
+      const body = await request.arrayBuffer();
+      if (body.byteLength > 0) {
+        if (ct) headers['Content-Type'] = ct;
+        init.body = body;
+      }
     }
   }
 

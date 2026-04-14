@@ -380,6 +380,12 @@
   text-underline-offset: 3px;
 }
 
+.uploadLabelDisabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .modalFooterBtn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -397,10 +403,31 @@
   color: var(--color-ink-black, #051826);
 }
 
-.hiddenInput {
+/**
+ * Кликабельная зона поверх кнопки — без pointer-events:none на input
+ * (иначе в части браузеров не срабатывает выбор файла).
+ */
+.uploadWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  vertical-align: middle;
+}
+
+.fileInputOverlay {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
   opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+.uploadWrap .uploadFace {
   pointer-events: none;
 }

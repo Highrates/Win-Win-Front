@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TBtn } from '@/components/TBtn/TBtn';
+import tbtnStyles from '@/components/TBtn/TBtn.module.css';
 import {
   adminBackendJson,
   adminUploadMediaLibrary,
@@ -69,7 +70,6 @@ function folderParentDisplayName(f: MediaFolderRow, all: MediaFolderRow[]): stri
 
 export function ObjectsLibraryClient() {
   const uploadInputId = useId();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [tab, setTab] = useState<MediaLibraryTab>('all');
   const [q, setQ] = useState('');
@@ -81,6 +81,7 @@ export function ObjectsLibraryClient() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
@@ -369,12 +370,13 @@ export function ObjectsLibraryClient() {
   }, [detail, detailLoading, detailSaving, detailDeleting]);
 
   async function onPickUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
+    /** Сначала копируем файлы: `FileList` живой — после `value = ''` он станет пустым. */
+    const list = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (!files?.length) return;
-    const list = Array.from(files);
+    if (!list.length) return;
     setUploading(true);
     setError(null);
+    setUploadNotice(null);
     const errors: string[] = [];
     try {
       for (const file of list) {
@@ -392,7 +394,14 @@ export function ObjectsLibraryClient() {
             : `Не удалось загрузить ${errors.length} из ${list.length}:\n${errors.join('\n')}`
         );
       }
-      if (errors.length < list.length) {
+      const okCount = list.length - errors.length;
+      if (okCount > 0) {
+        setUploadNotice(
+          okCount === list.length
+            ? `Загружено файлов: ${okCount}`
+            : `Загружено: ${okCount} из ${list.length}`
+        );
+        window.setTimeout(() => setUploadNotice(null), 5000);
         await loadObjects();
         await loadFolders();
       }
@@ -441,6 +450,11 @@ export function ObjectsLibraryClient() {
           {error}
         </p>
       ) : null}
+      {uploadNotice ? (
+        <p className={catalogStyles.muted} style={{ margin: '0 0 8px' }} role="status">
+          {uploadNotice}
+        </p>
+      ) : null}
 
       <div className={styles.layout}>
         <aside className={styles.folderSidebar} aria-label="Папки">
@@ -474,24 +488,27 @@ export function ObjectsLibraryClient() {
               onChange={(e) => setQ(e.target.value)}
               aria-label="Поиск объектов"
             />
-            <input
-              ref={fileInputRef}
-              id={uploadInputId}
-              type="file"
-              multiple
-              className={styles.hiddenInput}
-              onChange={onPickUpload}
-            />
-            <TBtn
-              variant="ghost"
-              type="button"
-              className={styles.uploadGhost}
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
+            <div
+              className={`${styles.uploadWrap} ${uploading ? styles.uploadLabelDisabled : ''}`}
             >
-              <img src="/icons/document-download.svg" alt="" width={20} height={20} />
-              {uploading ? 'Загрузка…' : 'Загрузить файлы'}
-            </TBtn>
+              <span
+                className={`${tbtnStyles.tbtn} ${tbtnStyles.tbtnGhost} ${styles.uploadGhost} ${styles.uploadFace}`}
+                aria-hidden
+              >
+                <img src="/icons/document-download.svg" alt="" width={20} height={20} />
+                {uploading ? 'Загрузка…' : 'Загрузить файлы'}
+              </span>
+              <input
+                id={uploadInputId}
+                type="file"
+                multiple
+                className={styles.fileInputOverlay}
+                disabled={uploading}
+                onChange={onPickUpload}
+                aria-label="Загрузить файлы"
+                title="Загрузить файлы"
+              />
+            </div>
           </div>
 
           <div className={styles.tabs} role="tablist" aria-label="Тип объекта">
