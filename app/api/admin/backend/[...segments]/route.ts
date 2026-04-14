@@ -38,8 +38,22 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
      * Иначе `arrayBuffer()` у NextRequest часто даёт пустое/битое тело → Nest/Multer: «Файл не передан».
      */
     if (ct.includes('multipart/form-data')) {
-      const fd = await request.formData();
-      init.body = fd;
+      /**
+       * Не вызываем `request.formData()`: парсинг multipart в Route Handler
+       * ограничен ~1 МБ → 413 на файлах больше лимита.
+       * Проксируем сырое тело; boundary остаётся в `Content-Type`.
+       */
+      const body = request.body;
+      if (!body) {
+        return NextResponse.json({ message: 'Пустое тело запроса' }, { status: 400 });
+      }
+      headers['Content-Type'] = ct;
+      const contentLength = request.headers.get('content-length');
+      if (contentLength) {
+        headers['Content-Length'] = contentLength;
+      }
+      init.body = body;
+      (init as RequestInit & { duplex: 'half' }).duplex = 'half';
     } else {
       const body = await request.arrayBuffer();
       if (body.byteLength > 0) {

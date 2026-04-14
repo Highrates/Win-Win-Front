@@ -11,7 +11,10 @@ const nextConfig = {
   async rewrites() {
     return [{ source: '/favicon.ico', destination: '/images/favicon.svg' }];
   },
-  /** Большие PATCH/POST (HTML из RichBlock с вложенными картинками) через прокси /api/admin/backend */
+  /**
+   * Лимит тела для Server Actions (не для Route Handlers).
+   * Multipart через прокси `app/api/admin/backend` — потоком, без `formData()` (см. route.ts).
+   */
   experimental: {
     serverActions: {
       bodySizeLimit: '15mb',
