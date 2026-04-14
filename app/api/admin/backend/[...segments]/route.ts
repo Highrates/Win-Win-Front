@@ -5,6 +5,48 @@ import { getServerApiBase } from '@/lib/serverApiBase';
 
 export const runtime = 'nodejs';
 
+/**
+ * Undici при следовании 301/302 часто шлёт второй запрос GET без тела → Nest: «Cannot GET …/upload».
+ * `redirect: 'manual'`, затем повтор POST/PUT/PATCH с копией тела (после первого fetch буфер может быть недействителен).
+ */
+async function fetchUpstream(
+  target: string,
+  method: string,
+  init: RequestInit,
+  bodyBackup: ArrayBuffer | null,
+): Promise<Response> {
+  let res = await fetch(target, { ...init, redirect: 'manual' });
+
+  const hasBody =
+    init.body != null &&
+    (method === 'POST' || method === 'PUT' || method === 'PATCH');
+  const loc = res.headers.get('location');
+  const retryPost =
+    hasBody &&
+    loc != null &&
+    [301, 302, 307, 308].includes(res.status);
+
+  if (retryPost) {
+    try {
+      await res.arrayBuffer();
+    } catch {
+      /* ignore */
+    }
+    const nextUrl = new URL(loc, target).href;
+    const retryBody =
+      bodyBackup != null && bodyBackup.byteLength > 0
+        ? bodyBackup.slice(0)
+        : init.body;
+    res = await fetch(nextUrl, {
+      ...init,
+      body: retryBody,
+      redirect: 'manual',
+    });
+  }
+
+  return res;
+}
+
 function isAllowed(segments: string[]): boolean {
   if (segments.length < 2) return false;
   if (segments[0] === 'catalog' && segments[1] === 'admin') return true;
@@ -31,6 +73,8 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
   const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
   const init: RequestInit = { method, headers, cache: 'no-store' };
 
+  let bodyBackup: ArrayBuffer | null = null;
+
   if (!['GET', 'HEAD'].includes(method)) {
     const ct = request.headers.get('content-type') ?? '';
     /**
@@ -40,9 +84,7 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
     if (ct.includes('multipart/form-data')) {
       /**
        * Не вызываем `request.formData()` — лимит парсера multipart ~1 МБ → 413.
-       * Сырое тело через `arrayBuffer()` (до лимита бэкенда 100 МБ), без стриминга:
-       * `fetch(body: ReadableStream, duplex: 'half')` к Nest давал POST→GET после редиректа
-       * и ответ Nest «Cannot GET /api/v1/.../upload» (404).
+       * Сырое тело через `arrayBuffer()` (до лимита бэкенда 100 МБ).
        */
       const buf = await request.arrayBuffer();
       if (buf.byteLength === 0) {
@@ -51,16 +93,18 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
       headers['Content-Type'] = ct;
       headers['Content-Length'] = String(buf.byteLength);
       init.body = buf;
+      bodyBackup = buf.slice(0);
     } else {
       const body = await request.arrayBuffer();
       if (body.byteLength > 0) {
         if (ct) headers['Content-Type'] = ct;
         init.body = body;
+        bodyBackup = body.slice(0);
       }
     }
   }
 
-  const res = await fetch(target, init);
+  const res = await fetchUpstream(target, method, init, bodyBackup);
   const out = new NextResponse(res.body, { status: res.status });
   const ct = res.headers.get('content-type');
   if (ct) out.headers.set('content-type', ct);
