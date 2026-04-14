@@ -39,21 +39,18 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
      */
     if (ct.includes('multipart/form-data')) {
       /**
-       * Не вызываем `request.formData()`: парсинг multipart в Route Handler
-       * ограничен ~1 МБ → 413 на файлах больше лимита.
-       * Проксируем сырое тело; boundary остаётся в `Content-Type`.
+       * Не вызываем `request.formData()` — лимит парсера multipart ~1 МБ → 413.
+       * Сырое тело через `arrayBuffer()` (до лимита бэкенда 100 МБ), без стриминга:
+       * `fetch(body: ReadableStream, duplex: 'half')` к Nest давал POST→GET после редиректа
+       * и ответ Nest «Cannot GET /api/v1/.../upload» (404).
        */
-      const body = request.body;
-      if (!body) {
+      const buf = await request.arrayBuffer();
+      if (buf.byteLength === 0) {
         return NextResponse.json({ message: 'Пустое тело запроса' }, { status: 400 });
       }
       headers['Content-Type'] = ct;
-      const contentLength = request.headers.get('content-length');
-      if (contentLength) {
-        headers['Content-Length'] = contentLength;
-      }
-      init.body = body;
-      (init as RequestInit & { duplex: 'half' }).duplex = 'half';
+      headers['Content-Length'] = String(buf.byteLength);
+      init.body = buf;
     } else {
       const body = await request.arrayBuffer();
       if (body.byteLength > 0) {
