@@ -60,6 +60,15 @@ export async function POST(request: Request) {
     if (res.status === 401) {
       return NextResponse.json({ error: MSG_401 }, { status: 401 });
     }
+    if (res.status === 404) {
+      return NextResponse.json(
+        {
+          error:
+            'API вернуло 404: проверьте API_URL / NEXT_PUBLIC_API_URL в frontend/.env — база должна заканчиваться на /api/v1 (не только /api). Затем перезапустите Next.',
+        },
+        { status: 502 },
+      );
+    }
     const nestMsg = await readNestError(res);
     return NextResponse.json(
       { error: nestMsg ?? `Ошибка API (${res.status})` },

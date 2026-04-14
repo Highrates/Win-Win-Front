@@ -4,6 +4,8 @@
 export function normalizeApiV1Base(raw: string): string {
   const t = raw.replace(/\/+$/, '');
   if (/\/api\/v\d+$/i.test(t)) return t;
+  /** `http://host:3001/api` без версии → Nest ждёт `/api/v1/...`, иначе 404 Not Found. */
+  if (/\/api$/i.test(t)) return `${t}/v1`;
   if (/^https?:\/\/[^/]+$/i.test(t)) return `${t}/api/v1`;
   return t;
 }

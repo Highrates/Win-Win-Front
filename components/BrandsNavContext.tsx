@@ -40,16 +40,18 @@ export function BrandsNavProvider({
   }, [initialItems]);
 
   useEffect(() => {
+    if (pathname.startsWith('/admin')) return;
     pull();
   }, [pathname, pull]);
 
   useEffect(() => {
     const onVis = () => {
+      if (pathname.startsWith('/admin')) return;
       if (document.visibilityState === 'visible') pull();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [pull]);
+  }, [pathname, pull]);
 
   return <BrandsNavContext.Provider value={items}>{children}</BrandsNavContext.Provider>;
 }
