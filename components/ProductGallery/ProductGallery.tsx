@@ -148,30 +148,38 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
     [offset, slideActive, N]
   );
 
-  const dotTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const MAX_DOTS = 8;
+  const dotIndices = useMemo(() => {
+    if (N <= MAX_DOTS) return Array.from({ length: N }, (_, i) => i);
+    /**
+     * Показываем "окно" индексов вокруг активного слайда.
+     * Всегда ровно 8 точек, сами изображения не ограничиваем.
+     */
+    const half = Math.floor(MAX_DOTS / 2); // 4
+    const start = offset - half;
+    return Array.from({ length: MAX_DOTS }, (_, k) => (start + k + N) % N);
+  }, [N, offset]);
+
+  const dotTabRefs = useRef<Map<number, HTMLButtonElement | null>>(new Map());
   const handleDotKeyDown = useCallback(
-    (e: React.KeyboardEvent, i: number) => {
+    (e: React.KeyboardEvent) => {
       let next: number | null = null;
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        next = (i + 1) % N;
+        next = (offset + 1) % N;
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        next = (i - 1 + N) % N;
+        next = (offset - 1 + N) % N;
       } else if (e.key === 'Home') {
         e.preventDefault();
         next = 0;
       } else if (e.key === 'End') {
         e.preventDefault();
         next = N - 1;
-      } else if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        goToIndex(i);
-        return;
       }
       if (next !== null) {
         goToIndex(next);
-        dotTabRefs.current[next]?.focus();
+        dotTabRefs.current.get(next)?.focus();
       }
     },
     [N, goToIndex]
@@ -372,11 +380,13 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
               role="tablist"
               aria-label="Номер изображения"
             >
-              {Array.from({ length: N }, (_, i) => (
+              {dotIndices.map((i) => (
                 <button
                   type="button"
                   key={i}
-                  ref={(el) => { dotTabRefs.current[i] = el; }}
+                  ref={(el) => {
+                    dotTabRefs.current.set(i, el);
+                  }}
                   role="tab"
                   aria-selected={i === offset}
                   aria-controls="gallery-panel"
@@ -385,7 +395,7 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
                   aria-label={`Изображение ${i + 1}`}
                   className={i === offset ? styles.navDotActive : styles.navDot}
                   onClick={() => goToIndex(i)}
-                  onKeyDown={(e) => handleDotKeyDown(e, i)}
+                  onKeyDown={handleDotKeyDown}
                 />
               ))}
             </div>
