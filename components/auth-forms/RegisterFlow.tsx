@@ -94,7 +94,8 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     e.preventDefault();
     setFormError(null);
     const fd = new FormData(e.currentTarget);
-    const code = String(fd.get('otp') ?? '').replace(/\D/g, '');
+    const otpFieldName = channel === 'phone' ? 'one-time-code' : 'email-registration-otp';
+    const code = String(fd.get(otpFieldName) ?? '').replace(/\D/g, '');
     if (code.length !== 6) {
       setFormError('Введите 6 цифр кода');
       return;
