@@ -6,7 +6,7 @@
   margin-top: 0;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: stretch;
   width: 100%;
   gap: 24px;
 }
@@ -19,7 +19,18 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 148px;
+  gap: 32px;
+}
+
+/* Занимает оставшуюся высоту рядом с hero; центрирует блок с названием по вертикали к img */
+.previewPageTitlesBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 0;
+  width: 100%;
 }
 
 .previewPageTitlesOuter {
@@ -422,6 +433,12 @@
 
   .previewPageTitles {
     gap: 56px;
+  }
+
+  .previewPageTitlesBody {
+    flex: 0 0 auto;
+    display: block;
+    width: 100%;
   }
 
   .previewImage {

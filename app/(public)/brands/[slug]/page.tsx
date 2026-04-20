@@ -97,22 +97,24 @@ export default async function BrandPage({
                   </Fragment>
                 ))}
               </nav>
-              <div className={styles.previewPageTitlesOuter}>
-                <div className={styles.previewPageTitlesInner}>
-                  <span className={styles.previewParentName}>БРЕНД</span>
-                  <h1 className={styles.previewCurrentName}>{name}</h1>
-                </div>
-                {excerpt ? (
-                  <div className={styles.shortBrandDescriptionWrapper}>
-                    <p>{excerpt}</p>
+              <div className={styles.previewPageTitlesBody}>
+                <div className={styles.previewPageTitlesOuter}>
+                  <div className={styles.previewPageTitlesInner}>
+                    <span className={styles.previewParentName}>БРЕНД</span>
+                    <h1 className={styles.previewCurrentName}>{name}</h1>
                   </div>
-                ) : null}
-                <MoreAboutBrandModal
-                  linkClassName={styles.moreAboutBrandLink}
-                  textClassName={styles.moreAboutBrandText}
-                  arrowClassName={styles.moreAboutBrandArrow}
-                  bodyHtml={richHtml}
-                />
+                  {excerpt ? (
+                    <div className={styles.shortBrandDescriptionWrapper}>
+                      <p>{excerpt}</p>
+                    </div>
+                  ) : null}
+                  <MoreAboutBrandModal
+                    linkClassName={styles.moreAboutBrandLink}
+                    textClassName={styles.moreAboutBrandText}
+                    arrowClassName={styles.moreAboutBrandArrow}
+                    bodyHtml={richHtml}
+                  />
+                </div>
               </div>
             </div>
             <img

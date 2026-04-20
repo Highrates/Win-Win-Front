@@ -2,13 +2,13 @@
   align-self: stretch;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 24px;
 }
 
 .tabs {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 16px;
   border-bottom: 1px solid var(--account-hairline-color, #e2e6e8);
   padding-bottom: 0;
 }
@@ -49,7 +49,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 500px;
+  height: 460px;
   overflow-y: auto;
   padding-right: 4px;
   padding-bottom: 12px;
@@ -136,6 +136,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .tabs {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex-shrink: 0;
+  }
 }
 
 @media (max-width: 640px) {

@@ -54,7 +54,7 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
   const galleryImagesSignature = useMemo(() => JSON.stringify(rawImages), [rawImages]);
   const prevGalleryImagesSigRef = useRef<string | null>(null);
 
-  /** После смены варианта/размера (другой набор URL) — прокрутка к галерее */
+  /** После смены варианта/набора кадров — сброс на первый слайд и прокрутка к галерее */
   useEffect(() => {
     if (prevGalleryImagesSigRef.current === null) {
       prevGalleryImagesSigRef.current = galleryImagesSignature;
@@ -62,6 +62,10 @@ export function ProductGallery({ images: rawImages, productName = 'Товар' }
     }
     if (prevGalleryImagesSigRef.current === galleryImagesSignature) return;
     prevGalleryImagesSigRef.current = galleryImagesSignature;
+    setOffset(0);
+    setPrevOffset(0);
+    setSlideActive(false);
+    setSlideTranslate(0);
     const el = galleryRef.current;
     if (!el) return;
     requestAnimationFrame(() => {
