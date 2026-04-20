@@ -2,14 +2,21 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminProductSetsListStrings } from '@/lib/admin-i18n/adminProductSetsI18n';
 import styles from '../catalog/catalogAdmin.module.css';
 import type { AdminProductSetRow } from './productSetsAdminTypes';
 
 export function ProductSetsListClient() {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminProductSetsListStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [rows, setRows] = useState<AdminProductSetRow[]>([]);
@@ -34,12 +41,12 @@ export function ProductSetsListClient() {
       setRows(data);
       setSelected(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : s.errLoad);
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ]);
+  }, [debouncedQ, s]);
 
   useEffect(() => {
     load();
@@ -61,7 +68,7 @@ export function ProductSetsListClient() {
 
   async function removeSelected() {
     if (!selected.size) return;
-    const ok = window.confirm(`Удалить выбранные наборы (${selected.size})?`);
+    const ok = window.confirm(s.confirmDelete(selected.size));
     if (!ok) return;
     setDeleting(true);
     setError(null);
@@ -74,7 +81,7 @@ export function ProductSetsListClient() {
       router.refresh();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка удаления');
+      setError(e instanceof Error ? e.message : s.errDelete);
     } finally {
       setDeleting(false);
     }
@@ -88,15 +95,15 @@ export function ProductSetsListClient() {
         <input
           type="search"
           className={styles.search}
-          placeholder="Поиск по названию…"
+          placeholder={s.searchPh}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          aria-label="Поиск наборов"
+          aria-label={s.searchAria}
         />
         <Link href="/admin/product-sets/new" className={`${styles.btn} ${styles.btnPrimary}`}>
-          Добавить набор
+          {s.add}
         </Link>
-        <div className={styles.bulkGroup} role="group" aria-label="Массовые операции">
+        <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
           {!debouncedQ && rows.length > 0 ? (
             <>
               <button
@@ -104,10 +111,10 @@ export function ProductSetsListClient() {
                 className={styles.btn}
                 onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
               >
-                Выбрать все
+                {s.selectAll}
               </button>
               <button type="button" className={styles.btn} onClick={() => setSelected(new Set())}>
-                Снять выбор
+                {s.clear}
               </button>
             </>
           ) : null}
@@ -117,7 +124,7 @@ export function ProductSetsListClient() {
             disabled={!selected.size || deleting}
             onClick={removeSelected}
           >
-            {deleting ? 'Удаление…' : `Удалить (${selected.size})`}
+            {deleting ? s.deleting : s.delete(selected.size)}
           </button>
         </div>
       </div>
@@ -125,9 +132,9 @@ export function ProductSetsListClient() {
       {error ? <p className={styles.error}>{error}</p> : null}
 
       {loading ? (
-        <p className={styles.muted}>Загрузка…</p>
+        <p className={styles.muted}>{c.loading}</p>
       ) : rows.length === 0 ? (
-        <p className={styles.muted}>Наборов не найдено.</p>
+        <p className={styles.muted}>{s.empty}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -139,12 +146,12 @@ export function ProductSetsListClient() {
                     className={styles.adminCheckboxInTable}
                     checked={allSelected}
                     onChange={toggleAll}
-                    aria-label="Выбрать все наборы"
+                    aria-label={s.selectAllAria}
                   />
                 </th>
-                <th>Название набора</th>
-                <th>Кол-во позиций</th>
-                <th>Доступность</th>
+                <th>{s.thName}</th>
+                <th>{s.thCount}</th>
+                <th>{s.thVis}</th>
               </tr>
             </thead>
             <tbody>
@@ -156,7 +163,7 @@ export function ProductSetsListClient() {
                       className={styles.adminCheckboxInTable}
                       checked={selected.has(r.id)}
                       onChange={() => toggle(r.id)}
-                      aria-label={`Выбрать ${r.name}`}
+                      aria-label={s.selectOne(r.name)}
                     />
                   </td>
                   <td>
@@ -165,7 +172,7 @@ export function ProductSetsListClient() {
                   <td>{r.itemCount}</td>
                   <td>
                     <span className={`${styles.badge} ${r.isActive ? styles.badgeOn : styles.badgeOff}`}>
-                      {r.isActive ? 'В каталоге' : 'Скрыт'}
+                      {r.isActive ? s.inCatalog : s.hidden}
                     </span>
                   </td>
                 </tr>

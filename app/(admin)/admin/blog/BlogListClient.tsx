@@ -15,6 +15,9 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { adminBlogListStrings } from '@/lib/admin-i18n/adminBlogI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import catalogStyles from '../catalog/catalogAdmin.module.css';
 import type { AdminBlogCategoryRow, AdminBlogPostListItem, AdminBlogPostsListResponse } from './blogAdminTypes';
 import { BlogCategoriesPanel } from './BlogCategoriesPanel';
@@ -23,10 +26,10 @@ import blogStyles from './blogAdmin.module.css';
 const FULL_LIST_LIMIT = 500;
 const PAGE_LIMIT = 20;
 
-function formatDate(iso: string | null) {
+function formatDate(iso: string | null, dateLocale: string) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('ru-RU', {
+    return new Date(iso).toLocaleDateString(dateLocale, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -36,16 +39,22 @@ function formatDate(iso: string | null) {
   }
 }
 
+type BlogListStr = ReturnType<typeof adminBlogListStrings>;
+
 function SortableBlogRow({
   row,
   selected,
   onToggle,
   reorderable,
+  str,
+  dateLocale,
 }: {
   row: AdminBlogPostListItem;
   selected: boolean;
   onToggle: () => void;
   reorderable: boolean;
+  str: BlogListStr;
+  dateLocale: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: row.id,
@@ -60,7 +69,7 @@ function SortableBlogRow({
   return (
     <tr ref={setNodeRef} style={style}>
       {reorderable ? (
-        <td className={catalogStyles.dragHandle} {...attributes} {...listeners} title="Перетащить">
+        <td className={catalogStyles.dragHandle} {...attributes} {...listeners} title={str.dragTitle}>
           ⋮⋮
         </td>
       ) : null}
@@ -70,7 +79,7 @@ function SortableBlogRow({
           className={catalogStyles.adminCheckboxInTable}
           checked={selected}
           onChange={onToggle}
-          aria-label={`Выбрать ${row.title}`}
+          aria-label={str.selectRow(row.title)}
         />
       </td>
       <td>
@@ -81,16 +90,21 @@ function SortableBlogRow({
         <span
           className={`${catalogStyles.badge} ${row.isPublished ? catalogStyles.badgeOn : catalogStyles.badgeOff}`}
         >
-          {row.isPublished ? 'Опубликована' : 'Черновик'}
+          {row.isPublished ? str.published : str.draft}
         </span>
       </td>
-      <td>{formatDate(row.publishedAt)}</td>
+      <td>{formatDate(row.publishedAt, dateLocale)}</td>
     </tr>
   );
 }
 
 export function BlogListClient() {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminBlogListStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
+
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -157,13 +171,13 @@ export function BlogListClient() {
       }
       setSelected(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : s.errLoad);
       setRows([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ, categoryId, page, filtered]);
+  }, [debouncedQ, categoryId, page, filtered, s]);
 
   useEffect(() => {
     loadCategories();
@@ -195,11 +209,11 @@ export function BlogListClient() {
         router.refresh();
         await loadPosts();
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Не удалось сохранить порядок');
+        setError(e instanceof Error ? e.message : s.errReorder);
         await loadPosts();
       }
     },
-    [canReorder, rows, loadPosts, router],
+    [canReorder, rows, loadPosts, router, s],
   );
 
   function toggle(id: string) {
@@ -217,7 +231,7 @@ export function BlogListClient() {
 
   async function bulkDelete() {
     if (!selected.size) return;
-    const ok = window.confirm(`Удалить выбранные статьи (${selected.size})?`);
+    const ok = window.confirm(s.confirmDelete(selected.size));
     if (!ok) return;
     setBulkBusy(true);
     setError(null);
@@ -230,7 +244,7 @@ export function BlogListClient() {
       await loadPosts();
       await loadCategories();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка удаления');
+      setError(e instanceof Error ? e.message : s.errDelete);
     } finally {
       setBulkBusy(false);
     }
@@ -240,7 +254,7 @@ export function BlogListClient() {
     () => (
       <thead>
         <tr>
-          {canReorder ? <th style={{ width: 36 }} aria-label="Порядок" /> : null}
+          {canReorder ? <th style={{ width: 36 }} aria-label={s.thOrder} /> : null}
           <th style={{ width: 44 }}>
             <AccountCheckbox
               id="blog-select-all"
@@ -250,17 +264,17 @@ export function BlogListClient() {
                 if (allSelected) setSelected(new Set());
                 else setSelected(new Set(rows.map((r) => r.id)));
               }}
-              aria-label="Выбрать все на странице"
+              aria-label={s.selectAllOnPage}
             />
           </th>
-          <th>Название</th>
-          <th>Категория</th>
-          <th>Доступность</th>
-          <th>Дата</th>
+          <th>{s.thTitle}</th>
+          <th>{s.thCategory}</th>
+          <th>{s.thVisibility}</th>
+          <th>{s.thDate}</th>
         </tr>
       </thead>
     ),
-    [allSelected, canReorder, rows],
+    [allSelected, canReorder, rows, s],
   );
 
   const ids = rows.map((r) => r.id);
@@ -279,29 +293,29 @@ export function BlogListClient() {
         <input
           type="search"
           className={catalogStyles.search}
-          placeholder="Поиск по заголовку, slug…"
+          placeholder={s.searchPh}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          aria-label="Поиск статей"
+          aria-label={s.searchAria}
         />
         <select
           className={catalogStyles.search}
           style={{ maxWidth: 220, flex: '0 1 220px' }}
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          aria-label="Фильтр по категории"
+          aria-label={s.filterCatAria}
         >
-          <option value="">Все категории</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
+          <option value="">{s.allCategories}</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
             </option>
           ))}
         </select>
         <Link href="/admin/blog/new" className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}>
-          Новая статья
+          {s.newPost}
         </Link>
-        <div className={catalogStyles.bulkGroup} role="group" aria-label="Массовые операции">
+        <div className={catalogStyles.bulkGroup} role="group" aria-label={s.bulkAria}>
           {!debouncedQ && rows.length > 0 ? (
             <>
               <button
@@ -309,10 +323,10 @@ export function BlogListClient() {
                 className={catalogStyles.btn}
                 onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
               >
-                Выбрать все на странице
+                {s.selectAllPage}
               </button>
               <button type="button" className={catalogStyles.btn} onClick={() => setSelected(new Set())}>
-                Снять выбор
+                {s.clearSelection}
               </button>
             </>
           ) : null}
@@ -322,25 +336,23 @@ export function BlogListClient() {
             disabled={!selected.size || bulkBusy}
             onClick={bulkDelete}
           >
-            {bulkBusy ? '…' : `Удалить (${selected.size})`}
+            {bulkBusy ? s.bulkBusy : s.deleteBulk(selected.size)}
           </button>
         </div>
       </div>
 
       {listOversized ? (
-        <p className={blogStyles.reorderHint}>
-          Статей больше {FULL_LIST_LIMIT} — порядок перетаскиванием недоступен. Используйте поиск или фильтр по категории.
-        </p>
+        <p className={blogStyles.reorderHint}>{s.reorderLimit(FULL_LIST_LIMIT)}</p>
       ) : canReorder ? (
-        <p className={blogStyles.reorderHint}>Порядок строк сохраняется для списка на сайте. Тяните за ⋮⋮.</p>
+        <p className={blogStyles.reorderHint}>{s.reorderHint}</p>
       ) : null}
 
       {error ? <p className={catalogStyles.error}>{error}</p> : null}
 
       {loading ? (
-        <p className={catalogStyles.muted}>Загрузка…</p>
+        <p className={catalogStyles.muted}>{c.loading}</p>
       ) : rows.length === 0 ? (
-        <p className={catalogStyles.muted}>Статей не найдено.</p>
+        <p className={catalogStyles.muted}>{s.empty}</p>
       ) : (
         <>
           <div className={catalogStyles.tableWrap}>
@@ -356,6 +368,8 @@ export function BlogListClient() {
                         selected={selected.has(r.id)}
                         onToggle={() => toggle(r.id)}
                         reorderable={canReorder}
+                        str={s}
+                        dateLocale={dateLocale}
                       />
                     ))}
                   </SortableContext>
@@ -371,18 +385,16 @@ export function BlogListClient() {
                 disabled={page <= 1 || loading}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                Назад
+                {s.back}
               </button>
-              <span>
-                Страница {page} из {totalPages} ({total} всего)
-              </span>
+              <span>{s.pageOf(page, totalPages, total)}</span>
               <button
                 type="button"
                 className={catalogStyles.btn}
                 disabled={page >= totalPages || loading}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Вперёд
+                {s.forward}
               </button>
             </div>
           ) : null}

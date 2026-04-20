@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { RichBlock } from '@/components/RichBlock/RichBlock';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
@@ -10,6 +10,9 @@ import {
   adminBackendJson,
   adminUploadRichMedia,
 } from '@/lib/adminBackendFetch';
+import { adminBlogPostEditorStrings } from '@/lib/admin-i18n/adminBlogI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import catalogStyles from '../catalog/catalogAdmin.module.css';
 import type { AdminBlogCategoryRow, AdminBlogPostDetail } from './blogAdminTypes';
 import { dateInputToIso, dateToDateInputValue, isoOrNowToDateInputValue } from './blogDateInput';
@@ -19,6 +22,9 @@ type Props = { postId?: string };
 
 export function BlogPostEditorClient({ postId }: Props) {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminBlogPostEditorStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
   const isEdit = !!postId;
 
   const [loading, setLoading] = useState(isEdit);
@@ -63,11 +69,11 @@ export function BlogPostEditorClient({ postId }: Props) {
       setIsPublished(row.isPublished);
       setCoverUrl(row.coverUrl ?? '');
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Не найдено');
+      setLoadError(e instanceof Error ? e.message : s.notFound);
     } finally {
       setLoading(false);
     }
-  }, [postId]);
+  }, [postId, s]);
 
   useEffect(() => {
     void loadCategories();
@@ -83,10 +89,10 @@ export function BlogPostEditorClient({ postId }: Props) {
         richPickResolver.current = resolve;
         setPicker({
           filter: kind === 'video' ? 'video' : 'image',
-          title: kind === 'video' ? 'Видео для статьи' : 'Изображение для статьи',
+          title: kind === 'video' ? s.pickerVideo : s.pickerImage,
         });
       }),
-    [],
+    [s],
   );
 
   function handlePickerPick(sel: { url: string; id: string }) {
@@ -108,9 +114,9 @@ export function BlogPostEditorClient({ postId }: Props) {
   }
 
   async function save() {
-    const t = title.trim();
-    if (!t) {
-      setSaveMsg('Укажите заголовок');
+    const titleTrim = title.trim();
+    if (!titleTrim) {
+      setSaveMsg(s.titleRequired);
       return;
     }
     setSaving(true);
@@ -121,7 +127,7 @@ export function BlogPostEditorClient({ postId }: Props) {
         await adminBackendJson(`blog/admin/posts/${postId}`, {
           method: 'PATCH',
           body: JSON.stringify({
-            title: t,
+            title: titleTrim,
             ...(slug.trim() ? { slug: slug.trim() } : {}),
             categoryId: categoryId || null,
             excerpt: excerpt.trim() || null,
@@ -131,12 +137,12 @@ export function BlogPostEditorClient({ postId }: Props) {
             coverUrl: coverUrl.trim() || null,
           }),
         });
-        setSaveMsg('Сохранено');
+        setSaveMsg(s.saved);
       } else {
         const created = await adminBackendJson<AdminBlogPostDetail>('blog/admin/posts', {
           method: 'POST',
           body: JSON.stringify({
-            title: t,
+            title: titleTrim,
             ...(slug.trim() ? { slug: slug.trim() } : {}),
             categoryId: categoryId || null,
             excerpt: excerpt.trim() || null,
@@ -152,21 +158,21 @@ export function BlogPostEditorClient({ postId }: Props) {
       }
       router.refresh();
     } catch (e) {
-      setSaveMsg(e instanceof Error ? e.message : 'Ошибка сохранения');
+      setSaveMsg(e instanceof Error ? e.message : s.saveErr);
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <p className={catalogStyles.muted}>Загрузка…</p>;
+    return <p className={catalogStyles.muted}>{c.loading}</p>;
   }
   if (loadError) {
     return (
       <p className={catalogStyles.error}>
         {loadError}{' '}
         <Link href="/admin/blog" className={catalogStyles.backLink}>
-          К списку
+          {s.toList}
         </Link>
       </p>
     );
@@ -176,13 +182,13 @@ export function BlogPostEditorClient({ postId }: Props) {
     <>
       <div className={catalogStyles.backRow}>
         <Link href="/admin/blog" className={catalogStyles.backLink}>
-          ← К списку статей
+          {s.backList}
         </Link>
       </div>
 
       <div className={blogStyles.editorField}>
         <label className={blogStyles.editorLabel} htmlFor="blog-title">
-          Заголовок
+          {s.titleLabel}
         </label>
         <input
           id="blog-title"
@@ -194,7 +200,7 @@ export function BlogPostEditorClient({ postId }: Props) {
 
       <div className={blogStyles.editorField}>
         <label className={blogStyles.editorLabel} htmlFor="blog-category">
-          Категория
+          {s.category}
         </label>
         <select
           id="blog-category"
@@ -202,10 +208,10 @@ export function BlogPostEditorClient({ postId }: Props) {
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
         >
-          <option value="">Без категории</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
+          <option value="">{s.noCategory}</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
             </option>
           ))}
         </select>
@@ -213,7 +219,7 @@ export function BlogPostEditorClient({ postId }: Props) {
 
       <div className={blogStyles.editorField}>
         <label className={blogStyles.editorLabel} htmlFor="blog-date">
-          Дата статьи
+          {s.dateLabel}
         </label>
         <input
           id="blog-date"
@@ -227,7 +233,7 @@ export function BlogPostEditorClient({ postId }: Props) {
 
       <div className={blogStyles.editorField}>
         <label className={blogStyles.editorLabel} htmlFor="blog-excerpt">
-          Короткое описание
+          {s.excerpt}
         </label>
         <textarea
           id="blog-excerpt"
@@ -239,7 +245,7 @@ export function BlogPostEditorClient({ postId }: Props) {
       </div>
 
       <div className={blogStyles.editorField}>
-        <span className={blogStyles.editorLabel}>Обложка</span>
+        <span className={blogStyles.editorLabel}>{s.cover}</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', maxWidth: 720 }}>
           {coverUrl ? <img src={coverUrl} alt="" className={blogStyles.coverPreview} /> : null}
           <button
@@ -247,14 +253,14 @@ export function BlogPostEditorClient({ postId }: Props) {
             className={catalogStyles.btn}
             onClick={() => {
               richPickResolver.current = null;
-              setPicker({ filter: 'image', title: 'Обложка статьи' });
+              setPicker({ filter: 'image', title: s.coverPicker });
             }}
           >
-            {coverUrl ? 'Изменить из медиатеки' : 'Из медиатеки'}
+            {coverUrl ? s.coverChange : s.coverPick}
           </button>
           {coverUrl ? (
             <button type="button" className={catalogStyles.btn} onClick={() => setCoverUrl('')}>
-              Убрать обложку
+              {s.removeCover}
             </button>
           ) : null}
         </div>
@@ -262,14 +268,14 @@ export function BlogPostEditorClient({ postId }: Props) {
 
       <div className={blogStyles.editorField}>
         <label className={blogStyles.editorLabel} htmlFor="blog-slug">
-          Slug (необязательно)
+          {s.slugOptional}
         </label>
         <input
           id="blog-slug"
           className={blogStyles.editorInput}
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
-          placeholder="Авто из заголовка, если пусто"
+          placeholder={s.slugPh}
         />
       </div>
 
@@ -280,14 +286,14 @@ export function BlogPostEditorClient({ postId }: Props) {
             className={catalogStyles.adminCheckboxForm}
             checked={isPublished}
             onChange={(e) => setIsPublished(e.target.checked)}
-            aria-label="Опубликована на сайте"
+            aria-label={s.publishedAria}
           />
-          <label htmlFor="blog-published">Опубликована на сайте</label>
+          <label htmlFor="blog-published">{s.publishedLabel}</label>
         </div>
       </div>
 
       <div className={blogStyles.editorField}>
-        <span className={blogStyles.editorLabel}>Текст статьи</span>
+        <span className={blogStyles.editorLabel}>{s.body}</span>
         <RichBlock
           value={body}
           onChange={setBody}
@@ -297,7 +303,7 @@ export function BlogPostEditorClient({ postId }: Props) {
       </div>
 
       {saveMsg ? (
-        <p className={saveMsg.includes('Ошиб') ? catalogStyles.error : catalogStyles.muted}>{saveMsg}</p>
+        <p className={saveMsg === s.saved ? catalogStyles.muted : catalogStyles.error}>{saveMsg}</p>
       ) : null}
 
       <div className={blogStyles.editorActions}>
@@ -307,7 +313,7 @@ export function BlogPostEditorClient({ postId }: Props) {
           disabled={saving}
           onClick={() => void save()}
         >
-          {saving ? 'Сохранение…' : 'Сохранить'}
+          {saving ? s.saveBusy : s.save}
         </button>
       </div>
 

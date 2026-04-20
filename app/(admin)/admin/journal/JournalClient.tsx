@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { adminJournalStrings } from '@/lib/admin-i18n/adminJournalI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import styles from '../catalog/catalogAdmin.module.css';
 
 export type AuditLogRow = {
@@ -29,10 +31,10 @@ type ListResponse = {
 
 const PAGE_SIZE = 50;
 
-function formatWhen(iso: string): string {
+function formatWhen(iso: string, dateLocale: string): string {
   try {
     const d = new Date(iso);
-    return new Intl.DateTimeFormat('ru-RU', {
+    return new Intl.DateTimeFormat(dateLocale, {
       dateStyle: 'short',
       timeStyle: 'medium',
     }).format(d);
@@ -44,8 +46,8 @@ function formatWhen(iso: string): string {
 function metadataPreview(meta: unknown): string {
   if (meta === null || meta === undefined) return '—';
   try {
-    const s = JSON.stringify(meta);
-    return s.length > 120 ? `${s.slice(0, 117)}…` : s;
+    const json = JSON.stringify(meta);
+    return json.length > 120 ? `${json.slice(0, 117)}…` : json;
   } catch {
     return '—';
   }
@@ -54,6 +56,10 @@ function metadataPreview(meta: unknown): string {
 type SessionRes = { authenticated: boolean; user?: { role?: string } };
 
 export function JournalClient() {
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminJournalStrings(locale), [locale]);
+  const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
+
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +72,8 @@ export function JournalClient() {
   useEffect(() => {
     void (async () => {
       try {
-        const s = await fetch('/api/admin/session', { credentials: 'same-origin' });
-        const j = (await s.json()) as SessionRes;
+        const res = await fetch('/api/admin/session', { credentials: 'same-origin' });
+        const j = (await res.json()) as SessionRes;
         setIsAdmin(j.authenticated && j.user?.role === 'ADMIN');
       } catch {
         setIsAdmin(false);
@@ -75,21 +81,24 @@ export function JournalClient() {
     })();
   }, []);
 
-  const load = useCallback(async (p: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await adminBackendJson<ListResponse>(
-        `audit/admin/logs?page=${p}&limit=${PAGE_SIZE}`,
-      );
-      setData(res);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (p: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await adminBackendJson<ListResponse>(
+          `audit/admin/logs?page=${p}&limit=${PAGE_SIZE}`,
+        );
+        setData(res);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : s.errLoad);
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [s],
+  );
 
   useEffect(() => {
     void load(page);
@@ -99,14 +108,10 @@ export function JournalClient() {
 
   async function runPurge() {
     if (!purgePassword.trim()) {
-      setPurgeMessage('Введите пароль очистки');
+      setPurgeMessage(s.purgePasswordPrompt);
       return;
     }
-    if (
-      !window.confirm(
-        'Удалить все записи журнала без восстановления? Это не затрагивает заказы и каталог.',
-      )
-    ) {
+    if (!window.confirm(s.purgeConfirm)) {
       return;
     }
     setPurgeBusy(true);
@@ -117,10 +122,10 @@ export function JournalClient() {
         body: JSON.stringify({ password: purgePassword }),
       });
       setPurgePassword('');
-      setPurgeMessage(`Удалено записей: ${res.deleted}`);
+      setPurgeMessage(s.purged(res.deleted));
       void load(page);
     } catch (e) {
-      setPurgeMessage(e instanceof Error ? e.message : 'Ошибка очистки');
+      setPurgeMessage(e instanceof Error ? e.message : s.purgeErr);
     } finally {
       setPurgeBusy(false);
     }
@@ -137,32 +142,28 @@ export function JournalClient() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Когда</th>
-              <th>Действие</th>
-              <th>Кто</th>
-              <th>Путь</th>
-              <th>Сущность</th>
-              <th>Детали</th>
+              <th>{s.thWhen}</th>
+              <th>{s.thAction}</th>
+              <th>{s.thWho}</th>
+              <th>{s.thPath}</th>
+              <th>{s.thEntity}</th>
+              <th>{s.thDetails}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6}>
-                  Загрузка…
-                </td>
+                <td colSpan={6}>{s.loading}</td>
               </tr>
             ) : null}
             {!loading && data?.items.length === 0 ? (
               <tr>
-                <td colSpan={6}>
-                  Записей пока нет
-                </td>
+                <td colSpan={6}>{s.empty}</td>
               </tr>
             ) : null}
             {data?.items.map((row) => (
               <tr key={row.id}>
-                <td>{formatWhen(row.createdAt)}</td>
+                <td>{formatWhen(row.createdAt, dateLocale)}</td>
                 <td>
                   {row.httpMethod ? `${row.httpMethod} · ` : ''}
                   {row.action}
@@ -213,11 +214,9 @@ export function JournalClient() {
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            Назад
+            {s.back}
           </button>
-          <span style={{ fontSize: '0.9rem' }}>
-            Стр. {page} из {totalPages} ({data.total} записей)
-          </span>
+          <span style={{ fontSize: '0.9rem' }}>{s.pageOf(page, totalPages, data.total)}</span>
           <button
             type="button"
             className={styles.backLink}
@@ -231,7 +230,7 @@ export function JournalClient() {
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
-            Вперёд
+            {s.forward}
           </button>
         </div>
       ) : null}
@@ -244,13 +243,13 @@ export function JournalClient() {
           }}
         >
           <h2 className={styles.title} style={{ fontSize: '1.1rem', marginBottom: 12 }}>
-            Очистка журнала
+            {s.purgeTitle}
           </h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
             <input
               type="password"
               autoComplete="off"
-              placeholder="Пароль очистки"
+              placeholder={s.purgePlaceholder}
               value={purgePassword}
               onChange={(e) => setPurgePassword(e.target.value)}
               style={{
@@ -274,7 +273,7 @@ export function JournalClient() {
                 fontSize: '0.9375rem',
               }}
             >
-              {purgeBusy ? 'Удаление…' : 'Очистить журнал'}
+              {purgeBusy ? s.purgeBusy : s.purgeBtn}
             </button>
           </div>
           {purgeMessage ? (

@@ -2,11 +2,14 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { RichBlock } from '@/components/RichBlock/RichBlock';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminBrandEditorStrings } from '@/lib/admin-i18n/adminBrandEditorI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { createClientRandomId } from '@/lib/clientRandomId';
 import pn from '../catalog/products/new/productNew.module.css';
 import styles from '../catalog/catalogAdmin.module.css';
@@ -82,6 +85,9 @@ function parseGallery(raw: unknown): [string, string, string] {
 
 export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminBrandEditorStrings(locale), [locale]);
+  const common = useMemo(() => adminCommonI18n(locale), [locale]);
   const isEdit = !!brandId;
 
   const [loading, setLoading] = useState(isEdit);
@@ -135,11 +141,11 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setSeoTitle(row.seoTitle ?? '');
       setSeoDescription(row.seoDescription ?? '');
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Не найдено');
+      setLoadError(e instanceof Error ? e.message : s.loadErrorNotFound);
     } finally {
       setLoading(false);
     }
-  }, [brandId]);
+  }, [brandId, s]);
 
   useEffect(() => {
     load();
@@ -154,10 +160,10 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setMaterials(rows.map(brandMaterialToRow));
       setMaterialsLoaded(true);
     } catch (e) {
-      setMaterialsMsg(e instanceof Error ? e.message : 'Не удалось загрузить материалы');
+      setMaterialsMsg(e instanceof Error ? e.message : s.materialsLoadErr);
       setMaterialsLoaded(true);
     }
-  }, [brandId]);
+  }, [brandId, s]);
 
   useEffect(() => {
     if (isEdit) void loadMaterials();
@@ -170,31 +176,31 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         brandTargetRef.current = null;
         setPicker({
           filter: kind === 'video' ? 'video' : 'image',
-          title: kind === 'video' ? 'Видео для описания' : 'Изображение для описания',
+          title: kind === 'video' ? s.pickerVideoDesc : s.pickerImageDesc,
         });
       }),
-    [],
+    [s],
   );
 
   function openLogoPicker() {
     richPickResolver.current = null;
     brandTargetRef.current = 'logo';
     setSaveMsg(null);
-    setPicker({ filter: 'image', title: 'Логотип бренда' });
+    setPicker({ filter: 'image', title: s.pickerLogo });
   }
 
   function openBackgroundPicker() {
     richPickResolver.current = null;
     brandTargetRef.current = 'background';
     setSaveMsg(null);
-    setPicker({ filter: 'image', title: 'Обложка бренда' });
+    setPicker({ filter: 'image', title: s.pickerCover });
   }
 
   function openGalleryPicker(slot: number) {
     richPickResolver.current = null;
     brandTargetRef.current = slot;
     setSaveMsg(null);
-    setPicker({ filter: 'image', title: `Галерея — изображение ${slot + 1}` });
+    setPicker({ filter: 'image', title: s.pickerGallery(slot + 1) });
   }
 
   function handlePickerPick(sel: { url: string; id: string; originalName?: string }) {
@@ -259,7 +265,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     richPickResolver.current = null;
     brandTargetRef.current = { kind: 'brandColor', materialId, colorId };
     setMaterialsMsg(null);
-    setPicker({ filter: 'image', title: 'Изображение цвета' });
+    setPicker({ filter: 'image', title: s.pickerColorImage });
   }
 
   function openBrandColorBatchPicker(materialId: string) {
@@ -268,7 +274,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     setMaterialsMsg(null);
     setPicker({
       filter: 'image',
-      title: 'Изображения для цветов (можно выбрать несколько)',
+      title: s.pickerColorBatch,
       multi: true,
     });
   }
@@ -347,9 +353,9 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       );
       setMaterials(updated.map(brandMaterialToRow));
       await revalidatePublicCatalogCache();
-      setMaterialsMsg('Материалы сохранены');
+      setMaterialsMsg(s.materialsSaved);
     } catch (err) {
-      setMaterialsMsg(err instanceof Error ? err.message : 'Ошибка сохранения материалов');
+      setMaterialsMsg(err instanceof Error ? err.message : s.materialsSaveErr);
     } finally {
       setMaterialsSaving(false);
     }
@@ -417,14 +423,14 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         router.refresh();
       }
     } catch (err) {
-      setSaveMsg(err instanceof Error ? err.message : 'Ошибка сохранения');
+      setSaveMsg(err instanceof Error ? err.message : s.saveErr);
     } finally {
       setSaving(false);
     }
   }
 
   if (isEdit && loading) {
-    return <p className={styles.muted}>Загрузка…</p>;
+    return <p className={styles.muted}>{common.loading}</p>;
   }
 
   if (isEdit && loadError) {
@@ -432,7 +438,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       <main>
         <p className={styles.error}>{loadError}</p>
         <Link href="/admin/brands" className={styles.btn}>
-          К списку
+          {common.backToList}
         </Link>
       </main>
     );
@@ -450,25 +456,23 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       />
       <p className={styles.backRow}>
         <Link href="/admin/brands" className={styles.backLink}>
-          ← Бренды
+          {s.backBrands}
         </Link>
       </p>
 
       <div className={styles.detailTitleRow}>
-        <h1 className={styles.detailTitle}>{isEdit ? name || 'Бренд' : 'Новый бренд'}</h1>
+        <h1 className={styles.detailTitle}>{isEdit ? name || s.titleFallback : s.titleNew}</h1>
         <button
           type="submit"
           form={FORM_ID}
           className={`${styles.btn} ${styles.btnPrimary}`}
           disabled={saving || !name.trim()}
         >
-          {saving ? 'Сохранение…' : isEdit ? 'Сохранить' : 'Создать'}
+          {saving ? s.saving : isEdit ? s.save : s.create}
         </button>
       </div>
 
-      {saveMsg ? (
-        <p className={saveMsg.startsWith('Сохран') ? styles.muted : styles.error}>{saveMsg}</p>
-      ) : null}
+      {saveMsg ? <p className={styles.error}>{saveMsg}</p> : null}
 
       {isEdit ? (
         <p className={styles.muted} style={{ margin: '0 0 16px' }}>
@@ -478,7 +482,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
 
       <form id={FORM_ID} className={styles.form} onSubmit={submit} style={{ maxWidth: 800 }}>
         <label className={styles.label}>
-          Название бренда
+          {s.brandName}
           <input
             className={styles.input}
             value={name}
@@ -490,30 +494,30 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
 
         {!isEdit ? (
           <label className={styles.label}>
-            Slug (необязательно)
+            {s.slugOptional}
             <input
               className={styles.input}
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              placeholder="авто из названия"
+              placeholder={s.slugAutoPlaceholder}
             />
           </label>
         ) : (
           <label className={styles.label}>
-            Slug
+            {s.slugLabel}
             <input className={styles.input} value={slug} onChange={(e) => setSlug(e.target.value)} required />
           </label>
         )}
 
         <label className={styles.label}>
-          Короткое описание <span className={styles.muted}>(витрина, макс. 400 символов)</span>
+          {s.shortDescLabel} <span className={styles.muted}>{s.shortDescHint}</span>
           <textarea
             className={styles.textarea}
             value={shortDescription}
             onChange={(e) => setShortDescription(e.target.value.slice(0, 400))}
             rows={3}
             maxLength={400}
-            placeholder="Текст под заголовком на странице бренда"
+            placeholder={s.shortDescPlaceholder}
           />
           <span className={styles.muted} style={{ display: 'block', marginTop: 6 }}>
             {shortDescription.length}/400
@@ -521,14 +525,14 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         </label>
 
         <div className={styles.section} style={{ marginTop: 4 }}>
-          <h2 className={styles.sectionTitle}>Логотип</h2>
+          <h2 className={styles.sectionTitle}>{s.sectionLogo}</h2>
           <div className={styles.fileRow}>
             <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={openLogoPicker}>
-              Выбрать из медиатеки
+              {s.pickFromLibrary}
             </button>
             {logoUrl ? (
               <button type="button" className={styles.btn} onClick={clearLogo}>
-                Убрать логотип
+                {s.removeLogo}
               </button>
             ) : null}
           </div>
@@ -556,21 +560,21 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
               className={styles.adminCheckboxForm}
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              aria-label="Опубликован на витрине"
+              aria-label={s.publishedAria}
             />
-            <label htmlFor="brand-active">Опубликован на витрине</label>
+            <label htmlFor="brand-active">{s.publishedLabel}</label>
           </div>
         </div>
 
         <div className={styles.section} style={{ marginTop: 8 }}>
-          <h2 className={styles.sectionTitle}>Обложка</h2>
+          <h2 className={styles.sectionTitle}>{s.sectionCover}</h2>
           <div className={styles.fileRow}>
             <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={openBackgroundPicker}>
-              Выбрать из медиатеки
+              {s.pickFromLibrary}
             </button>
             {backgroundImageUrl ? (
               <button type="button" className={styles.btn} onClick={clearCoverImage}>
-                Убрать обложку
+                {s.removeCover}
               </button>
             ) : null}
           </div>
@@ -582,22 +586,22 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         </div>
 
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>Дополнительные изображения (max 3)</h2>
+          <h2 className={styles.sectionTitle}>{s.sectionGallery}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[0, 1, 2].map((slot) => (
               <div key={slot} className={styles.label}>
-                <span>Изображение {slot + 1}</span>
+                <span>{s.imageN(slot + 1)}</span>
                 <div className={styles.fileRow}>
                   <button
                     type="button"
                     className={`${styles.btn} ${styles.btnPrimary}`}
                     onClick={() => openGalleryPicker(slot)}
                   >
-                    Выбрать из медиатеки
+                    {s.pickFromLibrary}
                   </button>
                   {gallery[slot] ? (
                     <button type="button" className={styles.btn} onClick={() => clearGallerySlot(slot)}>
-                      Убрать
+                      {s.remove}
                     </button>
                   ) : null}
                 </div>
@@ -612,21 +616,21 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         </div>
 
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>Подробнее о бренде</h2>
+          <h2 className={styles.sectionTitle}>{s.sectionRich}</h2>
           <RichBlock
             value={description}
             onChange={setDescription}
-            placeholder="Текст для блока «Подробнее о бренде»…"
+            placeholder={s.richPlaceholder}
             pickMediaFromLibrary={pickMediaFromLibrary}
           />
         </div>
 
         {isEdit ? (
           <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Материалы и цвета бренда</h2>
+            <h2 className={styles.sectionTitle}>{s.sectionMaterials}</h2>
 
             {!materialsLoaded ? (
-              <p className={styles.muted}>Загрузка материалов…</p>
+              <p className={styles.muted}>{s.loadingMaterials}</p>
             ) : (
               <div className={pn.repeatList}>
                 {materials.map((m) => (
@@ -645,7 +649,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
                         className={styles.input}
                         style={{ flex: 1, minWidth: 200 }}
                         value={m.name}
-                        placeholder="Название материала (напр. Ткань)"
+                        placeholder={s.materialNamePh}
                         onChange={(e) => updateMaterialName(m.id, e.target.value)}
                       />
                       <button
@@ -653,12 +657,12 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
                         className={`${styles.btn} ${styles.btnDanger}`}
                         onClick={() => removeMaterial(m.id)}
                       >
-                        Удалить материал
+                        {s.deleteMaterial}
                       </button>
                     </div>
                     <div style={{ marginTop: 12, paddingLeft: 8 }}>
                       <p className={styles.muted} style={{ margin: '0 0 8px' }}>
-                        Цвета
+                        {s.colorsHeading}
                       </p>
                       {m.colors.map((c) => (
                         <div
@@ -676,7 +680,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
                             className={styles.input}
                             style={{ flex: 1, minWidth: 160 }}
                             value={c.name}
-                            placeholder="Название цвета"
+                            placeholder={s.colorNamePh}
                             onChange={(e) =>
                               updateColor(m.id, c.id, { name: e.target.value })
                             }
@@ -687,14 +691,14 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
                               className={styles.btn}
                               onClick={() => openBrandColorImagePicker(m.id, c.id)}
                             >
-                              Медиатека
+                              {common.mediaLibrary}
                             </button>
                             <button
                               type="button"
                               className={`${styles.btn} ${styles.btnDanger}`}
                               onClick={() => removeColorFromMaterial(m.id, c.id)}
                             >
-                              Удалить
+                              {s.delete}
                             </button>
                           </div>
                         </div>
@@ -705,30 +709,28 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
                           className={styles.btn}
                           onClick={() => openBrandColorBatchPicker(m.id)}
                         >
-                          + Цвет из медиатеки
+                          {s.addColorFromLib}
                         </button>
                         <button
                           type="button"
                           className={styles.btn}
                           onClick={() => addColorToMaterial(m.id)}
                         >
-                          + Цвет (пустой)
+                          {s.addColorEmpty}
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
                 <button type="button" className={styles.btn} onClick={addMaterial}>
-                  + Материал
+                  {s.addMaterial}
                 </button>
               </div>
             )}
 
             {materialsMsg ? (
               <p
-                className={
-                  materialsMsg.startsWith('Матер') ? styles.muted : styles.error
-                }
+                className={materialsMsg === s.materialsSaved ? styles.muted : styles.error}
                 style={{ marginTop: 8 }}
               >
                 {materialsMsg}
@@ -743,22 +745,20 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
                 }}
                 disabled={materialsSaving || !materialsLoaded}
               >
-                {materialsSaving ? 'Сохранение…' : 'Сохранить материалы'}
+                {materialsSaving ? s.saving : s.saveMaterials}
               </button>
             </div>
           </div>
         ) : (
-          <p className={styles.muted}>
-            После создания бренда здесь появится раздел «Материалы и цвета бренда».
-          </p>
+          <p className={styles.muted}>{s.materialsAfterCreate}</p>
         )}
 
         <label className={styles.label}>
-          SEO title
+          {s.seoTitle}
           <input className={styles.input} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
         </label>
         <label className={styles.label}>
-          SEO description
+          {s.seoDescription}
           <textarea
             className={styles.textarea}
             value={seoDescription}
@@ -773,10 +773,10 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
             className={`${styles.btn} ${styles.btnPrimary}`}
             disabled={saving || !name.trim()}
           >
-            {saving ? 'Сохранение…' : isEdit ? 'Сохранить' : 'Создать'}
+            {saving ? s.saving : isEdit ? s.save : s.create}
           </button>
           <Link href="/admin/brands" className={styles.btn}>
-            Отмена
+            {s.cancel}
           </Link>
         </div>
       </form>

@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCategoriesListStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import styles from '../catalogAdmin.module.css';
 import { AdminCategorySearchTable } from './AdminCategorySearchTable';
 import { AdminCategorySortableTable } from './AdminCategorySortableTable';
@@ -19,6 +22,9 @@ function parentKey(parentId: string | null): string {
 
 export function CategoriesListClient() {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminCategoriesListStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [rows, setRows] = useState<AdminCategoryRow[]>([]);
@@ -43,12 +49,12 @@ export function CategoriesListClient() {
       setRows(data);
       setSelected(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : s.errLoad);
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ]);
+  }, [debouncedQ, s]);
 
   useEffect(() => {
     load();
@@ -87,11 +93,11 @@ export function CategoriesListClient() {
         router.refresh();
         await load();
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Не удалось сохранить порядок');
+        setError(e instanceof Error ? e.message : s.errReorder);
         await load();
       }
     },
-    [load, router]
+    [load, router, s],
   );
 
   const onDragEndRoots = useCallback(
@@ -169,9 +175,7 @@ export function CategoriesListClient() {
 
   async function removeSelected() {
     if (!selected.size) return;
-    const ok = window.confirm(
-      `Удалить выбранные категории (${selected.size})? Сначала удалятся пустые листья, затем освободившиеся родители. Категории с товарами или не выбранными дочерними ветками останутся.`
-    );
+    const ok = window.confirm(s.confirmDelete(selected.size));
     if (!ok) return;
     setDeleting(true);
     setError(null);
@@ -184,9 +188,7 @@ export function CategoriesListClient() {
         }
       );
       if (res.skipped.length) {
-        setError(
-          `Не удалено ${res.skipped.length} категорий (есть товары или дочерние категории вне выбора). Удалено: ${res.deleted.length}.`
-        );
+        setError(s.partialDelete(res.skipped.length, res.deleted.length));
       } else {
         setError(null);
       }
@@ -196,7 +198,7 @@ export function CategoriesListClient() {
       }
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка удаления');
+      setError(e instanceof Error ? e.message : s.errDelete);
     } finally {
       setDeleting(false);
     }
@@ -214,15 +216,15 @@ export function CategoriesListClient() {
         <input
           type="search"
           className={styles.search}
-          placeholder="Поиск по названию…"
+          placeholder={s.searchPh}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          aria-label="Поиск категорий"
+          aria-label={s.searchAria}
         />
         <Link href="/admin/catalog/categories/new" className={`${styles.btn} ${styles.btnPrimary}`}>
-          Создать категорию
+          {s.create}
         </Link>
-        <div className={styles.bulkGroup} role="group" aria-label="Массовые операции">
+        <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
           {!debouncedQ && rows.length > 0 ? (
             <>
               <button
@@ -230,10 +232,10 @@ export function CategoriesListClient() {
                 className={styles.btn}
                 onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
               >
-                Выбрать все
+                {s.selectAll}
               </button>
               <button type="button" className={styles.btn} onClick={() => setSelected(new Set())}>
-                Снять выбор
+                {s.clear}
               </button>
             </>
           ) : null}
@@ -243,23 +245,23 @@ export function CategoriesListClient() {
             disabled={!selected.size || deleting}
             onClick={removeSelected}
           >
-            {deleting ? 'Удаление…' : `Удалить (${selected.size})`}
+            {deleting ? s.deleting : s.delete(selected.size)}
           </button>
         </div>
       </div>
 
       {debouncedQ ? (
         <p className={styles.muted} style={{ marginBottom: 12 }}>
-          При активном поиске порядок перетаскиванием отключён.
+          {s.searchReorderHint}
         </p>
       ) : null}
 
       {error ? <p className={styles.error}>{error}</p> : null}
 
       {loading ? (
-        <p className={styles.muted}>Загрузка…</p>
+        <p className={styles.muted}>{c.loading}</p>
       ) : rows.length === 0 ? (
-        <p className={styles.muted}>Категории не найдены.</p>
+        <p className={styles.muted}>{s.empty}</p>
       ) : debouncedQ ? (
         <AdminCategorySearchTable
           rows={rows}
@@ -272,7 +274,7 @@ export function CategoriesListClient() {
         <>
           <section aria-labelledby="grp-root-cats">
             <h2 id="grp-root-cats" className={styles.groupHeading}>
-              Корневые категории
+              {s.rootHeading}
             </h2>
             <AdminCategorySortableTable
               rows={sortedRoots}
@@ -281,7 +283,7 @@ export function CategoriesListClient() {
               onToggleAll={toggleAllRoots}
               allSectionSelected={rootsAllSelected}
               selectAllCheckboxId="cat-select-all-roots"
-              selectAllAriaLabel="Выбрать все корневые категории"
+              selectAllAriaLabel={s.selectAllRootAria}
               checkboxIdPrefix="cat-select-root"
               onDragEnd={onDragEndRoots}
             />
@@ -290,7 +292,7 @@ export function CategoriesListClient() {
           {sortedChildren.length > 0 ? (
             <section aria-labelledby="grp-subcats" style={{ marginTop: 32 }}>
               <h2 id="grp-subcats" className={styles.groupHeading}>
-                Подкатегории
+                {s.subHeading}
               </h2>
               <AdminCategorySortableTable
                 rows={sortedChildren}
@@ -299,7 +301,7 @@ export function CategoriesListClient() {
                 onToggleAll={toggleAllChildren}
                 allSectionSelected={childrenAllSelected}
                 selectAllCheckboxId="cat-select-all-children"
-                selectAllAriaLabel="Выбрать все подкатегории"
+                selectAllAriaLabel={s.selectAllSubAria}
                 checkboxIdPrefix="cat-select-child"
                 onDragEnd={onDragEndChildren}
               />

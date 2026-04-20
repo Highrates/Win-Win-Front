@@ -2,13 +2,17 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCategoryNewStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import styles from '../../catalogAdmin.module.css';
 
 function NewCategoryForm() {
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminCategoryNewStrings(locale), [locale]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const parentId = searchParams.get('parentId') ?? '';
@@ -56,7 +60,7 @@ function NewCategoryForm() {
       router.push('/admin/catalog/categories');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось создать');
+      setError(err instanceof Error ? err.message : s.errCreate);
     } finally {
       setSaving(false);
     }
@@ -66,7 +70,7 @@ function NewCategoryForm() {
     <main>
       <MediaLibraryPickerModal
         open={pickerOpen}
-        title="Обложка категории — выберите изображение"
+        title={s.coverTitle}
         mediaFilter="image"
         onClose={() => setPickerOpen(false)}
         onPick={(sel) => {
@@ -81,16 +85,16 @@ function NewCategoryForm() {
           className={styles.backLink}
           href={parentId ? `/admin/catalog/categories/${parentId}` : '/admin/catalog/categories'}
         >
-          ← Назад
+          {s.back}
         </Link>
       </p>
-      <h1 className={styles.title}>{parentId ? 'Новая подкатегория' : 'Новая категория'}</h1>
+      <h1 className={styles.title}>{parentId ? s.titleSub : s.titleRoot}</h1>
 
       {error ? <p className={styles.error}>{error}</p> : null}
 
       <form className={styles.form} onSubmit={submit}>
         <label className={styles.label}>
-          Название
+          {s.name}
           <input
             className={styles.input}
             value={name}
@@ -100,12 +104,12 @@ function NewCategoryForm() {
           />
         </label>
         <label className={styles.label}>
-          Slug (необязательно)
+          {s.slugOpt}
           <input
             className={styles.input}
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="авто из названия"
+            placeholder={s.slugPh}
           />
         </label>
         <div className={styles.label}>
@@ -115,13 +119,13 @@ function NewCategoryForm() {
               className={styles.adminCheckboxForm}
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              aria-label="Активна на витрине"
+              aria-label={s.activeAria}
             />
-            <label htmlFor="new-category-active">Активна на витрине</label>
+            <label htmlFor="new-category-active">{s.activeLabel}</label>
           </div>
         </div>
         <label className={styles.label}>
-          SEO title (витрина)
+          {s.seoTitle}
           <input
             className={styles.input}
             value={seoTitle}
@@ -129,7 +133,7 @@ function NewCategoryForm() {
           />
         </label>
         <label className={styles.label}>
-          SEO description (витрина)
+          {s.seoDesc}
           <textarea
             className={styles.textarea}
             value={seoDescription}
@@ -138,7 +142,7 @@ function NewCategoryForm() {
           />
         </label>
         <div className={styles.label}>
-          Обложка <span className={styles.muted}>(необязательно)</span>
+          {s.coverLabel} <span className={styles.muted}>{s.coverOptional}</span>
           <div className={styles.fileRow}>
             <button
               type="button"
@@ -148,11 +152,11 @@ function NewCategoryForm() {
                 setPickerOpen(true);
               }}
             >
-              Выбрать из медиатеки
+              {s.pickLibrary}
             </button>
             {backgroundImageUrl.trim() ? (
               <button type="button" className={styles.btn} onClick={clearCover}>
-                Убрать обложку
+                {s.removeCover}
               </button>
             ) : null}
           </div>
@@ -168,10 +172,10 @@ function NewCategoryForm() {
             className={`${styles.btn} ${styles.btnPrimary}`}
             disabled={saving}
           >
-            {saving ? 'Сохранение…' : 'Создать'}
+            {saving ? s.saveBusy : s.create}
           </button>
           <Link href="/admin/catalog/categories" className={styles.btn}>
-            Отмена
+            {s.cancel}
           </Link>
         </div>
       </form>
@@ -180,8 +184,10 @@ function NewCategoryForm() {
 }
 
 export default function NewCategoryPage() {
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminCategoryNewStrings(locale), [locale]);
   return (
-    <Suspense fallback={<p className={styles.muted}>Загрузка…</p>}>
+    <Suspense fallback={<p className={styles.muted}>{s.suspenseLoading}</p>}>
       <NewCategoryForm />
     </Suspense>
   );

@@ -2,10 +2,13 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCategoryDetailStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import styles from '../../catalogAdmin.module.css';
 import { SubcategoriesDnD, type SubcatRow } from './SubcategoriesDnD';
 
@@ -36,11 +39,11 @@ type CategoryDetail = {
   depthFromRoot?: number;
 };
 
-function formatPrice(p: unknown, currency: string): string {
+function formatPrice(p: unknown, currency: string, numberLocale: string): string {
   const n = typeof p === 'string' ? parseFloat(p) : Number(p);
   if (Number.isNaN(n)) return '—';
   try {
-    return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: currency || 'RUB' }).format(n);
+    return new Intl.NumberFormat(numberLocale, { style: 'currency', currency: currency || 'RUB' }).format(n);
   } catch {
     return `${n} ${currency}`;
   }
@@ -48,6 +51,10 @@ function formatPrice(p: unknown, currency: string): string {
 
 export function CategoryDetailClient({ id }: { id: string }) {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminCategoryDetailStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
   const [data, setData] = useState<CategoryDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,12 +84,12 @@ export function CategoryDetailClient({ id }: { id: string }) {
       setBackgroundImageUrl(row.backgroundImageUrl ?? '');
       setBackgroundMediaObjectId(row.backgroundMediaObjectId ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не найдено');
+      setError(e instanceof Error ? e.message : s.errLoad);
       setData(null);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, s.errLoad]);
 
   useEffect(() => {
     load();
@@ -117,22 +124,22 @@ export function CategoryDetailClient({ id }: { id: string }) {
       router.push('/admin/catalog/categories');
       router.refresh();
     } catch (err) {
-      setSaveMsg(err instanceof Error ? err.message : 'Ошибка сохранения');
+      setSaveMsg(err instanceof Error ? err.message : s.saveErr);
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <p className={styles.muted}>Загрузка…</p>;
+    return <p className={styles.muted}>{c.loading}</p>;
   }
 
   if (error || !data) {
     return (
       <main>
-        <p className={styles.error}>{error ?? 'Категория не найдена'}</p>
+        <p className={styles.error}>{error ?? s.notFound}</p>
         <Link href="/admin/catalog/categories" className={styles.btn}>
-          К списку
+          {c.backToList}
         </Link>
       </main>
     );
@@ -142,7 +149,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
     <main>
       <MediaLibraryPickerModal
         open={pickerOpen}
-        title="Обложка категории — выберите изображение"
+        title={s.coverTitle}
         mediaFilter="image"
         onClose={() => setPickerOpen(false)}
         onPick={(sel) => {
@@ -154,7 +161,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
       />
       <p className={styles.backRow}>
         <Link href="/admin/catalog/categories" className={styles.backLink}>
-          ← Категории
+          {s.backCats}
         </Link>
         {data.parent ? (
           <>
@@ -175,12 +182,10 @@ export function CategoryDetailClient({ id }: { id: string }) {
             className={`${styles.btn} ${styles.btnPrimary}`}
             disabled={saving}
           >
-            {saving ? 'Сохранение…' : 'Сохранить'}
+            {saving ? s.saveBusy : s.save}
           </button>
         </div>
-        {saveMsg ? (
-          <p className={saveMsg.startsWith('Сохран') ? styles.muted : styles.error}>{saveMsg}</p>
-        ) : null}
+        {saveMsg ? <p className={styles.error}>{saveMsg}</p> : null}
         <p className={styles.muted} style={{ margin: '0 0 12px' }}>
           Slug: {slug}
         </p>
@@ -191,14 +196,14 @@ export function CategoryDetailClient({ id }: { id: string }) {
           </div>
         ) : (
           <p className={styles.muted}>
-            Обложка не задана — при необходимости выберите изображение в форме ниже и сохраните.
+            {s.coverMissing}
           </p>
         )}
       </div>
 
       <form id={CATEGORY_FORM_ID} className={styles.form} onSubmit={saveMeta} style={{ maxWidth: 560 }}>
         <label className={styles.label}>
-          Название категории
+          {s.name}
           <input
             className={styles.input}
             value={name}
@@ -208,7 +213,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
           />
         </label>
         <label className={styles.label}>
-          Slug
+          {c.slug}
           <input className={styles.input} value={slug} onChange={(e) => setSlug(e.target.value)} required />
         </label>
         <div className={styles.label}>
@@ -218,17 +223,17 @@ export function CategoryDetailClient({ id }: { id: string }) {
               className={styles.adminCheckboxForm}
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              aria-label="Активна на витрине"
+              aria-label={s.activeAria}
             />
-            <label htmlFor="edit-category-active">Активна на витрине</label>
+            <label htmlFor="edit-category-active">{s.activeLabel}</label>
           </div>
         </div>
         <label className={styles.label}>
-          SEO title (витрина)
+          {s.seoTitle}
           <input className={styles.input} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
         </label>
         <label className={styles.label}>
-          SEO description (витрина)
+          {s.seoDesc}
           <textarea
             className={styles.textarea}
             value={seoDescription}
@@ -237,7 +242,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
           />
         </label>
         <div className={styles.label}>
-          Обложка
+          {s.cover}
           <div className={styles.fileRow}>
             <button
               type="button"
@@ -247,11 +252,11 @@ export function CategoryDetailClient({ id }: { id: string }) {
                 setPickerOpen(true);
               }}
             >
-              Выбрать из медиатеки
+              {s.pickLibrary}
             </button>
             {backgroundImageUrl.trim() ? (
               <button type="button" className={styles.btn} onClick={clearCover}>
-                Убрать обложку
+                {s.removeCover}
               </button>
             ) : null}
           </div>
@@ -261,23 +266,23 @@ export function CategoryDetailClient({ id }: { id: string }) {
       <section className={styles.section} aria-labelledby="subcat-heading">
         <div className={styles.sectionHead}>
           <h2 id="subcat-heading" className={styles.sectionTitle}>
-            Подкатегории
+            {s.subcats}
           </h2>
           {(data.depthFromRoot ?? 0) < 2 ? (
             <Link
               href={`/admin/catalog/categories/new?parentId=${data.id}`}
               className={`${styles.btn} ${styles.btnPrimary}`}
             >
-              Создать подкатегорию
+              {s.createSub}
             </Link>
           ) : (
-            <span className={styles.muted} title="Максимум три уровня категорий">
-              Дочерних уровней больше нет
+            <span className={styles.muted} title={s.maxDepthTitle}>
+              {s.maxDepth}
             </span>
           )}
         </div>
         {data.children.length === 0 ? (
-          <p className={styles.muted}>Подкатегорий пока нет.</p>
+          <p className={styles.muted}>{s.noSubs}</p>
         ) : (
           <SubcategoriesDnD parentCategoryId={data.id} items={data.children} onUpdated={load} />
         )}
@@ -285,18 +290,18 @@ export function CategoryDetailClient({ id }: { id: string }) {
 
       <section className={styles.section} aria-labelledby="products-heading">
         <h2 id="products-heading" className={styles.sectionTitle}>
-          Товары категории
+          {s.products}
         </h2>
         {data.products.length === 0 ? (
-          <p className={styles.muted}>В этой категории пока нет товаров.</p>
+          <p className={styles.muted}>{s.noProducts}</p>
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Название</th>
-                  <th>Цена</th>
-                  <th>Активен</th>
+                  <th>{s.thName}</th>
+                  <th>{s.thPrice}</th>
+                  <th>{s.thActive}</th>
                 </tr>
               </thead>
               <tbody>
@@ -307,8 +312,8 @@ export function CategoryDetailClient({ id }: { id: string }) {
                         {p.name}
                       </a>
                     </td>
-                    <td>{formatPrice(p.price, p.currency)}</td>
-                    <td>{p.isActive ? 'да' : 'нет'}</td>
+                    <td>{formatPrice(p.price, p.currency, numberLocale)}</td>
+                    <td>{p.isActive ? s.yes : s.no}</td>
                   </tr>
                 ))}
               </tbody>

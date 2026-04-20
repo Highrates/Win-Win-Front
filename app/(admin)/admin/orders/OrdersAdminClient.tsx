@@ -1,17 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminOrderStatusLabels, adminOrdersStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import styles from '../catalog/catalogAdmin.module.css';
 
 const STATUSES = ['ORDERED', 'PAID', 'RECEIVED'] as const;
 type OrderStatus = (typeof STATUSES)[number];
-
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  ORDERED: 'Заказано',
-  PAID: 'Оплачено',
-  RECEIVED: 'Получено',
-};
 
 type AdminOrderRow = {
   id: string;
@@ -30,19 +27,19 @@ type ListResponse = {
   limit: number;
 };
 
-function formatMoney(amount: string | number, currency: string): string {
+function formatMoney(amount: string | number, currency: string, numberLocale: string): string {
   const n = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (!Number.isFinite(n)) return String(amount);
-  return new Intl.NumberFormat('ru-RU', {
+  return new Intl.NumberFormat(numberLocale, {
     style: 'currency',
     currency: currency || 'RUB',
     maximumFractionDigits: 2,
   }).format(n);
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, dateLocale: string): string {
   try {
-    return new Intl.DateTimeFormat('ru-RU', {
+    return new Intl.DateTimeFormat(dateLocale, {
       dateStyle: 'short',
       timeStyle: 'short',
     }).format(new Date(iso));
@@ -52,6 +49,13 @@ function formatDate(iso: string): string {
 }
 
 export function OrdersAdminClient() {
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminOrdersStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const statusLabels = useMemo(() => adminOrderStatusLabels(locale), [locale]);
+  const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
+  const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
+
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
   const [qActive, setQActive] = useState('');
@@ -61,25 +65,28 @@ export function OrdersAdminClient() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<Record<string, OrderStatus>>({});
 
-  const load = useCallback(async (p: number, search: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const qs = new URLSearchParams({
-        page: String(p),
-        limit: '20',
-      });
-      if (search.trim()) qs.set('q', search.trim());
-      const res = await adminBackendJson<ListResponse>(`orders/admin?${qs}`);
-      setData(res);
-      setDraftStatus({});
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (p: number, search: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const qs = new URLSearchParams({
+          page: String(p),
+          limit: '20',
+        });
+        if (search.trim()) qs.set('q', search.trim());
+        const res = await adminBackendJson<ListResponse>(`orders/admin?${qs}`);
+        setData(res);
+        setDraftStatus({});
+      } catch (e) {
+        setError(e instanceof Error ? e.message : s.errLoad);
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [s],
+  );
 
   useEffect(() => {
     void load(page, qActive);
@@ -106,7 +113,7 @@ export function OrdersAdminClient() {
       setDraftStatus(next);
       await load(page, qActive);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить статус');
+      setError(e instanceof Error ? e.message : s.errSaveStatus);
     } finally {
       setSavingId(null);
     }
@@ -124,7 +131,7 @@ export function OrdersAdminClient() {
             border: '1px solid var(--account-hairline-color, #e2e6e8)',
             fontSize: '0.9375rem',
           }}
-          placeholder="ID заказа, email или телефон"
+          placeholder={s.searchPh}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {
@@ -148,7 +155,7 @@ export function OrdersAdminClient() {
             setQActive(q);
           }}
         >
-          Найти
+          {s.find}
         </button>
       </div>
       {error ? (
@@ -160,27 +167,23 @@ export function OrdersAdminClient() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Дата</th>
-              <th>Заказ</th>
-              <th>Клиент</th>
-              <th>Сумма</th>
-              <th>Статус</th>
+              <th>{s.thDate}</th>
+              <th>{s.thOrder}</th>
+              <th>{s.thClient}</th>
+              <th>{s.thSum}</th>
+              <th>{s.thStatus}</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6}>
-                  Загрузка…
-                </td>
+                <td colSpan={6}>{c.loading}</td>
               </tr>
             ) : null}
             {!loading && data?.items.length === 0 ? (
               <tr>
-                <td colSpan={6}>
-                  Нет заказов
-                </td>
+                <td colSpan={6}>{s.empty}</td>
               </tr>
             ) : null}
             {data?.items.map((row) => {
@@ -188,11 +191,11 @@ export function OrdersAdminClient() {
               const dirty = current !== row.status;
               return (
                 <tr key={row.id}>
-                  <td>{formatDate(row.createdAt)}</td>
+                  <td>{formatDate(row.createdAt, dateLocale)}</td>
                   <td style={{ maxWidth: 200, wordBreak: 'break-all', fontSize: '0.85rem' }}>
                     <code>{row.id}</code>
                     <div style={{ color: 'var(--color-gray, #9d9d9d)', marginTop: 4 }}>
-                      {row.items.length} поз.
+                      {s.itemsCount(row.items.length)}
                     </div>
                   </td>
                   <td style={{ fontSize: '0.9rem' }}>
@@ -204,7 +207,7 @@ export function OrdersAdminClient() {
                       </>
                     ) : null}
                   </td>
-                  <td>{formatMoney(row.totalAmount, row.currency)}</td>
+                  <td>{formatMoney(row.totalAmount, row.currency, numberLocale)}</td>
                   <td>
                     <select
                       value={current}
@@ -220,9 +223,9 @@ export function OrdersAdminClient() {
                         fontSize: '0.875rem',
                       }}
                     >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {STATUS_LABELS[s]}
+                      {STATUSES.map((st) => (
+                        <option key={st} value={st}>
+                          {statusLabels[st]}
                         </option>
                       ))}
                     </select>
@@ -242,7 +245,7 @@ export function OrdersAdminClient() {
                       }}
                       onClick={() => void saveStatus(row.id, current)}
                     >
-                      {savingId === row.id ? '…' : 'Сохранить'}
+                      {savingId === row.id ? s.saving : s.save}
                     </button>
                   </td>
                 </tr>
@@ -266,11 +269,9 @@ export function OrdersAdminClient() {
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            Назад
+            {s.back}
           </button>
-          <span style={{ fontSize: '0.9rem' }}>
-            Стр. {page} из {totalPages} ({data.total})
-          </span>
+          <span style={{ fontSize: '0.9rem' }}>{s.pageOf(page, totalPages, data.total)}</span>
           <button
             type="button"
             className={styles.backLink}
@@ -284,7 +285,7 @@ export function OrdersAdminClient() {
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
-            Вперёд
+            {s.forward}
           </button>
         </div>
       ) : null}

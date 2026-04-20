@@ -21,6 +21,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCollectionEditorStrings } from '@/lib/admin-i18n/adminCollectionsI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import type { AdminProductRow } from '../catalog/products/adminProductTypes';
 import styles from '../catalog/catalogAdmin.module.css';
 import objStyles from '../objects/objectsLibrary.module.css';
@@ -39,10 +42,14 @@ function SortableItemRow({
   label,
   onRemove,
   rowId,
+  dragTitle,
+  removeLabel,
 }: {
   rowId: string;
   label: string;
   onRemove: () => void;
+  dragTitle: string;
+  removeLabel: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: rowId,
@@ -54,7 +61,7 @@ function SortableItemRow({
   };
   return (
     <tr ref={setNodeRef} style={style}>
-      <td className={styles.dragHandle} {...attributes} {...listeners} title="Перетащить">
+      <td className={styles.dragHandle} {...attributes} {...listeners} title={dragTitle}>
         ⋮⋮
       </td>
       <td>
@@ -62,7 +69,7 @@ function SortableItemRow({
       </td>
       <td>
         <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={onRemove}>
-          Убрать
+          {removeLabel}
         </button>
       </td>
     </tr>
@@ -92,6 +99,9 @@ function ModalCloseButton({ onClick, label }: { onClick: () => void; label: stri
 
 export function CuratedCollectionEditorClient({ collectionId }: { collectionId?: string }) {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const str = useMemo(() => adminCollectionEditorStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
   const isEdit = !!collectionId;
 
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -176,7 +186,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
         setLoaded(true);
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить');
+          setLoadError(e instanceof Error ? e.message : str.errLoad);
           setLoaded(false);
         }
       }
@@ -184,7 +194,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
     return () => {
       cancelled = true;
     };
-  }, [collectionId, isEdit]);
+  }, [collectionId, isEdit, str.errLoad]);
 
   useEffect(() => {
     const t = setTimeout(() => setAddDebouncedQ(addQ.trim()), 300);
@@ -275,7 +285,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
   function changeKind(next: 'PRODUCT' | 'BRAND') {
     if (next === kind) return;
     const has = productRows.length > 0 || brandRows.length > 0;
-    if (has && !window.confirm('Сменить тип коллекции? Текущий список позиций будет очищен.')) {
+    if (has && !window.confirm(str.changeKindConfirm)) {
       return;
     }
     setKind(next);
@@ -306,7 +316,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
     setSaveError(null);
     const nameTrim = name.trim();
     if (!nameTrim) {
-      setSaveError('Укажите название');
+      setSaveError(str.nameRequired);
       return;
     }
     setSaving(true);
@@ -350,21 +360,21 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
       await revalidatePublicCatalogCache();
       router.refresh();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
+      setSaveError(err instanceof Error ? err.message : str.saveErr);
     } finally {
       setSaving(false);
     }
   }
 
   if (isEdit && !loaded && !loadError) {
-    return <p className={styles.muted}>Загрузка…</p>;
+    return <p className={styles.muted}>{c.loading}</p>;
   }
 
   return (
     <>
       <p className={styles.backRow}>
         <Link className={styles.backLink} href="/admin/collections">
-          ← К списку коллекций
+          {str.backList}
         </Link>
       </p>
 
@@ -372,7 +382,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
 
       <MediaLibraryPickerModal
         open={coverPickerOpen}
-        title="Обложка коллекции"
+        title={str.coverTitle}
         mediaFilter="image"
         onClose={() => setCoverPickerOpen(false)}
         onPick={(sel) => {
@@ -388,7 +398,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
           className={objStyles.modalBackdrop}
           role="dialog"
           aria-modal
-          aria-label={kind === 'PRODUCT' ? 'Добавить товар' : 'Добавить бренд'}
+          aria-label={kind === 'PRODUCT' ? str.addProductAria : str.addBrandAria}
           onClick={() => setAddPickerOpen(false)}
         >
           <div
@@ -406,25 +416,25 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
               }}
             >
               <h2 className={objStyles.modalTitle} style={{ margin: 0, paddingRight: 8 }}>
-                {kind === 'PRODUCT' ? 'Добавить товар' : 'Добавить бренд'}
+                {kind === 'PRODUCT' ? str.addProduct : str.addBrand}
               </h2>
-              <ModalCloseButton onClick={() => setAddPickerOpen(false)} label="Закрыть" />
+              <ModalCloseButton onClick={() => setAddPickerOpen(false)} label={str.close} />
             </div>
             <input
               type="search"
               className={styles.search}
               style={{ width: '100%', maxWidth: 'none', marginBottom: 12 }}
-              placeholder="Поиск…"
+              placeholder={str.searchPh}
               value={addQ}
               onChange={(e) => setAddQ(e.target.value)}
-              aria-label="Поиск"
+              aria-label={str.searchAria}
             />
             <div className={styles.tableWrap} style={{ maxHeight: 320, overflow: 'auto' }}>
               {addLoading ? (
-                <p className={styles.muted}>Загрузка…</p>
+                <p className={styles.muted}>{c.loading}</p>
               ) : kind === 'PRODUCT' ? (
                 addProductHits.length === 0 ? (
-                  <p className={styles.muted}>Ничего не найдено.</p>
+                  <p className={styles.muted}>{str.nothing}</p>
                 ) : (
                   <table className={styles.table}>
                     <thead>
@@ -436,10 +446,10 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                             checked={modalAllSelectableSelected}
                             onChange={toggleModalSelectAll}
                             disabled={!selectableProductIds.length}
-                            aria-label="Выбрать все в списке"
+                            aria-label={str.selectAllList}
                           />
                         </th>
-                        <th>Название</th>
+                        <th>{str.thName}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -454,14 +464,14 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                                 disabled={inCol}
                                 checked={!inCol && addModalSelected.has(p.id)}
                                 onChange={() => toggleAddModalRow(p.id)}
-                                aria-label={`Выбрать ${p.name}`}
+                                aria-label={str.selectRow(p.name)}
                               />
                             </td>
                             <td>
                               {p.name}
                               {inCol ? (
                                 <span className={styles.muted} style={{ marginLeft: 6 }}>
-                                  — в коллекции
+                                  {str.inCollection}
                                 </span>
                               ) : null}
                             </td>
@@ -472,7 +482,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                   </table>
                 )
               ) : addBrandHits.length === 0 ? (
-                <p className={styles.muted}>Ничего не найдено.</p>
+                <p className={styles.muted}>{str.nothing}</p>
               ) : (
                 <table className={styles.table}>
                   <thead>
@@ -484,10 +494,10 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                           checked={modalAllSelectableSelected}
                           onChange={toggleModalSelectAll}
                           disabled={!selectableBrandIds.length}
-                          aria-label="Выбрать все в списке"
+                          aria-label={str.selectAllList}
                         />
                       </th>
-                      <th>Название</th>
+                      <th>{str.thName}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -502,14 +512,14 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                               disabled={inCol}
                               checked={!inCol && addModalSelected.has(b.id)}
                               onChange={() => toggleAddModalRow(b.id)}
-                              aria-label={`Выбрать ${b.name}`}
+                              aria-label={str.selectRow(b.name)}
                             />
                           </td>
                           <td>
                             {b.name}
                             {inCol ? (
                               <span className={styles.muted} style={{ marginLeft: 6 }}>
-                                — в коллекции
+                                {str.inCollection}
                               </span>
                             ) : null}
                           </td>
@@ -535,7 +545,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                 onClick={() => setAddModalSelected(new Set())}
                 disabled={!addModalSelected.size}
               >
-                Снять выбор
+                {str.clearSel}
               </button>
               <button
                 type="button"
@@ -543,7 +553,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                 disabled={!addModalSelected.size}
                 onClick={commitAddModalSelection}
               >
-                Добавить выбранные
+                {str.addSelected}
                 {addModalSelected.size ? ` (${addModalSelected.size})` : ''}
               </button>
             </div>
@@ -552,10 +562,10 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
       ) : null}
 
       <form className={`${styles.form} ${styles.formWide}`} onSubmit={submit}>
-        <h1 className={styles.title}>{isEdit ? 'Редактирование коллекции' : 'Новая коллекция'}</h1>
+        <h1 className={styles.title}>{isEdit ? str.titleEdit : str.titleNew}</h1>
 
         <label className={styles.label}>
-          Название коллекции
+          {str.nameLabel}
           <input
             className={styles.input}
             value={name}
@@ -565,17 +575,17 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
         </label>
 
         <label className={styles.label}>
-          Slug <span className={styles.muted}>(необязательно)</span>
+          {str.slugLabel}
           <input
             className={styles.input}
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="из названия"
+            placeholder={str.slugPh}
           />
         </label>
 
         <label className={styles.label}>
-          Описание
+          {str.desc}
           <textarea
             className={styles.textarea}
             value={description}
@@ -586,7 +596,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
 
         <fieldset className={styles.label} style={{ border: 'none', padding: 0, margin: 0 }}>
           <legend className={styles.label} style={{ marginBottom: 8 }}>
-            Содержимое коллекции
+            {str.contentTitle}
           </legend>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
@@ -596,7 +606,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                 checked={kind === 'PRODUCT'}
                 onChange={() => changeKind('PRODUCT')}
               />
-              Товары
+              {str.tabProducts}
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input
@@ -605,13 +615,13 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                 checked={kind === 'BRAND'}
                 onChange={() => changeKind('BRAND')}
               />
-              Бренды
+              {str.tabBrands}
             </label>
           </div>
         </fieldset>
 
         <div className={styles.label}>
-          Обложка коллекции
+          {str.coverBlock}
           <div className={styles.fileRow}>
             <button
               type="button"
@@ -621,7 +631,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                 setCoverPickerOpen(true);
               }}
             >
-              Выбрать из медиатеки
+              {str.pickLibrary}
             </button>
             {coverUrl.trim() ? (
               <button
@@ -632,7 +642,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                   setCoverMediaObjectId(null);
                 }}
               >
-                Убрать обложку
+                {str.removeCover}
               </button>
             ) : null}
           </div>
@@ -650,9 +660,9 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
               className={styles.adminCheckboxForm}
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              aria-label="Доступна на витрине"
+              aria-label={str.activeAria}
             />
-            <label htmlFor="curated-collection-active">Доступна на витрине</label>
+            <label htmlFor="curated-collection-active">{str.activeLabel}</label>
           </div>
         </div>
 
@@ -674,7 +684,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
         </label>
 
         <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>
-          {kind === 'PRODUCT' ? 'Товары в коллекции' : 'Бренды в коллекции'}
+          {kind === 'PRODUCT' ? str.listProducts : str.listBrands}
         </h2>
         <button
           type="button"
@@ -686,7 +696,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
             setAddPickerOpen(true);
           }}
         >
-          {kind === 'PRODUCT' ? '+ Добавить товар' : '+ Добавить бренд'}
+          {kind === 'PRODUCT' ? str.addProductBtn : str.addBrandBtn}
         </button>
 
         {kind === 'PRODUCT' ? (
@@ -695,8 +705,8 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th style={{ width: 36 }} aria-label="Порядок" />
-                    <th>Название</th>
+                    <th style={{ width: 36 }} aria-label={str.thOrder} />
+                    <th>{str.thName}</th>
                     <th />
                   </tr>
                 </thead>
@@ -704,7 +714,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                   {productRows.length === 0 ? (
                     <tr>
                       <td colSpan={3} className={styles.muted}>
-                        Позиций пока нет.
+                        {str.emptyPositions}
                       </td>
                     </tr>
                   ) : (
@@ -717,6 +727,8 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                           key={row.key}
                           rowId={row.key}
                           label={row.name}
+                          dragTitle={str.drag}
+                          removeLabel={str.remove}
                           onRemove={() =>
                             setProductRows((prev) => prev.filter((r) => r.key !== row.key))
                           }
@@ -734,8 +746,8 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th style={{ width: 36 }} aria-label="Порядок" />
-                    <th>Название</th>
+                    <th style={{ width: 36 }} aria-label={str.thOrder} />
+                    <th>{str.thName}</th>
                     <th />
                   </tr>
                 </thead>
@@ -743,7 +755,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                   {brandRows.length === 0 ? (
                     <tr>
                       <td colSpan={3} className={styles.muted}>
-                        Позиций пока нет.
+                        {str.emptyPositions}
                       </td>
                     </tr>
                   ) : (
@@ -756,6 +768,8 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                           key={row.key}
                           rowId={row.key}
                           label={row.name}
+                          dragTitle={str.drag}
+                          removeLabel={str.remove}
                           onRemove={() =>
                             setBrandRows((prev) => prev.filter((r) => r.key !== row.key))
                           }
@@ -777,10 +791,10 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
             className={`${styles.btn} ${styles.btnPrimary}`}
             disabled={saving || !!loadError || (isEdit && !loaded)}
           >
-            {saving ? 'Сохранение…' : isEdit ? 'Сохранить' : 'Создать коллекцию'}
+            {saving ? str.saveBusy : isEdit ? str.saveEdit : str.create}
           </button>
           <Link href="/admin/collections" className={styles.btn}>
-            Отмена
+            {str.cancel}
           </Link>
         </div>
       </form>

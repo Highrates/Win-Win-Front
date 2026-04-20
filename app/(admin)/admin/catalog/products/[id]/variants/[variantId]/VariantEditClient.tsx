@@ -30,6 +30,9 @@ import {
   adminBackendJson,
   revalidatePublicCatalogCache,
 } from '@/lib/adminBackendFetch';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminVariantEditStrings } from '@/lib/admin-i18n/adminVariantEditI18n';
 import { slugifyVariantLabel } from '@/lib/slugifyVariantLabel';
 import catalogStyles from '../../../../catalogAdmin.module.css';
 import pn from '../../../new/productNew.module.css';
@@ -59,10 +62,12 @@ function mmToCmInput(mm: number | null | undefined): string {
 function SortableProductFrameRow({
   frameId,
   url,
+  strings: str,
   onRemove,
 }: {
   frameId: string;
   url: string;
+  strings: ReturnType<typeof adminVariantEditStrings>;
   onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -80,15 +85,15 @@ function SortableProductFrameRow({
         className={pn.dragHandle}
         {...attributes}
         {...listeners}
-        title="Перетащить"
-        aria-label="Перетащить"
+        title={str.dndTitle}
+        aria-label={str.dndAria}
       >
         ⋮⋮
       </button>
       <img className={pn.galleryThumbLg} src={url} alt="" />
       <div className={pn.rowActions}>
         <button type="button" className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`} onClick={onRemove}>
-          Убрать из варианта
+          {str.removeFromVariant}
         </button>
       </div>
     </div>
@@ -109,6 +114,10 @@ export function VariantEditClient({
   variantId: string;
 }) {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminVariantEditStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const priceLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
   const gallerySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -228,14 +237,14 @@ export function VariantEditClient({
         setLoaded(true);
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить вариант');
+          setLoadError(e instanceof Error ? e.message : s.errLoad);
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [productId, variantId, applyVariant]);
+  }, [productId, variantId, applyVariant, s]);
 
   useEffect(() => {
     let cancelled = false;
@@ -321,12 +330,12 @@ export function VariantEditClient({
 
   function openModel3dPicker() {
     pickTarget.current = { kind: 'model3d' };
-    setPicker({ filter: 'all', title: '3D-модель' });
+    setPicker({ filter: 'all', title: s.picker3d });
   }
 
   function openDrawingPicker() {
     pickTarget.current = { kind: 'drawing' };
-    setPicker({ filter: 'all', title: 'Чертёж' });
+    setPicker({ filter: 'all', title: s.pickerDrawing });
   }
 
   function handlePickerPick(sel: { url: string; id: string }) {
@@ -374,7 +383,7 @@ export function VariantEditClient({
     const priceNum = Number(price.replace(',', '.'));
     if (priceMode === 'manual') {
       if (!Number.isFinite(priceNum) || priceNum < 0) {
-        setSaveError('Укажите корректную цену');
+        setSaveError(s.errPrice);
         return;
       }
     }
@@ -402,29 +411,29 @@ export function VariantEditClient({
     const costCnyNum = cnyTrim ? Number(cnyTrim) : null;
 
     if (!modificationId) {
-      setSaveError('Выберите модификацию');
+      setSaveError(s.errPickMod);
       return;
     }
 
     for (const el of elements) {
       if (el.availableMaterialColors.length === 0) continue;
       if (!selections[el.id]) {
-        setSaveError(`Для элемента «${el.name}» не выбран материал-цвет`);
+        setSaveError(s.errMaterialColor(el.name));
         return;
       }
     }
 
     if (priceMode === 'formula') {
       if (costCnyNum == null || !Number.isFinite(costCnyNum) || costCnyNum <= 0) {
-        setSaveError('Укажите закупочную цену в юанях (CNY)');
+        setSaveError(s.errPurchaseCny);
         return;
       }
       if (wkg == null || !Number.isFinite(wkg) || wkg <= 0) {
-        setSaveError('Для расчёта по формуле укажите вес брутто (кг)');
+        setSaveError(s.errGrossWeight);
         return;
       }
       if (volM3 == null || volM3 <= 0) {
-        setSaveError('Для расчёта по формуле укажите объём брутто (м³)');
+        setSaveError(s.errGrossVol);
         return;
       }
     }
@@ -481,7 +490,7 @@ export function VariantEditClient({
       await revalidatePublicCatalogCache();
       router.push(`/admin/catalog/products/${productId}`);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
+      setSaveError(err instanceof Error ? err.message : s.saveErr);
     } finally {
       setSaving(false);
     }
@@ -490,7 +499,7 @@ export function VariantEditClient({
   async function handleDeleteVariant() {
     if (
       !window.confirm(
-        'Удалить этот вариант? Останется минимум один вариант у товара. Действие необратимо.',
+        s.confirmDelete,
       )
     ) {
       return;
@@ -506,7 +515,7 @@ export function VariantEditClient({
       router.push(`/admin/catalog/products/${productId}`);
       router.refresh();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Не удалось удалить вариант');
+      setSaveError(err instanceof Error ? err.message : s.deleteErr);
     } finally {
       setDeleting(false);
     }
@@ -515,7 +524,7 @@ export function VariantEditClient({
   const backHref = `/admin/catalog/products/${productId}`;
 
   if (!loaded && !loadError) {
-    return <p className={catalogStyles.muted}>Загрузка варианта…</p>;
+    return <p className={catalogStyles.muted}>{s.loading}</p>;
   }
 
   return (
@@ -524,19 +533,19 @@ export function VariantEditClient({
 
       <form className={`${catalogStyles.form} ${pn.formWide}`} onSubmit={submit}>
         <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-          Товар: <strong>{productName}</strong>
+          {s.productLabel} <strong>{productName}</strong>
           {isDefaultVariant ? (
-            <span className={catalogStyles.muted}> — вариант по умолчанию</span>
+            <span className={catalogStyles.muted}>{s.defaultSuffix}</span>
           ) : null}
         </p>
 
         {siblingVariants.length > 1 ? (
-          <nav className={vt.nav} aria-label="Варианты товара">
-            <h2 className={vt.title}>Варианты этого товара</h2>
+          <nav className={vt.nav} aria-label={s.navAria}>
+            <h2 className={vt.title}>{s.navTitle}</h2>
             <ul className={vt.tabList} role="tablist">
               {siblingVariants.map((v, index) => {
                 const isCurrent = v.id === variantId;
-                const priceLabel = `${Number(v.price).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ${v.currency}`;
+                const priceLabel = `${Number(v.price).toLocaleString(priceLocale, { maximumFractionDigits: 0 })} ${v.currency}`;
                 const tabId = `variant-tab-${v.id}`;
                 return (
                   <li key={v.id} className={vt.tab} role="presentation">
@@ -549,9 +558,9 @@ export function VariantEditClient({
                         aria-current="page"
                       >
                         <span className={vt.tabTitleRow}>
-                          Вариант {index + 1}
-                          {v.isDefault ? <span className={vt.badge}>По умолчанию</span> : null}
-                          {!v.isActive ? <span className={vt.badgeInactive}>Скрыт</span> : null}
+                          {s.variantN(index + 1)}
+                          {v.isDefault ? <span className={vt.badge}>{s.badgeDefault}</span> : null}
+                          {!v.isActive ? <span className={vt.badgeInactive}>{s.badgeHidden}</span> : null}
                         </span>
                         <span className={vt.meta}>{priceLabel}</span>
                       </span>
@@ -564,9 +573,9 @@ export function VariantEditClient({
                         aria-selected={false}
                       >
                         <span className={vt.tabTitleRow}>
-                          Вариант {index + 1}
-                          {v.isDefault ? <span className={vt.badge}>По умолчанию</span> : null}
-                          {!v.isActive ? <span className={vt.badgeInactive}>Скрыт</span> : null}
+                          {s.variantN(index + 1)}
+                          {v.isDefault ? <span className={vt.badge}>{s.badgeDefault}</span> : null}
+                          {!v.isActive ? <span className={vt.badgeInactive}>{s.badgeHidden}</span> : null}
                         </span>
                         <span className={vt.meta}>{priceLabel}</span>
                       </Link>
@@ -586,17 +595,17 @@ export function VariantEditClient({
                 className={catalogStyles.adminCheckboxForm}
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                aria-label="Вариант доступен в каталоге"
+                aria-label={s.publishedAria}
               />
-              <label htmlFor="variant-active">Вариант опубликован</label>
+              <label htmlFor="variant-active">{s.publishedLabel}</label>
             </div>
           </div>
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Конфигурация варианта</h2>
+          <h2 className={pn.sectionTitle}>{s.configTitle}</h2>
           <label className={catalogStyles.label} style={{ maxWidth: 480 }}>
-            Модификация
+            {s.modification}
             <select
               className={catalogStyles.input}
               value={modificationId}
@@ -613,7 +622,7 @@ export function VariantEditClient({
           </label>
           {elements.length === 0 ? (
             <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-              У модификации нет настраиваемых элементов — вариант определяется только модификацией.
+              {s.noConfigurableElements}
             </p>
           ) : (
             <div style={{ display: 'grid', gap: 14, marginTop: 12 }}>
@@ -634,8 +643,9 @@ export function VariantEditClient({
                     </h3>
                     {el.availableMaterialColors.length === 0 ? (
                       <p className={catalogStyles.muted} style={{ margin: 0 }}>
-                        Для элемента «{el.name}» не задан пул «материал-цветов». Добавьте их в
-                        карточке товара → блок «Модификации».
+                        {s.poolMissingPrefix}
+                        {el.name}
+                        {s.poolMissingSuffix}
                       </p>
                     ) : (
                       <div
@@ -713,7 +723,7 @@ export function VariantEditClient({
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Название и slug варианта</h2>
+          <h2 className={pn.sectionTitle}>{s.nameSlugTitle}</h2>
           <div
             style={{
               display: 'flex',
@@ -724,7 +734,7 @@ export function VariantEditClient({
             }}
           >
             <label className={catalogStyles.label}>
-              Название варианта
+              {s.variantName}
               <input
                 type="text"
                 className={catalogStyles.input}
@@ -736,7 +746,7 @@ export function VariantEditClient({
                     setVariantSlug(slugifyVariantLabel(next));
                   }
                 }}
-                placeholder="Необязательно — сгенерируется автоматически"
+                placeholder={s.slugPh}
                 autoComplete="off"
               />
               {!variantLabel.trim() && autoVariantLabelPreview ? (
@@ -744,7 +754,7 @@ export function VariantEditClient({
                   className={catalogStyles.muted}
                   style={{ display: 'block', marginTop: 6, fontSize: 13 }}
                 >
-                  Будет показано как: <strong>{autoVariantLabelPreview}</strong>
+                  {s.willShowAs} <strong>{autoVariantLabelPreview}</strong>
                 </span>
               ) : null}
             </label>
@@ -758,27 +768,25 @@ export function VariantEditClient({
                   variantSlugManuallyEditedRef.current = true;
                   setVariantSlug(e.target.value);
                 }}
-                placeholder="латиница-цифры"
+                placeholder={s.slugInputPh}
                 autoComplete="off"
               />
               <span
                 className={catalogStyles.muted}
                 style={{ display: 'block', marginTop: 6, fontSize: 13 }}
               >
-                Генерируется из названия варианта.
+                {s.slugHint}
               </span>
             </label>
           </div>
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Галерея варианта</h2>
+          <h2 className={pn.sectionTitle}>{s.galleryTitle}</h2>
           {productGalleryImages.length > 0 ? (
             <>
               <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-                Подмножество кадров из галереи товара. Клик по превью — добавить или убрать кадр;
-                порядок в списке ниже — перетаскиванием. Если ничего не выбрано, на витрине
-                показывается полная галерея товара.
+                {s.galleryHint}
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                 {productGalleryImages.map((pi) => {
@@ -788,7 +796,7 @@ export function VariantEditClient({
                       key={pi.id}
                       type="button"
                       onClick={() => toggleProductFrame(pi.id)}
-                      title={selected ? 'Убрать из варианта' : 'Добавить в вариант'}
+                      title={selected ? s.removeFromVariantShort : s.addToVariant}
                       style={{
                         padding: 0,
                         border: selected ? '2px solid #2563eb' : '1px solid #ccc',
@@ -823,6 +831,7 @@ export function VariantEditClient({
                             key={fid}
                             frameId={fid}
                             url={img.url}
+                            strings={s}
                             onRemove={() =>
                               setSelectedFrameIds((prev) => prev.filter((x) => x !== fid))
                             }
@@ -833,21 +842,16 @@ export function VariantEditClient({
                   </SortableContext>
                 </DndContext>
               ) : (
-                <p className={catalogStyles.muted}>
-                  Кадры не выбраны — на витрине будет показана общая галерея товара.
-                </p>
+                <p className={catalogStyles.muted}>{s.noFramesSelected}</p>
               )}
             </>
           ) : (
-            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-              У товара пока нет общей галереи — задайте кадры на карточке товара, тогда здесь
-              появится возможность выбрать подмножество для варианта.
-            </p>
+            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>{s.noProductGallery}</p>
           )}
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Габариты брутто</h2>
+          <h2 className={pn.sectionTitle}>{s.grossDimsTitle}</h2>
           <div
             style={{
               display: 'grid',
@@ -856,7 +860,7 @@ export function VariantEditClient({
             }}
           >
             <label className={catalogStyles.label}>
-              Длина, см
+              {s.lenCm}
               <input
                 className={catalogStyles.input}
                 inputMode="decimal"
@@ -866,7 +870,7 @@ export function VariantEditClient({
               />
             </label>
             <label className={catalogStyles.label}>
-              Ширина, см
+              {s.widthCm}
               <input
                 className={catalogStyles.input}
                 inputMode="decimal"
@@ -876,7 +880,7 @@ export function VariantEditClient({
               />
             </label>
             <label className={catalogStyles.label}>
-              Высота, см
+              {s.heightCm}
               <input
                 className={catalogStyles.input}
                 inputMode="decimal"
@@ -887,17 +891,17 @@ export function VariantEditClient({
             </label>
           </div>
           <label className={catalogStyles.label} style={{ marginTop: 12 }}>
-            Объём брутто, м³
+            {s.volGross}
             <input
               className={catalogStyles.input}
               inputMode="decimal"
               value={volumeM3}
               onChange={(e) => setVolumeM3(e.target.value)}
-              placeholder="Вручную"
-            />
-          </label>
+              placeholder={s.manualPh}
+              />
+            </label>
           <label className={catalogStyles.label} style={{ maxWidth: 280 }}>
-            Вес брутто, кг
+            {s.weightGross}
             <input
               className={catalogStyles.input}
               inputMode="decimal"
@@ -914,12 +918,12 @@ export function VariantEditClient({
               checked={fillNetDimensions}
               onChange={(e) => setFillNetDimensions(e.target.checked)}
             />
-            Заполнить габариты нетто
+            {s.fillNet}
           </label>
           {fillNetDimensions ? (
             <>
               <h2 className={pn.sectionTitle} style={{ marginTop: 16 }}>
-                Габариты нетто
+                {s.netDimsTitle}
               </h2>
               <div
                 style={{
@@ -929,7 +933,7 @@ export function VariantEditClient({
                 }}
               >
                 <label className={catalogStyles.label}>
-                  Длина, см
+                  {s.lenCm}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -939,7 +943,7 @@ export function VariantEditClient({
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Ширина, см
+                  {s.widthCm}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -949,7 +953,7 @@ export function VariantEditClient({
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Высота, см
+                  {s.heightCm}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -960,17 +964,17 @@ export function VariantEditClient({
                 </label>
               </div>
               <label className={catalogStyles.label} style={{ marginTop: 12 }}>
-                Объём нетто, м³
+                {s.volNet}
                 <input
                   className={catalogStyles.input}
                   inputMode="decimal"
                   value={netVolumeM3}
                   onChange={(e) => setNetVolumeM3(e.target.value)}
-                  placeholder="Вручную"
+                  placeholder={s.manualPh}
                 />
               </label>
               <label className={catalogStyles.label} style={{ maxWidth: 280 }}>
-                Вес нетто, кг
+                {s.weightNet}
                 <input
                   className={catalogStyles.input}
                   inputMode="decimal"
@@ -983,7 +987,7 @@ export function VariantEditClient({
         </div>
 
         <div className={pn.section}>
-          <div className={pn.priceModeRow} role="radiogroup" aria-label="Способ задания цены">
+          <div className={pn.priceModeRow} role="radiogroup" aria-label={s.priceModeAria}>
             <label className={pn.radioLabel}>
               <input
                 type="radio"
@@ -991,7 +995,7 @@ export function VariantEditClient({
                 checked={priceMode === 'formula'}
                 onChange={() => setPriceMode('formula')}
               />
-              По формуле
+              {s.byFormula}
             </label>
             <label className={pn.radioLabel}>
               <input
@@ -1000,32 +1004,32 @@ export function VariantEditClient({
                 checked={priceMode === 'manual'}
                 onChange={() => setPriceMode('manual')}
               />
-              Произвольно
+              {s.custom}
             </label>
           </div>
           {priceMode === 'formula' ? (
             <>
               <label className={catalogStyles.label}>
-                Закупочная цена (CNY)
+                {s.purchaseCny}
                 <input
                   type="text"
                   inputMode="decimal"
                   className={catalogStyles.input}
                   value={costPriceCny}
                   onChange={(e) => setCostPriceCny(e.target.value)}
-                  placeholder="¥ за единицу"
+                  placeholder={s.cnyPh}
                 />
               </label>
               <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-                Категории для расчёта берутся с карточки товара (основная и дополнительные).
+                {s.pricingCatsHint}
               </p>
               <div className={pn.pricePreviewBox} aria-live="polite">
                 {pricePreview.kind === 'loading' ? (
-                  <span className={catalogStyles.muted}>Расчёт…</span>
+                  <span className={catalogStyles.muted}>{s.calculating}</span>
                 ) : pricePreview.kind === 'ok' ? (
                   <>
-                    Цена:{' '}
-                    {Math.round(pricePreview.retailRub).toLocaleString('ru-RU', {
+                    {s.priceLabel}{' '}
+                    {Math.round(pricePreview.retailRub).toLocaleString(priceLocale, {
                       maximumFractionDigits: 0,
                     })}{' '}
                     ₽
@@ -1033,8 +1037,8 @@ export function VariantEditClient({
                       className={catalogStyles.muted}
                       style={{ display: 'block', marginTop: 6, fontWeight: 400 }}
                     >
-                      Себестоимость на складе МСК:{' '}
-                      {Math.round(pricePreview.mskRub).toLocaleString('ru-RU', {
+                      {s.costMsk}{' '}
+                      {Math.round(pricePreview.mskRub).toLocaleString(priceLocale, {
                         maximumFractionDigits: 0,
                       })}{' '}
                       ₽
@@ -1043,23 +1047,21 @@ export function VariantEditClient({
                 ) : pricePreview.kind === 'err' ? (
                   <span className={catalogStyles.error}>
                     {pricePreview.code === 'NO_PROFILE'
-                      ? 'Нет профиля ценообразования для выбранных категорий'
+                      ? s.noProfile
                       : pricePreview.code === 'INVALID_INPUT'
-                        ? 'Проверьте вес, объём и цену в юанях'
+                        ? s.checkInputs
                         : pricePreview.code === 'REQUEST_FAILED'
-                          ? 'Не удалось рассчитать цену'
-                          : 'Нет данных для расчёта'}
+                          ? s.calcFailed
+                          : s.noCalcData}
                   </span>
                 ) : (
-                  <span className={catalogStyles.muted}>
-                    Укажите CNY, вес и объём — цена появится здесь
-                  </span>
+                  <span className={catalogStyles.muted}>{s.hintCnyVolWeight}</span>
                 )}
               </div>
             </>
           ) : (
             <label className={catalogStyles.label}>
-              Цена (₽)
+              {s.priceRub}
               <input
                 type="text"
                 inputMode="decimal"
@@ -1073,14 +1075,14 @@ export function VariantEditClient({
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>3D-модель и чертёж</h2>
+          <h2 className={pn.sectionTitle}>{s.files3dTitle}</h2>
           <p className={catalogStyles.muted} style={{ marginTop: 0, marginBottom: 12 }}>
-            Файлы из медиатеки: например GLB / GLTF для модели, PDF или изображение для чертежа.
+            {s.files3dHint}
           </p>
           <div className={pn.repeatList} style={{ marginBottom: 0 }}>
             <div className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>3D-модель</div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.model3d}</div>
                 {model3dUrl.trim() ? (
                   <a
                     href={model3dUrl.trim()}
@@ -1092,12 +1094,12 @@ export function VariantEditClient({
                     {model3dUrl.trim()}
                   </a>
                 ) : (
-                  <span className={catalogStyles.muted}>Файл не выбран</span>
+                  <span className={catalogStyles.muted}>{s.fileNotSelected}</span>
                 )}
               </div>
               <div className={pn.rowActions}>
                 <button type="button" className={catalogStyles.btn} onClick={openModel3dPicker}>
-                  Медиатека
+                  {c.mediaLibrary}
                 </button>
                 <button
                   type="button"
@@ -1105,13 +1107,13 @@ export function VariantEditClient({
                   onClick={() => setModel3dUrl('')}
                   disabled={!model3dUrl.trim()}
                 >
-                  Очистить
+                  {s.clear}
                 </button>
               </div>
             </div>
             <div className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Чертёж</div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.drawing}</div>
                 {drawingUrl.trim() ? (
                   <a
                     href={drawingUrl.trim()}
@@ -1123,12 +1125,12 @@ export function VariantEditClient({
                     {drawingUrl.trim()}
                   </a>
                 ) : (
-                  <span className={catalogStyles.muted}>Файл не выбран</span>
+                  <span className={catalogStyles.muted}>{s.fileNotSelected}</span>
                 )}
               </div>
               <div className={pn.rowActions}>
                 <button type="button" className={catalogStyles.btn} onClick={openDrawingPicker}>
-                  Медиатека
+                  {c.mediaLibrary}
                 </button>
                 <button
                   type="button"
@@ -1136,7 +1138,7 @@ export function VariantEditClient({
                   onClick={() => setDrawingUrl('')}
                   disabled={!drawingUrl.trim()}
                 >
-                  Очистить
+                  {s.clear}
                 </button>
               </div>
             </div>
@@ -1144,7 +1146,7 @@ export function VariantEditClient({
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Артикул</h2>
+          <h2 className={pn.sectionTitle}>{s.skuSection}</h2>
           <label className={catalogStyles.label}>
             SKU
             <input
@@ -1164,10 +1166,10 @@ export function VariantEditClient({
             className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
             disabled={saving || !loaded}
           >
-            {saving ? 'Сохранение…' : 'Сохранить вариант'}
+            {saving ? s.saving : s.saveVariant}
           </button>
           <Link href={backHref} className={catalogStyles.btn}>
-            ← К карточке товара
+            {s.backProduct}
           </Link>
           <button
             type="button"
@@ -1177,7 +1179,7 @@ export function VariantEditClient({
               void handleDeleteVariant();
             }}
           >
-            {deleting ? 'Удаление…' : 'Удалить вариант'}
+            {deleting ? s.deleting : s.deleteVariant}
           </button>
         </div>
       </form>

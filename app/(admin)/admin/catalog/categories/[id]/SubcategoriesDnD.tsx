@@ -17,8 +17,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCategoryTableStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import styles from '../../catalogAdmin.module.css';
 
 export type SubcatRow = {
@@ -29,7 +31,7 @@ export type SubcatRow = {
   _count: { primaryProducts: number; productCategories: number; children: number };
 };
 
-function SortableSubRow({ row }: { row: SubcatRow }) {
+function SortableSubRow({ row, t }: { row: SubcatRow; t: ReturnType<typeof adminCategoryTableStrings> }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: row.id,
   });
@@ -40,7 +42,7 @@ function SortableSubRow({ row }: { row: SubcatRow }) {
   };
   return (
     <tr ref={setNodeRef} style={style}>
-      <td className={styles.dragHandle} {...attributes} {...listeners} title="Перетащить">
+      <td className={styles.dragHandle} {...attributes} {...listeners} title={t.drag}>
         ⋮⋮
       </td>
       <td>
@@ -62,6 +64,8 @@ export function SubcategoriesDnD({
   onUpdated: () => void | Promise<void>;
 }) {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const t = useMemo(() => adminCategoryTableStrings(locale), [locale]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const handleDragEnd = useCallback(
@@ -84,7 +88,7 @@ export function SubcategoriesDnD({
         await onUpdated();
       }
     },
-    [items, parentCategoryId, onUpdated, router]
+    [items, parentCategoryId, onUpdated, router],
   );
 
   const ids = items.map((r) => r.id);
@@ -95,16 +99,16 @@ export function SubcategoriesDnD({
         <table className={styles.table}>
           <thead>
             <tr>
-              <th style={{ width: 36 }} aria-label="Порядок" />
-              <th>Название</th>
-              <th>Товаров</th>
-              <th>Подкатегорий</th>
+              <th style={{ width: 36 }} aria-label={t.thOrder} />
+              <th>{t.thName}</th>
+              <th>{t.thProducts}</th>
+              <th>{t.thSubcats}</th>
             </tr>
           </thead>
           <tbody>
             <SortableContext items={ids} strategy={verticalListSortingStrategy}>
               {items.map((row) => (
-                <SortableSubRow key={row.id} row={row} />
+                <SortableSubRow key={row.id} row={row} t={t} />
               ))}
             </SortableContext>
           </tbody>

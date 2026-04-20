@@ -15,7 +15,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { adminCategoryTableStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import type { AdminCategoryRow } from './adminCategoryTypes';
 import styles from '../catalogAdmin.module.css';
 
@@ -24,11 +27,13 @@ function SortableRow({
   selected,
   onToggleSelect,
   checkboxIdPrefix,
+  t,
 }: {
   row: AdminCategoryRow;
   selected: boolean;
   onToggleSelect: () => void;
   checkboxIdPrefix: string;
+  t: ReturnType<typeof adminCategoryTableStrings>;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: row.id,
@@ -41,7 +46,7 @@ function SortableRow({
 
   return (
     <tr ref={setNodeRef} style={style} className={!row.isActive ? styles.rowInactive : undefined}>
-      <td className={styles.dragHandle} {...attributes} {...listeners} title="Перетащить">
+      <td className={styles.dragHandle} {...attributes} {...listeners} title={t.drag}>
         ⋮⋮
       </td>
       <td>
@@ -50,7 +55,7 @@ function SortableRow({
           className={styles.adminCheckboxInTable}
           checked={selected}
           onChange={onToggleSelect}
-          aria-label={`Выбрать категорию «${row.name}»`}
+          aria-label={t.selectCat(row.name)}
         />
       </td>
       <td>
@@ -58,7 +63,7 @@ function SortableRow({
       </td>
       <td>{row.parent ? row.parent.name : '—'}</td>
       <td
-        title={`Напрямую в узле: ${row._count.primaryProducts + row._count.productCategories}`}
+        title={t.directTitle(row._count.primaryProducts + row._count.productCategories)}
       >
         {row.recursiveProductCount}
       </td>
@@ -69,13 +74,15 @@ function SortableRow({
 
 function TableHead({
   selectAllProps,
+  t,
 }: {
   selectAllProps: { id: string; checked: boolean; onChange: () => void; ariaLabel: string };
+  t: ReturnType<typeof adminCategoryTableStrings>;
 }) {
   return (
     <thead>
       <tr>
-        <th style={{ width: 36 }} aria-label="Порядок" />
+        <th style={{ width: 36 }} aria-label={t.thOrder} />
         <th style={{ width: 44 }}>
           <AccountCheckbox
             id={selectAllProps.id}
@@ -85,10 +92,10 @@ function TableHead({
             aria-label={selectAllProps.ariaLabel}
           />
         </th>
-        <th>Название</th>
-        <th>Родитель</th>
-        <th title="Включая товары во всех вложенных подкатегориях">Товаров (всего)</th>
-        <th>Подкатегорий</th>
+        <th>{t.thName}</th>
+        <th>{t.thParent}</th>
+        <th title={t.thProductsTotalTitle}>{t.thProductsTotal}</th>
+        <th>{t.thSubcats}</th>
       </tr>
     </thead>
   );
@@ -117,6 +124,8 @@ export function AdminCategorySortableTable({
   checkboxIdPrefix,
   onDragEnd,
 }: Props) {
+  const { locale } = useAdminLocale();
+  const t = useMemo(() => adminCategoryTableStrings(locale), [locale]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const ids = rows.map((r) => r.id);
 
@@ -125,6 +134,7 @@ export function AdminCategorySortableTable({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <table className={styles.table}>
           <TableHead
+            t={t}
             selectAllProps={{
               id: selectAllCheckboxId,
               checked: allSectionSelected,
@@ -141,6 +151,7 @@ export function AdminCategorySortableTable({
                   selected={selected.has(row.id)}
                   onToggleSelect={() => onToggle(row.id)}
                   checkboxIdPrefix={checkboxIdPrefix}
+                  t={t}
                 />
               ))}
             </SortableContext>

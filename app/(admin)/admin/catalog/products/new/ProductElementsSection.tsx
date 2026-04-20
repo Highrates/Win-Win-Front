@@ -15,9 +15,11 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BrandMaterialColorPickerModal } from '@/components/admin/BrandMaterialColorPickerModal/BrandMaterialColorPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminProductElementsStrings } from '@/lib/admin-i18n/adminProductElementsI18n';
 import { createClientRandomId } from '@/lib/clientRandomId';
 import catalogStyles from '../../catalogAdmin.module.css';
 import pn from './productNew.module.css';
@@ -65,12 +67,14 @@ function elementFromAdmin(el: AdminProductElement): ElementRow {
 
 function SortableElementCard({
   el,
+  strings: es,
   onChange,
   onRemove,
   onOpenPicker,
   onRemoveAvailability,
 }: {
   el: ElementRow;
+  strings: ReturnType<typeof adminProductElementsStrings>;
   onChange: (patch: Partial<ElementRow>) => void;
   onRemove: () => void;
   onOpenPicker: () => void;
@@ -101,8 +105,8 @@ function SortableElementCard({
           className={pn.dragHandle}
           {...attributes}
           {...listeners}
-          title="Перетащить элемент"
-          aria-label="Перетащить элемент"
+          title={es.dragEl}
+          aria-label={es.dragElAria}
         >
           ⋮⋮
         </button>
@@ -110,7 +114,7 @@ function SortableElementCard({
           type="text"
           className={catalogStyles.input}
           style={{ flex: 1, minWidth: 180 }}
-          placeholder="Напр. Обивка"
+          placeholder={es.namePh}
           value={el.name}
           onChange={(e) => onChange({ name: e.target.value })}
         />
@@ -119,7 +123,7 @@ function SortableElementCard({
           className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
           onClick={onRemove}
         >
-          Удалить
+          {es.delete}
         </button>
       </div>
       <div style={{ marginTop: 10 }}>
@@ -132,14 +136,14 @@ function SortableElementCard({
             marginBottom: 8,
           }}
         >
-          <span className={catalogStyles.muted}>Доступные «материал-цвета»:</span>
+          <span className={catalogStyles.muted}>{es.poolLabel}</span>
           <button type="button" className={catalogStyles.btn} onClick={onOpenPicker}>
-            Выбрать из библиотеки бренда
+            {es.pickFromBrand}
           </button>
         </div>
         {el.availabilities.length === 0 ? (
           <p className={catalogStyles.muted} style={{ marginTop: 4 }}>
-            Ещё не выбрано. Кликните «Выбрать из библиотеки бренда», чтобы добавить.
+            {es.poolEmpty}
           </p>
         ) : (
           <ul
@@ -191,8 +195,8 @@ function SortableElementCard({
                   className={catalogStyles.btn}
                   style={{ padding: '2px 8px', minHeight: 0 }}
                   onClick={() => onRemoveAvailability(a.brandMaterialColorId)}
-                  aria-label="Убрать из элемента"
-                  title="Убрать из элемента"
+                  aria-label={es.removeFromElAria}
+                  title={es.removeFromElTitle}
                 >
                   ×
                 </button>
@@ -218,6 +222,8 @@ export function ProductElementsSection({
   initialElements,
   onProductMutated,
 }: Props) {
+  const { locale } = useAdminLocale();
+  const elStr = useMemo(() => adminProductElementsStrings(locale), [locale]);
   const [elements, setElements] = useState<ElementRow[]>(() =>
     initialElements.map(elementFromAdmin),
   );
@@ -272,7 +278,7 @@ export function ProductElementsSection({
     setMsg(null);
     if (elements.some((el) => !el.name.trim())) {
       setMsgKind('err');
-      setMsg('У всех элементов должно быть название');
+      setMsg(elStr.errNames);
       return;
     }
     setSaving(true);
@@ -308,14 +314,14 @@ export function ProductElementsSection({
       onProductMutated(fresh);
       await revalidatePublicCatalogCache();
       setMsgKind('ok');
-      setMsg('Элементы сохранены');
+      setMsg(elStr.saved);
     } catch (err) {
       setMsgKind('err');
-      setMsg(err instanceof Error ? err.message : 'Ошибка сохранения элементов');
+      setMsg(err instanceof Error ? err.message : elStr.saveErr);
     } finally {
       setSaving(false);
     }
-  }, [elements, productId, onProductMutated]);
+  }, [elements, productId, onProductMutated, elStr]);
 
   return (
     <div className={pn.section}>
@@ -323,7 +329,7 @@ export function ProductElementsSection({
         open={pickerElementId !== null}
         brandId={brandId}
         preSelectedIds={pickerElement?.availabilities.map((a) => a.brandMaterialColorId) ?? []}
-        title={`Материал-цвета для «${pickerElement?.name || 'элемент'}»`}
+        title={elStr.pickerTitle(pickerElement?.name || elStr.elementFallback)}
         onClose={() => setPickerElementId(null)}
         onConfirm={(picked) => {
           if (pickerElementId) {
@@ -357,7 +363,7 @@ export function ProductElementsSection({
         }}
       >
         <h2 className={pn.sectionTitle} style={{ margin: 0 }}>
-          Настраиваемые элементы
+          {elStr.sectionTitle}
         </h2>
         <button
           type="button"
@@ -367,14 +373,13 @@ export function ProductElementsSection({
           }}
           disabled={saving}
         >
-          {saving ? 'Сохранение…' : 'Сохранить элементы'}
+          {saving ? elStr.saveBusy : elStr.save}
         </button>
       </div>
 
       {elements.length === 0 ? (
         <p className={catalogStyles.muted}>
-          У товара ещё нет элементов. Для простого товара это нормально — достаточно только
-          модификации. Для составного товара добавьте соответствующие элементы.
+          {elStr.hintNoElements}
         </p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -387,6 +392,7 @@ export function ProductElementsSection({
                 <SortableElementCard
                   key={el.id}
                   el={el}
+                  strings={elStr}
                   onChange={(patch) => updateElement(el.id, patch)}
                   onRemove={() => removeElement(el.id)}
                   onOpenPicker={() => setPickerElementId(el.id)}
@@ -400,7 +406,7 @@ export function ProductElementsSection({
 
       <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className={catalogStyles.btn} onClick={addElement}>
-          + Элемент
+          {elStr.addElement}
         </button>
       </div>
 

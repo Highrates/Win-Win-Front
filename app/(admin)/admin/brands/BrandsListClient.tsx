@@ -1,13 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminBrandsListStrings } from '@/lib/admin-i18n/adminBrandsListI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import styles from '../catalog/catalogAdmin.module.css';
 import type { AdminBrandRow } from './adminBrandTypes';
 
 export function BrandsListClient() {
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminBrandsListStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [rows, setRows] = useState<AdminBrandRow[]>([]);
@@ -30,12 +36,12 @@ export function BrandsListClient() {
       setRows(data);
       setSelected(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : c.errLoad);
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ]);
+  }, [debouncedQ, c.errLoad]);
 
   useEffect(() => {
     load();
@@ -59,9 +65,7 @@ export function BrandsListClient() {
 
   async function removeSelected() {
     if (!selected.size) return;
-    const ok = window.confirm(
-      `Удалить выбранные бренды (${selected.size})? У брендов с товарами удаление будет пропущено.`
-    );
+    const ok = window.confirm(s.confirmDelete(selected.size));
     if (!ok) return;
     setDeleting(true);
     setError(null);
@@ -74,15 +78,13 @@ export function BrandsListClient() {
         }
       );
       if (res.skipped.length) {
-        setError(
-          `Не удалено ${res.skipped.length} брендов (есть товары). Удалено без товаров: ${res.deleted.length}.`
-        );
+        setError(s.partialDelete(res.skipped.length, res.deleted.length));
       } else {
         setError(null);
       }
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка удаления');
+      setError(e instanceof Error ? e.message : c.errDelete);
     } finally {
       setDeleting(false);
     }
@@ -94,15 +96,15 @@ export function BrandsListClient() {
         <input
           type="search"
           className={styles.search}
-          placeholder="Поиск по названию…"
+          placeholder={s.searchPlaceholder}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          aria-label="Поиск брендов"
+          aria-label={s.searchAria}
         />
         <Link href="/admin/brands/new" className={`${styles.btn} ${styles.btnPrimary}`}>
-          Добавить бренд
+          {s.addBrand}
         </Link>
-        <div className={styles.bulkGroup} role="group" aria-label="Массовые операции">
+        <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
           {rows.length > 0 ? (
             <>
               <button
@@ -110,10 +112,10 @@ export function BrandsListClient() {
                 className={styles.btn}
                 onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
               >
-                Выбрать все
+                {s.selectAll}
               </button>
               <button type="button" className={styles.btn} onClick={() => setSelected(new Set())}>
-                Снять выбор
+                {s.clearSelection}
               </button>
             </>
           ) : null}
@@ -123,7 +125,7 @@ export function BrandsListClient() {
             disabled={!selected.size || deleting}
             onClick={removeSelected}
           >
-            {deleting ? 'Удаление…' : `Удалить (${selected.size})`}
+            {deleting ? s.deleteBusy : s.deleteWithCount(selected.size)}
           </button>
         </div>
       </div>
@@ -131,9 +133,9 @@ export function BrandsListClient() {
       {error ? <p className={styles.error}>{error}</p> : null}
 
       {loading ? (
-        <p className={styles.muted}>Загрузка…</p>
+        <p className={styles.muted}>{c.loading}</p>
       ) : rows.length === 0 ? (
-        <p className={styles.muted}>Бренды не найдены.</p>
+        <p className={styles.muted}>{s.empty}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -145,12 +147,12 @@ export function BrandsListClient() {
                     className={styles.adminCheckboxInTable}
                     checked={allSelected}
                     onChange={toggleAll}
-                    aria-label="Выбрать все бренды"
+                    aria-label={s.selectAllBrandsAria}
                   />
                 </th>
-                <th>Название бренда</th>
-                <th>Товары</th>
-                <th>Доступность</th>
+                <th>{s.colName}</th>
+                <th>{s.colProducts}</th>
+                <th>{s.colVisibility}</th>
               </tr>
             </thead>
             <tbody>
@@ -162,7 +164,7 @@ export function BrandsListClient() {
                       className={styles.adminCheckboxInTable}
                       checked={selected.has(r.id)}
                       onChange={() => toggle(r.id)}
-                      aria-label={`Выбрать бренд «${r.name}»`}
+                      aria-label={s.selectBrandAria(r.name)}
                     />
                   </td>
                   <td>
@@ -171,7 +173,7 @@ export function BrandsListClient() {
                   <td>{r._count.products}</td>
                   <td>
                     <span className={r.isActive ? `${styles.badge} ${styles.badgeOn}` : `${styles.badge} ${styles.badgeOff}`}>
-                      {r.isActive ? 'Опубликован' : 'Скрыт'}
+                      {r.isActive ? s.published : s.hidden}
                     </span>
                   </td>
                 </tr>

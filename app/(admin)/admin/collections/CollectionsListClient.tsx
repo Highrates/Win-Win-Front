@@ -2,18 +2,21 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCollectionsListStrings } from '@/lib/admin-i18n/adminCollectionsI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import styles from '../catalog/catalogAdmin.module.css';
 import type { AdminCuratedCollectionRow } from './collectionsAdminTypes';
 
-function kindLabel(k: AdminCuratedCollectionRow['kind']): string {
-  return k === 'PRODUCT' ? 'Товары' : 'Бренды';
-}
-
 export function CollectionsListClient() {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminCollectionsListStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [rows, setRows] = useState<AdminCuratedCollectionRow[]>([]);
@@ -38,16 +41,20 @@ export function CollectionsListClient() {
       setRows(data);
       setSelected(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : s.errLoad);
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ]);
+  }, [debouncedQ, s]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  function kindLabel(k: AdminCuratedCollectionRow['kind']): string {
+    return k === 'PRODUCT' ? s.kindProduct : s.kindBrand;
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -65,7 +72,7 @@ export function CollectionsListClient() {
 
   async function removeSelected() {
     if (!selected.size) return;
-    const ok = window.confirm(`Удалить выбранные коллекции (${selected.size})?`);
+    const ok = window.confirm(s.confirmDelete(selected.size));
     if (!ok) return;
     setDeleting(true);
     setError(null);
@@ -78,7 +85,7 @@ export function CollectionsListClient() {
       router.refresh();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка удаления');
+      setError(e instanceof Error ? e.message : s.errDelete);
     } finally {
       setDeleting(false);
     }
@@ -92,15 +99,15 @@ export function CollectionsListClient() {
         <input
           type="search"
           className={styles.search}
-          placeholder="Поиск по названию…"
+          placeholder={s.searchPh}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          aria-label="Поиск коллекций"
+          aria-label={s.searchAria}
         />
         <Link href="/admin/collections/new" className={`${styles.btn} ${styles.btnPrimary}`}>
-          Добавить коллекцию
+          {s.add}
         </Link>
-        <div className={styles.bulkGroup} role="group" aria-label="Массовые операции">
+        <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
           {!debouncedQ && rows.length > 0 ? (
             <>
               <button
@@ -108,10 +115,10 @@ export function CollectionsListClient() {
                 className={styles.btn}
                 onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
               >
-                Выбрать все
+                {s.selectAll}
               </button>
               <button type="button" className={styles.btn} onClick={() => setSelected(new Set())}>
-                Снять выбор
+                {s.clear}
               </button>
             </>
           ) : null}
@@ -121,7 +128,7 @@ export function CollectionsListClient() {
             disabled={!selected.size || deleting}
             onClick={removeSelected}
           >
-            {deleting ? 'Удаление…' : `Удалить (${selected.size})`}
+            {deleting ? s.deleting : s.delete(selected.size)}
           </button>
         </div>
       </div>
@@ -129,9 +136,9 @@ export function CollectionsListClient() {
       {error ? <p className={styles.error}>{error}</p> : null}
 
       {loading ? (
-        <p className={styles.muted}>Загрузка…</p>
+        <p className={styles.muted}>{c.loading}</p>
       ) : rows.length === 0 ? (
-        <p className={styles.muted}>Коллекций не найдено.</p>
+        <p className={styles.muted}>{s.empty}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -143,13 +150,13 @@ export function CollectionsListClient() {
                     className={styles.adminCheckboxInTable}
                     checked={allSelected}
                     onChange={toggleAll}
-                    aria-label="Выбрать все коллекции"
+                    aria-label={s.selectAllAria}
                   />
                 </th>
-                <th>Название коллекции</th>
-                <th>Тип</th>
-                <th>Кол-во позиций</th>
-                <th>Доступность</th>
+                <th>{s.thName}</th>
+                <th>{s.thType}</th>
+                <th>{s.thCount}</th>
+                <th>{s.thVis}</th>
               </tr>
             </thead>
             <tbody>
@@ -161,7 +168,7 @@ export function CollectionsListClient() {
                       className={styles.adminCheckboxInTable}
                       checked={selected.has(r.id)}
                       onChange={() => toggle(r.id)}
-                      aria-label={`Выбрать ${r.name}`}
+                      aria-label={s.selectOne(r.name)}
                     />
                   </td>
                   <td>
@@ -171,7 +178,7 @@ export function CollectionsListClient() {
                   <td>{r.itemCount}</td>
                   <td>
                     <span className={`${styles.badge} ${r.isActive ? styles.badgeOn : styles.badgeOff}`}>
-                      {r.isActive ? 'В каталоге' : 'Скрыта'}
+                      {r.isActive ? s.inCatalog : s.hidden}
                     </span>
                   </td>
                 </tr>

@@ -17,6 +17,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminProductModsStrings } from '@/lib/admin-i18n/adminProductModsI18n';
 import { createClientRandomId } from '@/lib/clientRandomId';
 import catalogStyles from '../../catalogAdmin.module.css';
 import pn from './productNew.module.css';
@@ -47,10 +49,12 @@ function modificationFromAdmin(m: AdminProductModification): ModificationRow {
 
 function SortableModificationRow({
   mod,
+  strings: ms,
   onChange,
   onRemove,
 }: {
   mod: ModificationRow;
+  strings: ReturnType<typeof adminProductModsStrings>;
   onChange: (next: ModificationRow) => void;
   onRemove: () => void;
 }) {
@@ -69,8 +73,8 @@ function SortableModificationRow({
         className={pn.dragHandle}
         {...attributes}
         {...listeners}
-        title="Перетащить модификацию"
-        aria-label="Перетащить модификацию"
+        title={ms.dragMod}
+        aria-label={ms.dragModAria}
       >
         ⋮⋮
       </button>
@@ -78,7 +82,7 @@ function SortableModificationRow({
         type="text"
         className={catalogStyles.input}
         style={{ flex: 1, minWidth: 200 }}
-        placeholder="Напр. 2000×800 — угловой левый"
+        placeholder={ms.namePh}
         value={mod.name}
         onChange={(e) => onChange({ ...mod, name: e.target.value })}
       />
@@ -86,7 +90,7 @@ function SortableModificationRow({
         type="text"
         className={catalogStyles.input}
         style={{ width: 200 }}
-        placeholder="slug (авто)"
+        placeholder={ms.slugPh}
         value={mod.modificationSlug ?? ''}
         onChange={(e) => onChange({ ...mod, modificationSlug: e.target.value || null })}
       />
@@ -95,7 +99,7 @@ function SortableModificationRow({
         className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
         onClick={onRemove}
       >
-        Удалить
+        {ms.delete}
       </button>
     </div>
   );
@@ -112,6 +116,8 @@ export function ProductModificationsSection({
   initialModifications,
   onProductMutated,
 }: Props) {
+  const { locale } = useAdminLocale();
+  const ms = useMemo(() => adminProductModsStrings(locale), [locale]);
   const [modifications, setModifications] = useState<ModificationRow[]>(() =>
     initialModifications.map(modificationFromAdmin),
   );
@@ -158,7 +164,7 @@ export function ProductModificationsSection({
     setMsg(null);
     if (hasAnyUnnamed) {
       setMsgKind('err');
-      setMsg('У всех модификаций должно быть название');
+      setMsg(ms.errNames);
       return;
     }
     const payload = {
@@ -191,14 +197,14 @@ export function ProductModificationsSection({
       onProductMutated(fresh);
       await revalidatePublicCatalogCache();
       setMsgKind('ok');
-      setMsg('Модификации сохранены');
+      setMsg(ms.saved);
     } catch (err) {
       setMsgKind('err');
-      setMsg(err instanceof Error ? err.message : 'Ошибка сохранения модификаций');
+      setMsg(err instanceof Error ? err.message : ms.saveErr);
     } finally {
       setSaving(false);
     }
-  }, [hasAnyUnnamed, modifications, productId, onProductMutated]);
+  }, [hasAnyUnnamed, modifications, productId, onProductMutated, ms]);
 
   return (
     <div className={pn.section}>
@@ -212,7 +218,7 @@ export function ProductModificationsSection({
         }}
       >
         <h2 className={pn.sectionTitle} style={{ margin: 0 }}>
-          Модификации товара
+          {ms.sectionTitle}
         </h2>
         <button
           type="button"
@@ -222,13 +228,13 @@ export function ProductModificationsSection({
           }}
           disabled={saving}
         >
-          {saving ? 'Сохранение…' : 'Сохранить модификации'}
+          {saving ? ms.saveBusy : ms.save}
         </button>
       </div>
 
       {modifications.length === 0 ? (
         <p className={catalogStyles.muted}>
-          Ещё нет модификаций. Нажмите «+ Модификация», чтобы добавить.
+          {ms.empty}
         </p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onModDragEnd}>
@@ -241,6 +247,7 @@ export function ProductModificationsSection({
                 <SortableModificationRow
                   key={m.id}
                   mod={m}
+                  strings={ms}
                   onChange={(next) => updateModification(m.id, next)}
                   onRemove={() => removeModification(m.id)}
                 />
@@ -252,7 +259,7 @@ export function ProductModificationsSection({
 
       <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className={catalogStyles.btn} onClick={addModification}>
-          + Модификация
+          {ms.addMod}
         </button>
       </div>
 

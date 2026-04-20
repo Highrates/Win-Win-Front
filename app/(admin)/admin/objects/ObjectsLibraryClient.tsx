@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TBtn } from '@/components/TBtn/TBtn';
 import tbtnStyles from '@/components/TBtn/TBtn.module.css';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import {
   adminBackendJson,
   adminUploadMediaLibrary,
@@ -13,6 +14,7 @@ import type {
   MediaLibraryTab,
   MediaObjectRow,
 } from '@/lib/adminMediaLibraryTypes';
+import { objectsLibraryStrings } from '@/lib/admin-i18n/adminObjectsLibraryStrings';
 import catalogStyles from '../catalog/catalogAdmin.module.css';
 import styles from './objectsLibrary.module.css';
 
@@ -24,7 +26,7 @@ function formatBytes(n: number): string {
   return `${mb >= 10 ? mb.toFixed(0) : mb.toFixed(1)} MB`;
 }
 
-function formatKindLabel(mimeType: string, originalName: string): string {
+function formatKindLabel(mimeType: string, originalName: string, fallbackGeneric: string): string {
   const ext = originalName.match(/\.([a-z0-9]+)$/i)?.[1]?.toUpperCase();
   const map: Record<string, string> = {
     'image/jpeg': 'JPEG',
@@ -42,7 +44,7 @@ function formatKindLabel(mimeType: string, originalName: string): string {
   if (map[mimeType]) return map[mimeType];
   if (ext) return ext;
   const part = mimeType.split('/')[1];
-  return part ? part.replace(/[-+]/g, ' ').toUpperCase() : 'Файл';
+  return part ? part.replace(/[-+]/g, ' ').toUpperCase() : fallbackGeneric;
 }
 
 /** Отступ подписей в селектах (плоский список по pathKey) */
@@ -63,13 +65,19 @@ function isProtectedMediaFolder(f: MediaFolderRow): boolean {
   );
 }
 
-function folderParentDisplayName(f: MediaFolderRow, all: MediaFolderRow[]): string {
-  if (!f.parentId) return 'Корень';
+function folderParentDisplayName(
+  f: MediaFolderRow,
+  all: MediaFolderRow[],
+  rootLabel: string
+): string {
+  if (!f.parentId) return rootLabel;
   return all.find((x) => x.id === f.parentId)?.name ?? '—';
 }
 
 export function ObjectsLibraryClient() {
   const uploadInputId = useId();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => objectsLibraryStrings(locale), [locale]);
 
   const [tab, setTab] = useState<MediaLibraryTab>('all');
   const [q, setQ] = useState('');
@@ -139,7 +147,7 @@ export function ObjectsLibraryClient() {
                 className={styles.folderToggle}
                 aria-expanded={!isCollapsed}
                 aria-label={
-                  isCollapsed ? 'Развернуть вложенные папки' : 'Свернуть вложенные папки'
+                  isCollapsed ? s.folderExpandNested : s.folderCollapseNested
                 }
                 onClick={() => toggleFolderCollapse(f.id)}
               >
@@ -164,8 +172,8 @@ export function ObjectsLibraryClient() {
               <button
                 type="button"
                 className={styles.folderMenuBtn}
-                title="Настройки папки"
-                aria-label="Настройки папки"
+                title={s.folderSettingsTitle}
+                aria-label={s.folderSettingsAria}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -192,9 +200,9 @@ export function ObjectsLibraryClient() {
       const data = await adminBackendJson<MediaFolderRow[]>('catalog/admin/media/folders');
       setFolders(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить папки');
+      setError(e instanceof Error ? e.message : s.errLoadFolders);
     }
-  }, []);
+  }, [s.errLoadFolders]);
 
   const loadObjects = useCallback(async () => {
     setLoading(true);
@@ -209,12 +217,12 @@ export function ObjectsLibraryClient() {
       );
       setObjects(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : s.errLoadObjects);
       setObjects([]);
     } finally {
       setLoading(false);
     }
-  }, [tab, debouncedQ, folderFilter]);
+  }, [tab, debouncedQ, folderFilter, s.errLoadObjects]);
 
   useEffect(() => {
     loadFolders();
@@ -247,7 +255,7 @@ export function ObjectsLibraryClient() {
       setCreateOpen(false);
       await loadFolders();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось создать папку');
+      setError(err instanceof Error ? err.message : s.errCreateFolder);
     } finally {
       setCreateSaving(false);
     }
@@ -256,9 +264,7 @@ export function ObjectsLibraryClient() {
   async function deleteFolderFromSettings() {
     if (!folderSettings) return;
     if (isProtectedMediaFolder(folderSettings)) return;
-    const ok = window.confirm(
-      `Удалить папку «${folderSettings.name}»? Должна быть пустой (без вложенных папок и файлов).`
-    );
+    const ok = window.confirm(s.deleteFolderConfirm(folderSettings.name));
     if (!ok) return;
     setFolderDeleting(true);
     setError(null);
@@ -271,7 +277,7 @@ export function ObjectsLibraryClient() {
       await loadFolders();
       await loadObjects();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось удалить папку');
+      setError(err instanceof Error ? err.message : s.errDeleteFolder);
     } finally {
       setFolderDeleting(false);
     }
@@ -288,7 +294,7 @@ export function ObjectsLibraryClient() {
       setDetailAlt(row.altText ?? '');
       setDetailFolderId(row.folderId ?? '');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось открыть объект');
+      setError(e instanceof Error ? e.message : s.errOpenObject);
     } finally {
       setDetailLoading(false);
     }
@@ -302,9 +308,7 @@ export function ObjectsLibraryClient() {
 
   async function deleteDetail() {
     if (!detail) return;
-    const ok = window.confirm(
-      'Удалить объект из хранилища? Ссылка перестанет работать. Действие необратимо.'
-    );
+    const ok = window.confirm(s.deleteObjectConfirm);
     if (!ok) return;
     setDetailDeleting(true);
     setError(null);
@@ -316,7 +320,7 @@ export function ObjectsLibraryClient() {
       await loadObjects();
       await loadFolders();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось удалить');
+      setError(e instanceof Error ? e.message : s.errDeleteObject);
     } finally {
       setDetailDeleting(false);
     }
@@ -326,7 +330,7 @@ export function ObjectsLibraryClient() {
     if (!detail) return;
     const name = detailOriginalName.trim();
     if (!name) {
-      setError('Укажите имя файла');
+      setError(s.errNameRequired);
       return;
     }
     setDetailSaving(true);
@@ -351,7 +355,7 @@ export function ObjectsLibraryClient() {
       await loadObjects();
       await loadFolders();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить');
+      setError(e instanceof Error ? e.message : s.errSave);
     } finally {
       setDetailSaving(false);
     }
@@ -383,7 +387,7 @@ export function ObjectsLibraryClient() {
         try {
           await adminUploadMediaLibrary(file, folderFilter);
         } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Ошибка загрузки';
+          const msg = err instanceof Error ? err.message : s.errUploadFile;
           errors.push(`${file.name}: ${msg}`);
         }
       }
@@ -391,15 +395,13 @@ export function ObjectsLibraryClient() {
         setError(
           errors.length === list.length
             ? errors.join('\n')
-            : `Не удалось загрузить ${errors.length} из ${list.length}:\n${errors.join('\n')}`
+            : s.uploadPartialFail(errors.length, list.length, errors.join('\n'))
         );
       }
       const okCount = list.length - errors.length;
       if (okCount > 0) {
         setUploadNotice(
-          okCount === list.length
-            ? `Загружено файлов: ${okCount}`
-            : `Загружено: ${okCount} из ${list.length}`
+          okCount === list.length ? s.uploadAllOk(okCount) : s.uploadPartialOk(okCount, list.length)
         );
         window.setTimeout(() => setUploadNotice(null), 5000);
         await loadObjects();
@@ -424,24 +426,27 @@ export function ObjectsLibraryClient() {
       );
     }
     if (row.category === 'DOCUMENT') {
-      return <div className={styles.thumbPlaceholder}>PDF / документ</div>;
+      return <div className={styles.thumbPlaceholder}>{s.thumbPdfDoc}</div>;
     }
     if (row.category === 'MODEL') {
-      return <div className={styles.thumbPlaceholder}>3D модель</div>;
+      return <div className={styles.thumbPlaceholder}>{s.thumbModel3d}</div>;
     }
     if (row.category === 'VIDEO') {
-      return <div className={styles.thumbPlaceholder}>Видео</div>;
+      return <div className={styles.thumbPlaceholder}>{s.thumbVideo}</div>;
     }
-    return <div className={styles.thumbPlaceholder}>Файл</div>;
+    return <div className={styles.thumbPlaceholder}>{s.fileGeneric}</div>;
   }
 
-  const tabs: { key: MediaLibraryTab; label: string }[] = [
-    { key: 'all', label: 'Все объекты' },
-    { key: 'images', label: 'Изображения' },
-    { key: 'documents', label: 'Документы' },
-    { key: 'models', label: '3D модели' },
-    { key: 'videos', label: 'Видео' },
-  ];
+  const tabs: { key: MediaLibraryTab; label: string }[] = useMemo(
+    () => [
+      { key: 'all', label: s.tabAll },
+      { key: 'images', label: s.tabImages },
+      { key: 'documents', label: s.tabDocuments },
+      { key: 'models', label: s.tabModels },
+      { key: 'videos', label: s.tabVideos },
+    ],
+    [s]
+  );
 
   return (
     <>
@@ -457,14 +462,14 @@ export function ObjectsLibraryClient() {
       ) : null}
 
       <div className={styles.layout}>
-        <aside className={styles.folderSidebar} aria-label="Папки">
-          <p className={styles.folderSidebarTitle}>Папки</p>
+        <aside className={styles.folderSidebar} aria-label={s.foldersAsideLabel}>
+          <p className={styles.folderSidebarTitle}>{s.foldersTitle}</p>
           <button
             type="button"
             className={`${styles.folderBtn} ${folderFilter === null ? styles.folderBtnActive : ''}`}
             onClick={() => setFolderFilter(null)}
           >
-            Все расположения
+            {s.allLocations}
           </button>
           {renderFolderBranch(null, 0)}
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -473,7 +478,7 @@ export function ObjectsLibraryClient() {
               className={catalogStyles.btn}
               onClick={openCreateFolder}
             >
-              Новая папка
+              {s.newFolderButton}
             </button>
           </div>
         </aside>
@@ -483,10 +488,10 @@ export function ObjectsLibraryClient() {
             <input
               type="search"
               className={catalogStyles.search}
-              placeholder="Поиск по имени или alt…"
+              placeholder={s.searchPlaceholder}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              aria-label="Поиск объектов"
+              aria-label={s.searchAriaLabel}
             />
             <div
               className={`${styles.uploadWrap} ${uploading ? styles.uploadLabelDisabled : ''}`}
@@ -496,7 +501,7 @@ export function ObjectsLibraryClient() {
                 aria-hidden
               >
                 <img src="/icons/document-download.svg" alt="" width={20} height={20} />
-                {uploading ? 'Загрузка…' : 'Загрузить файлы'}
+                {uploading ? s.uploadLabelBusy : s.uploadLabel}
               </span>
               <input
                 id={uploadInputId}
@@ -505,13 +510,13 @@ export function ObjectsLibraryClient() {
                 className={styles.fileInputOverlay}
                 disabled={uploading}
                 onChange={onPickUpload}
-                aria-label="Загрузить файлы"
-                title="Загрузить файлы"
+                aria-label={s.uploadAria}
+                title={s.uploadTitle}
               />
             </div>
           </div>
 
-          <div className={styles.tabs} role="tablist" aria-label="Тип объекта">
+          <div className={styles.tabs} role="tablist" aria-label={s.tablistAria}>
             {tabs.map(({ key, label }) => (
               <button
                 key={key}
@@ -527,9 +532,9 @@ export function ObjectsLibraryClient() {
           </div>
 
           {loading ? (
-            <p className={catalogStyles.muted}>Загрузка…</p>
+            <p className={catalogStyles.muted}>{s.loading}</p>
           ) : objects.length === 0 ? (
-            <p className={catalogStyles.muted}>Нет объектов по текущим фильтрам.</p>
+            <p className={catalogStyles.muted}>{s.emptyList}</p>
           ) : (
             <ul className={styles.grid}>
               {objects.map((row) => (
@@ -539,8 +544,8 @@ export function ObjectsLibraryClient() {
                     <button
                       type="button"
                       className={styles.cardMenuBtn}
-                      title="Свойства"
-                      aria-label="Свойства объекта"
+                      title={s.propertiesTitle}
+                      aria-label={s.propertiesAria}
                       onClick={() => openDetail(row.id)}
                     >
                       ⋮
@@ -551,7 +556,7 @@ export function ObjectsLibraryClient() {
                       {row.originalName}
                     </p>
                     <p className={styles.cardMeta}>
-                      {formatKindLabel(row.mimeType, row.originalName)}
+                      {formatKindLabel(row.mimeType, row.originalName, s.fileGeneric)}
                       {row.width && row.height
                         ? ` · ${row.width}×${row.height}`
                         : ''}
@@ -578,11 +583,11 @@ export function ObjectsLibraryClient() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="objects-new-folder-title" className={styles.dialogTitle}>
-              Новая папка
+              {s.newFolderDialogTitle}
             </h2>
             <form onSubmit={submitCreateFolder} className={catalogStyles.form}>
               <label className={catalogStyles.label}>
-                Название
+                {s.labelName}
                 <input
                   className={catalogStyles.input}
                   value={createName}
@@ -592,13 +597,13 @@ export function ObjectsLibraryClient() {
                 />
               </label>
               <label className={catalogStyles.label}>
-                Родительская папка
+                {s.labelParentFolder}
                 <select
                   className={styles.modalSelect}
                   value={createParentId}
                   onChange={(e) => setCreateParentId(e.target.value)}
                 >
-                  <option value="">Корень</option>
+                  <option value="">{s.rootOption}</option>
                   {folderList.map((f) => (
                     <option key={f.id} value={f.id}>
                       {'\u00A0'.repeat(folderDepth(f.pathKey) * 2)}
@@ -614,7 +619,7 @@ export function ObjectsLibraryClient() {
                   disabled={createSaving}
                   onClick={() => setCreateOpen(false)}
                 >
-                  Отмена
+                  {s.cancel}
                 </TBtn>
                 <Button
                   variant="primary"
@@ -622,7 +627,7 @@ export function ObjectsLibraryClient() {
                   className={styles.modalFooterBtn}
                   disabled={createSaving}
                 >
-                  {createSaving ? 'Создание…' : 'Создать'}
+                  {createSaving ? s.creating : s.create}
                 </Button>
               </div>
             </form>
@@ -644,11 +649,11 @@ export function ObjectsLibraryClient() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="objects-folder-settings-title" className={styles.dialogTitle}>
-              Папка
+              {s.folderDialogTitle}
             </h2>
             <div className={catalogStyles.form}>
               <label className={catalogStyles.label}>
-                Название
+                {s.labelName}
                 <input
                   className={`${styles.modalInput} ${styles.modalInputReadonly}`}
                   value={folderSettings.name}
@@ -657,17 +662,20 @@ export function ObjectsLibraryClient() {
                 />
               </label>
               <label className={catalogStyles.label}>
-                Родительская папка
+                {s.labelParentFolder}
                 <input
                   className={`${styles.modalInput} ${styles.modalInputReadonly}`}
-                  value={folderParentDisplayName(folderSettings, folderList)}
+                  value={folderParentDisplayName(folderSettings, folderList, s.folderRoot)}
                   disabled
                   readOnly
                 />
               </label>
               <p className={catalogStyles.muted} style={{ margin: '0 0 4px' }}>
-                Путь: {folderSettings.pathKey} · объектов: {folderSettings._count.objects}, вложенных
-                папок: {folderSettings._count.children}
+                {s.pathStats(
+                  folderSettings.pathKey,
+                  folderSettings._count.objects,
+                  folderSettings._count.children
+                )}
               </p>
               <div className={styles.modalActionsCreate}>
                 <TBtn
@@ -676,11 +684,11 @@ export function ObjectsLibraryClient() {
                   disabled={folderDeleting}
                   onClick={() => setFolderSettings(null)}
                 >
-                  Отмена
+                  {s.cancel}
                 </TBtn>
                 {isProtectedMediaFolder(folderSettings) ? (
                   <span className={catalogStyles.muted} style={{ alignSelf: 'center' }}>
-                    Системная папка — удаление недоступно
+                    {s.systemFolderNoDelete}
                   </span>
                 ) : (
                   <TBtn
@@ -690,7 +698,7 @@ export function ObjectsLibraryClient() {
                     disabled={folderDeleting}
                     onClick={() => void deleteFolderFromSettings()}
                   >
-                    {folderDeleting ? 'Удаление…' : 'Удалить'}
+                    {folderDeleting ? s.deleting : s.delete}
                   </TBtn>
                 )}
               </div>
@@ -713,15 +721,15 @@ export function ObjectsLibraryClient() {
             onClick={(e) => e.stopPropagation()}
           >
             {detailLoading ? (
-              <p className={catalogStyles.muted}>Загрузка…</p>
+              <p className={catalogStyles.muted}>{s.loading}</p>
             ) : detail ? (
               <>
                 <h2 id="objects-detail-title" className={styles.modalTitle}>
-                  Свойства
+                  {s.detailPropertiesTitle}
                 </h2>
                 <div className={styles.modalField}>
                   <label className={styles.modalLabel} htmlFor="objects-detail-name">
-                    Имя файла
+                    {s.fileNameLabel}
                   </label>
                   <input
                     id="objects-detail-name"
@@ -733,7 +741,11 @@ export function ObjectsLibraryClient() {
                 </div>
                 <div className={styles.modalStats}>
                   <div>
-                    {formatKindLabel(detail.mimeType, detailOriginalName || detail.originalName)}
+                    {formatKindLabel(
+                      detail.mimeType,
+                      detailOriginalName || detail.originalName,
+                      s.fileGeneric
+                    )}
                     {detail.width && detail.height
                       ? `, ${detail.width} × ${detail.height}px`
                       : ''}
@@ -742,7 +754,7 @@ export function ObjectsLibraryClient() {
                 </div>
                 <div className={styles.modalField}>
                   <label className={styles.modalLabel} htmlFor="objects-detail-folder">
-                    Папка
+                    {s.folderLabel}
                   </label>
                   <select
                     id="objects-detail-folder"
@@ -750,7 +762,7 @@ export function ObjectsLibraryClient() {
                     value={detailFolderId}
                     onChange={(e) => setDetailFolderId(e.target.value)}
                   >
-                    <option value="">Корень (без папки)</option>
+                    <option value="">{s.rootOptionDetail}</option>
                     {folderList.map((f) => (
                       <option key={f.id} value={f.id}>
                         {'\u00A0'.repeat(folderDepth(f.pathKey) * 2)}
@@ -768,7 +780,7 @@ export function ObjectsLibraryClient() {
                     className={styles.modalInput}
                     value={detailAlt}
                     onChange={(e) => setDetailAlt(e.target.value)}
-                    placeholder="Описание для доступности"
+                    placeholder={s.altDescriptionPlaceholder}
                   />
                 </div>
                 <div className={styles.modalActions}>
@@ -779,7 +791,7 @@ export function ObjectsLibraryClient() {
                     disabled={detailSaving || detailDeleting}
                     onClick={() => void deleteDetail()}
                   >
-                    {detailDeleting ? 'Удаление…' : 'Удалить'}
+                    {detailDeleting ? s.deleting : s.delete}
                   </TBtn>
                   <div className={styles.modalActionsEnd}>
                     <TBtn
@@ -788,7 +800,7 @@ export function ObjectsLibraryClient() {
                       disabled={detailSaving || detailDeleting}
                       onClick={closeDetail}
                     >
-                      Закрыть
+                      {s.close}
                     </TBtn>
                     <Button
                       variant="primary"
@@ -797,7 +809,7 @@ export function ObjectsLibraryClient() {
                       disabled={detailSaving || detailDeleting}
                       onClick={() => void saveDetail()}
                     >
-                      {detailSaving ? 'Сохранение…' : 'Сохранить'}
+                      {detailSaving ? s.saving : s.save}
                     </Button>
                   </div>
                 </div>

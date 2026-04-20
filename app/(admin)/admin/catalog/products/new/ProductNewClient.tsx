@@ -34,6 +34,9 @@ import {
   adminUploadRichMedia,
   revalidatePublicCatalogCache,
 } from '@/lib/adminBackendFetch';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminProductNewStrings } from '@/lib/admin-i18n/adminProductNewI18n';
 import { createClientRandomId } from '@/lib/clientRandomId';
 import catalogStyles from '../../catalogAdmin.module.css';
 import pn from './productNew.module.css';
@@ -50,10 +53,12 @@ function SortableGalleryRow({
   item,
   onPick,
   onRemove,
+  pStr,
 }: {
   item: GalleryItem;
   onPick: () => void;
   onRemove: () => void;
+  pStr: ReturnType<typeof adminProductNewStrings>;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -70,8 +75,8 @@ function SortableGalleryRow({
         className={pn.dragHandle}
         {...attributes}
         {...listeners}
-        title="Перетащить"
-        aria-label="Перетащить"
+        title={pStr.dndTitle}
+        aria-label={pStr.dndAria}
       >
         ⋮⋮
       </button>
@@ -82,10 +87,10 @@ function SortableGalleryRow({
       )}
       <div className={pn.rowActions}>
         <button type="button" className={catalogStyles.btn} onClick={onPick}>
-          Медиатека
+          {pStr.mediaLibrary}
         </button>
         <button type="button" className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`} onClick={onRemove}>
-          Удалить
+          {pStr.delete}
         </button>
       </div>
     </div>
@@ -94,6 +99,9 @@ function SortableGalleryRow({
 
 export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminProductNewStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
   const isEdit = !!productId;
   const gallerySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -193,7 +201,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         if (!cancelled) setProductLoaded(true);
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить данные');
+          setLoadError(e instanceof Error ? e.message : s.errLoadData);
           if (productId) setProductLoaded(false);
         }
       }
@@ -201,7 +209,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [productId, applyProduct]);
+  }, [productId, applyProduct, s]);
 
   useEffect(() => {
     if (!categoryId) return;
@@ -217,9 +225,9 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     return [...categories].sort((a, b) => {
       const la = a.parent ? `${a.parent.name} ${a.name}` : a.name;
       const lb = b.parent ? `${b.parent.name} ${b.name}` : b.name;
-      return la.localeCompare(lb, 'ru');
+      return la.localeCompare(lb, locale === 'zh' ? 'zh' : 'ru');
     });
-  }, [categories]);
+  }, [categories, locale]);
 
   const categoriesAvailableForAdditional = useMemo(() => {
     if (!categoryId) return [];
@@ -239,7 +247,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   );
 
   const setsAvailableForPick = useMemo(
-    () => productSets.filter((s) => !curatedProductSetIds.has(s.id)),
+    () => productSets.filter((setRow) => !curatedProductSetIds.has(setRow.id)),
     [productSets, curatedProductSetIds],
   );
 
@@ -250,22 +258,22 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         pickTarget.current = { kind: 'rich' };
         setPicker({
           filter: kind === 'video' ? 'video' : 'image',
-          title: kind === 'video' ? 'Видео' : 'Изображение',
+          title: kind === 'video' ? s.pickerVideo : s.pickerImage,
         });
       }),
-    [],
+    [s],
   );
 
   function openGalleryPicker(id: string) {
     richPickResolver.current = null;
     pickTarget.current = { kind: 'gallery', id };
-    setPicker({ filter: 'image', title: 'Изображение галереи' });
+    setPicker({ filter: 'image', title: s.pickerGallery });
   }
 
   function openGalleryPickerMulti() {
     richPickResolver.current = null;
     pickTarget.current = null;
-    setPicker({ filter: 'image', title: 'Несколько изображений галереи', multi: true });
+    setPicker({ filter: 'image', title: s.pickerGalleryMulti, multi: true });
   }
 
   function handlePickerPickBatch(items: { url: string; id: string }[]) {
@@ -361,7 +369,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   async function createVariant() {
     if (!productId) return;
     if (!variantCreateModificationId) {
-      setVariantCreateError('Сначала сохраните модификации товара');
+      setVariantCreateError(s.variantModsFirst);
       return;
     }
     setVariantCreateBusy(true);
@@ -377,7 +385,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       setVariantCreateOpen(false);
       router.push(`/admin/catalog/products/${productId}/variants/${id}`);
     } catch (e) {
-      setVariantCreateError(e instanceof Error ? e.message : 'Не удалось создать вариант');
+      setVariantCreateError(e instanceof Error ? e.message : s.variantCreateErr);
     } finally {
       setVariantCreateBusy(false);
     }
@@ -387,12 +395,12 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     e.preventDefault();
     setSaveError(null);
     if (!categoryId) {
-      setSaveError('Выберите категорию');
+      setSaveError(s.errPickCategory);
       return;
     }
     const nameTrim = name.trim();
     if (!nameTrim) {
-      setSaveError('Укажите название');
+      setSaveError(s.errName);
       return;
     }
 
@@ -434,7 +442,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         await revalidatePublicCatalogCache();
         router.refresh();
       } catch (err) {
-        setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
+        setSaveError(err instanceof Error ? err.message : s.saveErr);
       } finally {
         setSaving(false);
       }
@@ -451,14 +459,14 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       router.push(`/admin/catalog/products/${created.id}`);
       router.refresh();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
+      setSaveError(err instanceof Error ? err.message : s.saveErr);
     } finally {
       setSaving(false);
     }
   }
 
   if (productId && !productLoaded && !loadError) {
-    return <p className={catalogStyles.muted}>Загрузка товара…</p>;
+    return <p className={catalogStyles.muted}>{s.loadingProduct}</p>;
   }
 
   const normalizedBrandId = brandId || null;
@@ -472,7 +480,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         <div className={pn.productFormGrid}>
           <div className={pn.productFormMain}>
             <label className={catalogStyles.label}>
-              Название товара
+              {s.productName}
               <input
                 className={catalogStyles.input}
                 value={name}
@@ -483,7 +491,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             </label>
 
             <label className={catalogStyles.label}>
-              Slug (необязательно, иначе из названия)
+              {s.slugOptional}
               <input
                 className={catalogStyles.input}
                 value={slug}
@@ -494,7 +502,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             </label>
 
             <label className={catalogStyles.label}>
-              Короткое описание
+              {s.shortDesc}
               <textarea
                 className={catalogStyles.textarea}
                 value={shortDescription}
@@ -504,13 +512,13 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             </label>
 
             <label className={catalogStyles.label}>
-              Бренд
+              {s.brand}
               <select
                 className={catalogStyles.input}
                 value={brandId}
                 onChange={(e) => setBrandId(e.target.value)}
               >
-                <option value="">— Нет —</option>
+                <option value="">{s.brandNone}</option>
                 {brands.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name}
@@ -518,16 +526,15 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                 ))}
               </select>
               <span className={catalogStyles.muted} style={{ display: 'block', marginTop: 6 }}>
-                Материалы и цвета для элементов товара берутся из библиотеки выбранного бренда.
+                {s.brandHint}
               </span>
             </label>
 
             <div className={pn.section}>
-              <h2 className={pn.sectionTitle}>Галерея изображений</h2>
+              <h2 className={pn.sectionTitle}>{s.galleryTitle}</h2>
               <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-                Крупное превью, порядок — перетаскиванием за ⋮⋮. Подписи к файлам настраиваются в объектах
-                медиатеки.
-                {isEdit ? ' Для варианта без своих кадров на витрине используется эта галерея.' : null}
+                {s.galleryHint}
+                {isEdit ? s.galleryHintEdit : null}
               </p>
               <DndContext sensors={gallerySensors} collisionDetection={closestCenter} onDragEnd={onGalleryDragEnd}>
                 <SortableContext items={gallery.map((g) => g.id)} strategy={verticalListSortingStrategy}>
@@ -536,6 +543,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                       <SortableGalleryRow
                         key={item.id}
                         item={item}
+                        pStr={s}
                         onPick={() => openGalleryPicker(item.id)}
                         onRemove={() => setGallery((prev) => prev.filter((g) => g.id !== item.id))}
                       />
@@ -545,42 +553,42 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
               </DndContext>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 <button type="button" className={catalogStyles.btn} onClick={addGalleryRow}>
-                  + Добавить кадр
+                  {s.addFrame}
                 </button>
                 <button type="button" className={catalogStyles.btn} onClick={openGalleryPickerMulti}>
-                  + Несколько из медиатеки
+                  {s.addMultiLib}
                 </button>
               </div>
             </div>
 
             <div className={pn.section}>
-              <h2 className={pn.sectionTitle}>Доставка</h2>
+              <h2 className={pn.sectionTitle}>{s.delivery}</h2>
               <textarea
                 className={`${catalogStyles.textarea} ${pn.wideTextarea}`}
                 value={deliveryText}
                 onChange={(e) => setDeliveryText(e.target.value)}
                 rows={6}
-                placeholder="Текст о доставке"
+                placeholder={s.deliveryPh}
               />
             </div>
 
             <div className={pn.section}>
-              <h2 className={pn.sectionTitle}>Технические параметры</h2>
+              <h2 className={pn.sectionTitle}>{s.techTitle}</h2>
               <textarea
                 className={`${catalogStyles.textarea} ${pn.wideTextarea}`}
                 value={technicalSpecs}
                 onChange={(e) => setTechnicalSpecs(e.target.value)}
                 rows={6}
-                placeholder="Технические характеристики"
+                placeholder={s.techPh}
               />
             </div>
 
             <div className={pn.section}>
-              <h2 className={pn.sectionTitle}>Дополнительная информация</h2>
+              <h2 className={pn.sectionTitle}>{s.extraTitle}</h2>
               <RichBlock
                 value={additionalInfoHtml}
                 onChange={setAdditionalInfoHtml}
-                placeholder="Текст, изображения, видео…"
+                placeholder={s.extraPh}
                 uploadMedia={(file, type) => adminUploadRichMedia(file, type)}
                 pickMediaFromLibrary={pickMediaFromLibrary}
                 onUploadError={(msg) => setSaveError(msg)}
@@ -609,19 +617,19 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             </div>
           </div>
 
-          <aside className={pn.productFormPlacement} aria-label="Расположение товара в каталоге">
-            <p className={pn.placementHeading}>Расположение в каталоге</p>
+          <aside className={pn.productFormPlacement} aria-label={s.placementAria}>
+            <p className={pn.placementHeading}>{s.placementHeading}</p>
 
             <div className={pn.placementBlock}>
               <label className={catalogStyles.label}>
-                Основная категория
+                {s.mainCategory}
                 <select
                   className={catalogStyles.input}
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                   required
                 >
-                  <option value="">— Выберите —</option>
+                  <option value="">{s.choosePlaceholder}</option>
                   {sortedCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.parent ? `${c.parent.name} → ${c.name}` : c.name}
@@ -639,36 +647,33 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                     className={catalogStyles.adminCheckboxForm}
                     checked={isActive}
                     onChange={(e) => setIsActive(e.target.checked)}
-                    aria-label="Товар опубликован в каталоге"
+                    aria-label={s.publishedAria}
                   />
-                  <label htmlFor="product-new-active">Товар опубликован (в каталоге)</label>
+                  <label htmlFor="product-new-active">{s.publishedLabel}</label>
                 </div>
               </div>
             </div>
 
             <div className={pn.placementBlock}>
-              <h3 className={pn.placementBlockTitle}>Дополнительные категории</h3>
-              <p className={pn.placementHint}>
-                Товар будет показан и в этих разделах. Для карточки и сортировки по умолчанию используется
-                основная категория.
-              </p>
+              <h3 className={pn.placementBlockTitle}>{s.extraCatsTitle}</h3>
+              <p className={pn.placementHint}>{s.extraCatsHint}</p>
               {!categoryId ? (
-                <p className={catalogStyles.muted}>Сначала выберите основную категорию.</p>
+                <p className={catalogStyles.muted}>{s.selectMainFirst}</p>
               ) : (
                 <div className={pn.additionalCatsWrap}>
                   <label className={catalogStyles.label}>
-                    Добавить категорию
+                    {s.addCategory}
                     <select
                       key={additionalCatSelectKey}
                       className={catalogStyles.input}
                       defaultValue=""
-                      aria-label="Добавить дополнительную категорию"
+                      aria-label={s.addCategoryAria}
                       onChange={(e) => {
                         const v = e.target.value;
                         if (v) addAdditionalCategoryFromDropdown(v);
                       }}
                     >
-                      <option value="">— Выберите категорию —</option>
+                      <option value="">{s.chooseCategory}</option>
                       {categoriesAvailableForAdditional.map((c) => (
                         <option key={c.id} value={c.id}>
                           {categoryLabel(c)}
@@ -679,13 +684,13 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                   {categoriesAvailableForAdditional.length === 0 &&
                   additionalCategoryIds.size === 0 ? (
                     <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-                      Нет других категорий для добавления.
+                      {s.noOtherCats}
                     </p>
                   ) : null}
                   {additionalCategoryIds.size > 0 ? (
                     <ul
                       className={pn.additionalCatChips}
-                      aria-label="Выбранные дополнительные категории"
+                      aria-label={s.selectedCatsAria}
                     >
                       {Array.from(additionalCategoryIds).map((id) => {
                         const c = categories.find((x) => x.id === id);
@@ -698,7 +703,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                               type="button"
                               className={pn.additionalCatChipRemove}
                               onClick={() => removeAdditionalCategory(id)}
-                              aria-label={`Убрать категорию: ${label}`}
+                              aria-label={s.removeCatAria(label)}
                             >
                               ×
                             </button>
@@ -708,7 +713,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                     </ul>
                   ) : (
                     <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-                      Категории не выбраны — выберите из списка выше.
+                      {s.noExtraSelected}
                     </p>
                   )}
                 </div>
@@ -716,24 +721,22 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             </div>
 
             <div className={pn.placementBlock}>
-              <h3 className={pn.placementBlockTitle}>Коллекции</h3>
-              <p className={pn.placementHint}>
-                Только коллекции с типом «товары». Порядок в коллекции — в карточке коллекции.
-              </p>
+              <h3 className={pn.placementBlockTitle}>{s.collectionsTitle}</h3>
+              <p className={pn.placementHint}>{s.collectionsHint}</p>
               <div className={pn.additionalCatsWrap}>
                 <label className={catalogStyles.label}>
-                  Добавить коллекцию
+                  {s.addCollection}
                   <select
                     key={collectionSelectKey}
                     className={catalogStyles.input}
                     defaultValue=""
-                    aria-label="Добавить коллекцию"
+                    aria-label={s.addCollectionAria}
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v) addCuratedCollectionFromDropdown(v);
                     }}
                   >
-                    <option value="">— Выберите коллекцию —</option>
+                    <option value="">{s.chooseCollection}</option>
                     {collectionsAvailableForPick.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -743,11 +746,11 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                 </label>
                 {collectionsAvailableForPick.length === 0 && curatedCollectionIds.size === 0 ? (
                   <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-                    Нет коллекций с типом «товары» или все уже выбраны.
+                    {s.noCollectionsLeft}
                   </p>
                 ) : null}
                 {curatedCollectionIds.size > 0 ? (
-                  <ul className={pn.additionalCatChips} aria-label="Выбранные коллекции">
+                  <ul className={pn.additionalCatChips} aria-label={s.selectedCollectionsAria}>
                     {Array.from(curatedCollectionIds).map((id) => {
                       const c = productCollections.find((x) => x.id === id);
                       if (!c) return null;
@@ -758,7 +761,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                             type="button"
                             className={pn.additionalCatChipRemove}
                             onClick={() => removeCuratedCollection(id)}
-                            aria-label={`Убрать коллекцию: ${c.name}`}
+                            aria-label={s.removeColAria(c.name)}
                           >
                             ×
                           </button>
@@ -768,54 +771,54 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                   </ul>
                 ) : (
                   <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-                    Коллекции не выбраны.
+                    {s.noCollectionsSelected}
                   </p>
                 )}
               </div>
             </div>
 
             <div className={pn.placementBlock}>
-              <h3 className={pn.placementBlockTitle}>Наборы</h3>
-              <p className={pn.placementHint}>Порядок в наборе задаётся в карточке набора.</p>
+              <h3 className={pn.placementBlockTitle}>{s.setsTitle}</h3>
+              <p className={pn.placementHint}>{s.setsHint}</p>
               <div className={pn.additionalCatsWrap}>
                 <label className={catalogStyles.label}>
-                  Добавить набор
+                  {s.addSet}
                   <select
                     key={productSetSelectKey}
                     className={catalogStyles.input}
                     defaultValue=""
-                    aria-label="Добавить набор"
+                    aria-label={s.addSetAria}
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v) addProductSetFromDropdown(v);
                     }}
                   >
-                    <option value="">— Выберите набор —</option>
-                    {setsAvailableForPick.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
+                    <option value="">{s.chooseSet}</option>
+                    {setsAvailableForPick.map((ps) => (
+                      <option key={ps.id} value={ps.id}>
+                        {ps.name}
                       </option>
                     ))}
                   </select>
                 </label>
                 {setsAvailableForPick.length === 0 && curatedProductSetIds.size === 0 ? (
                   <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-                    Нет наборов или все уже выбраны.
+                    {s.noSetsLeft}
                   </p>
                 ) : null}
                 {curatedProductSetIds.size > 0 ? (
-                  <ul className={pn.additionalCatChips} aria-label="Выбранные наборы">
+                  <ul className={pn.additionalCatChips} aria-label={s.selectedSetsAria}>
                     {Array.from(curatedProductSetIds).map((id) => {
-                      const s = productSets.find((x) => x.id === id);
-                      if (!s) return null;
+                      const setRow = productSets.find((x) => x.id === id);
+                      if (!setRow) return null;
                       return (
                         <li key={id} className={pn.additionalCatChip}>
-                          <span className={pn.additionalCatChipLabel}>{s.name}</span>
+                          <span className={pn.additionalCatChipLabel}>{setRow.name}</span>
                           <button
                             type="button"
                             className={pn.additionalCatChipRemove}
                             onClick={() => removeProductSet(id)}
-                            aria-label={`Убрать набор: ${s.name}`}
+                            aria-label={s.removeSetAria(setRow.name)}
                           >
                             ×
                           </button>
@@ -825,7 +828,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                   </ul>
                 ) : (
                   <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-                    Наборы не выбраны.
+                    {s.noSetsSelected}
                   </p>
                 )}
               </div>
@@ -843,14 +846,14 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
           >
             {saving
               ? isEdit
-                ? 'Сохранение…'
-                : 'Создание…'
+                ? s.saveBusyEdit
+                : s.saveBusyCreate
               : isEdit
-                ? 'Сохранить'
-                : 'Создать товар'}
+                ? s.save
+                : s.createProduct}
           </button>
           <Link href="/admin/catalog/products" className={catalogStyles.btn}>
-            Отмена
+            {s.cancel}
           </Link>
         </div>
       </form>
@@ -881,7 +884,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
               }}
             >
               <h2 className={pn.sectionTitle} style={{ margin: 0 }}>
-                Варианты
+                {s.variantsTitle}
               </h2>
               <button
                 type="button"
@@ -891,31 +894,29 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                 title={
                   canCreateVariant
                     ? undefined
-                    : 'Сначала создайте хотя бы одну модификацию'
+                    : s.addVariantDisabled
                 }
               >
-                + Добавить вариант
+                {s.addVariant}
               </button>
             </div>
             <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-              Вариант = одна модификация + выбор «материал-цвета» для каждого элемента. Цена,
-              габариты, SKU и кадры галереи — в карточке варианта. Удалить вариант можно в его
-              карточке.
+              {s.variantsHint}
             </p>
             {variants.length === 0 ? (
               <p className={catalogStyles.muted}>
-                Ещё нет вариантов. Создайте модификацию и добавьте первый вариант.
+                {s.noVariants}
               </p>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e6e8' }}>
-                      <th style={{ padding: '8px 6px' }}>Название варианта</th>
-                      <th style={{ padding: '8px 6px' }}>Модификация</th>
-                      <th style={{ padding: '8px 6px' }}>Элементы</th>
-                      <th style={{ padding: '8px 6px' }}>Цена</th>
-                      <th style={{ padding: '8px 6px' }}>Доступность</th>
+                      <th style={{ padding: '8px 6px' }}>{s.thVarName}</th>
+                      <th style={{ padding: '8px 6px' }}>{s.thMod}</th>
+                      <th style={{ padding: '8px 6px' }}>{s.thElements}</th>
+                      <th style={{ padding: '8px 6px' }}>{s.thPrice}</th>
+                      <th style={{ padding: '8px 6px' }}>{s.thVis}</th>
                       <th style={{ padding: '8px 6px', width: 56 }} />
                     </tr>
                   </thead>
@@ -928,23 +929,25 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                             <span
                               className={catalogStyles.badge}
                               style={{ marginLeft: 8 }}
-                              aria-label="Вариант по умолчанию"
+                              aria-label={s.defaultAria}
                             >
-                              по умолчанию
+                              {s.defaultBadge}
                             </span>
                           ) : null}
                         </td>
                         <td style={{ padding: '8px 6px' }}>{v.modificationLabel || '—'}</td>
                         <td style={{ padding: '8px 6px' }}>{v.selectionsLabel ?? '—'}</td>
                         <td style={{ padding: '8px 6px' }}>
-                          {Number(v.price).toLocaleString('ru-RU', { maximumFractionDigits: 0 })}{' '}
+                          {Number(v.price).toLocaleString(locale === 'zh' ? 'zh-CN' : 'ru-RU', {
+                            maximumFractionDigits: 0,
+                          })}{' '}
                           {v.currency}
                         </td>
-                        <td style={{ padding: '8px 6px' }}>{v.isActive ? 'Да' : 'Нет'}</td>
+                        <td style={{ padding: '8px 6px' }}>{v.isActive ? c.yes : c.no}</td>
                         <td style={{ padding: '8px 6px' }}>
                           <Link
                             href={`/admin/catalog/products/${productId}/variants/${v.id}`}
-                            aria-label="Редактировать вариант"
+                            aria-label={s.editVariantAria}
                             style={{ display: 'inline-flex', padding: 4 }}
                           >
                             <img src="/icons/edit.svg" alt="" width={20} height={20} />
@@ -990,13 +993,12 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
               gap: 16,
             }}
           >
-            <h2 style={{ margin: 0 }}>Новый вариант</h2>
+            <h2 style={{ margin: 0 }}>{s.modalNewVariant}</h2>
             <p className={catalogStyles.muted} style={{ margin: 0 }}>
-              Вариант создаётся на базе модификации. После создания вы перейдёте в карточку варианта
-              и зададите выбор материал-цветов, цену, габариты и кадры.
+              {s.modalNewVariantLead}
             </p>
             <label className={catalogStyles.label} style={{ margin: 0 }}>
-              Модификация
+              {s.modification}
               <select
                 className={catalogStyles.input}
                 value={variantCreateModificationId}
@@ -1021,7 +1023,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                 onClick={() => setVariantCreateOpen(false)}
                 disabled={variantCreateBusy}
               >
-                Отмена
+                {s.modalCancel}
               </button>
               <button
                 type="button"
@@ -1031,7 +1033,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                 }}
                 disabled={variantCreateBusy || !variantCreateModificationId}
               >
-                {variantCreateBusy ? 'Создание…' : 'Создать'}
+                {variantCreateBusy ? s.modalCreateBusy : s.modalCreate}
               </button>
             </div>
           </div>

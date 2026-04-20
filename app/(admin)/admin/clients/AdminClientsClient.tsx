@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { adminClientsStrings } from '@/lib/admin-i18n/adminClientsI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import catalogStyles from '../catalog/catalogAdmin.module.css';
 import styles from './clients.module.css';
 
@@ -15,39 +18,47 @@ type Row = {
 };
 
 export function AdminClientsClient() {
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminClientsStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
+
   const [items, setItems] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (search: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({ take: '50', skip: '0' });
-      if (search.trim()) params.set('q', search.trim());
-      const res = await fetch(`/api/admin/backend/users/admin?${params}`, {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      if (!res.ok) {
-        setError(res.status === 401 ? 'Войдите в админку' : `Ошибка ${res.status}`);
+  const load = useCallback(
+    async (search: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({ take: '50', skip: '0' });
+        if (search.trim()) params.set('q', search.trim());
+        const res = await fetch(`/api/admin/backend/users/admin?${params}`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (!res.ok) {
+          setError(res.status === 401 ? s.loginRequired : s.errStatus(res.status));
+          setItems([]);
+          setTotal(0);
+          return;
+        }
+        const data = (await res.json()) as { items: Row[]; total: number };
+        setItems(data.items ?? []);
+        setTotal(data.total ?? 0);
+      } catch {
+        setError(s.errLoadList);
         setItems([]);
         setTotal(0);
-        return;
+      } finally {
+        setLoading(false);
       }
-      const data = (await res.json()) as { items: Row[]; total: number };
-      setItems(data.items ?? []);
-      setTotal(data.total ?? 0);
-    } catch {
-      setError('Не удалось загрузить список');
-      setItems([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [s.errLoadList, s.errStatus, s.loginRequired],
+  );
 
   useEffect(() => {
     void load('');
@@ -62,26 +73,24 @@ export function AdminClientsClient() {
     <main>
       <p className={catalogStyles.backRow}>
         <Link href="/admin" className={catalogStyles.backLink}>
-          ← В админку
+          {s.backAdmin}
         </Link>
       </p>
-      <h1 className={catalogStyles.title}>Пользователи</h1>
-      <p className={catalogStyles.lead}>
-        Роль «покупатель» (USER). Всего: {total}
-      </p>
+      <h1 className={catalogStyles.title}>{s.pageTitle}</h1>
+      <p className={catalogStyles.lead}>{s.pageLead(total)}</p>
 
       <form className={styles.searchForm} onSubmit={onSearchSubmit}>
         <input
           type="search"
           name="q"
           className={styles.searchInput}
-          placeholder="Поиск по email или телефону"
+          placeholder={s.searchPlaceholder}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          aria-label="Поиск"
+          aria-label={s.searchAria}
         />
         <button type="submit" className={styles.searchBtn}>
-          Найти
+          {s.find}
         </button>
       </form>
 
@@ -91,25 +100,25 @@ export function AdminClientsClient() {
         </p>
       ) : null}
 
-      {loading ? <p className={catalogStyles.lead}>Загрузка…</p> : null}
+      {loading ? <p className={catalogStyles.lead}>{c.loading}</p> : null}
 
       {!loading && !error ? (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Email</th>
-                <th>Телефон</th>
-                <th>Имя</th>
-                <th>Регистрация</th>
-                <th>Статус</th>
+                <th>{s.thEmail}</th>
+                <th>{s.thPhone}</th>
+                <th>{s.thName}</th>
+                <th>{s.thRegistered}</th>
+                <th>{s.thStatus}</th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={5} className={styles.empty}>
-                    Нет записей
+                    {s.emptyTable}
                   </td>
                 </tr>
               ) : (
@@ -121,8 +130,8 @@ export function AdminClientsClient() {
                       <td>{u.email ?? '—'}</td>
                       <td>{u.phone ?? '—'}</td>
                       <td>{name}</td>
-                      <td>{new Date(u.createdAt).toLocaleString('ru-RU')}</td>
-                      <td>{u.isActive ? 'Активен' : 'Неактивен'}</td>
+                      <td>{new Date(u.createdAt).toLocaleString(dateLocale)}</td>
+                      <td>{u.isActive ? s.active : s.inactive}</td>
                     </tr>
                   );
                 })

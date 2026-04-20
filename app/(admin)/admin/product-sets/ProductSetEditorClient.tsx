@@ -21,6 +21,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminProductSetEditorStrings } from '@/lib/admin-i18n/adminProductSetsI18n';
 import type { AdminBrandRow } from '../brands/adminBrandTypes';
 import type { AdminProductRow } from '../catalog/products/adminProductTypes';
 import styles from '../catalog/catalogAdmin.module.css';
@@ -37,10 +40,14 @@ function SortableItemRow({
   label,
   onRemove,
   rowId,
+  dragTitle,
+  removeLabel,
 }: {
   rowId: string;
   label: string;
   onRemove: () => void;
+  dragTitle: string;
+  removeLabel: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: rowId,
@@ -52,7 +59,7 @@ function SortableItemRow({
   };
   return (
     <tr ref={setNodeRef} style={style}>
-      <td className={styles.dragHandle} {...attributes} {...listeners} title="Перетащить">
+      <td className={styles.dragHandle} {...attributes} {...listeners} title={dragTitle}>
         ⋮⋮
       </td>
       <td>
@@ -60,7 +67,7 @@ function SortableItemRow({
       </td>
       <td>
         <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={onRemove}>
-          Убрать
+          {removeLabel}
         </button>
       </td>
     </tr>
@@ -90,6 +97,9 @@ function ModalCloseButton({ onClick, label }: { onClick: () => void; label: stri
 
 export function ProductSetEditorClient({ setId }: { setId?: string }) {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminProductSetEditorStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
   const isEdit = !!setId;
 
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -172,7 +182,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
         setLoaded(true);
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить');
+          setLoadError(e instanceof Error ? e.message : s.errLoad);
           setLoaded(false);
         }
       }
@@ -180,7 +190,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [setId, isEdit]);
+  }, [setId, isEdit, s]);
 
   useEffect(() => {
     const t = setTimeout(() => setAddDebouncedQ(addQ.trim()), 300);
@@ -261,7 +271,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
     setSaveError(null);
     const nameTrim = name.trim();
     if (!nameTrim) {
-      setSaveError('Укажите название');
+      setSaveError(s.nameRequired);
       return;
     }
     setSaving(true);
@@ -301,21 +311,21 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
       await revalidatePublicCatalogCache();
       router.refresh();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
+      setSaveError(err instanceof Error ? err.message : s.saveErr);
     } finally {
       setSaving(false);
     }
   }
 
   if (isEdit && !loaded && !loadError) {
-    return <p className={styles.muted}>Загрузка…</p>;
+    return <p className={styles.muted}>{c.loading}</p>;
   }
 
   return (
     <>
       <p className={styles.backRow}>
         <Link className={styles.backLink} href="/admin/product-sets">
-          ← К списку наборов
+          {s.backList}
         </Link>
       </p>
 
@@ -323,7 +333,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
 
       <MediaLibraryPickerModal
         open={coverPickerOpen}
-        title="Обложка набора"
+        title={s.coverTitle}
         mediaFilter="image"
         onClose={() => setCoverPickerOpen(false)}
         onPick={(sel) => {
@@ -339,7 +349,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
           className={objStyles.modalBackdrop}
           role="dialog"
           aria-modal
-          aria-label="Добавить товар"
+          aria-label={s.addProductAria}
           onClick={() => setAddPickerOpen(false)}
         >
           <div
@@ -357,24 +367,24 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
               }}
             >
               <h2 className={objStyles.modalTitle} style={{ margin: 0, paddingRight: 8 }}>
-                Добавить товар
+                {s.addProduct}
               </h2>
-              <ModalCloseButton onClick={() => setAddPickerOpen(false)} label="Закрыть" />
+              <ModalCloseButton onClick={() => setAddPickerOpen(false)} label={s.close} />
             </div>
             <input
               type="search"
               className={styles.search}
               style={{ width: '100%', maxWidth: 'none', marginBottom: 12 }}
-              placeholder="Поиск…"
+              placeholder={s.searchPh}
               value={addQ}
               onChange={(e) => setAddQ(e.target.value)}
-              aria-label="Поиск"
+              aria-label={s.searchAria}
             />
             <div className={styles.tableWrap} style={{ maxHeight: 320, overflow: 'auto' }}>
               {addLoading ? (
-                <p className={styles.muted}>Загрузка…</p>
+                <p className={styles.muted}>{c.loading}</p>
               ) : addProductHits.length === 0 ? (
-                <p className={styles.muted}>Ничего не найдено.</p>
+                <p className={styles.muted}>{s.nothing}</p>
               ) : (
                 <table className={styles.table}>
                   <thead>
@@ -386,10 +396,10 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                           checked={modalAllSelectableSelected}
                           onChange={toggleModalSelectAll}
                           disabled={!selectableProductIds.length}
-                          aria-label="Выбрать все в списке"
+                          aria-label={s.selectAllList}
                         />
                       </th>
-                      <th>Название</th>
+                      <th>{s.thName}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -404,14 +414,14 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                               disabled={inSet}
                               checked={!inSet && addModalSelected.has(p.id)}
                               onChange={() => toggleAddModalRow(p.id)}
-                              aria-label={`Выбрать ${p.name}`}
+                              aria-label={s.selectRow(p.name)}
                             />
                           </td>
                           <td>
                             {p.name}
                             {inSet ? (
                               <span className={styles.muted} style={{ marginLeft: 6 }}>
-                                — в наборе
+                                {s.inSet}
                               </span>
                             ) : null}
                           </td>
@@ -437,7 +447,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                 onClick={() => setAddModalSelected(new Set())}
                 disabled={!addModalSelected.size}
               >
-                Снять выбор
+                {s.clearSel}
               </button>
               <button
                 type="button"
@@ -445,7 +455,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                 disabled={!addModalSelected.size}
                 onClick={commitAddModalSelection}
               >
-                Добавить выбранные
+                {s.addSelected}
                 {addModalSelected.size ? ` (${addModalSelected.size})` : ''}
               </button>
             </div>
@@ -454,10 +464,10 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
       ) : null}
 
       <form className={`${styles.form} ${styles.formWide}`} onSubmit={submit}>
-        <h1 className={styles.title}>{isEdit ? 'Редактирование набора' : 'Новый набор'}</h1>
+        <h1 className={styles.title}>{isEdit ? s.titleEdit : s.titleNew}</h1>
 
         <label className={styles.label}>
-          Название набора
+          {s.nameLabel}
           <input
             className={styles.input}
             value={name}
@@ -467,17 +477,17 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
         </label>
 
         <label className={styles.label}>
-          Slug <span className={styles.muted}>(необязательно)</span>
+          {s.slugLabel}
           <input
             className={styles.input}
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="из названия"
+            placeholder={s.slugPh}
           />
         </label>
 
         <label className={styles.label}>
-          Описание
+          {s.desc}
           <textarea
             className={styles.textarea}
             value={description}
@@ -487,7 +497,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
         </label>
 
         <div className={styles.label}>
-          Обложка набора
+          {s.coverBlock}
           <div className={styles.fileRow}>
             <button
               type="button"
@@ -497,7 +507,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                 setCoverPickerOpen(true);
               }}
             >
-              Выбрать из медиатеки
+              {s.pickLibrary}
             </button>
             {coverUrl.trim() ? (
               <button
@@ -508,7 +518,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                   setCoverMediaObjectId(null);
                 }}
               >
-                Убрать обложку
+                {s.removeCover}
               </button>
             ) : null}
           </div>
@@ -520,14 +530,14 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
         </div>
 
         <label className={styles.label}>
-          Бренд
+          {s.brand}
           <select
             className={styles.input}
             value={brandId}
             onChange={(e) => setBrandId(e.target.value)}
-            aria-label="Бренд набора"
+            aria-label={s.brandAria}
           >
-            <option value="">— Не выбран —</option>
+            <option value="">{s.brandNone}</option>
             {brands.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -543,9 +553,9 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
               className={styles.adminCheckboxForm}
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              aria-label="Доступен на витрине"
+              aria-label={s.activeAria}
             />
-            <label htmlFor="product-set-active">Доступен на витрине</label>
+            <label htmlFor="product-set-active">{s.activeLabel}</label>
           </div>
         </div>
 
@@ -567,7 +577,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
         </label>
 
         <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>
-          Товары в наборе
+          {s.productsTitle}
         </h2>
         <button
           type="button"
@@ -579,7 +589,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
             setAddPickerOpen(true);
           }}
         >
-          + Добавить товар
+          {s.addProductBtn}
         </button>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onProductDragEnd}>
@@ -587,8 +597,8 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ width: 36 }} aria-label="Порядок" />
-                  <th>Название</th>
+                  <th style={{ width: 36 }} aria-label={s.thOrder} />
+                  <th>{s.thName}</th>
                   <th />
                 </tr>
               </thead>
@@ -596,7 +606,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                 {productRows.length === 0 ? (
                   <tr>
                     <td colSpan={3} className={styles.muted}>
-                      Позиций пока нет.
+                      {s.emptyPositions}
                     </td>
                   </tr>
                 ) : (
@@ -609,6 +619,8 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                         key={row.key}
                         rowId={row.key}
                         label={row.name}
+                        dragTitle={s.drag}
+                        removeLabel={s.remove}
                         onRemove={() =>
                           setProductRows((prev) => prev.filter((r) => r.key !== row.key))
                         }
@@ -629,10 +641,10 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
             className={`${styles.btn} ${styles.btnPrimary}`}
             disabled={saving || !!loadError || (isEdit && !loaded)}
           >
-            {saving ? 'Сохранение…' : isEdit ? 'Сохранить' : 'Создать набор'}
+            {saving ? s.saveBusy : isEdit ? s.saveEdit : s.create}
           </button>
           <Link href="/admin/product-sets" className={styles.btn}>
-            Отмена
+            {s.cancel}
           </Link>
         </div>
       </form>

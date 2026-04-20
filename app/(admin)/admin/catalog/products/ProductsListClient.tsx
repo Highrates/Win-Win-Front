@@ -2,18 +2,21 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminProductsListStrings } from '@/lib/admin-i18n/adminProductsListI18n';
 import styles from '../catalogAdmin.module.css';
 import type { AdminProductRow } from './adminProductTypes';
 
-function formatPrice(amount: string, currency: string): string {
+function formatPrice(amount: string, currency: string, numberLocale: string): string {
   const n = Number(amount);
   if (!Number.isFinite(n)) return amount;
   const cur = currency || 'RUB';
   try {
-    return new Intl.NumberFormat('ru-RU', {
+    return new Intl.NumberFormat(numberLocale, {
       style: 'currency',
       currency: cur,
       maximumFractionDigits: cur === 'RUB' ? 0 : 2,
@@ -25,6 +28,11 @@ function formatPrice(amount: string, currency: string): string {
 
 export function ProductsListClient() {
   const router = useRouter();
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminProductsListStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
+
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [rows, setRows] = useState<AdminProductRow[]>([]);
@@ -49,12 +57,12 @@ export function ProductsListClient() {
       setRows(data);
       setSelected(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : s.errLoad);
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [debouncedQ]);
+  }, [debouncedQ, s]);
 
   useEffect(() => {
     load();
@@ -76,9 +84,7 @@ export function ProductsListClient() {
 
   async function removeSelected() {
     if (!selected.size) return;
-    const ok = window.confirm(
-      `Удалить выбранные товары (${selected.size})? Товары, которые уже есть в заказах, удалены не будут.`,
-    );
+    const ok = window.confirm(s.confirmDelete(selected.size));
     if (!ok) return;
     setDeleting(true);
     setError(null);
@@ -91,9 +97,7 @@ export function ProductsListClient() {
         },
       );
       if (res.skipped.length) {
-        setError(
-          `Не удалено ${res.skipped.length} товаров (есть в заказах или ошибка). Удалено: ${res.deleted.length}.`,
-        );
+        setError(s.partialDelete(res.skipped.length, res.deleted.length));
       } else {
         setError(null);
       }
@@ -103,7 +107,7 @@ export function ProductsListClient() {
       }
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка удаления');
+      setError(e instanceof Error ? e.message : s.errDelete);
     } finally {
       setDeleting(false);
     }
@@ -117,15 +121,15 @@ export function ProductsListClient() {
         <input
           type="search"
           className={styles.search}
-          placeholder="Поиск по названию или slug…"
+          placeholder={s.searchPh}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          aria-label="Поиск товаров"
+          aria-label={s.searchAria}
         />
         <Link href="/admin/catalog/products/new" className={`${styles.btn} ${styles.btnPrimary}`}>
-          Добавить товар
+          {s.add}
         </Link>
-        <div className={styles.bulkGroup} role="group" aria-label="Массовые операции">
+        <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
           {!debouncedQ && rows.length > 0 ? (
             <>
               <button
@@ -133,10 +137,10 @@ export function ProductsListClient() {
                 className={styles.btn}
                 onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
               >
-                Выбрать все
+                {s.selectAll}
               </button>
               <button type="button" className={styles.btn} onClick={() => setSelected(new Set())}>
-                Снять выбор
+                {s.clear}
               </button>
             </>
           ) : null}
@@ -146,7 +150,7 @@ export function ProductsListClient() {
             disabled={!selected.size || deleting}
             onClick={removeSelected}
           >
-            {deleting ? 'Удаление…' : `Удалить (${selected.size})`}
+            {deleting ? s.deleting : s.delete(selected.size)}
           </button>
         </div>
       </div>
@@ -154,28 +158,28 @@ export function ProductsListClient() {
       {error ? <p className={styles.error}>{error}</p> : null}
 
       {loading ? (
-        <p className={styles.muted}>Загрузка…</p>
+        <p className={styles.muted}>{c.loading}</p>
       ) : rows.length === 0 ? (
-        <p className={styles.muted}>Товары не найдены.</p>
+        <p className={styles.muted}>{s.empty}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th style={{ width: 54 }} aria-label="Превью" />
+                <th style={{ width: 54 }} aria-label={s.thPreview} />
                 <th style={{ width: 44 }}>
                   <AccountCheckbox
                     id="products-select-all"
                     className={styles.adminCheckboxInTable}
                     checked={allSelected}
                     onChange={toggleAll}
-                    aria-label="Выбрать все товары"
+                    aria-label={s.selectAllProducts}
                   />
                 </th>
-                <th>Название товара</th>
-                <th>Категория</th>
-                <th>Цена</th>
-                <th>Доступность</th>
+                <th>{s.thName}</th>
+                <th>{s.thCategory}</th>
+                <th>{s.thPrice}</th>
+                <th>{s.thVis}</th>
               </tr>
             </thead>
             <tbody>
@@ -200,7 +204,7 @@ export function ProductsListClient() {
                       className={styles.adminCheckboxInTable}
                       checked={selected.has(r.id)}
                       onChange={() => toggle(r.id)}
-                      aria-label={`Выбрать «${r.name}»`}
+                      aria-label={s.selectOne(r.name)}
                     />
                   </td>
                   <td>
@@ -212,10 +216,10 @@ export function ProductsListClient() {
                       <span className={styles.muted}> +{r.additionalCategoryCount}</span>
                     ) : null}
                   </td>
-                  <td>{formatPrice(r.price, r.currency)}</td>
+                  <td>{formatPrice(r.price, r.currency, numberLocale)}</td>
                   <td>
                     <span className={`${styles.badge} ${r.isActive ? styles.badgeOn : styles.badgeOff}`}>
-                      {r.isActive ? 'В каталоге' : 'Скрыт'}
+                      {r.isActive ? s.inCatalog : s.hidden}
                     </span>
                   </td>
                 </tr>

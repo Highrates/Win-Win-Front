@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { adminCategoryTableStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import type { AdminCategoryRow } from './adminCategoryTypes';
 import styles from '../catalogAdmin.module.css';
 
@@ -20,6 +23,9 @@ export function AdminCategorySearchTable({
   onToggleAll,
   allRowsSelected,
 }: Props) {
+  const { locale } = useAdminLocale();
+  const t = useMemo(() => adminCategoryTableStrings(locale), [locale]);
+
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
@@ -31,13 +37,13 @@ export function AdminCategorySearchTable({
                 className={styles.adminCheckboxInTable}
                 checked={rows.length > 0 && allRowsSelected}
                 onChange={onToggleAll}
-                aria-label="Выбрать все категории"
+                aria-label={t.selectAllCats}
               />
             </th>
-            <th>Название</th>
-            <th>Родитель</th>
-            <th title="Включая товары во всех вложенных подкатегориях">Товаров (всего)</th>
-            <th>Подкатегорий</th>
+            <th>{t.thName}</th>
+            <th>{t.thParent}</th>
+            <th title={t.thProductsTotalTitle}>{t.thProductsTotal}</th>
+            <th>{t.thSubcats}</th>
           </tr>
         </thead>
         <tbody>
@@ -49,7 +55,7 @@ export function AdminCategorySearchTable({
                   className={styles.adminCheckboxInTable}
                   checked={selected.has(r.id)}
                   onChange={() => onToggle(r.id)}
-                  aria-label={`Выбрать категорию «${r.name}»`}
+                  aria-label={t.selectCat(r.name)}
                 />
               </td>
               <td>
@@ -57,7 +63,7 @@ export function AdminCategorySearchTable({
               </td>
               <td>{r.parent ? r.parent.name : '—'}</td>
               <td
-                title={`Напрямую в узле: ${r._count.primaryProducts + r._count.productCategories}`}
+                title={t.directTitle(r._count.primaryProducts + r._count.productCategories)}
               >
                 {r.recursiveProductCount}
               </td>

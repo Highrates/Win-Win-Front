@@ -3,18 +3,19 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { AdminLocaleProvider } from '@/lib/admin-i18n/adminLocaleContext';
 import {
   ADMIN_LOCALE_STORAGE_KEY,
   adminBrandLine,
   adminChromeStrings,
+  adminLocaleCookieString,
   catalogGroupLabel,
   catalogSubLabel,
-  defaultAdminLocale,
   getNavLabel,
   settingsGroupLabel,
   settingsSubLabel,
   type AdminLocale,
-} from '@/lib/adminChromeI18n';
+} from '@/lib/admin-i18n/adminChromeI18n';
 import styles from './layout.module.css';
 
 const CATALOG_CHILDREN = [
@@ -60,21 +61,34 @@ function CatalogChevron({ open }: { open: boolean }) {
   );
 }
 
-export function AdminChrome({ children }: { children: React.ReactNode }) {
+export function AdminChrome({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  initialLocale: AdminLocale;
+}) {
   const pathname = usePathname() ?? '';
   const router = useRouter();
-  const [locale, setLocale] = useState<AdminLocale>(defaultAdminLocale);
+  const [locale, setLocale] = useState<AdminLocale>(initialLocale);
   const [localeReady, setLocaleReady] = useState(false);
+
+  useEffect(() => {
+    setLocale(initialLocale);
+  }, [initialLocale]);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(ADMIN_LOCALE_STORAGE_KEY);
-      if (saved === 'zh' || saved === 'ru') setLocale(saved);
+      if ((saved === 'zh' || saved === 'ru') && saved !== initialLocale) {
+        document.cookie = adminLocaleCookieString(saved);
+        router.refresh();
+      }
     } catch {
       /* ignore */
     }
     setLocaleReady(true);
-  }, []);
+  }, [initialLocale, router]);
 
   const inCatalog =
     pathname.startsWith('/admin/catalog') ||
@@ -96,9 +110,11 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
     setLocale(next);
     try {
       localStorage.setItem(ADMIN_LOCALE_STORAGE_KEY, next);
+      document.cookie = adminLocaleCookieString(next);
     } catch {
       /* ignore */
     }
+    router.refresh();
   }
 
   async function logout() {
@@ -112,146 +128,145 @@ export function AdminChrome({ children }: { children: React.ReactNode }) {
   }
 
   const t = adminChromeStrings(locale);
-  const navAria = locale === 'zh' ? '管理区' : 'Разделы админки';
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.body}>
-        <aside className={styles.sidebar}>
-          <p className={styles.brand}>
-            {localeReady ? adminBrandLine(locale) : adminBrandLine(defaultAdminLocale)}
-          </p>
-          <div className={styles.localeBlock}>
-            <p className={styles.localeHeading}>{localeReady ? t.langHeading : 'Язык'}</p>
-            <div className={styles.localeRow} role="group" aria-label={localeReady ? t.langHeading : 'Язык'}>
-              <button
-                type="button"
-                className={`${styles.localeBtn} ${locale === 'ru' ? styles.localeBtnActive : ''}`}
-                onClick={() => setAdminLocale('ru')}
-                disabled={!localeReady}
-              >
-                {localeReady ? t.langBtnRu : 'Русский'}
-              </button>
-              <button
-                type="button"
-                className={`${styles.localeBtn} ${locale === 'zh' ? styles.localeBtnActive : ''}`}
-                onClick={() => setAdminLocale('zh')}
-                disabled={!localeReady}
-              >
-                {localeReady ? t.langBtnZh : '中文'}
-              </button>
-            </div>
-          </div>
-          <nav aria-label={navAria}>
-            <div className={styles.navGroup}>
-              <div className={styles.navGroupRow}>
+    <AdminLocaleProvider locale={locale} localeReady={localeReady}>
+      <div className={styles.shell}>
+        <div className={styles.body}>
+          <aside className={styles.sidebar}>
+            <p className={styles.brand}>{adminBrandLine(locale)}</p>
+            <div className={styles.localeBlock}>
+              <p className={styles.localeHeading}>{t.langHeading}</p>
+              <div className={styles.localeRow} role="group" aria-label={t.langHeading}>
                 <button
                   type="button"
-                  className={styles.navChevronBtn}
-                  aria-expanded={catalogOpen}
-                  aria-controls="admin-nav-catalog-sub"
-                  onClick={() => setCatalogOpen((o) => !o)}
-                  title={locale === 'zh' ? '展开或折叠' : 'Развернуть или свернуть'}
+                  className={`${styles.localeBtn} ${locale === 'ru' ? styles.localeBtnActive : ''}`}
+                  onClick={() => setAdminLocale('ru')}
+                  disabled={!localeReady}
                 >
-                  <CatalogChevron open={catalogOpen} />
+                  {t.langBtnRu}
                 </button>
-                <span
-                  className={`${styles.navLink} ${styles.navGroupLink} ${styles.navGroupTitle} ${
-                    pathname.startsWith('/admin/catalog') ||
-                    pathname.startsWith('/admin/collections') ||
-                    pathname.startsWith('/admin/product-sets')
-                      ? styles.navLinkActive
-                      : ''
-                  }`}
+                <button
+                  type="button"
+                  className={`${styles.localeBtn} ${locale === 'zh' ? styles.localeBtnActive : ''}`}
+                  onClick={() => setAdminLocale('zh')}
+                  disabled={!localeReady}
                 >
-                  {catalogGroupLabel(localeReady ? locale : defaultAdminLocale)}
-                </span>
+                  {localeReady ? t.langBtnZh : '中文'}
+                </button>
               </div>
-              {catalogOpen ? (
-                <div id="admin-nav-catalog-sub" className={styles.navSub}>
-                  {CATALOG_CHILDREN.map(({ href, key }) => {
-                    const active =
-                      href === '/admin/collections'
-                        ? pathname.startsWith('/admin/collections')
-                        : href === '/admin/product-sets'
-                          ? pathname.startsWith('/admin/product-sets')
+            </div>
+            <nav aria-label={t.navAria}>
+              <div className={styles.navGroup}>
+                <div className={styles.navGroupRow}>
+                  <button
+                    type="button"
+                    className={styles.navChevronBtn}
+                    aria-expanded={catalogOpen}
+                    aria-controls="admin-nav-catalog-sub"
+                    onClick={() => setCatalogOpen((o) => !o)}
+                    title={t.expandCollapseChevron}
+                  >
+                    <CatalogChevron open={catalogOpen} />
+                  </button>
+                  <span
+                    className={`${styles.navLink} ${styles.navGroupLink} ${styles.navGroupTitle} ${
+                      pathname.startsWith('/admin/catalog') ||
+                      pathname.startsWith('/admin/collections') ||
+                      pathname.startsWith('/admin/product-sets')
+                        ? styles.navLinkActive
+                        : ''
+                    }`}
+                  >
+                    {catalogGroupLabel(locale)}
+                  </span>
+                </div>
+                {catalogOpen ? (
+                  <div id="admin-nav-catalog-sub" className={styles.navSub}>
+                    {CATALOG_CHILDREN.map(({ href, key }) => {
+                      const active =
+                        href === '/admin/collections'
+                          ? pathname.startsWith('/admin/collections')
+                          : href === '/admin/product-sets'
+                            ? pathname.startsWith('/admin/product-sets')
+                            : pathname === href || pathname.startsWith(`${href}/`);
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={`${styles.navLink} ${styles.navSublink} ${
+                            active ? styles.navLinkActive : ''
+                          }`}
+                        >
+                          {catalogSubLabel(locale, key)}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+              <div className={styles.navGroup}>
+                <div className={styles.navGroupRow}>
+                  <button
+                    type="button"
+                    className={styles.navChevronBtn}
+                    aria-expanded={settingsOpen}
+                    aria-controls="admin-nav-settings-sub"
+                    onClick={() => setSettingsOpen((o) => !o)}
+                    title={t.expandCollapseChevron}
+                  >
+                    <CatalogChevron open={settingsOpen} />
+                  </button>
+                  <span
+                    className={`${styles.navLink} ${styles.navGroupLink} ${styles.navGroupTitle} ${
+                      inSettings ? styles.navLinkActive : ''
+                    }`}
+                  >
+                    {settingsGroupLabel(locale)}
+                  </span>
+                </div>
+                {settingsOpen ? (
+                  <div id="admin-nav-settings-sub" className={styles.navSub}>
+                    {SETTINGS_CHILDREN.map(({ href, key }) => {
+                      const active =
+                        key === 'referrals'
+                          ? pathname.startsWith('/admin/referrals')
                           : pathname === href || pathname.startsWith(`${href}/`);
-                    return (
-                      <Link
-                        key={href}
-                        href={href}
-                        className={`${styles.navLink} ${styles.navSublink} ${
-                          active ? styles.navLinkActive : ''
-                        }`}
-                      >
-                        {catalogSubLabel(localeReady ? locale : defaultAdminLocale, key)}
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </div>
-            <div className={styles.navGroup}>
-              <div className={styles.navGroupRow}>
-                <button
-                  type="button"
-                  className={styles.navChevronBtn}
-                  aria-expanded={settingsOpen}
-                  aria-controls="admin-nav-settings-sub"
-                  onClick={() => setSettingsOpen((o) => !o)}
-                  title={locale === 'zh' ? '展开或折叠' : 'Развернуть или свернуть'}
-                >
-                  <CatalogChevron open={settingsOpen} />
-                </button>
-                <span
-                  className={`${styles.navLink} ${styles.navGroupLink} ${styles.navGroupTitle} ${
-                    inSettings ? styles.navLinkActive : ''
-                  }`}
-                >
-                  {settingsGroupLabel(localeReady ? locale : defaultAdminLocale)}
-                </span>
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={`${styles.navLink} ${styles.navSublink} ${
+                            active ? styles.navLinkActive : ''
+                          }`}
+                        >
+                          {settingsSubLabel(locale, key)}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
-              {settingsOpen ? (
-                <div id="admin-nav-settings-sub" className={styles.navSub}>
-                  {SETTINGS_CHILDREN.map(({ href, key }) => {
-                    const active =
-                      key === 'referrals'
-                        ? pathname.startsWith('/admin/referrals')
-                        : pathname === href || pathname.startsWith(`${href}/`);
-                    return (
-                      <Link
-                        key={href}
-                        href={href}
-                        className={`${styles.navLink} ${styles.navSublink} ${
-                          active ? styles.navLinkActive : ''
-                        }`}
-                      >
-                        {settingsSubLabel(localeReady ? locale : defaultAdminLocale, key)}
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </div>
-            {NAV_HREFS.map((href) => {
-              const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
-                >
-                  {getNavLabel(localeReady ? locale : defaultAdminLocale, href)}
-                </Link>
-              );
-            })}
-          </nav>
-          <button type="button" className={styles.logout} onClick={logout}>
-            {localeReady ? t.logout : 'Выйти'}
-          </button>
-        </aside>
-        <div className={styles.content}>{children}</div>
+              {NAV_HREFS.map((href) => {
+                const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
+                  >
+                    {getNavLabel(locale, href)}
+                  </Link>
+                );
+              })}
+            </nav>
+            <button type="button" className={styles.logout} onClick={logout}>
+              {t.logout}
+            </button>
+          </aside>
+          <div className={styles.content}>{children}</div>
+        </div>
       </div>
-    </div>
+    </AdminLocaleProvider>
   );
 }

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AdminCategoryRow } from '../../catalog/categories/adminCategoryTypes';
 import type { PricingProfileRow } from '../pricingAdminTypes';
 import { adminBackendFetch, adminBackendJson } from '@/lib/adminBackendFetch';
+import { adminPricingStrings } from '@/lib/admin-i18n/adminPricingI18n';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
 import pn from '../../catalog/products/new/productNew.module.css';
 import styles from './pricingSettings.module.css';
@@ -89,6 +91,10 @@ function defaultContainerMaxLimits(containerType: '40' | '20'): { kg: string; m3
 }
 
 export function PricingSettingsClient() {
+  const { locale } = useAdminLocale();
+  const s = useMemo(() => adminPricingStrings(locale), [locale]);
+  const sortLocale = locale === 'zh' ? 'zh' : 'ru';
+
   const [profiles, setProfiles] = useState<PricingProfileRow[]>([]);
   const [categories, setCategories] = useState<AdminCategoryRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -112,9 +118,9 @@ export function PricingSettingsClient() {
       setProfiles(profs);
       setCategories(cats);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setLoadError(e instanceof Error ? e.message : s.errLoad);
     }
-  }, []);
+  }, [s]);
 
   useEffect(() => {
     void load();
@@ -124,9 +130,9 @@ export function PricingSettingsClient() {
     return [...categories].sort((a, b) => {
       const la = a.parent ? `${a.parent.name} ${a.name}` : a.name;
       const lb = b.parent ? `${b.parent.name} ${b.name}` : b.name;
-      return la.localeCompare(lb, 'ru');
+      return la.localeCompare(lb, sortLocale);
     });
-  }, [categories]);
+  }, [categories, sortLocale]);
 
   function categoryLabel(c: AdminCategoryRow): string {
     return c.parent ? `${c.parent.name} → ${c.name}` : c.name;
@@ -223,7 +229,7 @@ export function PricingSettingsClient() {
     setConflictCategoryIds([]);
     const categoryIds = Array.from(form.categoryIds);
     if (!categoryIds.length) {
-      setSaveError('Выберите хотя бы одну категорию');
+      setSaveError(s.pickCategory);
       return;
     }
 
@@ -235,9 +241,7 @@ export function PricingSettingsClient() {
       const nw = parseNum(wt);
       const nv = parseNum(vol);
       if (!Number.isFinite(nw) || nw <= 0 || !Number.isFinite(nv) || nv <= 0) {
-        setSaveError(
-          'Параметры контейнера: укажите оба положительных числа (max вес, кг и max объём, м³) или очистите оба',
-        );
+        setSaveError(s.containerRule);
         return;
       }
       containerMaxWeightKg = nw;
@@ -261,7 +265,7 @@ export function PricingSettingsClient() {
     };
     for (const [k, v] of Object.entries(nums)) {
       if (!Number.isFinite(v) || v < 0) {
-        setSaveError(`Некорректное число: ${k}`);
+        setSaveError(s.badNumber(k));
         return;
       }
     }
@@ -305,27 +309,27 @@ export function PricingSettingsClient() {
         if (Array.isArray(j.conflictingCategoryIds) && j.conflictingCategoryIds.length) {
           setConflictCategoryIds(j.conflictingCategoryIds);
         }
-        setSaveError(typeof j.message === 'string' ? j.message : 'Ошибка сохранения');
+        setSaveError(typeof j.message === 'string' ? j.message : s.saveErr);
         return;
       }
       await load();
       startNew();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Ошибка сохранения');
+      setSaveError(err instanceof Error ? err.message : s.saveErr);
     } finally {
       setSaving(false);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm('Удалить профиль ценообразования?')) return;
+    if (!confirm(s.confirmDeleteProfile)) return;
     setSaveError(null);
     try {
       await adminBackendJson(`catalog/admin/pricing-profiles/${id}`, { method: 'DELETE' });
       if (editingId === id) startNew();
       await load();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Ошибка удаления');
+      setSaveError(err instanceof Error ? err.message : s.deleteErr);
     }
   }
 
@@ -349,10 +353,10 @@ export function PricingSettingsClient() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="container-modal-title" className={styles.modalTitle}>
-              Параметры контейнера
+              {s.containerParams}
             </h3>
             <label className={catalogStyles.label}>
-              Max груз, кг (до 90%)
+              {s.maxWeight}
               <input
                 className={catalogStyles.input}
                 inputMode="decimal"
@@ -361,7 +365,7 @@ export function PricingSettingsClient() {
               />
             </label>
             <label className={catalogStyles.label}>
-              Max объём, м³ (до 90%)
+              {s.maxVol}
               <input
                 className={catalogStyles.input}
                 inputMode="decimal"
@@ -371,7 +375,7 @@ export function PricingSettingsClient() {
             </label>
             <div className={styles.modalActions}>
               <button type="button" className={catalogStyles.btn} onClick={applyContainerModal}>
-                Сохранить
+                {s.save}
               </button>
               <button
                 type="button"
@@ -381,14 +385,14 @@ export function PricingSettingsClient() {
                   setModalVolume('');
                 }}
               >
-                Очистить поля
+                {s.clearFields}
               </button>
               <button
                 type="button"
                 className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
                 onClick={() => setContainerModalOpen(false)}
               >
-                Отмена
+                {s.cancel}
               </button>
             </div>
           </div>
@@ -398,9 +402,9 @@ export function PricingSettingsClient() {
       <div className={styles.grid}>
         <section className={styles.listPanel}>
           <div className={styles.listHeader}>
-            <h2 className={styles.h2}>Профили</h2>
+            <h2 className={styles.h2}>{s.profiles}</h2>
             <button type="button" className={catalogStyles.btn} onClick={startNew}>
-              Новый профиль
+              {s.newProfile}
             </button>
           </div>
           <ul className={styles.profileList}>
@@ -411,9 +415,9 @@ export function PricingSettingsClient() {
                   className={`${styles.profileItem} ${editingId === p.id ? styles.profileItemActive : ''}`}
                   onClick={() => startEdit(p)}
                 >
-                  <span className={styles.profileName}>{p.name.trim() || 'Без названия'}</span>
+                  <span className={styles.profileName}>{p.name.trim() || s.unnamed}</span>
                   <span className={styles.profileMeta}>
-                    контейнер {p.containerType}&apos; · {p.categoryIds.length} кат.
+                    {s.containerBit(p.containerType, p.categoryIds.length)}
                   </span>
                 </button>
                 <button
@@ -421,47 +425,47 @@ export function PricingSettingsClient() {
                   className={`${catalogStyles.btn} ${catalogStyles.btnDanger} ${styles.btnDelete}`}
                   onClick={() => remove(p.id)}
                 >
-                  Удалить
+                  {s.delete}
                 </button>
               </li>
             ))}
           </ul>
-          {profiles.length === 0 ? <p className={catalogStyles.muted}>Профилей пока нет.</p> : null}
+          {profiles.length === 0 ? <p className={catalogStyles.muted}>{s.noProfiles}</p> : null}
         </section>
 
         <section className={styles.formPanel}>
-          <h2 className={styles.h2}>{editingId ? 'Редактирование' : 'Новый профиль'}</h2>
+          <h2 className={styles.h2}>{editingId ? s.editTitle : s.newTitle}</h2>
           {saveError ? <p className={catalogStyles.error}>{saveError}</p> : null}
 
           <form className={styles.form} onSubmit={save}>
             <label className={catalogStyles.label}>
-              Название (для админки)
+              {s.nameAdmin}
               <input
                 className={catalogStyles.input}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Напр. Импорт мебель 2026"
+                placeholder={s.namePh}
               />
             </label>
 
             <fieldset className={styles.fieldset}>
-              <legend>Применить к категориям товаров</legend>
+              <legend>{s.legendCats}</legend>
               <div className={pn.additionalCatsWrap}>
                 <label className={catalogStyles.label}>
-                  Добавить категорию
+                  {s.addCat}
                   <select
                     key={catSelectKey}
                     className={catalogStyles.input}
                     defaultValue=""
-                    aria-label="Добавить категорию в профиль"
+                    aria-label={s.addCatAria}
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v) addCategoryFromDropdown(v);
                     }}
                   >
-                    <option value="">— Выберите —</option>
+                    <option value="">{s.choose}</option>
                     {sortedCategories.length > 0 ? (
-                      <option value={ALL_CATEGORIES_VALUE}>Все категории</option>
+                      <option value={ALL_CATEGORIES_VALUE}>{s.allCats}</option>
                     ) : null}
                     {categoriesAvailableToAdd.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -471,7 +475,7 @@ export function PricingSettingsClient() {
                   </select>
                 </label>
                 {form.categoryIds.size > 0 ? (
-                  <ul className={pn.additionalCatChips} aria-label="Выбранные категории">
+                  <ul className={pn.additionalCatChips} aria-label={s.selectedCatsAria}>
                     {Array.from(form.categoryIds).map((id) => {
                       const c = categories.find((x) => x.id === id);
                       if (!c) return null;
@@ -487,7 +491,7 @@ export function PricingSettingsClient() {
                             type="button"
                             className={pn.additionalCatChipRemove}
                             onClick={() => removeCategoryChip(id)}
-                            aria-label={`Убрать: ${label}`}
+                            aria-label={s.removeAria(label)}
                           >
                             ×
                           </button>
@@ -497,7 +501,7 @@ export function PricingSettingsClient() {
                   </ul>
                 ) : (
                   <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-                    Категории не выбраны.
+                    {s.noCatsSelected}
                   </p>
                 )}
               </div>
@@ -505,7 +509,7 @@ export function PricingSettingsClient() {
 
             <div className={styles.containerTypeRow}>
               <label className={catalogStyles.label} style={{ flex: 1, marginBottom: 0 }}>
-                Тип контейнера для расчёта доли
+                {s.containerType}
                 <select
                   className={catalogStyles.input}
                   value={form.containerType}
@@ -518,21 +522,23 @@ export function PricingSettingsClient() {
                 </select>
               </label>
               <button type="button" className={styles.containerParamsLink} onClick={openContainerModal}>
-                Изменить параметры контейнера
+                {s.changeContainer}
               </button>
             </div>
             {hasCustomContainer ? (
               <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-                Свои лимиты: {form.containerMaxWeightKg.trim() || '—'} кг /{' '}
-                {form.containerMaxVolumeM3.trim() || '—'} м³ (max до 90%)
+                {s.customLimits(
+                  form.containerMaxWeightKg.trim() || '—',
+                  form.containerMaxVolumeM3.trim() || '—',
+                )}
               </p>
             ) : null}
 
             <fieldset className={styles.fieldset}>
-              <legend>Курсы (₽ за 1 единицу валюты)</legend>
+              <legend>{s.legendRates}</legend>
               <div className={styles.row3}>
                 <label className={catalogStyles.label}>
-                  Курс юаня (CNY)
+                  {s.rateCny}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -541,7 +547,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Курс доллара (USD)
+                  {s.rateUsd}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -550,7 +556,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Курс евро (EUR)
+                  {s.rateEur}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -562,10 +568,10 @@ export function PricingSettingsClient() {
             </fieldset>
 
             <fieldset className={styles.fieldset}>
-              <legend>Логистика (на полный контейнер)</legend>
+              <legend>{s.legendLogistics}</legend>
               <div className={styles.row2}>
                 <label className={catalogStyles.label}>
-                  Склад — порт отгрузки (Китай), USD
+                  {s.legChinaUsd}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -574,7 +580,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  FOB / фрахт до порта назначения, USD
+                  {s.legFobUsd}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -583,7 +589,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Порт — склад Москва, ₽
+                  {s.legPortMsk}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -592,7 +598,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Прочие логистические расходы, ₽
+                  {s.legOtherRub}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -604,10 +610,10 @@ export function PricingSettingsClient() {
             </fieldset>
 
             <fieldset className={styles.fieldset}>
-              <legend>Проценты и фикс</legend>
+              <legend>{s.legendPercents}</legend>
               <div className={styles.row2}>
                 <label className={catalogStyles.label}>
-                  Комиссия за перевод в Китай (%)
+                  {s.feeTransfer}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -616,7 +622,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Таможенная пошлина, адвалорная (%)
+                  {s.dutyAdval}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -625,7 +631,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Таможенная составляющая по весу (%)
+                  {s.dutyWeight}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -634,7 +640,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  НДС (%)
+                  {s.vat}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -643,7 +649,7 @@ export function PricingSettingsClient() {
                   />
                 </label>
                 <label className={catalogStyles.label}>
-                  Агентские (на контейнер), ₽
+                  {s.agency}
                   <input
                     className={catalogStyles.input}
                     inputMode="decimal"
@@ -656,7 +662,7 @@ export function PricingSettingsClient() {
 
             <div className={styles.markupBlock}>
               <label className={catalogStyles.label}>
-                Наценка к себестоимости (%)
+                {s.markup}
                 <input
                   className={catalogStyles.input}
                   inputMode="decimal"
@@ -668,7 +674,7 @@ export function PricingSettingsClient() {
 
             <div className={styles.formActions}>
               <button type="submit" className={catalogStyles.btn} disabled={saving}>
-                {saving ? 'Сохранение…' : 'Сохранить'}
+                {saving ? s.saving : s.saveProfile}
               </button>
             </div>
           </form>
