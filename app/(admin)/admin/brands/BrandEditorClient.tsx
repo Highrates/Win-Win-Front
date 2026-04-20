@@ -393,7 +393,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       logoUrl: logoUrl.trim() || null,
       backgroundImageUrl: backgroundImageUrl.trim() || null,
       galleryImageUrls: galleryUrls,
-      shortDescription: shortDescription.trim().slice(0, 280) || null,
+      shortDescription: shortDescription.trim().slice(0, 400) || null,
       description: description.trim() || null,
       seoTitle: seoTitle.trim() || null,
       seoDescription: seoDescription.trim() || null,
@@ -506,17 +506,17 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         )}
 
         <label className={styles.label}>
-          Короткое описание <span className={styles.muted}>(витрина, макс. 280 символов)</span>
+          Короткое описание <span className={styles.muted}>(витрина, макс. 400 символов)</span>
           <textarea
             className={styles.textarea}
             value={shortDescription}
-            onChange={(e) => setShortDescription(e.target.value.slice(0, 280))}
+            onChange={(e) => setShortDescription(e.target.value.slice(0, 400))}
             rows={3}
-            maxLength={280}
+            maxLength={400}
             placeholder="Текст под заголовком на странице бренда"
           />
           <span className={styles.muted} style={{ display: 'block', marginTop: 6 }}>
-            {shortDescription.length}/280
+            {shortDescription.length}/400
           </span>
         </label>
 
