@@ -1,0 +1,145 @@
+.root {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--account-hairline-color, #e2e6e8);
+  padding-bottom: 0;
+}
+
+.tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-ink-black);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  padding: 8px 2px;
+  margin-bottom: -1px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.tab:hover {
+  color: var(--color-ink-black);
+  border-bottom-color: rgba(0, 0, 0, 0.2);
+}
+
+.tabActive {
+  border-bottom-color: var(--color-ink-black);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.tabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 500px;
+  overflow-y: auto;
+  padding-right: 4px;
+  padding-bottom: 12px;
+  border-bottom: var(--account-hairline-width, 1px) solid var(--account-hairline-color, #e2e6e8);
+}
+
+.materialGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.materialTitle {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  margin: 0;
+  color: var(--color-ink-black);
+}
+
+.tileGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  width: 100%;
+  border: var(--account-hairline-width, 1px) solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.tile:hover {
+  border-color: rgba(0, 0, 0, 0.4);
+  background: var(--color-bright-snow, #f5f7f8);
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.tileSelected,
+.tile[aria-pressed='true'] {
+  border-color: var(--color-ink-black);
+  background: var(--color-bright-snow, #f5f7f8);
+}
+
+.tileThumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  background-color: var(--color-bright-snow, #f5f7f8);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.tileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tileName {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-ink-black);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .tileGrid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}

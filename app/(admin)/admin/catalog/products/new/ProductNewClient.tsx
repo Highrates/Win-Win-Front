@@ -27,8 +27,6 @@ import type { AdminCategoryRow } from '../../categories/adminCategoryTypes';
 import type {
   AdminProductVariantSummary,
   ProductAdminDetail,
-  ProductMaterialColorShell,
-  ProductSizeOptionShell,
 } from '../adminProductTypes';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import {
@@ -39,108 +37,13 @@ import {
 import { createClientRandomId } from '@/lib/clientRandomId';
 import catalogStyles from '../../catalogAdmin.module.css';
 import pn from './productNew.module.css';
+import { ProductElementsSection } from './ProductElementsSection';
+import { ProductModificationsSection } from './ProductModificationsSection';
 
 type GalleryItem = { id: string; url: string; serverId?: string };
 
-type MaterialShellRow = {
-  id: string;
-  serverId?: string;
-  name: string;
-};
-
-type ColorShellRow = {
-  id: string;
-  serverId?: string;
-  /** Каким материалам в этом размере доступен цвет (client id). */
-  materialIds: string[];
-  name: string;
-  imageUrl: string;
-};
-
-type SizeShellRow = {
-  id: string;
-  serverId?: string;
-  name: string;
-  sizeSlug?: string | null;
-  materials: MaterialShellRow[];
-  colors: ColorShellRow[];
-};
-
-function sizeShellToSizeOption(sz: SizeShellRow, sortOrder: number) {
-  const namedMaterials = sz.materials.filter((m) => m.name.trim());
-  return {
-    ...(sz.serverId ? { id: sz.serverId } : {}),
-    name: sz.name.trim(),
-    sortOrder,
-    ...(sz.sizeSlug !== undefined ? { sizeSlug: sz.sizeSlug } : {}),
-    materials: namedMaterials.map((m, mi) => ({
-      ...(m.serverId ? { id: m.serverId } : {}),
-      ref: m.id,
-      name: m.name.trim(),
-      sortOrder: mi,
-    })),
-    colorOptions: sz.colors
-      .filter((c) => c.name.trim() && c.imageUrl.trim() && c.materialIds.length > 0)
-      .map((c, ci) => ({
-        ...(c.serverId ? { id: c.serverId } : {}),
-        name: c.name.trim(),
-        imageUrl: c.imageUrl.trim(),
-        sortOrder: ci,
-        materialIds: c.materialIds.map((mid) => {
-          const row = sz.materials.find((m) => m.id === mid);
-          return row?.serverId ?? row?.id ?? mid;
-        }),
-      })),
-  };
-}
 function rowId() {
   return createClientRandomId();
-}
-
-export function parseSpecsJson(raw: unknown): {
-  colors: { name: string; imageUrl: string }[];
-  materials: { name: string }[];
-  sizes: { value: string }[];
-  labels: string[];
-} {
-  const out = {
-    colors: [] as { name: string; imageUrl: string }[],
-    materials: [] as { name: string }[],
-    sizes: [] as { value: string }[],
-    labels: [] as string[],
-  };
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
-  const o = raw as Record<string, unknown>;
-  if (Array.isArray(o.colors)) {
-    for (const c of o.colors) {
-      if (c && typeof c === 'object') {
-        const x = c as Record<string, unknown>;
-        if (typeof x.name === 'string' && typeof x.imageUrl === 'string') {
-          out.colors.push({ name: x.name, imageUrl: x.imageUrl });
-        }
-      }
-    }
-  }
-  if (Array.isArray(o.materials)) {
-    for (const m of o.materials) {
-      if (m && typeof m === 'object' && typeof (m as Record<string, unknown>).name === 'string') {
-        out.materials.push({ name: String((m as Record<string, unknown>).name) });
-      }
-    }
-  }
-  if (Array.isArray(o.sizes)) {
-    for (const s of o.sizes) {
-      if (s && typeof s === 'object' && typeof (s as Record<string, unknown>).value === 'string') {
-        out.sizes.push({ value: String((s as Record<string, unknown>).value) });
-      }
-    }
-  }
-  if (Array.isArray(o.labels)) {
-    for (const l of o.labels) {
-      if (typeof l === 'string' && l.trim()) out.labels.push(l.trim());
-    }
-  }
-  return out;
 }
 
 function SortableGalleryRow({
@@ -217,30 +120,52 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const [isActive, setIsActive] = useState(true);
 
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [sizeMaterialShell, setSizeMaterialShell] = useState<SizeShellRow[]>(() => [
-    { id: rowId(), name: '', sizeSlug: null, materials: [{ id: rowId(), name: '' }], colors: [] },
-  ]);
   const [deliveryText, setDeliveryText] = useState('');
   const [technicalSpecs, setTechnicalSpecs] = useState('');
   const [additionalInfoHtml, setAdditionalInfoHtml] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
 
+  const [product, setProduct] = useState<ProductAdminDetail | null>(null);
   const [variants, setVariants] = useState<AdminProductVariantSummary[]>([]);
-  const [variantActionBusy, setVariantActionBusy] = useState(false);
+  const [variantCreateOpen, setVariantCreateOpen] = useState(false);
+  const [variantCreateModificationId, setVariantCreateModificationId] = useState('');
+  const [variantCreateBusy, setVariantCreateBusy] = useState(false);
+  const [variantCreateError, setVariantCreateError] = useState<string | null>(null);
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [picker, setPicker] = useState<
     null | { filter: 'image' | 'video' | 'all'; title: string; multi?: boolean }
   >(null);
-  const pickTarget = useRef<
-    | null
-    | { kind: 'gallery'; id: string }
-    | { kind: 'mcShellColor'; sizeId: string; colorId: string }
-    | { kind: 'rich' }
-  >(null);
+  const pickTarget = useRef<null | { kind: 'gallery'; id: string } | { kind: 'rich' }>(null);
   const richPickResolver = useRef<((url: string | null) => void) | null>(null);
+
+  const applyProduct = useCallback((p: ProductAdminDetail) => {
+    setProduct(p);
+    setName(p.name);
+    setSlug(p.slug);
+    setCategoryId(p.categoryId);
+    setAdditionalCategoryIds(new Set(p.additionalCategoryIds ?? []));
+    setCuratedCollectionIds(new Set(p.curatedCollectionIds ?? []));
+    setCuratedProductSetIds(new Set(p.curatedProductSetIds ?? []));
+    setBrandId(p.brandId ?? '');
+    setShortDescription(p.shortDescription ?? '');
+    setIsActive(p.isActive);
+    setGallery(
+      p.images.map((img) => ({
+        id: rowId(),
+        url: img.url,
+        serverId: img.id,
+      })),
+    );
+    setVariants(p.variants ?? []);
+    setDeliveryText(p.deliveryText ?? '');
+    setTechnicalSpecs(p.technicalSpecs ?? '');
+    setAdditionalInfoHtml(p.additionalInfoHtml ?? '');
+    setSeoTitle(p.seoTitle ?? '');
+    setSeoDescription(p.seoDescription ?? '');
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -263,94 +188,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
         if (productId) {
           const p = await adminBackendJson<ProductAdminDetail>(`catalog/admin/products/${productId}`);
           if (cancelled) return;
-          setName(p.name);
-          setSlug(p.slug);
-          setCategoryId(p.categoryId);
-          setAdditionalCategoryIds(new Set(p.additionalCategoryIds ?? []));
-          setCuratedCollectionIds(new Set(p.curatedCollectionIds ?? []));
-          setCuratedProductSetIds(new Set(p.curatedProductSetIds ?? []));
-          setBrandId(p.brandId ?? '');
-          setShortDescription(p.shortDescription ?? '');
-          setIsActive(p.isActive);
-          setGallery(
-            p.images.map((img) => ({
-              id: rowId(),
-              url: img.url,
-              serverId: img.id,
-            })),
-          );
-          setSizeMaterialShell(
-            (p.sizeOptions?.length
-              ? p.sizeOptions
-              : [
-                  {
-                    id: '',
-                    name: 'Стандарт',
-                    sizeSlug: null,
-                    sortOrder: 0,
-                    materialColorOptions: p.materialColorOptions ?? [],
-                  },
-                ]
-            ).map((sz: ProductSizeOptionShell) => {
-              let materials: MaterialShellRow[];
-              let colors: ColorShellRow[];
-
-              if (sz.colorOptions?.length) {
-                materials =
-                  sz.materials?.length ?
-                    sz.materials.map((m) => ({
-                      id: rowId(),
-                      serverId: m.id,
-                      name: m.name,
-                    }))
-                  : sz.materialColorOptions.map((m: ProductMaterialColorShell) => ({
-                      id: rowId(),
-                      serverId: m.id,
-                      name: m.name,
-                    }));
-                if (!materials.length) materials = [{ id: rowId(), name: '' }];
-                colors = sz.colorOptions.map((c) => ({
-                  id: rowId(),
-                  serverId: c.id,
-                  materialIds:
-                    c.materialIds?.length ? [...c.materialIds] : [materials[0]!.id],
-                  name: c.name,
-                  imageUrl: c.imageUrl,
-                }));
-              } else {
-                const rawMaterials = sz.materialColorOptions.map((m: ProductMaterialColorShell) => ({
-                  id: rowId(),
-                  serverId: m.id,
-                  name: m.name,
-                }));
-                materials = rawMaterials.length ? rawMaterials : [{ id: rowId(), name: '' }];
-                colors = sz.materialColorOptions.flatMap((m: ProductMaterialColorShell, mi: number) =>
-                  m.colors.map((c) => ({
-                    id: rowId(),
-                    serverId: c.id,
-                    materialIds: [rawMaterials[mi]?.id ?? materials[0]!.id],
-                    name: c.name,
-                    imageUrl: c.imageUrl,
-                  })),
-                );
-              }
-
-              return {
-                id: rowId(),
-                serverId: sz.id?.trim() ? sz.id : undefined,
-                sizeSlug: sz.sizeSlug ?? null,
-                name: sz.name,
-                materials,
-                colors,
-              };
-            }),
-          );
-          setVariants(p.variants ?? []);
-          setDeliveryText(p.deliveryText ?? '');
-          setTechnicalSpecs(p.technicalSpecs ?? '');
-          setAdditionalInfoHtml(p.additionalInfoHtml ?? '');
-          setSeoTitle(p.seoTitle ?? '');
-          setSeoDescription(p.seoDescription ?? '');
+          applyProduct(p);
         }
         if (!cancelled) setProductLoaded(true);
       } catch (e) {
@@ -363,7 +201,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [productId, applyProduct]);
 
   useEffect(() => {
     if (!categoryId) return;
@@ -430,12 +268,6 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     setPicker({ filter: 'image', title: 'Несколько изображений галереи', multi: true });
   }
 
-  function openMcShellColorPicker(sizeId: string, colorId: string) {
-    richPickResolver.current = null;
-    pickTarget.current = { kind: 'mcShellColor', sizeId, colorId };
-    setPicker({ filter: 'image', title: 'Изображение цвета (витрина)' });
-  }
-
   function handlePickerPickBatch(items: { url: string; id: string }[]) {
     if (!items.length) return;
     setGallery((prev) => [...prev, ...items.map((s) => ({ id: rowId(), url: s.url }))]);
@@ -457,19 +289,6 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     if (!t) return;
     if (t.kind === 'gallery') {
       setGallery((prev) => prev.map((g) => (g.id === t.id ? { ...g, url: sel.url } : g)));
-    } else if (t.kind === 'mcShellColor') {
-      setSizeMaterialShell((prev) =>
-        prev.map((sz) =>
-          sz.id !== t.sizeId
-            ? sz
-            : {
-                ...sz,
-                colors: sz.colors.map((c) =>
-                  c.id === t.colorId ? { ...c, imageUrl: sel.url } : c,
-                ),
-              },
-        ),
-      );
     }
   }
 
@@ -484,98 +303,6 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
 
   function addGalleryRow() {
     setGallery((g) => [...g, { id: rowId(), url: '' }]);
-  }
-
-  function addSizeShellRow() {
-    setSizeMaterialShell((prev) => [
-      ...prev,
-      { id: rowId(), name: '', sizeSlug: null, materials: [{ id: rowId(), name: '' }], colors: [] },
-    ]);
-  }
-
-  function removeSizeShellRow(sid: string) {
-    setSizeMaterialShell((prev) => prev.filter((s) => s.id !== sid));
-  }
-
-  function addMaterialShellRow(sizeId: string) {
-    setSizeMaterialShell((prev) =>
-      prev.map((sz) =>
-        sz.id !== sizeId
-          ? sz
-          : { ...sz, materials: [...sz.materials, { id: rowId(), name: '' }] },
-      ),
-    );
-  }
-
-  function removeMaterialShellRow(sizeId: string, mid: string) {
-    setSizeMaterialShell((prev) =>
-      prev.map((sz) => {
-        if (sz.id !== sizeId) return sz;
-        if (sz.materials.length <= 1) return sz;
-        const nextMats = sz.materials.filter((m) => m.id !== mid);
-        const fallback = nextMats[0]?.id;
-        if (!fallback) return sz;
-        const nextColors = sz.colors.map((c) => {
-          const nextIds = c.materialIds.filter((x) => x !== mid);
-          const fixed =
-            nextIds.length > 0 ? nextIds : fallback ? [fallback] : [];
-          return { ...c, materialIds: fixed };
-        });
-        return { ...sz, materials: nextMats, colors: nextColors };
-      }),
-    );
-  }
-
-  function toggleColorMaterial(sizeId: string, colorId: string, materialId: string, checked: boolean) {
-    setSizeMaterialShell((prev) =>
-      prev.map((sz) => {
-        if (sz.id !== sizeId) return sz;
-        return {
-          ...sz,
-          colors: sz.colors.map((c) => {
-            if (c.id !== colorId) return c;
-            const set = new Set(c.materialIds);
-            if (checked) set.add(materialId);
-            else set.delete(materialId);
-            let next = Array.from(set);
-            if (next.length === 0 && sz.materials[0]) next = [sz.materials[0].id];
-            return { ...c, materialIds: next };
-          }),
-        };
-      }),
-    );
-  }
-
-  function addColorShellRow(sizeId: string) {
-    setSizeMaterialShell((prev) =>
-      prev.map((sz) => {
-        if (sz.id !== sizeId) return sz;
-        let materials = sz.materials;
-        if (!materials.length) {
-          const nm = { id: rowId(), name: '' };
-          materials = [nm];
-        }
-        const first = materials[0];
-        return {
-          ...sz,
-          materials,
-          colors: [
-            ...sz.colors,
-            { id: rowId(), materialIds: [first.id], name: '', imageUrl: '' },
-          ],
-        };
-      }),
-    );
-  }
-
-  function removeColorShellRow(sizeId: string, colorId: string) {
-    setSizeMaterialShell((prev) =>
-      prev.map((sz) =>
-        sz.id !== sizeId
-          ? sz
-          : { ...sz, colors: sz.colors.filter((c) => c.id !== colorId) },
-      ),
-    );
   }
 
   function addAdditionalCategoryFromDropdown(catId: string) {
@@ -624,6 +351,38 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     return c.parent ? `${c.parent.name} → ${c.name}` : c.name;
   }
 
+  function openVariantCreateModal() {
+    setVariantCreateError(null);
+    const firstModId = product?.modifications[0]?.id ?? '';
+    setVariantCreateModificationId(firstModId);
+    setVariantCreateOpen(true);
+  }
+
+  async function createVariant() {
+    if (!productId) return;
+    if (!variantCreateModificationId) {
+      setVariantCreateError('Сначала сохраните модификации товара');
+      return;
+    }
+    setVariantCreateBusy(true);
+    setVariantCreateError(null);
+    try {
+      const { id } = await adminBackendJson<{ id: string }>(
+        `catalog/admin/products/${productId}/variants`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ modificationId: variantCreateModificationId }),
+        },
+      );
+      setVariantCreateOpen(false);
+      router.push(`/admin/catalog/products/${productId}/variants/${id}`);
+    } catch (e) {
+      setVariantCreateError(e instanceof Error ? e.message : 'Не удалось создать вариант');
+    } finally {
+      setVariantCreateBusy(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSaveError(null);
@@ -637,41 +396,41 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       return;
     }
 
+    const basePayload = {
+      categoryId,
+      additionalCategoryIds: Array.from(additionalCategoryIds),
+      curatedCollectionIds: Array.from(curatedCollectionIds),
+      curatedProductSetIds: Array.from(curatedProductSetIds),
+      brandId: brandId || null,
+      name: nameTrim,
+      slug: slug.trim() || undefined,
+      shortDescription: shortDescription.trim() || null,
+      gallery: gallery
+        .filter((g) => g.url.trim())
+        .map((g) => ({
+          ...(g.serverId ? { id: g.serverId } : {}),
+          url: g.url.trim(),
+          alt: null,
+        })),
+      deliveryText: deliveryText.trim() || null,
+      technicalSpecs: technicalSpecs.trim() || null,
+      additionalInfoHtml: additionalInfoHtml.trim() || null,
+      seoTitle: seoTitle.trim() || null,
+      seoDescription: seoDescription.trim() || null,
+      isActive,
+    };
+
     if (productId) {
       setSaving(true);
       try {
-        const shellPayload = {
-          categoryId,
-          additionalCategoryIds: Array.from(additionalCategoryIds),
-          curatedCollectionIds: Array.from(curatedCollectionIds),
-          curatedProductSetIds: Array.from(curatedProductSetIds),
-          brandId: brandId || null,
-          name: nameTrim,
-          slug: slug.trim() || undefined,
-          shortDescription: shortDescription.trim() || null,
-          gallery: gallery
-            .filter((g) => g.url.trim())
-            .map((g) => ({
-              ...(g.serverId ? { id: g.serverId } : {}),
-              url: g.url.trim(),
-              alt: null,
-            })),
-          sizeOptions: sizeMaterialShell.map((sz, si) => sizeShellToSizeOption(sz, si)),
-          deliveryText: deliveryText.trim() || null,
-          technicalSpecs: technicalSpecs.trim() || null,
-          additionalInfoHtml: additionalInfoHtml.trim() || null,
-          seoTitle: seoTitle.trim() || null,
-          seoDescription: seoDescription.trim() || null,
-          isActive,
-        };
         const updated = await adminBackendJson<ProductAdminDetail>(
           `catalog/admin/products/${productId}`,
           {
             method: 'PATCH',
-            body: JSON.stringify(shellPayload),
+            body: JSON.stringify(basePayload),
           },
         );
-        setVariants(updated.variants ?? []);
+        applyProduct(updated);
         await revalidatePublicCatalogCache();
         router.refresh();
       } catch (err) {
@@ -684,38 +443,9 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
 
     setSaving(true);
     try {
-      const payload = {
-        categoryId,
-        additionalCategoryIds: Array.from(additionalCategoryIds),
-        curatedCollectionIds: Array.from(curatedCollectionIds),
-        curatedProductSetIds: Array.from(curatedProductSetIds),
-        brandId: brandId || null,
-        name: nameTrim,
-        slug: slug.trim() || undefined,
-        shortDescription: shortDescription.trim() || null,
-        gallery: gallery
-          .filter((g) => g.url.trim())
-          .map((g) => ({ url: g.url.trim(), alt: null })),
-        sizeOptions: sizeMaterialShell.map((sz, si) => ({
-          ...sizeShellToSizeOption(
-            { ...sz, name: sz.name.trim() || 'Стандарт' },
-            si,
-          ),
-        })),
-        deliveryText: deliveryText.trim() || null,
-        technicalSpecs: technicalSpecs.trim() || null,
-        additionalInfoHtml: additionalInfoHtml.trim() || null,
-        seoTitle: seoTitle.trim() || null,
-        seoDescription: seoDescription.trim() || null,
-        price: 0,
-        priceMode: 'manual' as const,
-        currency: 'RUB',
-        isActive,
-      };
-
       const created = await adminBackendJson<{ id: string }>('catalog/admin/products', {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(basePayload),
       });
       await revalidatePublicCatalogCache();
       router.push(`/admin/catalog/products/${created.id}`);
@@ -731,6 +461,9 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     return <p className={catalogStyles.muted}>Загрузка товара…</p>;
   }
 
+  const normalizedBrandId = brandId || null;
+  const canCreateVariant = !!product && product.modifications.length > 0;
+
   return (
     <>
       {loadError ? <p className={catalogStyles.error}>{loadError}</p> : null}
@@ -738,311 +471,142 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       <form className={`${catalogStyles.form} ${pn.formWide}`} onSubmit={submit}>
         <div className={pn.productFormGrid}>
           <div className={pn.productFormMain}>
-        <label className={catalogStyles.label}>
-          Название товара
-          <input
-            className={catalogStyles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            autoComplete="off"
-          />
-        </label>
+            <label className={catalogStyles.label}>
+              Название товара
+              <input
+                className={catalogStyles.input}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                autoComplete="off"
+              />
+            </label>
 
-        <label className={catalogStyles.label}>
-          Slug (необязательно, иначе из названия)
-          <input
-            className={catalogStyles.input}
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="latin-slug"
-            autoComplete="off"
-          />
-        </label>
+            <label className={catalogStyles.label}>
+              Slug (необязательно, иначе из названия)
+              <input
+                className={catalogStyles.input}
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="latin-slug"
+                autoComplete="off"
+              />
+            </label>
 
-        <label className={catalogStyles.label}>
-          Короткое описание
-          <textarea
-            className={catalogStyles.textarea}
-            value={shortDescription}
-            onChange={(e) => setShortDescription(e.target.value)}
-            rows={4}
-          />
-        </label>
+            <label className={catalogStyles.label}>
+              Короткое описание
+              <textarea
+                className={catalogStyles.textarea}
+                value={shortDescription}
+                onChange={(e) => setShortDescription(e.target.value)}
+                rows={4}
+              />
+            </label>
 
-        <label className={catalogStyles.label}>
-          Бренд
-          <select className={catalogStyles.input} value={brandId} onChange={(e) => setBrandId(e.target.value)}>
-            <option value="">— Нет —</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Галерея изображений</h2>
-          <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-            Крупное превью, порядок — перетаскиванием за ⋮⋮. Подписи к файлам настраиваются в объектах
-            медиатеки.
-            {isEdit ? ' Для варианта без своих кадров на витрине используется эта галерея.' : null}
-          </p>
-          <DndContext sensors={gallerySensors} collisionDetection={closestCenter} onDragEnd={onGalleryDragEnd}>
-            <SortableContext items={gallery.map((g) => g.id)} strategy={verticalListSortingStrategy}>
-              <div className={pn.repeatList}>
-                {gallery.map((item) => (
-                  <SortableGalleryRow
-                    key={item.id}
-                    item={item}
-                    onPick={() => openGalleryPicker(item.id)}
-                    onRemove={() => setGallery((prev) => prev.filter((g) => g.id !== item.id))}
-                  />
+            <label className={catalogStyles.label}>
+              Бренд
+              <select
+                className={catalogStyles.input}
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+              >
+                <option value="">— Нет —</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
                 ))}
+              </select>
+              <span className={catalogStyles.muted} style={{ display: 'block', marginTop: 6 }}>
+                Материалы и цвета для элементов товара берутся из библиотеки выбранного бренда.
+              </span>
+            </label>
+
+            <div className={pn.section}>
+              <h2 className={pn.sectionTitle}>Галерея изображений</h2>
+              <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
+                Крупное превью, порядок — перетаскиванием за ⋮⋮. Подписи к файлам настраиваются в объектах
+                медиатеки.
+                {isEdit ? ' Для варианта без своих кадров на витрине используется эта галерея.' : null}
+              </p>
+              <DndContext sensors={gallerySensors} collisionDetection={closestCenter} onDragEnd={onGalleryDragEnd}>
+                <SortableContext items={gallery.map((g) => g.id)} strategy={verticalListSortingStrategy}>
+                  <div className={pn.repeatList}>
+                    {gallery.map((item) => (
+                      <SortableGalleryRow
+                        key={item.id}
+                        item={item}
+                        onPick={() => openGalleryPicker(item.id)}
+                        onRemove={() => setGallery((prev) => prev.filter((g) => g.id !== item.id))}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <button type="button" className={catalogStyles.btn} onClick={addGalleryRow}>
+                  + Добавить кадр
+                </button>
+                <button type="button" className={catalogStyles.btn} onClick={openGalleryPickerMulti}>
+                  + Несколько из медиатеки
+                </button>
               </div>
-            </SortableContext>
-          </DndContext>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-            <button type="button" className={catalogStyles.btn} onClick={addGalleryRow}>
-              + Добавить кадр
-            </button>
-            <button type="button" className={catalogStyles.btn} onClick={openGalleryPickerMulti}>
-              + Несколько из медиатеки
-            </button>
-          </div>
-        </div>
-
-        <div className={pn.section}>
-            <h2 className={pn.sectionTitle}>Размеры, материалы и цвета</h2>
-            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-              Сначала задаётся размер (конфигурация), внутри — отдельно материалы (название) и цвета (превью и
-              название; при необходимости укажите материал для цвета). SKU в карточке варианта привязывается к
-              размеру, материалу и цвету.
-            </p>
-            <div className={pn.repeatList}>
-              {sizeMaterialShell.map((sz) => (
-                <div
-                  key={sz.id}
-                  style={{
-                    border: '1px solid #c5d4e0',
-                    borderRadius: 8,
-                    padding: 12,
-                    marginBottom: 14,
-                  }}
-                >
-                  <div className={pn.repeatRow}>
-                    <input
-                      type="text"
-                      className={catalogStyles.input}
-                      style={{ flex: 1, minWidth: 200 }}
-                      value={sz.name}
-                      onChange={(e) =>
-                        setSizeMaterialShell((prev) =>
-                          prev.map((x) => (x.id === sz.id ? { ...x, name: e.target.value } : x)),
-                        )
-                      }
-                    />
-                    <button
-                      type="button"
-                      className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                      onClick={() => removeSizeShellRow(sz.id)}
-                    >
-                      Удалить размер
-                    </button>
-                  </div>
-                  <div style={{ marginTop: 12, paddingLeft: 8 }}>
-                    <p className={catalogStyles.muted} style={{ margin: '0 0 8px' }}>
-                      Материалы
-                    </p>
-                    {sz.materials.map((m) => (
-                      <div key={m.id} className={pn.repeatRow} style={{ marginBottom: 8 }}>
-                        <input
-                          type="text"
-                          className={catalogStyles.input}
-                          style={{ flex: 1, minWidth: 200 }}
-                          value={m.name}
-                          onChange={(e) =>
-                            setSizeMaterialShell((prev) =>
-                              prev.map((row) =>
-                                row.id !== sz.id
-                                  ? row
-                                  : {
-                                      ...row,
-                                      materials: row.materials.map((mat) =>
-                                        mat.id === m.id ? { ...mat, name: e.target.value } : mat,
-                                      ),
-                                    },
-                              ),
-                            )
-                          }
-                        />
-                        <button
-                          type="button"
-                          className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                          disabled={sz.materials.length <= 1}
-                          onClick={() => removeMaterialShellRow(sz.id, m.id)}
-                          title={sz.materials.length <= 1 ? 'Нужен хотя бы один материал' : undefined}
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    ))}
-                    <button type="button" className={catalogStyles.btn} onClick={() => addMaterialShellRow(sz.id)}>
-                      + Материал
-                    </button>
-
-                    <p className={catalogStyles.muted} style={{ margin: '16px 0 8px' }}>
-                      Цвета
-                    </p>
-                    {sz.colors.map((c) => (
-                      <div
-                        key={c.id}
-                        className={`${pn.repeatRow} ${pn.galleryRowLayout}`}
-                        style={{ marginBottom: 8 }}
-                      >
-                        {c.imageUrl ? (
-                          <img className={pn.colorPreview} src={c.imageUrl} alt="" />
-                        ) : (
-                          <div className={pn.colorPreview} aria-hidden />
-                        )}
-                        <input
-                          type="text"
-                          className={catalogStyles.input}
-                          style={{ flex: 1, minWidth: 160 }}
-                          value={c.name}
-                          onChange={(e) =>
-                            setSizeMaterialShell((prev) =>
-                              prev.map((row) =>
-                                row.id !== sz.id
-                                  ? row
-                                  : {
-                                      ...row,
-                                      colors: row.colors.map((col) =>
-                                        col.id === c.id ? { ...col, name: e.target.value } : col,
-                                      ),
-                                    },
-                              ),
-                            )
-                          }
-                        />
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '8px 14px',
-                            alignItems: 'center',
-                            flex: 1,
-                            minWidth: 200,
-                          }}
-                        >
-                          <span
-                            className={catalogStyles.muted}
-                            style={{ margin: 0, flexShrink: 0, alignSelf: 'center' }}
-                          >
-                            Материалы для этого цвета:
-                          </span>
-                          {sz.materials.map((m) => (
-                            <label
-                              key={m.id}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-                            >
-                              <AccountCheckbox
-                                checked={c.materialIds.includes(m.id)}
-                                onChange={(e) =>
-                                  toggleColorMaterial(sz.id, c.id, m.id, e.target.checked)
-                                }
-                              />
-                              <span>{m.name.trim() || 'Материал'}</span>
-                            </label>
-                          ))}
-                        </div>
-                        <div className={pn.rowActions}>
-                          <button
-                            type="button"
-                            className={catalogStyles.btn}
-                            onClick={() => openMcShellColorPicker(sz.id, c.id)}
-                          >
-                            Медиатека
-                          </button>
-                          <button
-                            type="button"
-                            className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                            onClick={() => removeColorShellRow(sz.id, c.id)}
-                          >
-                            Удалить
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    <button type="button" className={catalogStyles.btn} onClick={() => addColorShellRow(sz.id)}>
-                      + Цвет
-                    </button>
-                  </div>
-                </div>
-              ))}
             </div>
-            <button type="button" className={catalogStyles.btn} onClick={addSizeShellRow}>
-              + Размер
-            </button>
-          </div>
 
+            <div className={pn.section}>
+              <h2 className={pn.sectionTitle}>Доставка</h2>
+              <textarea
+                className={`${catalogStyles.textarea} ${pn.wideTextarea}`}
+                value={deliveryText}
+                onChange={(e) => setDeliveryText(e.target.value)}
+                rows={6}
+                placeholder="Текст о доставке"
+              />
+            </div>
 
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Доставка</h2>
-          <textarea
-            className={`${catalogStyles.textarea} ${pn.wideTextarea}`}
-            value={deliveryText}
-            onChange={(e) => setDeliveryText(e.target.value)}
-            rows={6}
-            placeholder="Текст о доставке"
-          />
-        </div>
+            <div className={pn.section}>
+              <h2 className={pn.sectionTitle}>Технические параметры</h2>
+              <textarea
+                className={`${catalogStyles.textarea} ${pn.wideTextarea}`}
+                value={technicalSpecs}
+                onChange={(e) => setTechnicalSpecs(e.target.value)}
+                rows={6}
+                placeholder="Технические характеристики"
+              />
+            </div>
 
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Технические параметры</h2>
-          <textarea
-            className={`${catalogStyles.textarea} ${pn.wideTextarea}`}
-            value={technicalSpecs}
-            onChange={(e) => setTechnicalSpecs(e.target.value)}
-            rows={6}
-            placeholder="Технические характеристики"
-          />
-        </div>
+            <div className={pn.section}>
+              <h2 className={pn.sectionTitle}>Дополнительная информация</h2>
+              <RichBlock
+                value={additionalInfoHtml}
+                onChange={setAdditionalInfoHtml}
+                placeholder="Текст, изображения, видео…"
+                uploadMedia={(file, type) => adminUploadRichMedia(file, type)}
+                pickMediaFromLibrary={pickMediaFromLibrary}
+                onUploadError={(msg) => setSaveError(msg)}
+              />
+            </div>
 
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Дополнительная информация</h2>
-          <RichBlock
-            value={additionalInfoHtml}
-            onChange={setAdditionalInfoHtml}
-            placeholder="Текст, изображения, видео…"
-            uploadMedia={(file, type) => adminUploadRichMedia(file, type)}
-            pickMediaFromLibrary={pickMediaFromLibrary}
-            onUploadError={(msg) => setSaveError(msg)}
-          />
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>SEO</h2>
-          <label className={catalogStyles.label}>
-            Meta title
-            <input
-              className={catalogStyles.input}
-              value={seoTitle}
-              onChange={(e) => setSeoTitle(e.target.value)}
-            />
-          </label>
-          <label className={catalogStyles.label}>
-            Meta description
-            <textarea
-              className={catalogStyles.textarea}
-              value={seoDescription}
-              onChange={(e) => setSeoDescription(e.target.value)}
-              rows={3}
-            />
-          </label>
-        </div>
-
+            <div className={pn.section}>
+              <h2 className={pn.sectionTitle}>SEO</h2>
+              <label className={catalogStyles.label}>
+                Meta title
+                <input
+                  className={catalogStyles.input}
+                  value={seoTitle}
+                  onChange={(e) => setSeoTitle(e.target.value)}
+                />
+              </label>
+              <label className={catalogStyles.label}>
+                Meta description
+                <textarea
+                  className={catalogStyles.textarea}
+                  value={seoDescription}
+                  onChange={(e) => setSeoDescription(e.target.value)}
+                  rows={3}
+                />
+              </label>
+            </div>
           </div>
 
           <aside className={pn.productFormPlacement} aria-label="Расположение товара в каталоге">
@@ -1269,80 +833,6 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
           </aside>
         </div>
 
-        {isEdit ? (
-          <div className={pn.section}>
-            <h2 className={pn.sectionTitle}>Варианты</h2>
-            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-              Цена, габариты, SKU, 3D/чертёж, цвета и галерея варианта — в карточке варианта. Если у варианта
-              нет своих фото, подставляется общая галерея товара.
-            </p>
-            <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-              Удалить вариант можно в его карточке (кнопка «Удалить вариант»), если вариантов больше одного.
-            </p>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e6e8' }}>
-                    <th style={{ padding: '8px 6px' }}>Название варианта</th>
-                    <th style={{ padding: '8px 6px' }}>Размер</th>
-                    <th style={{ padding: '8px 6px' }}>Цвет — материал</th>
-                    <th style={{ padding: '8px 6px' }}>Цена</th>
-                    <th style={{ padding: '8px 6px' }}>Доступность</th>
-                    <th style={{ padding: '8px 6px', width: 56 }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {variants.map((v) => (
-                    <tr key={v.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                      <td style={{ padding: '8px 6px' }}>{v.displayName}</td>
-                      <td style={{ padding: '8px 6px' }}>{v.sizeLabel?.trim() || '—'}</td>
-                      <td style={{ padding: '8px 6px' }}>{v.colorMaterialLabel?.trim() || '—'}</td>
-                      <td style={{ padding: '8px 6px' }}>
-                        {Number(v.price).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} {v.currency}
-                      </td>
-                      <td style={{ padding: '8px 6px' }}>{v.isActive ? 'Да' : 'Нет'}</td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <Link
-                          href={`/admin/catalog/products/${productId}/variants/${v.id}`}
-                          aria-label="Редактировать вариант"
-                          style={{ display: 'inline-flex', padding: 4 }}
-                        >
-                          <img src="/icons/edit.svg" alt="" width={20} height={20} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <button
-              type="button"
-              className={catalogStyles.btn}
-              style={{ marginTop: 12 }}
-              disabled={variantActionBusy || !productId}
-              onClick={() => {
-                void (async () => {
-                  if (!productId) return;
-                  setVariantActionBusy(true);
-                  try {
-                    const { id } = await adminBackendJson<{ id: string }>(
-                      `catalog/admin/products/${productId}/variants`,
-                      { method: 'POST', body: '{}' },
-                    );
-                    router.push(`/admin/catalog/products/${productId}/variants/${id}`);
-                  } catch (e) {
-                    setSaveError(e instanceof Error ? e.message : 'Не удалось создать вариант');
-                  } finally {
-                    setVariantActionBusy(false);
-                  }
-                })();
-              }}
-            >
-              {variantActionBusy ? '…' : '+ Добавить вариант'}
-            </button>
-          </div>
-        ) : null}
-
         {saveError ? <p className={catalogStyles.error}>{saveError}</p> : null}
 
         <div className={pn.actionsBar}>
@@ -1364,6 +854,189 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
           </Link>
         </div>
       </form>
+
+      {isEdit && productId && product ? (
+        <>
+          <ProductModificationsSection
+            productId={productId}
+            initialModifications={product.modifications}
+            onProductMutated={applyProduct}
+          />
+
+          <ProductElementsSection
+            productId={productId}
+            brandId={normalizedBrandId}
+            initialElements={product.elements}
+            onProductMutated={applyProduct}
+          />
+
+          <div className={pn.section}>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+              }}
+            >
+              <h2 className={pn.sectionTitle} style={{ margin: 0 }}>
+                Варианты
+              </h2>
+              <button
+                type="button"
+                className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
+                onClick={openVariantCreateModal}
+                disabled={!canCreateVariant}
+                title={
+                  canCreateVariant
+                    ? undefined
+                    : 'Сначала создайте хотя бы одну модификацию'
+                }
+              >
+                + Добавить вариант
+              </button>
+            </div>
+            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
+              Вариант = одна модификация + выбор «материал-цвета» для каждого элемента. Цена,
+              габариты, SKU и кадры галереи — в карточке варианта. Удалить вариант можно в его
+              карточке.
+            </p>
+            {variants.length === 0 ? (
+              <p className={catalogStyles.muted}>
+                Ещё нет вариантов. Создайте модификацию и добавьте первый вариант.
+              </p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e6e8' }}>
+                      <th style={{ padding: '8px 6px' }}>Название варианта</th>
+                      <th style={{ padding: '8px 6px' }}>Модификация</th>
+                      <th style={{ padding: '8px 6px' }}>Элементы</th>
+                      <th style={{ padding: '8px 6px' }}>Цена</th>
+                      <th style={{ padding: '8px 6px' }}>Доступность</th>
+                      <th style={{ padding: '8px 6px', width: 56 }} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {variants.map((v) => (
+                      <tr key={v.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                        <td style={{ padding: '8px 6px' }}>
+                          {v.displayName}
+                          {v.isDefault ? (
+                            <span
+                              className={catalogStyles.badge}
+                              style={{ marginLeft: 8 }}
+                              aria-label="Вариант по умолчанию"
+                            >
+                              по умолчанию
+                            </span>
+                          ) : null}
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>{v.modificationLabel || '—'}</td>
+                        <td style={{ padding: '8px 6px' }}>{v.selectionsLabel ?? '—'}</td>
+                        <td style={{ padding: '8px 6px' }}>
+                          {Number(v.price).toLocaleString('ru-RU', { maximumFractionDigits: 0 })}{' '}
+                          {v.currency}
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>{v.isActive ? 'Да' : 'Нет'}</td>
+                        <td style={{ padding: '8px 6px' }}>
+                          <Link
+                            href={`/admin/catalog/products/${productId}/variants/${v.id}`}
+                            aria-label="Редактировать вариант"
+                            style={{ display: 'inline-flex', padding: 4 }}
+                          >
+                            <img src="/icons/edit.svg" alt="" width={20} height={20} />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      ) : null}
+
+      {variantCreateOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 260,
+            background: 'rgba(5, 24, 38, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setVariantCreateOpen(false);
+          }}
+        >
+          <div
+            style={{
+              width: 'min(480px, 96vw)',
+              background: '#fff',
+              borderRadius: 14,
+              padding: 20,
+              boxShadow: '0 24px 64px rgba(5, 24, 38, 0.22)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+          >
+            <h2 style={{ margin: 0 }}>Новый вариант</h2>
+            <p className={catalogStyles.muted} style={{ margin: 0 }}>
+              Вариант создаётся на базе модификации. После создания вы перейдёте в карточку варианта
+              и зададите выбор материал-цветов, цену, габариты и кадры.
+            </p>
+            <label className={catalogStyles.label} style={{ margin: 0 }}>
+              Модификация
+              <select
+                className={catalogStyles.input}
+                value={variantCreateModificationId}
+                onChange={(e) => setVariantCreateModificationId(e.target.value)}
+              >
+                {product?.modifications.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {variantCreateError ? (
+              <p className={catalogStyles.error} style={{ margin: 0 }}>
+                {variantCreateError}
+              </p>
+            ) : null}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className={catalogStyles.btn}
+                onClick={() => setVariantCreateOpen(false)}
+                disabled={variantCreateBusy}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
+                onClick={() => {
+                  void createVariant();
+                }}
+                disabled={variantCreateBusy || !variantCreateModificationId}
+              >
+                {variantCreateBusy ? 'Создание…' : 'Создать'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {picker ? (
         <MediaLibraryPickerModal

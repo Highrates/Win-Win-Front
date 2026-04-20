@@ -15,6 +15,33 @@ export type AdminProductRow = {
   thumbUrl: string | null;
 };
 
+/** Один «материал-цвет» (доступность) внутри элемента модификации. */
+export type AdminProductElementAvailability = {
+  brandMaterialColorId: string;
+  sortOrder: number;
+  materialName: string;
+  colorName: string;
+  imageUrl: string | null;
+};
+
+/** Элемент модификации товара — напр. «Обивка», «Ножки». */
+export type AdminProductElement = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  /** Пул «материал-цветов» бренда, доступных для выбора в варианте. */
+  availabilities: AdminProductElementAvailability[];
+};
+
+/** Модификация товара — напр. «2000×800 — угловой левый». */
+export type AdminProductModification = {
+  id: string;
+  name: string;
+  modificationSlug: string | null;
+  sortOrder: number;
+};
+
+/** Краткая карточка варианта в таблице товара. */
 export type AdminProductVariantSummary = {
   id: string;
   displayName: string;
@@ -22,55 +49,13 @@ export type AdminProductVariantSummary = {
   currency: string;
   isActive: boolean;
   isDefault: boolean;
-  /** Название размера из опции товара */
-  sizeLabel?: string | null;
-  /** «Цвет — материал» из опций и/или optionAttributes */
-  colorMaterialLabel?: string | null;
+  modificationId: string;
+  modificationLabel: string;
+  /** «Обивка: Ткань/Серый · Ножки: Металл/Чёрный» */
+  selectionsLabel: string | null;
 };
 
-/** Материал и цвета на карточке товара (админка / витрина). */
-export type ProductMaterialColorShell = {
-  id: string;
-  name: string;
-  sortOrder: number;
-  colors: {
-    id: string;
-    name: string;
-    imageUrl: string;
-    sortOrder: number;
-  }[];
-};
-
-export type ProductMaterialShell = {
-  id: string;
-  name: string;
-  sortOrder: number;
-};
-
-/** Цвет в размере с привязкой к одному или нескольким материалам. */
-export type ProductColorShell = {
-  id: string;
-  name: string;
-  imageUrl: string;
-  sortOrder: number;
-  materialIds: string[];
-};
-
-/** Размер и вложенные материалы/цвета (GET/PATCH товара). */
-export type ProductSizeOptionShell = {
-  id: string;
-  name: string;
-  sizeSlug: string | null;
-  sortOrder: number;
-  /** Плоский список материалов (предпочтительно). */
-  materials?: ProductMaterialShell[];
-  /** Плоский список цветов с materialIds (предпочтительно). */
-  colorOptions?: ProductColorShell[];
-  /** Вычисляемое: материалы с вложенными цветами (вариант SKU, PDP). */
-  materialColorOptions: ProductMaterialColorShell[];
-};
-
-/** Ответ GET catalog/admin/products/:id — оболочка товара + список вариантов */
+/** Ответ GET catalog/admin/products/:id */
 export type ProductAdminDetail = {
   id: string;
   slug: string;
@@ -82,11 +67,10 @@ export type ProductAdminDetail = {
   brandId: string | null;
   shortDescription: string | null;
   isActive: boolean;
-  images: { id?: string; url: string; alt: string | null; sortOrder: number }[];
-  /** Размеры; внутри — материалы и цвета */
-  sizeOptions?: ProductSizeOptionShell[];
-  /** @deprecated Используйте sizeOptions */
-  materialColorOptions?: ProductMaterialColorShell[];
+  images: { id: string; url: string; alt: string | null; sortOrder: number }[];
+  modifications: AdminProductModification[];
+  /** Общий пул настраиваемых элементов товара (Обивка, Ножки…), доступных во всех модификациях. */
+  elements: AdminProductElement[];
   additionalInfoHtml: string | null;
   deliveryText: string | null;
   technicalSpecs: string | null;
@@ -97,30 +81,51 @@ export type ProductAdminDetail = {
   variants: AdminProductVariantSummary[];
 };
 
+/** Элемент модификации с доступными «материал-цветами» (в карточке варианта). */
+export type ProductVariantElementForPick = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  availableMaterialColors: {
+    brandMaterialColorId: string;
+    materialId: string;
+    materialName: string;
+    colorName: string;
+    imageUrl: string | null;
+    sortOrder: number;
+  }[];
+};
+
 /** GET catalog/admin/products/:productId/variants/:variantId */
 export type ProductVariantAdminDetail = {
   id: string;
   productId: string;
   productName: string;
-  displayName: string;
-  variantLabel?: string | null;
-  variantSlug?: string | null;
-  sizeOptionId?: string | null;
-  materialOptionId?: string | null;
-  colorOptionId?: string | null;
-  sizeOptions?: ProductSizeOptionShell[];
-  materialColorOptions?: ProductMaterialColorShell[];
-  productGalleryImages?: { id: string; url: string; alt: string | null; sortOrder: number }[];
-  galleryProductImageIds?: string[];
-  optionAttributes: Record<string, string> | null;
+  variantLabel: string | null;
+  variantSlug: string | null;
+  modificationId: string;
+  /** Все модификации товара — для переключения. */
+  modificationsForProduct: {
+    id: string;
+    name: string;
+    modificationSlug: string | null;
+    sortOrder: number;
+  }[];
+  /** Общий пул элементов товара с доступными «материал-цветами». */
+  productElements: ProductVariantElementForPick[];
+  /** Фактически выбранные «материал-цвета» по элементам. */
+  selections: {
+    productElementId: string;
+    brandMaterialColorId: string;
+  }[];
+  productGalleryImages: { id: string; url: string; alt: string | null; sortOrder: number }[];
+  galleryProductImageIds: string[];
   priceMode: 'manual' | 'formula';
   costPriceCny: string | null;
   price: string;
   currency: string;
   isActive: boolean;
   isDefault: boolean;
-  images: { url: string; alt: string | null; sortOrder: number }[];
-  specsJson: unknown;
   sku: string | null;
   lengthMm: number | null;
   widthMm: number | null;

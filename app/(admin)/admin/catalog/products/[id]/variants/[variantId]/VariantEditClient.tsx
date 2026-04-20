@@ -22,20 +22,17 @@ import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerMo
 import type {
   AdminProductVariantSummary,
   ProductAdminDetail,
-  ProductMaterialColorShell,
-  ProductSizeOptionShell,
   ProductVariantAdminDetail,
+  ProductVariantElementForPick,
 } from '../../../adminProductTypes';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import {
   adminBackendJson,
   revalidatePublicCatalogCache,
 } from '@/lib/adminBackendFetch';
-import { createClientRandomId } from '@/lib/clientRandomId';
 import { slugifyVariantLabel } from '@/lib/slugifyVariantLabel';
 import catalogStyles from '../../../../catalogAdmin.module.css';
 import pn from '../../../new/productNew.module.css';
-import { parseSpecsJson } from '../../../new/ProductNewClient';
 import vt from './variantTabs.module.css';
 
 function parseCmInputToMm(s: string): number | null {
@@ -57,59 +54,6 @@ function parseOptionalM3(s: string): number | null {
 function mmToCmInput(mm: number | null | undefined): string {
   if (mm == null) return '';
   return String(mm / 10);
-}
-
-type GalleryItem = { id: string; url: string };
-type GalleryMode = 'product' | 'legacy';
-
-function rowId() {
-  return createClientRandomId();
-}
-
-function SortableGalleryRow({
-  item,
-  onPick,
-  onRemove,
-}: {
-  item: GalleryItem;
-  onPick: () => void;
-  onRemove: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.7 : 1,
-  };
-  return (
-    <div ref={setNodeRef} style={style} className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
-      <button
-        type="button"
-        className={pn.dragHandle}
-        {...attributes}
-        {...listeners}
-        title="Перетащить"
-        aria-label="Перетащить"
-      >
-        ⋮⋮
-      </button>
-      {item.url ? (
-        <img className={pn.galleryThumbLg} src={item.url} alt="" />
-      ) : (
-        <div className={pn.galleryThumbLg} aria-hidden />
-      )}
-      <div className={pn.rowActions}>
-        <button type="button" className={catalogStyles.btn} onClick={onPick}>
-          Медиатека
-        </button>
-        <button type="button" className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`} onClick={onRemove}>
-          Удалить
-        </button>
-      </div>
-    </div>
-  );
 }
 
 function SortableProductFrameRow({
@@ -171,11 +115,6 @@ export function VariantEditClient({
   const [loaded, setLoaded] = useState(false);
   const [productName, setProductName] = useState('');
 
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [labels, setLabels] = useState<string[]>(['']);
-  /** Размеры из specsJson только для сохранения (редактирование — на карточке товара). */
-  const specsSizesRef = useRef<{ value: string }[]>([]);
-
   const [sku, setSku] = useState('');
   const [lengthCm, setLengthCm] = useState('');
   const [widthCm, setWidthCm] = useState('');
@@ -199,15 +138,19 @@ export function VariantEditClient({
   const [drawingUrl, setDrawingUrl] = useState('');
   const [variantLabel, setVariantLabel] = useState('');
   const [variantSlug, setVariantSlug] = useState('');
-  const [sizeOptions, setSizeOptions] = useState<ProductSizeOptionShell[]>([]);
-  const [sizeOptionId, setSizeOptionId] = useState('');
-  const [materialOptionId, setMaterialOptionId] = useState('');
-  const [colorOptionId, setColorOptionId] = useState('');
+
+  const [modificationId, setModificationId] = useState('');
+  const [modificationsForProduct, setModificationsForProduct] = useState<
+    { id: string; name: string; modificationSlug: string | null; sortOrder: number }[]
+  >([]);
+  const [elements, setElements] = useState<ProductVariantElementForPick[]>([]);
+  /** productElementId -> brandMaterialColorId. */
+  const [selections, setSelections] = useState<Record<string, string>>({});
+
   const [productGalleryImages, setProductGalleryImages] = useState<
     { id: string; url: string; alt: string | null }[]
   >([]);
   const [selectedFrameIds, setSelectedFrameIds] = useState<string[]>([]);
-  const [galleryMode, setGalleryMode] = useState<GalleryMode>('product');
 
   const [categoryIdsForPricing, setCategoryIdsForPricing] = useState<string[]>([]);
 
@@ -216,16 +159,10 @@ export function VariantEditClient({
   const [deleting, setDeleting] = useState(false);
   const [siblingVariants, setSiblingVariants] = useState<AdminProductVariantSummary[]>([]);
   const [picker, setPicker] = useState<
-    null | { filter: 'image' | 'video' | 'all'; title: string; multi?: boolean }
+    null | { filter: 'image' | 'video' | 'all'; title: string }
   >(null);
-  const pickTarget = useRef<null | { kind: 'gallery'; id: string } | { kind: 'model3d' } | { kind: 'drawing' }>(null);
-  /** После правки slug вручную не перезаписываем его из названия. */
+  const pickTarget = useRef<null | { kind: 'model3d' } | { kind: 'drawing' }>(null);
   const variantSlugManuallyEditedRef = useRef(false);
-
-  const materialsForSize = useMemo((): ProductMaterialColorShell[] => {
-    if (!sizeOptionId) return [];
-    return sizeOptions.find((s) => s.id === sizeOptionId)?.materialColorOptions ?? [];
-  }, [sizeOptions, sizeOptionId]);
 
   const applyVariant = useCallback((v: ProductVariantAdminDetail) => {
     setProductName(v.productName);
@@ -233,43 +170,21 @@ export function VariantEditClient({
     const slugTrim = v.variantSlug?.trim() ?? '';
     const looksLikeDefaultSlug = /^v-\d+(?:-\d+)?$/i.test(slugTrim);
     variantSlugManuallyEditedRef.current =
-      slugTrim !== '' &&
-      slugifyVariantLabel(labelTrim) !== slugTrim &&
-      !looksLikeDefaultSlug;
+      slugTrim !== '' && slugifyVariantLabel(labelTrim) !== slugTrim && !looksLikeDefaultSlug;
     setVariantLabel(labelTrim);
     setVariantSlug(slugTrim);
-    setSizeOptions(v.sizeOptions ?? []);
-    setSizeOptionId(v.sizeOptionId ?? '');
-    setMaterialOptionId(v.materialOptionId ?? '');
-    setColorOptionId(v.colorOptionId ?? '');
+
+    setModificationId(v.modificationId);
+    setModificationsForProduct(v.modificationsForProduct);
+    setElements(v.productElements);
+    setSelections(
+      Object.fromEntries(v.selections.map((s) => [s.productElementId, s.brandMaterialColorId])),
+    );
 
     const frames = v.productGalleryImages ?? [];
     setProductGalleryImages(frames);
-    if (frames.length > 0) {
-      setGalleryMode('product');
-      if (v.galleryProductImageIds?.length) {
-        setSelectedFrameIds(v.galleryProductImageIds);
-      } else {
-        const byUrl = new Map(frames.map((x) => [x.url, x.id]));
-        const matched = (v.images ?? [])
-          .map((im) => byUrl.get(im.url))
-          .filter((x): x is string => !!x);
-        setSelectedFrameIds(matched);
-      }
-    } else {
-      setGalleryMode('legacy');
-      setSelectedFrameIds([]);
-      setGallery(
-        v.images.map((im) => ({
-          id: rowId(),
-          url: im.url,
-        })),
-      );
-    }
+    setSelectedFrameIds(v.galleryProductImageIds ?? []);
 
-    const specs = parseSpecsJson(v.specsJson);
-    specsSizesRef.current = specs.sizes.map((s) => ({ value: s.value }));
-    setLabels(specs.labels.length ? specs.labels : ['']);
     setSku(v.sku ?? '');
     setLengthCm(mmToCmInput(v.lengthMm));
     setWidthCm(mmToCmInput(v.widthMm));
@@ -392,15 +307,17 @@ export function VariantEditClient({
     };
   }, [priceMode, categoryIdsForPricing, costPriceCny, weightKg, volumeM3]);
 
-  function openGalleryPicker(id: string) {
-    pickTarget.current = { kind: 'gallery', id };
-    setPicker({ filter: 'image', title: 'Изображение галереи варианта' });
-  }
-
-  function openGalleryPickerMulti() {
-    pickTarget.current = null;
-    setPicker({ filter: 'image', title: 'Несколько изображений галереи варианта', multi: true });
-  }
+  /**
+   * При смене модификации элементы товара общие, поэтому пул и selections не меняются —
+   * просто фиксируем новый modificationId.
+   */
+  const onChangeModification = useCallback(
+    (nextId: string) => {
+      if (!nextId || nextId === modificationId) return;
+      setModificationId(nextId);
+    },
+    [modificationId],
+  );
 
   function openModel3dPicker() {
     pickTarget.current = { kind: 'model3d' };
@@ -412,33 +329,13 @@ export function VariantEditClient({
     setPicker({ filter: 'all', title: 'Чертёж' });
   }
 
-  function handlePickerPickBatch(items: { url: string; id: string }[]) {
-    if (!items.length) return;
-    setGallery((prev) => [...prev, ...items.map((s) => ({ id: rowId(), url: s.url }))]);
-    setPicker(null);
-  }
-
   function handlePickerPick(sel: { url: string; id: string }) {
     const t = pickTarget.current;
     pickTarget.current = null;
     setPicker(null);
     if (!t) return;
-    if (t.kind === 'gallery') {
-      setGallery((prev) => prev.map((g) => (g.id === t.id ? { ...g, url: sel.url } : g)));
-    } else if (t.kind === 'model3d') {
-      setModel3dUrl(sel.url);
-    } else if (t.kind === 'drawing') {
-      setDrawingUrl(sel.url);
-    }
-  }
-
-  function onGalleryDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const oldIndex = gallery.findIndex((g) => g.id === active.id);
-    const newIndex = gallery.findIndex((g) => g.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    setGallery((g) => arrayMove(g, oldIndex, newIndex));
+    if (t.kind === 'model3d') setModel3dUrl(sel.url);
+    else if (t.kind === 'drawing') setDrawingUrl(sel.url);
   }
 
   function onProductFrameDragEnd(e: DragEndEvent) {
@@ -456,12 +353,19 @@ export function VariantEditClient({
     );
   }
 
-  function addGalleryRow() {
-    setGallery((g) => [...g, { id: rowId(), url: '' }]);
-  }
-  function addLabelRow() {
-    setLabels((l) => [...l, '']);
-  }
+  const autoVariantLabelPreview = useMemo(() => {
+    const mod = modificationsForProduct.find((m) => m.id === modificationId);
+    if (!mod) return '';
+    const parts = elements.map((el) => {
+      const bmcId = selections[el.id];
+      if (!bmcId) return null;
+      const a = el.availableMaterialColors.find((x) => x.brandMaterialColorId === bmcId);
+      if (!a) return null;
+      return `${el.name}: ${a.materialName}/${a.colorName}`;
+    });
+    const tail = parts.filter((x): x is string => x !== null).join(', ');
+    return tail ? `${mod.name} · ${tail}` : mod.name;
+  }, [modificationsForProduct, modificationId, elements, selections]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -497,16 +401,15 @@ export function VariantEditClient({
     const cnyTrim = costPriceCny.trim().replace(',', '.');
     const costCnyNum = cnyTrim ? Number(cnyTrim) : null;
 
-    if (sizeOptions.length > 0 && !sizeOptionId.trim()) {
-      setSaveError('Выберите размер');
+    if (!modificationId) {
+      setSaveError('Выберите модификацию');
       return;
     }
-    if (materialsForSize.length > 0) {
-      if (
-        (materialOptionId && !colorOptionId) ||
-        (!materialOptionId && colorOptionId)
-      ) {
-        setSaveError('Выберите материал и цвет вместе или очистите оба поля.');
+
+    for (const el of elements) {
+      if (el.availableMaterialColors.length === 0) continue;
+      if (!selections[el.id]) {
+        setSaveError(`Для элемента «${el.name}» не выбран материал-цвет`);
         return;
       }
     }
@@ -535,13 +438,18 @@ export function VariantEditClient({
 
     setSaving(true);
     try {
+      const selectionsPayload = elements
+        .filter((el) => el.availableMaterialColors.length > 0 && selections[el.id])
+        .map((el) => ({
+          productElementId: el.id,
+          brandMaterialColorId: selections[el.id]!,
+        }));
       const payload: Record<string, unknown> = {
         variantLabel: variantLabel.trim() || null,
         variantSlug: variantSlug.trim() || null,
-        sizes: specsSizesRef.current
-          .filter((s) => s.value.trim())
-          .map((s) => ({ value: s.value.trim() })),
-        labels: labels.map((l) => l.trim()).filter(Boolean),
+        modificationId,
+        selections: selectionsPayload,
+        galleryProductImageIds: selectedFrameIds,
         sku: sku.trim() || null,
         lengthMm: lm,
         widthMm: wm,
@@ -557,25 +465,6 @@ export function VariantEditClient({
         model3dUrl: model3dUrl.trim() || null,
         drawingUrl: drawingUrl.trim() || null,
       };
-      if (sizeOptions.length > 0) {
-        payload.sizeOptionId = sizeOptionId.trim();
-      }
-      if (materialsForSize.length > 0) {
-        if (materialOptionId && colorOptionId) {
-          payload.materialOptionId = materialOptionId;
-          payload.colorOptionId = colorOptionId;
-        } else {
-          payload.materialOptionId = null;
-          payload.colorOptionId = null;
-        }
-      }
-      if (galleryMode === 'product' && productGalleryImages.length > 0) {
-        payload.galleryProductImageIds = selectedFrameIds;
-      } else {
-        payload.gallery = gallery
-          .filter((g) => g.url.trim())
-          .map((g) => ({ url: g.url.trim(), alt: null as string | null }));
-      }
       if (fillNetDimensions) {
         payload.netLengthMm = nlm;
         payload.netWidthMm = nwm;
@@ -625,7 +514,6 @@ export function VariantEditClient({
 
   const backHref = `/admin/catalog/products/${productId}`;
 
-
   if (!loaded && !loadError) {
     return <p className={catalogStyles.muted}>Загрузка варианта…</p>;
   }
@@ -662,9 +550,7 @@ export function VariantEditClient({
                       >
                         <span className={vt.tabTitleRow}>
                           Вариант {index + 1}
-                          {v.isDefault ? (
-                            <span className={vt.badge}>По умолчанию</span>
-                          ) : null}
+                          {v.isDefault ? <span className={vt.badge}>По умолчанию</span> : null}
                           {!v.isActive ? <span className={vt.badgeInactive}>Скрыт</span> : null}
                         </span>
                         <span className={vt.meta}>{priceLabel}</span>
@@ -679,9 +565,7 @@ export function VariantEditClient({
                       >
                         <span className={vt.tabTitleRow}>
                           Вариант {index + 1}
-                          {v.isDefault ? (
-                            <span className={vt.badge}>По умолчанию</span>
-                          ) : null}
+                          {v.isDefault ? <span className={vt.badge}>По умолчанию</span> : null}
                           {!v.isActive ? <span className={vt.badgeInactive}>Скрыт</span> : null}
                         </span>
                         <span className={vt.meta}>{priceLabel}</span>
@@ -710,12 +594,191 @@ export function VariantEditClient({
         </div>
 
         <div className={pn.section}>
+          <h2 className={pn.sectionTitle}>Конфигурация варианта</h2>
+          <label className={catalogStyles.label} style={{ maxWidth: 480 }}>
+            Модификация
+            <select
+              className={catalogStyles.input}
+              value={modificationId}
+              onChange={(e) => {
+                void onChangeModification(e.target.value);
+              }}
+            >
+              {modificationsForProduct.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {elements.length === 0 ? (
+            <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
+              У модификации нет настраиваемых элементов — вариант определяется только модификацией.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gap: 14, marginTop: 12 }}>
+              {elements.map((el) => {
+                const currentId = selections[el.id] ?? '';
+                return (
+                  <div
+                    key={el.id}
+                    style={{
+                      border: '1px solid #e2e6e8',
+                      borderRadius: 10,
+                      padding: 12,
+                      background: '#fff',
+                    }}
+                  >
+                    <h3 className={pn.sectionTitle} style={{ margin: '0 0 10px' }}>
+                      {el.name}
+                    </h3>
+                    {el.availableMaterialColors.length === 0 ? (
+                      <p className={catalogStyles.muted} style={{ margin: 0 }}>
+                        Для элемента «{el.name}» не задан пул «материал-цветов». Добавьте их в
+                        карточке товара → блок «Модификации».
+                      </p>
+                    ) : (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                          gap: 10,
+                        }}
+                      >
+                        {el.availableMaterialColors.map((a) => {
+                          const selected = a.brandMaterialColorId === currentId;
+                          return (
+                            <button
+                              key={a.brandMaterialColorId}
+                              type="button"
+                              onClick={() =>
+                                setSelections((prev) => ({
+                                  ...prev,
+                                  [el.id]: a.brandMaterialColorId,
+                                }))
+                              }
+                              aria-pressed={selected}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 6,
+                                padding: 0,
+                                border: `2px solid ${selected ? '#3d83f6' : '#e2e6e8'}`,
+                                borderRadius: 10,
+                                background: '#fff',
+                                cursor: 'pointer',
+                                overflow: 'hidden',
+                                textAlign: 'left',
+                                boxShadow: selected ? '0 0 0 2px rgba(61,131,246,.2)' : 'none',
+                              }}
+                            >
+                              {a.imageUrl ? (
+                                <img
+                                  src={a.imageUrl}
+                                  alt=""
+                                  style={{
+                                    width: '100%',
+                                    aspectRatio: '1',
+                                    objectFit: 'cover',
+                                    background: '#f5f7f8',
+                                    display: 'block',
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  aria-hidden
+                                  style={{
+                                    width: '100%',
+                                    aspectRatio: '1',
+                                    background: '#f5f7f8',
+                                  }}
+                                />
+                              )}
+                              <div style={{ padding: '6px 10px 10px' }}>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>{a.colorName}</div>
+                                <div style={{ color: '#9d9d9d', fontSize: 12 }}>
+                                  {a.materialName}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className={pn.section}>
+          <h2 className={pn.sectionTitle}>Название и slug варианта</h2>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              maxWidth: 480,
+              marginTop: 8,
+            }}
+          >
+            <label className={catalogStyles.label}>
+              Название варианта
+              <input
+                type="text"
+                className={catalogStyles.input}
+                value={variantLabel}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setVariantLabel(next);
+                  if (!variantSlugManuallyEditedRef.current) {
+                    setVariantSlug(slugifyVariantLabel(next));
+                  }
+                }}
+                placeholder="Необязательно — сгенерируется автоматически"
+                autoComplete="off"
+              />
+              {!variantLabel.trim() && autoVariantLabelPreview ? (
+                <span
+                  className={catalogStyles.muted}
+                  style={{ display: 'block', marginTop: 6, fontSize: 13 }}
+                >
+                  Будет показано как: <strong>{autoVariantLabelPreview}</strong>
+                </span>
+              ) : null}
+            </label>
+            <label className={catalogStyles.label}>
+              Slug
+              <input
+                type="text"
+                className={catalogStyles.input}
+                value={variantSlug}
+                onChange={(e) => {
+                  variantSlugManuallyEditedRef.current = true;
+                  setVariantSlug(e.target.value);
+                }}
+                placeholder="латиница-цифры"
+                autoComplete="off"
+              />
+              <span
+                className={catalogStyles.muted}
+                style={{ display: 'block', marginTop: 6, fontSize: 13 }}
+              >
+                Генерируется из названия варианта.
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div className={pn.section}>
           <h2 className={pn.sectionTitle}>Галерея варианта</h2>
-          {galleryMode === 'product' && productGalleryImages.length > 0 ? (
+          {productGalleryImages.length > 0 ? (
             <>
               <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-                Подмножество кадров из галереи товара. Клик по превью — добавить или убрать кадр; порядок в списке
-                ниже — перетаскиванием. Если ничего не выбрано, на витрине показывается полная галерея товара.
+                Подмножество кадров из галереи товара. Клик по превью — добавить или убрать кадр;
+                порядок в списке ниже — перетаскиванием. Если ничего не выбрано, на витрине
+                показывается полная галерея товара.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                 {productGalleryImages.map((pi) => {
@@ -770,164 +833,17 @@ export function VariantEditClient({
                   </SortableContext>
                 </DndContext>
               ) : (
-                <p className={catalogStyles.muted}>Кадры не выбраны — будет показана общая галерея товара.</p>
+                <p className={catalogStyles.muted}>
+                  Кадры не выбраны — на витрине будет показана общая галерея товара.
+                </p>
               )}
             </>
           ) : (
-            <>
-              <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-                У товара пока нет общей галереи — задайте кадры на карточке товара или добавьте URL ниже. Если список
-                пуст, на витрине не будет своих фото варианта.
-              </p>
-              <DndContext sensors={gallerySensors} collisionDetection={closestCenter} onDragEnd={onGalleryDragEnd}>
-                <SortableContext items={gallery.map((g) => g.id)} strategy={verticalListSortingStrategy}>
-                  <div className={pn.repeatList}>
-                    {gallery.map((item) => (
-                      <SortableGalleryRow
-                        key={item.id}
-                        item={item}
-                        onPick={() => openGalleryPicker(item.id)}
-                        onRemove={() => setGallery((prev) => prev.filter((g) => g.id !== item.id))}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                <button type="button" className={catalogStyles.btn} onClick={addGalleryRow}>
-                  + Добавить кадр
-                </button>
-                <button type="button" className={catalogStyles.btn} onClick={openGalleryPickerMulti}>
-                  + Несколько из медиатеки
-                </button>
-              </div>
-            </>
+            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
+              У товара пока нет общей галереи — задайте кадры на карточке товара, тогда здесь
+              появится возможность выбрать подмножество для варианта.
+            </p>
           )}
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Название и витрина</h2>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              maxWidth: 480,
-              marginTop: 8,
-            }}
-          >
-            <label className={catalogStyles.label}>
-              Название варианта
-              <input
-                type="text"
-                className={catalogStyles.input}
-                value={variantLabel}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setVariantLabel(next);
-                  if (!variantSlugManuallyEditedRef.current) {
-                    setVariantSlug(slugifyVariantLabel(next));
-                  }
-                }}
-                placeholder="Необязательно"
-                autoComplete="off"
-              />
-            </label>
-            <label className={catalogStyles.label}>
-              Slug
-              <input
-                type="text"
-                className={catalogStyles.input}
-                value={variantSlug}
-                onChange={(e) => {
-                  variantSlugManuallyEditedRef.current = true;
-                  setVariantSlug(e.target.value);
-                }}
-                placeholder="латиница-цифры"
-                autoComplete="off"
-              />
-              <span className={catalogStyles.muted} style={{ display: 'block', marginTop: 6, fontSize: 13 }}>
-                Генерируется из названия варианта
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: 12,
-              marginTop: 16,
-            }}
-          >
-            {sizeOptions.length > 0 ? (
-              <label className={catalogStyles.label} style={{ gridColumn: '1 / -1' }}>
-                Размер
-                <select
-                  className={catalogStyles.input}
-                  value={sizeOptionId}
-                  onChange={(e) => {
-                    setSizeOptionId(e.target.value);
-                    setMaterialOptionId('');
-                    setColorOptionId('');
-                  }}
-                >
-                  <option value="">— выберите —</option>
-                  {sizeOptions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            {materialsForSize.length > 0 ? (
-              <>
-                <label className={catalogStyles.label}>
-                  Материал (группа)
-                  <select
-                    className={catalogStyles.input}
-                    value={materialOptionId}
-                    onChange={(e) => {
-                      setMaterialOptionId(e.target.value);
-                      setColorOptionId('');
-                    }}
-                  >
-                    <option value="">— не выбрано —</option>
-                    {materialsForSize.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={catalogStyles.label}>
-                  Цвет (карточка)
-                  <select
-                    className={catalogStyles.input}
-                    value={colorOptionId}
-                    disabled={!materialOptionId}
-                    onChange={(e) => setColorOptionId(e.target.value)}
-                  >
-                    <option value="">— не выбрано —</option>
-                    {(materialsForSize.find((m) => m.id === materialOptionId)?.colors ?? []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </>
-            ) : sizeOptions.length > 0 ? (
-              <p className={catalogStyles.muted} style={{ gridColumn: '1 / -1' }}>
-                Для выбранного размера не заданы материалы и цвета (или размер не выбран).
-              </p>
-            ) : (
-              <p className={catalogStyles.muted} style={{ gridColumn: '1 / -1' }}>
-                На товаре не заведены размеры и материалы. Добавьте их в форме редактирования товара (блок «Размеры,
-                материалы и цвета»).
-              </p>
-            )}
-          </div>
         </div>
 
         <div className={pn.section}>
@@ -1113,7 +1029,10 @@ export function VariantEditClient({
                       maximumFractionDigits: 0,
                     })}{' '}
                     ₽
-                    <span className={catalogStyles.muted} style={{ display: 'block', marginTop: 6, fontWeight: 400 }}>
+                    <span
+                      className={catalogStyles.muted}
+                      style={{ display: 'block', marginTop: 6, fontWeight: 400 }}
+                    >
                       Себестоимость на складе МСК:{' '}
                       {Math.round(pricePreview.mskRub).toLocaleString('ru-RU', {
                         maximumFractionDigits: 0,
@@ -1132,7 +1051,9 @@ export function VariantEditClient({
                           : 'Нет данных для расчёта'}
                   </span>
                 ) : (
-                  <span className={catalogStyles.muted}>Укажите CNY, вес и объём — цена появится здесь</span>
+                  <span className={catalogStyles.muted}>
+                    Укажите CNY, вес и объём — цена появится здесь
+                  </span>
                 )}
               </div>
             </>
@@ -1149,41 +1070,6 @@ export function VariantEditClient({
               />
             </label>
           )}
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>Лейблы</h2>
-          <div className={pn.repeatList}>
-            {labels.map((label, idx) => (
-              <div key={idx} className={pn.repeatRow}>
-                <input
-                  type="text"
-                  className={catalogStyles.input}
-                  style={{ flex: 1, minWidth: 200 }}
-                  value={label}
-                  onChange={(e) =>
-                    setLabels((prev) => {
-                      const next = [...prev];
-                      next[idx] = e.target.value;
-                      return next;
-                    })
-                  }
-                  placeholder="Напр. Новинка"
-                />
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setLabels((prev) => prev.filter((_, i) => i !== idx))}
-                  disabled={labels.length <= 1}
-                >
-                  Удалить
-                </button>
-              </div>
-            ))}
-          </div>
-          <button type="button" className={catalogStyles.btn} onClick={addLabelRow}>
-            + Лейбл
-          </button>
         </div>
 
         <div className={pn.section}>
@@ -1305,8 +1191,7 @@ export function VariantEditClient({
             pickTarget.current = null;
             setPicker(null);
           }}
-          onPick={picker.multi ? undefined : handlePickerPick}
-          onPickBatch={picker.multi ? handlePickerPickBatch : undefined}
+          onPick={handlePickerPick}
         />
       ) : null}
     </>

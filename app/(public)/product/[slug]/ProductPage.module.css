@@ -513,6 +513,15 @@ a.productBrandName:hover {
   gap: 10px;
 }
 
+.productModificationsSelect {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .productMaterialsTitle {
   font-size: var(--text-card-16-400);
   font-weight: 400;

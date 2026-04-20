@@ -1,0 +1,171 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 2vw, 24px);
+  background: rgba(5, 24, 38, 0.45);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 96vw);
+  max-height: min(90vh, 820px);
+  border-radius: 14px;
+  background: var(--color-white, #fff);
+  box-shadow: 0 24px 64px rgba(5, 24, 38, 0.22);
+  overflow: hidden;
+  font-family: var(--font-commissioner, system-ui);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--account-hairline-color, #e2e6e8);
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-ink-black, #051826);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 12px;
+  overflow: auto;
+}
+
+.materialGroup {
+  margin-bottom: 18px;
+}
+
+.materialTitle {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink-black, #051826);
+}
+
+.colorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+}
+
+.colorTile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--color-white, #fff);
+  border: 2px solid var(--account-hairline-color, #e2e6e8);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  text-align: left;
+}
+
+.colorTile:hover {
+  border-color: var(--color-blue, #3d83f6);
+}
+
+.colorTileSelected {
+  border-color: var(--color-blue, #3d83f6);
+  box-shadow: 0 0 0 2px rgba(61, 131, 246, 0.2);
+}
+
+.colorTileThumb {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--color-bright-snow, #f5f7f8);
+  object-fit: cover;
+  display: block;
+}
+
+.colorTileThumbPh {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--color-bright-snow, #f5f7f8);
+}
+
+.colorTileLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 10px;
+}
+
+.colorTileName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink-black, #051826);
+  line-height: 1.2;
+}
+
+.colorTileSub {
+  font-size: 0.75rem;
+  color: var(--color-gray, #9d9d9d);
+  line-height: 1.2;
+}
+
+.selectedBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-blue, #3d83f6);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--account-hairline-color, #e2e6e8);
+  flex-shrink: 0;
+}
+
+.footerCounter {
+  font-size: 0.875rem;
+  color: var(--color-gray, #9d9d9d);
+}
+
+.footerActions {
+  display: flex;
+  gap: 10px;
+}
+
+.empty {
+  margin: 16px 0 0;
+  font-size: 0.875rem;
+  color: var(--color-gray, #9d9d9d);
+}

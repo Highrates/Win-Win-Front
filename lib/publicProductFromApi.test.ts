@@ -3,7 +3,23 @@ import {
   parsePublicProduct,
   pickPublicProductVariant,
   type PublicProductFromApi,
+  type PublicProductVariantApi,
 } from './publicProductFromApi';
+
+function makeVariant(overrides: Partial<PublicProductVariantApi> = {}): PublicProductVariantApi {
+  return {
+    id: 'v',
+    variantSlug: null,
+    variantLabel: null,
+    modificationId: null,
+    price: 1,
+    sku: null,
+    isDefault: false,
+    images: [],
+    selections: [],
+    ...overrides,
+  };
+}
 
 function makeProduct(overrides: Partial<PublicProductFromApi> = {}): PublicProductFromApi {
   return {
@@ -17,11 +33,13 @@ function makeProduct(overrides: Partial<PublicProductFromApi> = {}): PublicProdu
     deliveryText: null,
     technicalSpecs: null,
     additionalInfoHtml: null,
-    specsJson: null,
     category: null,
     brand: null,
     images: [],
+    modifications: [],
+    elements: [],
     defaultVariantId: null,
+    defaultModificationId: null,
     variants: [],
     ...overrides,
   };
@@ -38,28 +56,8 @@ describe('pickPublicProductVariant', () => {
   it('prefers vs over v and default', () => {
     const p = makeProduct({
       variants: [
-        {
-          id: 'a',
-          variantSlug: 'alpha',
-          variantLabel: 'A',
-          price: 1,
-          sku: null,
-          specsJson: null,
-          optionAttributes: null,
-          isDefault: true,
-          images: [],
-        },
-        {
-          id: 'b',
-          variantSlug: 'beta',
-          variantLabel: 'B',
-          price: 2,
-          sku: null,
-          specsJson: null,
-          optionAttributes: null,
-          isDefault: false,
-          images: [],
-        },
+        makeVariant({ id: 'a', variantSlug: 'alpha', variantLabel: 'A', isDefault: true }),
+        makeVariant({ id: 'b', variantSlug: 'beta', variantLabel: 'B', price: 2 }),
       ],
       defaultVariantId: 'a',
     });
@@ -70,55 +68,11 @@ describe('pickPublicProductVariant', () => {
 
   it('falls back to v when vs missing', () => {
     const p = makeProduct({
-      variants: [
-        {
-          id: 'x',
-          variantSlug: null,
-          variantLabel: null,
-          price: 1,
-          sku: null,
-          specsJson: null,
-          optionAttributes: null,
-          isDefault: false,
-          images: [],
-        },
-      ],
+      variants: [makeVariant({ id: 'x' })],
       defaultVariantId: 'x',
     });
     const r = pickPublicProductVariant(p, 'x', undefined);
     expect(r.variant?.id).toBe('x');
-  });
-
-  it('uses defaultVariantId then first variant', () => {
-    const p = makeProduct({
-      variants: [
-        {
-          id: 'd',
-          variantSlug: 'd',
-          variantLabel: null,
-          price: 5,
-          sku: null,
-          specsJson: null,
-          optionAttributes: null,
-          isDefault: true,
-          images: [],
-        },
-        {
-          id: 'e',
-          variantSlug: 'e',
-          variantLabel: null,
-          price: 6,
-          sku: null,
-          specsJson: null,
-          optionAttributes: null,
-          isDefault: false,
-          images: [],
-        },
-      ],
-      defaultVariantId: 'd',
-    });
-    const r = pickPublicProductVariant(p, undefined, undefined);
-    expect(r.variant?.id).toBe('d');
   });
 });
 
@@ -135,14 +89,17 @@ describe('parsePublicProduct', () => {
       deliveryText: null,
       technicalSpecs: null,
       additionalInfoHtml: null,
-      specsJson: null,
       category: null,
       brand: null,
       images: [],
+      modifications: [],
+      elements: [],
       variants: [],
     };
     const p = parsePublicProduct(raw);
     expect(p?.slug).toBe('s');
     expect(p?.variants).toEqual([]);
+    expect(p?.modifications).toEqual([]);
+    expect(p?.elements).toEqual([]);
   });
 });

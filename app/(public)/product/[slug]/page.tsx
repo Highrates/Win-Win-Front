@@ -2,25 +2,12 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ProductGallery } from '@/components/ProductGallery';
-import { Button } from '@/components/Button';
 import { Recommendations } from '@/sections/home';
 import { fetchProductSetSiblingsBySlug, fetchPublicProductBySlug } from '@/lib/catalogPublic';
 import { parsePublicProduct, pickPublicProductVariant } from '@/lib/publicProductFromApi';
-import {
-  formatProductPriceRangeRub,
-  formatProductPriceRub,
-  parseProductPriceFromApi,
-  parseProductSpecsFromApi,
-} from '@/lib/productSpecsFromApi';
-import { buildMaterialChoiceGroups } from '@/lib/productMaterialChoiceGroups';
+import { parseProductPriceFromApi } from '@/lib/productSpecsFromApi';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
-import ProductAccordions from './ProductAccordions';
-import ProductSizeOptions from './ProductSizeOptions';
-import ProductMaterialsOptions from './ProductMaterialsOptions';
-import ProductColorOptions from './ProductColorOptions';
-import ProductMaterialChoice from './ProductMaterialChoice';
-import { ProductDetailsStickyBar } from './ProductDetailsStickyBar';
+import ProductInteractive from './ProductInteractive';
 import styles from './ProductPage.module.css';
 
 export async function generateMetadata({
@@ -28,7 +15,7 @@ export async function generateMetadata({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ v?: string; vs?: string; sz?: string }>;
+  searchParams: Promise<{ v?: string; vs?: string; m?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
   const { v, vs } = await searchParams;
@@ -47,20 +34,38 @@ export async function generateMetadata({
   return { title, description };
 }
 
+/**
+ * Начальная модификация: из `?m=<slug|id>`, иначе `defaultModificationId`,
+ * иначе первая. Дальше переключение — клиентское, чтобы не сбрасывать selections.
+ */
+function pickModificationId(
+  product: ReturnType<typeof parsePublicProduct>,
+  mQuery: string | undefined,
+): string | null {
+  if (!product) return null;
+  const q = mQuery?.trim();
+  if (q) {
+    const bySlug = product.modifications.find((m) => m.modificationSlug === q);
+    if (bySlug) return bySlug.id;
+    const byId = product.modifications.find((m) => m.id === q);
+    if (byId) return byId.id;
+  }
+  return product.defaultModificationId ?? product.modifications[0]?.id ?? null;
+}
+
 export default async function ProductPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ v?: string; vs?: string; sz?: string }>;
+  searchParams: Promise<{ v?: string; vs?: string; m?: string }>;
 }) {
   const { slug } = await params;
-  const { v: variantQuery, vs: variantSlugQuery, sz: sizeQuery } = await searchParams;
+  const { v: variantQuery, vs: variantSlugQuery, m: modificationQuery } = await searchParams;
   const [raw, siblingsRes] = await Promise.all([
     fetchPublicProductBySlug(slug, {
       v: variantQuery,
       vs: variantSlugQuery,
-      sz: sizeQuery,
     }),
     fetchProductSetSiblingsBySlug(slug),
   ]);
@@ -74,8 +79,8 @@ export default async function ProductPage({
     variantQuery,
     variantSlugQuery,
   );
-  const displaySpecsJson = selectedVariant?.specsJson ?? product.specsJson;
-  const displayImages = product.images;
+  const initialModificationId = selectedVariant?.modificationId
+    ?? pickModificationId(product, modificationQuery);
 
   const variantLabel = selectedVariant?.variantLabel?.trim() ?? '';
   const productTitleText = variantLabel || product.name;
@@ -92,29 +97,17 @@ export default async function ProductPage({
 
   const priceMinNum = parseProductPriceFromApi(product.priceMin);
   const priceMaxNum = parseProductPriceFromApi(product.priceMax);
-  let priceText: string;
-  if (selectedVariant) {
-    const priceNum = parseProductPriceFromApi(selectedVariant.price);
-    priceText = priceNum > 0 ? formatProductPriceRub(priceNum) : '—';
-  } else if (priceMinNum > 0 && priceMaxNum > 0 && priceMaxNum > priceMinNum) {
-    priceText = formatProductPriceRangeRub(priceMinNum, priceMaxNum);
-  } else if (priceMinNum > 0) {
-    priceText = formatProductPriceRub(priceMinNum);
-  } else {
-    priceText = '—';
-  }
-  const specs = parseProductSpecsFromApi(displaySpecsJson);
-  const materialChoiceGroups = buildMaterialChoiceGroups(product, resolveMediaUrlForServer);
-  const sizeFilterForMaterials =
-    selectedVariant?.sizeOptionId ?? product.selectedSizeOptionId ?? null;
-  const colorItems = specs.colors.map((c) => ({
-    name: c.name,
-    imageUrl: resolveMediaUrlForServer(c.imageUrl),
-  }));
-  const gallerySrcs =
-    displayImages.length > 0
-      ? displayImages.map((im) => resolveMediaUrlForServer(im.url))
+
+  const productImages =
+    product.images.length > 0
+      ? product.images.map((im) => resolveMediaUrlForServer(im.url))
       : [resolveMediaUrlForServer(null)];
+
+  const variantImagesMap: Record<string, string[]> = {};
+  for (const v of product.variants) {
+    if (v.images.length === 0) continue;
+    variantImagesMap[v.id] = v.images.map((im) => resolveMediaUrlForServer(im.url));
+  }
 
   const category = product.category;
   const breadcrumbs: { label: string; href: string; current: boolean }[] = [
@@ -138,14 +131,42 @@ export default async function ProductPage({
 
   const brand = product.brand;
   const brandHref = brand ? `/brands/${brand.slug}` : null;
-  const brandDesc =
-    brand?.shortDescription?.trim() ||
-    'Продукция бренда представлена в нашем каталоге.';
 
   const bodyText =
     product.shortDescription?.trim() ||
     product.description?.trim() ||
     'Описание появится позже.';
+
+  const leftColumn = (
+    <div className={styles.productDetailsLeft}>
+      <div className={styles.productDetailsInner}>
+        <div className={styles.productTitles}>
+          {brand ? (
+            <Link href={brandHref!} className={styles.productBrandName}>
+              {brand.name}
+            </Link>
+          ) : (
+            <span className={styles.productBrandName}>Бренд не указан</span>
+          )}
+          <h1 className={styles.productName}>{productTitleText}</h1>
+        </div>
+        <div className={styles.productDetailsInteract}>
+          <div className={styles.productDetailsInteractItem}>
+            <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
+            <span className={styles.productDetailsInteractValue}>0</span>
+          </div>
+          <div className={styles.productDetailsInteractItem}>
+            <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
+            <span className={styles.productDetailsInteractValue}>0</span>
+          </div>
+          <div className={styles.productDetailsInteractItem}>
+            <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
+            <span className={styles.productDetailsInteractValue}>0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <main>
@@ -166,158 +187,37 @@ export default async function ProductPage({
                 </Fragment>
               ))}
             </nav>
-            <div className={styles.productImgsWrapper}>
-              <ProductGallery images={gallerySrcs} productName={productTitleText} />
-            </div>
 
-            <div className={styles.productDetails}>
-              <div className={styles.productDetailsLeft}>
-                <div className={styles.productDetailsInner}>
-                  <div className={styles.productTitles}>
-                    {brand ? (
-                      <Link href={brandHref!} className={styles.productBrandName}>
-                        {brand.name}
-                      </Link>
-                    ) : (
-                      <span className={styles.productBrandName}>Бренд не указан</span>
-                    )}
-                    <h1 className={styles.productName}>{productTitleText}</h1>
-                  </div>
-                  <div className={styles.productDetailsInteract}>
-                    <div className={styles.productDetailsInteractItem}>
-                      <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
-                      <span className={styles.productDetailsInteractValue}>0</span>
-                    </div>
-                    <div className={styles.productDetailsInteractItem}>
-                      <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
-                      <span className={styles.productDetailsInteractValue}>0</span>
-                    </div>
-                    <div className={styles.productDetailsInteractItem}>
-                      <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
-                      <span className={styles.productDetailsInteractValue}>0</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className={styles.productDetailsRight}>
-                <div className={styles.productDetailsRightRow}>
-                  <span className={styles.productDetailsPrice}>{priceText}</span>
-                  <div className={styles.productDetailsBtnsWrapper}>
-                    <div className={styles.productDetailsBtnsSecondary}>
-                      <Button
-                        variant="secondary"
-                        iconLeft="/icons/ruler&pen.svg"
-                        iconRightChevron
-                        aria-label="Скачать чертеж"
-                      />
-                      <Button
-                        variant="secondary"
-                        iconLeft="/icons/3dcube.svg"
-                        iconRightChevron
-                        aria-label="Скачать 3D модель"
-                      />
-                    </div>
-                    <Button variant="primary" className={styles.productDetailsBtnPrimary}>
-                      Добавить к заказу
-                    </Button>
-                  </div>
-                </div>
-                <ProductDetailsStickyBar priceText={priceText} />
-
-                <div className={styles.descriptionWrapper}>
-                  <p className={styles.descriptionText}>{bodyText}</p>
-                </div>
-
-                {product.sizeOptions && product.sizeOptions.length > 1 ? (
-                  <ProductSizeOptions
-                    productPath={`/product/${slug}`}
-                    sizes={product.sizeOptions.map((s) => ({
-                      id: s.id,
-                      name: s.name,
-                      sizeSlug: s.sizeSlug,
-                    }))}
-                    selectedSizeOptionId={product.selectedSizeOptionId ?? null}
-                  />
-                ) : null}
-
-                {materialChoiceGroups ? (
-                  <ProductMaterialChoice
-                    productPath={`/product/${slug}`}
-                    groups={materialChoiceGroups}
-                    selectedVariantId={selectedVariant?.id ?? null}
-                    selectedSizeOptionId={selectedVariant ? null : sizeFilterForMaterials}
-                  />
-                ) : (
-                  <>
-                    {colorItems.length > 0 ? (
-                      <div className={styles.productColorWrapper}>
-                        <span className={styles.productColorTitle}>Цвет</span>
-                        <ProductColorOptions items={colorItems} />
-                      </div>
-                    ) : null}
-
-                    <div className={styles.productMaterialsSelect}>
-                      <span className={styles.productMaterialsTitle}>Материалы</span>
-                      <ProductMaterialsOptions items={specs.materials.length ? specs.materials : undefined} />
-                    </div>
-                  </>
-                )}
-
-                {product.sizeOptions && product.sizeOptions.length <= 1 && specs.sizes.length > 0 ? (
-                  <div className={styles.productSizeSelect}>
-                    <span className={styles.productSizeTitle}>Размеры</span>
-                    <div className={styles.productSizeOptions}>
-                      {specs.sizes.map((s, i) => (
-                        <span key={`${s}-${i}`} className={styles.productSizeOption}>
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className={styles.accordionsWrapper}>
-                  <ProductAccordions
-                    deliveryText={product.deliveryText}
-                    technicalSpecs={product.technicalSpecs}
-                    additionalInfoHtml={product.additionalInfoHtml}
-                  />
-                </div>
-
-                {brand && brandHref ? (
-                  <div className={styles.brandWrapper}>
-                    <h2 className={styles.brandTitle}>Бренд</h2>
-                    <Link
-                      href={brandHref}
-                      className={styles.brandContent}
-                      aria-label={`Перейти на страницу бренда ${brand.name}`}
-                    >
-                      <div className={styles.brandContentInner}>
-                        <div
-                          className={styles.brandLogo}
-                          style={
-                            brand.logoUrl
-                              ? {
-                                  backgroundImage: `url(${resolveMediaUrlForServer(brand.logoUrl)})`,
-                                  backgroundSize: 'contain',
-                                  backgroundRepeat: 'no-repeat',
-                                  backgroundPosition: 'center',
-                                }
-                              : undefined
-                          }
-                          aria-hidden
-                        />
-                        <div className={styles.brandShortDescription}>
-                          <span className={styles.brandName}>{brand.name}</span>
-                          <p className={styles.brandDescription}>{brandDesc}</p>
-                        </div>
-                      </div>
-                      <img src="/icons/arrow.svg" alt="" width={22} height={22} className={styles.brandArrow} aria-hidden />
-                    </Link>
-                  </div>
-                ) : null}
-              </div>
-            </div>
+            <ProductInteractive
+              productName={productTitleText}
+              productImages={productImages}
+              variantImagesMap={variantImagesMap}
+              leftColumn={leftColumn}
+              modifications={product.modifications}
+              elements={product.elements}
+              variants={product.variants}
+              initialModificationId={initialModificationId}
+              selectedVariantId={selectedVariant?.id ?? null}
+              defaultVariantId={product.defaultVariantId}
+              priceMin={priceMinNum}
+              priceMax={priceMaxNum}
+              bodyText={bodyText}
+              deliveryText={product.deliveryText}
+              technicalSpecs={product.technicalSpecs}
+              additionalInfoHtml={product.additionalInfoHtml}
+              brand={
+                brand && brandHref
+                  ? {
+                      name: brand.name,
+                      href: brandHref,
+                      shortDescription: brand.shortDescription,
+                      logoUrl: brand.logoUrl
+                        ? resolveMediaUrlForServer(brand.logoUrl)
+                        : null,
+                    }
+                  : null
+              }
+            />
           </div>
         </div>
       </section>

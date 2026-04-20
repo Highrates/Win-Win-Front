@@ -7,8 +7,64 @@ import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox
 import { RichBlock } from '@/components/RichBlock/RichBlock';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { createClientRandomId } from '@/lib/clientRandomId';
+import pn from '../catalog/products/new/productNew.module.css';
 import styles from '../catalog/catalogAdmin.module.css';
-import type { BrandAdminDetail } from './adminBrandTypes';
+import type {
+  AdminBrandMaterial,
+  AdminBrandMaterialColor,
+  BrandAdminDetail,
+} from './adminBrandTypes';
+
+type MaterialRow = {
+  id: string;
+  serverId?: string;
+  name: string;
+  colors: ColorRow[];
+};
+
+type ColorRow = {
+  id: string;
+  serverId?: string;
+  name: string;
+  imageUrl: string;
+};
+
+function rowId() {
+  return createClientRandomId();
+}
+
+/**
+ * Превращает исходное имя файла («beige-linen_01.JPG») в удобную подпись цвета:
+ * отрезает расширение, заменяет разделители на пробелы и делает заглавную первую букву.
+ */
+function colorNameFromFile(originalName: string): string {
+  const base = originalName
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[._\-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!base) return '';
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+function brandMaterialToRow(m: AdminBrandMaterial): MaterialRow {
+  return {
+    id: rowId(),
+    serverId: m.id,
+    name: m.name,
+    colors: m.colors.map(brandColorToRow),
+  };
+}
+
+function brandColorToRow(c: AdminBrandMaterialColor): ColorRow {
+  return {
+    id: rowId(),
+    serverId: c.id,
+    name: c.name,
+    imageUrl: c.imageUrl ?? '',
+  };
+}
 
 const FORM_ID = 'brand-editor-form';
 
@@ -44,11 +100,23 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
 
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [picker, setPicker] = useState<
-    null | { filter: 'image' | 'video' | 'all'; title?: string }
+    null | { filter: 'image' | 'video' | 'all'; title?: string; multi?: boolean }
   >(null);
   const richPickResolver = useRef<((url: string | null) => void) | null>(null);
-  const brandTargetRef = useRef<'logo' | 'background' | number | null>(null);
+  const brandTargetRef = useRef<
+    | 'logo'
+    | 'background'
+    | number
+    | { kind: 'brandColor'; materialId: string; colorId: string }
+    | { kind: 'brandColorBatch'; materialId: string }
+    | null
+  >(null);
   const [saving, setSaving] = useState(false);
+
+  const [materials, setMaterials] = useState<MaterialRow[]>([]);
+  const [materialsLoaded, setMaterialsLoaded] = useState(false);
+  const [materialsSaving, setMaterialsSaving] = useState(false);
+  const [materialsMsg, setMaterialsMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!brandId) return;
@@ -76,6 +144,24 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadMaterials = useCallback(async () => {
+    if (!brandId) return;
+    try {
+      const rows = await adminBackendJson<AdminBrandMaterial[]>(
+        `catalog/admin/brands/${brandId}/materials`,
+      );
+      setMaterials(rows.map(brandMaterialToRow));
+      setMaterialsLoaded(true);
+    } catch (e) {
+      setMaterialsMsg(e instanceof Error ? e.message : 'Не удалось загрузить материалы');
+      setMaterialsLoaded(true);
+    }
+  }, [brandId]);
+
+  useEffect(() => {
+    if (isEdit) void loadMaterials();
+  }, [isEdit, loadMaterials]);
 
   const pickMediaFromLibrary = useCallback(
     (kind: 'image' | 'video') =>
@@ -111,7 +197,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     setPicker({ filter: 'image', title: `Галерея — изображение ${slot + 1}` });
   }
 
-  function handlePickerPick(sel: { url: string; id: string }) {
+  function handlePickerPick(sel: { url: string; id: string; originalName?: string }) {
     const resolveRich = richPickResolver.current;
     if (resolveRich) {
       richPickResolver.current = null;
@@ -131,8 +217,142 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         next[t] = sel.url;
         return next;
       });
+    } else if (t && typeof t === 'object' && t.kind === 'brandColor') {
+      setMaterials((prev) =>
+        prev.map((m) =>
+          m.id !== t.materialId
+            ? m
+            : {
+                ...m,
+                colors: m.colors.map((c) =>
+                  c.id === t.colorId ? { ...c, imageUrl: sel.url } : c,
+                ),
+              },
+        ),
+      );
     }
     setPicker(null);
+  }
+
+  function handlePickerPickBatch(
+    items: { url: string; id: string; originalName?: string }[],
+  ) {
+    const t = brandTargetRef.current;
+    brandTargetRef.current = null;
+    if (t && typeof t === 'object' && t.kind === 'brandColorBatch') {
+      const materialId = t.materialId;
+      const newRows: ColorRow[] = items.map((it) => ({
+        id: rowId(),
+        name: colorNameFromFile(it.originalName ?? ''),
+        imageUrl: it.url,
+      }));
+      setMaterials((prev) =>
+        prev.map((m) =>
+          m.id !== materialId ? m : { ...m, colors: [...m.colors, ...newRows] },
+        ),
+      );
+    }
+    setPicker(null);
+  }
+
+  function openBrandColorImagePicker(materialId: string, colorId: string) {
+    richPickResolver.current = null;
+    brandTargetRef.current = { kind: 'brandColor', materialId, colorId };
+    setMaterialsMsg(null);
+    setPicker({ filter: 'image', title: 'Изображение цвета' });
+  }
+
+  function openBrandColorBatchPicker(materialId: string) {
+    richPickResolver.current = null;
+    brandTargetRef.current = { kind: 'brandColorBatch', materialId };
+    setMaterialsMsg(null);
+    setPicker({
+      filter: 'image',
+      title: 'Изображения для цветов (можно выбрать несколько)',
+      multi: true,
+    });
+  }
+
+  function addMaterial() {
+    setMaterials((prev) => [...prev, { id: rowId(), name: '', colors: [] }]);
+  }
+
+  function removeMaterial(mid: string) {
+    setMaterials((prev) => prev.filter((m) => m.id !== mid));
+  }
+
+  function updateMaterialName(mid: string, name: string) {
+    setMaterials((prev) => prev.map((m) => (m.id !== mid ? m : { ...m, name })));
+  }
+
+  function addColorToMaterial(mid: string) {
+    setMaterials((prev) =>
+      prev.map((m) =>
+        m.id !== mid
+          ? m
+          : { ...m, colors: [...m.colors, { id: rowId(), name: '', imageUrl: '' }] },
+      ),
+    );
+  }
+
+  function removeColorFromMaterial(mid: string, cid: string) {
+    setMaterials((prev) =>
+      prev.map((m) =>
+        m.id !== mid ? m : { ...m, colors: m.colors.filter((c) => c.id !== cid) },
+      ),
+    );
+  }
+
+  function updateColor(mid: string, cid: string, patch: Partial<ColorRow>) {
+    setMaterials((prev) =>
+      prev.map((m) =>
+        m.id !== mid
+          ? m
+          : {
+              ...m,
+              colors: m.colors.map((c) => (c.id === cid ? { ...c, ...patch } : c)),
+            },
+      ),
+    );
+  }
+
+  async function saveMaterials() {
+    if (!brandId) return;
+    const cleaned = materials
+      .map((m) => ({
+        ...(m.serverId ? { id: m.serverId } : {}),
+        name: m.name.trim(),
+        sortOrder: 0,
+        colors: m.colors
+          .map((c, ci) => ({
+            ...(c.serverId ? { id: c.serverId } : {}),
+            name: c.name.trim(),
+            imageUrl: c.imageUrl.trim() || null,
+            sortOrder: ci,
+          }))
+          .filter((c) => c.name),
+      }))
+      .filter((m) => m.name)
+      .map((m, mi) => ({ ...m, sortOrder: mi }));
+
+    setMaterialsSaving(true);
+    setMaterialsMsg(null);
+    try {
+      const updated = await adminBackendJson<AdminBrandMaterial[]>(
+        `catalog/admin/brands/${brandId}/materials`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ materials: cleaned }),
+        },
+      );
+      setMaterials(updated.map(brandMaterialToRow));
+      await revalidatePublicCatalogCache();
+      setMaterialsMsg('Материалы сохранены');
+    } catch (err) {
+      setMaterialsMsg(err instanceof Error ? err.message : 'Ошибка сохранения материалов');
+    } finally {
+      setMaterialsSaving(false);
+    }
   }
 
   function handlePickerClose() {
@@ -225,7 +445,8 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         title={picker?.title}
         mediaFilter={picker?.filter ?? 'image'}
         onClose={handlePickerClose}
-        onPick={handlePickerPick}
+        onPick={picker?.multi ? undefined : handlePickerPick}
+        onPickBatch={picker?.multi ? handlePickerPickBatch : undefined}
       />
       <p className={styles.backRow}>
         <Link href="/admin/brands" className={styles.backLink}>
@@ -399,6 +620,138 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
             pickMediaFromLibrary={pickMediaFromLibrary}
           />
         </div>
+
+        {isEdit ? (
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Материалы и цвета бренда</h2>
+
+            {!materialsLoaded ? (
+              <p className={styles.muted}>Загрузка материалов…</p>
+            ) : (
+              <div className={pn.repeatList}>
+                {materials.map((m) => (
+                  <div
+                    key={m.id}
+                    style={{
+                      border: '1px solid #c5d4e0',
+                      borderRadius: 8,
+                      padding: 12,
+                      marginBottom: 14,
+                    }}
+                  >
+                    <div className={pn.repeatRow}>
+                      <input
+                        type="text"
+                        className={styles.input}
+                        style={{ flex: 1, minWidth: 200 }}
+                        value={m.name}
+                        placeholder="Название материала (напр. Ткань)"
+                        onChange={(e) => updateMaterialName(m.id, e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnDanger}`}
+                        onClick={() => removeMaterial(m.id)}
+                      >
+                        Удалить материал
+                      </button>
+                    </div>
+                    <div style={{ marginTop: 12, paddingLeft: 8 }}>
+                      <p className={styles.muted} style={{ margin: '0 0 8px' }}>
+                        Цвета
+                      </p>
+                      {m.colors.map((c) => (
+                        <div
+                          key={c.id}
+                          className={`${pn.repeatRow} ${pn.galleryRowLayout}`}
+                          style={{ marginBottom: 8 }}
+                        >
+                          {c.imageUrl ? (
+                            <img className={pn.colorPreview} src={c.imageUrl} alt="" />
+                          ) : (
+                            <div className={pn.colorPreview} aria-hidden />
+                          )}
+                          <input
+                            type="text"
+                            className={styles.input}
+                            style={{ flex: 1, minWidth: 160 }}
+                            value={c.name}
+                            placeholder="Название цвета"
+                            onChange={(e) =>
+                              updateColor(m.id, c.id, { name: e.target.value })
+                            }
+                          />
+                          <div className={pn.rowActions}>
+                            <button
+                              type="button"
+                              className={styles.btn}
+                              onClick={() => openBrandColorImagePicker(m.id, c.id)}
+                            >
+                              Медиатека
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.btn} ${styles.btnDanger}`}
+                              onClick={() => removeColorFromMaterial(m.id, c.id)}
+                            >
+                              Удалить
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        <button
+                          type="button"
+                          className={styles.btn}
+                          onClick={() => openBrandColorBatchPicker(m.id)}
+                        >
+                          + Цвет из медиатеки
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.btn}
+                          onClick={() => addColorToMaterial(m.id)}
+                        >
+                          + Цвет (пустой)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" className={styles.btn} onClick={addMaterial}>
+                  + Материал
+                </button>
+              </div>
+            )}
+
+            {materialsMsg ? (
+              <p
+                className={
+                  materialsMsg.startsWith('Матер') ? styles.muted : styles.error
+                }
+                style={{ marginTop: 8 }}
+              >
+                {materialsMsg}
+              </p>
+            ) : null}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                onClick={() => {
+                  void saveMaterials();
+                }}
+                disabled={materialsSaving || !materialsLoaded}
+              >
+                {materialsSaving ? 'Сохранение…' : 'Сохранить материалы'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className={styles.muted}>
+            После создания бренда здесь появится раздел «Материалы и цвета бренда».
+          </p>
+        )}
 
         <label className={styles.label}>
           SEO title

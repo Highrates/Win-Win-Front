@@ -19,31 +19,50 @@ export type PublicProductImageApi = {
   alt?: string | null;
 };
 
+/** Выбор «материал-цвет» для элемента в рамках варианта. */
+export type PublicVariantSelectionApi = {
+  productElementId: string;
+  brandMaterialColorId: string;
+};
+
 /** Вариант на витрине (`GET /catalog/products/:slug`). */
 export type PublicProductVariantApi = {
   id: string;
   variantSlug?: string | null;
   variantLabel?: string | null;
-  sizeOptionId?: string | null;
+  modificationId: string | null;
   price: unknown;
   sku: string | null;
-  specsJson: unknown;
-  optionAttributes: unknown;
   isDefault: boolean;
   images: PublicProductImageApi[];
+  selections: PublicVariantSelectionApi[];
 };
 
-export type PublicProductSizeOptionApi = {
+/** Модификация товара (размер/конфигурация). */
+export type PublicProductModificationApi = {
   id: string;
   name: string;
-  sizeSlug: string | null;
+  modificationSlug: string | null;
   sortOrder: number;
-  materials: {
-    id: string;
-    name: string;
-    sortOrder: number;
-    colors: { id: string; name: string; imageUrl: string; sortOrder: number }[];
-  }[];
+};
+
+/** Доступный «материал-цвет» (из брендовой библиотеки) для элемента. */
+export type PublicElementAvailabilityApi = {
+  brandMaterialColorId: string;
+  brandMaterialId: string;
+  materialName: string;
+  materialSortOrder: number;
+  colorName: string;
+  imageUrl: string | null;
+  sortOrder: number;
+};
+
+/** Элемент товара (обивка/ножки/…). */
+export type PublicProductElementApi = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  availabilities: PublicElementAvailabilityApi[];
 };
 
 export type PublicProductFromApi = {
@@ -51,7 +70,7 @@ export type PublicProductFromApi = {
   name: string;
   /** Задано только при выбранном SKU (`?v` / `?vs`) */
   price: unknown;
-  /** Диапазон без выбранного SKU */
+  /** Диапазон активных вариантов (всегда отдаём для подписи) */
   priceMin?: unknown;
   priceMax?: unknown;
   shortDescription: string | null;
@@ -61,15 +80,14 @@ export type PublicProductFromApi = {
   deliveryText: string | null;
   technicalSpecs: string | null;
   additionalInfoHtml: string | null;
-  specsJson: unknown;
   category: PublicProductCategoryApi | null;
   brand: PublicProductBrandApi | null;
   images: PublicProductImageApi[];
+  modifications: PublicProductModificationApi[];
+  elements: PublicProductElementApi[];
   variants: PublicProductVariantApi[];
   defaultVariantId: string | null;
-  sizeOptions?: PublicProductSizeOptionApi[];
-  /** Выбранный размер из `?sz=` (без SKU) */
-  selectedSizeOptionId?: string | null;
+  defaultModificationId: string | null;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -112,6 +130,22 @@ function parseImages(raw: unknown): PublicProductImageApi[] {
   return out;
 }
 
+function parseSelections(raw: unknown): PublicVariantSelectionApi[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PublicVariantSelectionApi[] = [];
+  for (const x of raw) {
+    if (!isRecord(x)) continue;
+    if (typeof x.productElementId !== 'string' || typeof x.brandMaterialColorId !== 'string') {
+      continue;
+    }
+    out.push({
+      productElementId: x.productElementId,
+      brandMaterialColorId: x.brandMaterialColorId,
+    });
+  }
+  return out;
+}
+
 function parseVariants(raw: unknown): PublicProductVariantApi[] {
   if (!Array.isArray(raw)) return [];
   const out: PublicProductVariantApi[] = [];
@@ -122,13 +156,67 @@ function parseVariants(raw: unknown): PublicProductVariantApi[] {
       id: x.id.trim(),
       variantSlug: typeof x.variantSlug === 'string' ? x.variantSlug : null,
       variantLabel: typeof x.variantLabel === 'string' ? x.variantLabel : null,
-      sizeOptionId: typeof x.sizeOptionId === 'string' ? x.sizeOptionId : null,
+      modificationId: typeof x.modificationId === 'string' ? x.modificationId : null,
       price: x.price,
       sku: typeof x.sku === 'string' ? x.sku : null,
-      specsJson: x.specsJson,
-      optionAttributes: x.optionAttributes,
       isDefault: x.isDefault === true,
       images: parseImages(x.images),
+      selections: parseSelections(x.selections),
+    });
+  }
+  return out;
+}
+
+function parseModifications(raw: unknown): PublicProductModificationApi[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PublicProductModificationApi[] = [];
+  for (const x of raw) {
+    if (!isRecord(x)) continue;
+    if (typeof x.id !== 'string' || typeof x.name !== 'string') continue;
+    out.push({
+      id: x.id,
+      name: x.name,
+      modificationSlug: typeof x.modificationSlug === 'string' ? x.modificationSlug : null,
+      sortOrder: typeof x.sortOrder === 'number' ? x.sortOrder : 0,
+    });
+  }
+  return out;
+}
+
+function parseElementAvailabilities(raw: unknown): PublicElementAvailabilityApi[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PublicElementAvailabilityApi[] = [];
+  for (const x of raw) {
+    if (!isRecord(x)) continue;
+    const bmcId = typeof x.brandMaterialColorId === 'string' ? x.brandMaterialColorId : '';
+    const materialId = typeof x.brandMaterialId === 'string' ? x.brandMaterialId : '';
+    const materialName = typeof x.materialName === 'string' ? x.materialName : '';
+    const colorName = typeof x.colorName === 'string' ? x.colorName : '';
+    if (!bmcId || !materialId) continue;
+    out.push({
+      brandMaterialColorId: bmcId,
+      brandMaterialId: materialId,
+      materialName,
+      materialSortOrder: typeof x.materialSortOrder === 'number' ? x.materialSortOrder : 0,
+      colorName,
+      imageUrl: typeof x.imageUrl === 'string' && x.imageUrl.trim() ? x.imageUrl : null,
+      sortOrder: typeof x.sortOrder === 'number' ? x.sortOrder : 0,
+    });
+  }
+  return out;
+}
+
+function parseElements(raw: unknown): PublicProductElementApi[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PublicProductElementApi[] = [];
+  for (const x of raw) {
+    if (!isRecord(x)) continue;
+    if (typeof x.id !== 'string' || typeof x.name !== 'string') continue;
+    out.push({
+      id: x.id,
+      name: x.name,
+      sortOrder: typeof x.sortOrder === 'number' ? x.sortOrder : 0,
+      availabilities: parseElementAvailabilities(x.availabilities),
     });
   }
   return out;
@@ -167,6 +255,10 @@ export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
     typeof raw.defaultVariantId === 'string' && raw.defaultVariantId.trim()
       ? raw.defaultVariantId.trim()
       : null;
+  const defaultModificationId =
+    typeof raw.defaultModificationId === 'string' && raw.defaultModificationId.trim()
+      ? raw.defaultModificationId.trim()
+      : null;
   return {
     slug: raw.slug,
     name: raw.name,
@@ -180,60 +272,13 @@ export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
     deliveryText: typeof raw.deliveryText === 'string' ? raw.deliveryText : null,
     technicalSpecs: typeof raw.technicalSpecs === 'string' ? raw.technicalSpecs : null,
     additionalInfoHtml: typeof raw.additionalInfoHtml === 'string' ? raw.additionalInfoHtml : null,
-    specsJson: raw.specsJson,
     category: parseCategory(raw.category),
     brand: raw.brand == null ? null : parseBrand(raw.brand),
     images: parseImages(raw.images),
+    modifications: parseModifications(raw.modifications),
+    elements: parseElements(raw.elements),
     variants,
     defaultVariantId,
-    sizeOptions: parseSizeOptions(raw.sizeOptions),
-    selectedSizeOptionId:
-      typeof raw.selectedSizeOptionId === 'string' && raw.selectedSizeOptionId.trim()
-        ? raw.selectedSizeOptionId.trim()
-        : raw.selectedSizeOptionId === null
-          ? null
-          : undefined,
+    defaultModificationId,
   };
-}
-
-function parseSizeOptions(raw: unknown): PublicProductSizeOptionApi[] | undefined {
-  if (!Array.isArray(raw)) return undefined;
-  const out: PublicProductSizeOptionApi[] = [];
-  for (const x of raw) {
-    if (!isRecord(x)) continue;
-    if (typeof x.id !== 'string' || typeof x.name !== 'string') continue;
-    const materials: PublicProductSizeOptionApi['materials'] = [];
-    if (Array.isArray(x.materials)) {
-      for (const m of x.materials) {
-        if (!isRecord(m) || typeof m.id !== 'string' || typeof m.name !== 'string') continue;
-        const colors: PublicProductSizeOptionApi['materials'][0]['colors'] = [];
-        if (Array.isArray(m.colors)) {
-          for (const c of m.colors) {
-            if (!isRecord(c) || typeof c.id !== 'string' || typeof c.name !== 'string') continue;
-            const imageUrl = typeof c.imageUrl === 'string' ? c.imageUrl : '';
-            colors.push({
-              id: c.id,
-              name: c.name,
-              imageUrl,
-              sortOrder: typeof c.sortOrder === 'number' ? c.sortOrder : 0,
-            });
-          }
-        }
-        materials.push({
-          id: m.id,
-          name: m.name,
-          sortOrder: typeof m.sortOrder === 'number' ? m.sortOrder : 0,
-          colors,
-        });
-      }
-    }
-    out.push({
-      id: x.id,
-      name: x.name,
-      sizeSlug: typeof x.sizeSlug === 'string' ? x.sizeSlug : null,
-      sortOrder: typeof x.sortOrder === 'number' ? x.sortOrder : 0,
-      materials,
-    });
-  }
-  return out.length ? out : undefined;
 }

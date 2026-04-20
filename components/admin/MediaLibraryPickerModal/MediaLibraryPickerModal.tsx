@@ -17,7 +17,12 @@ import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import libStyles from '@/app/(admin)/admin/objects/objectsLibrary.module.css';
 import pickStyles from './MediaLibraryPickerModal.module.css';
 
-export type MediaLibraryPickResult = { url: string; id: string };
+export type MediaLibraryPickResult = {
+  url: string;
+  id: string;
+  /** Исходное имя файла в медиатеке (без папок и без расширения). */
+  originalName?: string;
+};
 
 type MediaLibraryPickerModalProps = {
   open: boolean;
@@ -324,7 +329,7 @@ export function MediaLibraryPickerModal({
       );
       return;
     }
-    onPick({ url: row.publicUrl, id: row.id });
+    onPick({ url: row.publicUrl, id: row.id, originalName: row.originalName });
   }
 
   function confirmBatch() {
@@ -333,7 +338,9 @@ export function MediaLibraryPickerModal({
       (o) => selectedIds.includes(o.id) && selectionAllowed(mediaFilter, o),
     );
     if (!rows.length) return;
-    onPickBatch(rows.map((r) => ({ url: r.publicUrl, id: r.id })));
+    onPickBatch(
+      rows.map((r) => ({ url: r.publicUrl, id: r.id, originalName: r.originalName })),
+    );
   }
 
   function toggleCardSelection(row: MediaObjectRow) {
@@ -528,7 +535,11 @@ export function MediaLibraryPickerModal({
                               if (multiMode) {
                                 toggleCardSelection(row);
                               } else if (onPick) {
-                                onPick({ url: row.publicUrl, id: row.id });
+                                onPick({
+                                  url: row.publicUrl,
+                                  id: row.id,
+                                  originalName: row.originalName,
+                                });
                               }
                             }}
                           >
