@@ -28,10 +28,10 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       {!hideChrome && <HeaderWrapper />}
-      {!hideChrome ? (
-        <div className={`${styles.taglineRow} ${isHome ? styles.taglineRowOnHome : ''}`.trim()}>
+      {!hideChrome && isHome ? (
+        <div className={`${styles.taglineRow} ${styles.taglineRowOnHome}`.trim()}>
           <div className="padding-global">
-            <h3 className={`${styles.tagline} ${isHome ? styles.taglineOnHome : ''}`.trim()}>
+            <h3 className={`${styles.tagline} ${styles.taglineOnHome}`.trim()}>
               Качественный и стильный интерьер из Китая
             </h3>
           </div>
