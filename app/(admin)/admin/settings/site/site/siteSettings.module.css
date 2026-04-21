@@ -1,0 +1,61 @@
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin: 16px 0 16px;
+}
+
+.tabBtn {
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--color-ink-black);
+  opacity: 0.7;
+  border-bottom: 2px solid transparent;
+}
+
+.tabBtnActive {
+  opacity: 1;
+  border-bottom-color: var(--color-ink-black);
+}
+
+.panel {
+  max-width: 980px;
+}
+
+.thumbGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.thumbCard {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.thumbImg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #f3f3f3;
+}
+
+.thumbActions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px;
+}
+
+@media (max-width: 900px) {
+  .thumbGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+

@@ -13,10 +13,23 @@ export function SiteLoader() {
   const bgRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setMounted(true);
+    // Не показываем прелоадер на reload/back-forward — только на "первый вход" в новой вкладке.
+    // Это убирает эффект "страница успела отрисоваться → потом прелоадер поверх".
+    try {
+      const nav = performance.getEntriesByType('navigation')?.[0] as PerformanceNavigationTiming | undefined;
+      if (nav?.type === 'reload' || nav?.type === 'back_forward') {
+        setShouldShow(false);
+      } else {
+        setShouldShow(true);
+      }
+    } catch {
+      setShouldShow(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -60,12 +73,20 @@ export function SiteLoader() {
   }, [mounted]);
 
   function _destroy() {
-    if (rootRef.current?.parentNode) {
-      rootRef.current.parentNode.removeChild(rootRef.current);
+    const el = rootRef.current;
+    if (!el) return;
+    const parent = el.parentNode;
+    if (!parent) return;
+    // На быстрых переходах / повторных вызовах анимации узел уже может быть удалён.
+    if ((parent as ParentNode).contains?.(el) === false) return;
+    try {
+      parent.removeChild(el);
+    } catch {
+      /* ignore */
     }
   }
 
-  if (!mounted) return null;
+  if (!mounted || !shouldShow) return null;
 
   return (
     <div

@@ -30,6 +30,7 @@ export function SiteTransition() {
   }, []);
 
   useEffect(() => {
+    if (!pathname) return;
     if (isFirstMount.current) {
       isFirstMount.current = false;
       prevPathnameRef.current = pathname;

@@ -237,6 +237,7 @@
   display: flex;
   align-items: center;
   gap: 32px;
+  text-transform: uppercase;
 }
 
 .menuItem {
@@ -270,9 +271,11 @@
 }
 
 .menuItemText {
-  font-size: var(--text-body);
+  font-size: var(--text-caption);
+  font-weight: 350;
   flex: 1;
   white-space: nowrap;
+  text-transform: uppercase;
 }
 
 .menuChevron {

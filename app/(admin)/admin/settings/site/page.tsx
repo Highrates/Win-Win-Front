@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { adminNavBackToDashboard, adminSettingsSitePage } from '@/lib/admin-i18n/adminMiscPagesI18n';
 import { getAdminLocale } from '@/lib/admin-i18n/getAdminLocale';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
+import { SiteSettingsClient } from './site/SiteSettingsClient';
 
 export default function AdminSettingsSitePage() {
   const locale = getAdminLocale();
@@ -14,7 +15,8 @@ export default function AdminSettingsSitePage() {
         </Link>
       </p>
       <h1 className={catalogStyles.title}>{t.title}</h1>
-      <p className={catalogStyles.lead}>{t.devNote}</p>
+      <p className={catalogStyles.lead}>{t.lead}</p>
+      <SiteSettingsClient />
     </main>
   );
 }

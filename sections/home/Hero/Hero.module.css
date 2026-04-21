@@ -1,35 +1,25 @@
 .heroBg {
-  min-height: 520px;
-  background: var(--color-ink-black);
+  min-height: 720px;
+  background-color: var(--color-ink-black);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  position: relative;
 }
 
-.heroImg {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-}
-
-.heroImgMob {
-  display: none;
+.heroBg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(5, 24, 38, 0.3), rgba(5, 24, 38, 0));
+  pointer-events: none;
 }
 
 @media (max-width: 768px) {
   .heroBg {
     min-height: 40vh;
-  }
-
-  .heroImg {
-    display: none;
-  }
-
-  .heroImgMob {
-    display: block;
-    width: 100%;
-    height: auto;
-    object-fit: cover;
   }
 }
