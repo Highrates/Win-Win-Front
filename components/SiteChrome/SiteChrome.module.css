@@ -32,7 +32,8 @@
 }
 
 @media (max-width: 768px) {
-  .tagline {
+  /* На мобилке слоган рисуется внутри Hero, чтобы центрирование было по Hero, а не по viewport */
+  .taglineRowOnHome {
     display: none;
   }
 }

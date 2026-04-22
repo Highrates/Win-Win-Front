@@ -9,7 +9,11 @@ export function Hero({ imageUrl }: { imageUrl?: string | null }) {
         style={{
           backgroundImage: `url("${bgUrl.replace(/"/g, '%22')}")`,
         }}
-      />
+      >
+        <div className={styles.heroSloganWrap} aria-hidden="true">
+          <h3 className={styles.heroSlogan}>Качественный и стильный интерьер из Китая</h3>
+        </div>
+      </div>
     </section>
   );
 }
