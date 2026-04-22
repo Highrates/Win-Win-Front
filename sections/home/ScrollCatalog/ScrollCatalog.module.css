@@ -1,14 +1,44 @@
 .section {
-  margin-top: 64px;
   background: var(--color-white);
+  position: relative;
+  z-index: 3;
+  margin-top: 0;
 }
 
 .tabsWrapper {
   display: flex;
   flex-direction: row;
   gap: 32px;
+  padding: 14px 32px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.10);
   flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
+  max-width: 100%;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  z-index: 6;
+  top: -24px;
+  margin-bottom: -24px;
+  --tabs-indicator-x: 0px;
+  --tabs-indicator-w: 0px;
+}
+
+.tabsIndicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1.2px;
+  width: var(--tabs-indicator-w);
+  transform: translateX(var(--tabs-indicator-x));
+  background: var(--color-ink-black);
+  border-radius: 2px;
+  transition: transform 600ms ease, width 600ms ease;
+  pointer-events: none;
 }
 
 .tab,
@@ -20,6 +50,8 @@
   cursor: pointer;
   padding: 0;
   font-family: inherit;
+  position: relative;
+  z-index: 1;
 }
 
 .tab {

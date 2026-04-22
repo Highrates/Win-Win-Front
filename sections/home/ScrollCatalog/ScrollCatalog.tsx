@@ -16,6 +16,9 @@ type Props = {
 export function ScrollCatalog({ roots: initialRoots }: Props) {
   const pathname = usePathname();
   const [roots, setRoots] = useState<HomeCatalogRoot[]>(initialRoots);
+  const tabsWrapperRef = useRef<HTMLDivElement>(null);
+  const tabBtnRefs = useRef(new Map<string, HTMLButtonElement>());
+  const [hoverTabId, setHoverTabId] = useState<string | null>(null);
 
   const pullTree = useCallback(async () => {
     try {
@@ -62,6 +65,41 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     () => roots.find((r) => r.id === activeId) ?? roots[0],
     [roots, activeId]
   );
+
+  const indicatorTargetId = hoverTabId ?? activeId;
+
+  const updateIndicator = useCallback(() => {
+    const wrap = tabsWrapperRef.current;
+    if (!wrap) return;
+    const btn = indicatorTargetId ? tabBtnRefs.current.get(indicatorTargetId) : null;
+    if (!btn) {
+      wrap.style.setProperty('--tabs-indicator-x', '0px');
+      wrap.style.setProperty('--tabs-indicator-w', '0px');
+      return;
+    }
+    const wRect = wrap.getBoundingClientRect();
+    const bRect = btn.getBoundingClientRect();
+    const x = Math.max(0, bRect.left - wRect.left);
+    const w = Math.max(0, bRect.width);
+    wrap.style.setProperty('--tabs-indicator-x', `${x}px`);
+    wrap.style.setProperty('--tabs-indicator-w', `${w}px`);
+  }, [indicatorTargetId]);
+
+  useLayoutEffect(() => {
+    updateIndicator();
+  }, [updateIndicator, activeId, hoverTabId, roots.length]);
+
+  useEffect(() => {
+    const wrap = tabsWrapperRef.current;
+    if (!wrap) return;
+    const ro = new ResizeObserver(() => updateIndicator());
+    ro.observe(wrap);
+    window.addEventListener('resize', updateIndicator);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateIndicator);
+    };
+  }, [updateIndicator]);
 
   const stripCards = useMemo(() => {
     if (!roots.length) return [];
@@ -172,7 +210,13 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
   return (
     <section className={styles.section}>
       <div className="padding-global">
-        <div className={styles.tabsWrapper} role="tablist" aria-label="Разделы каталога">
+        <div
+          className={styles.tabsWrapper}
+          role="tablist"
+          aria-label="Разделы каталога"
+          ref={tabsWrapperRef}
+          onMouseLeave={() => setHoverTabId(null)}
+        >
           {roots.map((tab) => (
             <button
               key={tab.id}
@@ -183,10 +227,16 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
               aria-controls="catalog-cards-panel"
               className={tab.id === activeId ? styles.tabActive : styles.tab}
               onClick={() => setActiveId(tab.id)}
+              onMouseEnter={() => setHoverTabId(tab.id)}
+              ref={(el) => {
+                if (!el) tabBtnRefs.current.delete(tab.id);
+                else tabBtnRefs.current.set(tab.id, el);
+              }}
             >
               {tab.name}
             </button>
           ))}
+          <span className={styles.tabsIndicator} aria-hidden="true" />
         </div>
         <div className={`${styles.stripHostFlex} ${styles.stripHostFlexHome}`}>
           <div className={styles.stripPanel}>
