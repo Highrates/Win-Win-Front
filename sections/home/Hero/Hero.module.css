@@ -3,7 +3,7 @@
 }
 
 .heroBg {
-  min-height: 624px;
+  min-height: 64vh;
   background-color: var(--color-ink-black);
   background-size: cover;
   background-position: center;
@@ -33,7 +33,7 @@
   }
 
   .heroBg {
-    min-height: 60vh;
+    min-height: 64vh;
   }
 }
 
