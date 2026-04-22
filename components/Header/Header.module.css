@@ -212,6 +212,65 @@
   height: auto;
 }
 
+.heroLogoBadge {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 96px;
+  padding: 12px 12px;
+  border-radius: 4px;
+  outline: 2px solid rgba(255, 255, 255, 1);
+  outline-offset: -2px;
+  overflow: hidden;
+}
+
+.heroLogoBadgeText {
+  margin: 0;
+  max-width: 176px;
+  font-size: var(--text-body);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1.25;
+  color: var(--color-white);
+}
+
+.heroLogoBadgeBottomRow {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.heroLogoBadgeLogoSlot {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+  .heroLogoBadgeLogoSlot {
+    max-width: 196px;
+  }
+}
+
+.heroLogoBadgeLogo {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+
+.heroLogoBadgeTm {
+  display: inline-block;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--color-white);
+  transform: translateY(-8px);
+}
+
 .headerMinimal .logoImg {
   filter: brightness(0) invert(1);
   color: var(--color-white);
@@ -521,6 +580,11 @@
   align-self: center;
   pointer-events: all;
   margin-left: auto;
+}
+
+/* В hero (header-minimal) бейдж лого высокий — фиксируем иконки сверху строки */
+.headerMinimal .rightNav {
+  align-self: start;
 }
 
 .iconBtn {

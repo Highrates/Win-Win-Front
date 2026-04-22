@@ -94,6 +94,7 @@ export function HeaderWrapper() {
 
   const variant: HeaderVariant =
     isMobile ? 'main' : pathname !== '/' ? 'main' : hasScrolledPastHero ? 'main' : 'minimal';
+  const showHeroLogoBadge = pathname === '/' && variant === 'minimal';
   const isMainOverlayOnHome =
     (pathname === '/' && variant === 'main') ||
     pathname.startsWith('/categories/') ||
@@ -116,6 +117,7 @@ export function HeaderWrapper() {
     <Header
       variant={variant}
       isMainOverlayOnHome={isMainOverlayOnHome}
+      showHeroLogoBadge={showHeroLogoBadge}
       superMenuOpen={superMenuOpen}
       setSuperMenuOpen={setSuperMenuOpen}
     />

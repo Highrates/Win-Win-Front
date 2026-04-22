@@ -23,20 +23,10 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? '';
   const hideChrome = shouldHideChrome(pathname);
   const hideFooter = shouldHideFooter(pathname);
-  const isHome = pathname === '/';
 
   return (
     <>
       {!hideChrome && <HeaderWrapper />}
-      {!hideChrome && isHome ? (
-        <div className={`${styles.taglineRow} ${styles.taglineRowOnHome}`.trim()}>
-          <div className="padding-global">
-            <h3 className={`${styles.tagline} ${styles.taglineOnHome}`.trim()}>
-              Качественный и стильный интерьер из Китая
-            </h3>
-          </div>
-        </div>
-      ) : null}
       {children}
       {!hideChrome && !hideFooter && <Footer />}
     </>

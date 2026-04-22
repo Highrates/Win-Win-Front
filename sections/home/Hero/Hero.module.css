@@ -18,7 +18,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(5, 24, 38, 0.3), rgba(5, 24, 38, 0));
+  background: linear-gradient(to bottom, rgba(5, 24, 38, 0.3) 0%, rgba(5, 24, 38, 0) 40%);
   pointer-events: none;
 }
 
@@ -26,6 +26,10 @@
   .section {
     /* На мобилке header-main фиксированный — сдвигаем hero ниже, чтобы фон не был под хедером. */
     padding-top: 42px;
+  }
+
+  .heroBg::before {
+    background: rgba(5, 24, 38, 0.4);
   }
 
   .heroBg {
@@ -48,15 +52,21 @@
     z-index: 2;
     pointer-events: none;
   }
+}
 
-  .heroSlogan {
-    margin: 0;
-    width: 100%;
-    font-size: var(--h3-size);
-    font-weight: 500;
-    text-transform: uppercase;
-    line-height: 1.2;
-    text-align: center;
-    color: var(--color-white);
-  }
+.heroBetaRow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.heroBeta {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-white);
+  text-align: right;
 }

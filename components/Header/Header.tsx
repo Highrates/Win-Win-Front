@@ -61,11 +61,13 @@ const headerClassMap: Record<HeaderVariant, string> = {
 export function Header({
   variant = 'default',
   isMainOverlayOnHome = false,
+  showHeroLogoBadge = false,
   superMenuOpen: superMenuOpenProp,
   setSuperMenuOpen: setSuperMenuOpenProp,
 }: {
   variant?: HeaderVariant;
   isMainOverlayOnHome?: boolean;
+  showHeroLogoBadge?: boolean;
   superMenuOpen?: boolean;
   setSuperMenuOpen?: (open: boolean) => void;
 }) {
@@ -273,15 +275,29 @@ export function Header({
           </button>
           <div className={styles.logoBlock}>
             <Link href="/" aria-label="На главную">
-              <Image
-                src="/images/logo.svg"
-                alt="Win-Win"
-                width={280}
-                height={41}
-                className={styles.logoImg}
-                style={{ height: 'auto' }}
-                priority
-              />
+              {showHeroLogoBadge ? (
+                <div className={styles.heroLogoBadge}>
+                  <p className={styles.heroLogoBadgeText}>
+                    Качественный, стильный интерьер из Китая
+                  </p>
+                  <span className={styles.heroLogoBadgeBottomRow} aria-hidden="true">
+                    <span className={styles.heroLogoBadgeLogoSlot}>
+                      <img className={styles.heroLogoBadgeLogo} src="/images/logo.svg" alt="" />
+                    </span>
+                    <span className={styles.heroLogoBadgeTm}>TM</span>
+                  </span>
+                </div>
+              ) : (
+                <Image
+                  src="/images/logo.svg"
+                  alt="Win-Win"
+                  width={280}
+                  height={41}
+                  className={styles.logoImg}
+                  style={{ height: 'auto' }}
+                  priority
+                />
+              )}
             </Link>
           </div>
           <nav className={styles.siteHeaderNav} aria-label="Основное меню">
