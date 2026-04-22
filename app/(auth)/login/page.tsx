@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function LoginIndexPage() {
-  redirect('/login/phone');
+  redirect('/login/email');
 }

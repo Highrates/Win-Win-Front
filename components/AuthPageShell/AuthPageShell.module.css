@@ -162,3 +162,11 @@ button.authAltMethod {
   color: var(--color-gray);
   line-height: 1.4;
 }
+
+.authError {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: #b91c1c;
+  line-height: 1.4;
+}

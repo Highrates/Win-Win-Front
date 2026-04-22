@@ -1,4 +1,7 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { CustomerAccountSidebar } from '@/components/CustomerAccountSidebar/CustomerAccountSidebar';
+import { USER_ACCESS_TOKEN_COOKIE } from '@/lib/userAuth';
 import styles from './AccountLayout.module.css';
 
 export default function AccountLayout({
@@ -6,6 +9,10 @@ export default function AccountLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const token = cookies().get(USER_ACCESS_TOKEN_COOKIE)?.value;
+  if (!token) {
+    redirect('/login/email');
+  }
   return (
     <main>
       <section className={styles.accountMainSection} aria-label="Личный кабинет">

@@ -163,6 +163,13 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     try {
       const data = await registerComplete({ completionToken, password });
       setUserAccessToken(data.access_token);
+      // Чтобы server-side /account видел авторизацию (cookie httpOnly).
+      await fetch('/api/user/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ access_token: data.access_token }),
+        credentials: 'same-origin',
+      }).catch(() => {});
       router.push('/account');
       router.refresh();
     } catch (err) {
@@ -207,13 +214,38 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     </button>
   );
 
+  const backFromRegisterStart = (
+    <button
+      type="button"
+      className={styles.authBack}
+      onClick={() => {
+        // /register редиректит на /register/phone, поэтому обычный backHref не работает.
+        // Если пользователь пришёл со страницы логина — вернём его туда через history.
+        try {
+          router.back();
+        } catch {
+          router.push('/login/email');
+        }
+      }}
+    >
+      <img
+        src="/icons/arrow-right.svg"
+        alt=""
+        width={12}
+        height={7}
+        className={styles.authBackArrow}
+      />
+      <span className={styles.authBackText}>Назад</span>
+    </button>
+  );
+
   if (step === 1) {
     return (
       <AuthPageShell
         sectionAriaLabel={channel === 'phone' ? 'Регистрация по телефону' : 'Регистрация по email'}
         title="Регистрация"
         subtitle={subtitle}
-        backHref="/register"
+        backSlot={backFromRegisterStart}
       >
         <form className={styles.authForm} noValidate onSubmit={onStep1Submit}>
           <div className={styles.authFields}>

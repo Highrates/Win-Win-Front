@@ -24,10 +24,6 @@ export default function LoginEmailPage() {
       }
     >
       <LoginEmailForm />
-
-      <Link href="/login/phone" className={styles.authAltMethod}>
-        Войти по номеру телефона
-      </Link>
     </AuthPageShell>
   );
 }
