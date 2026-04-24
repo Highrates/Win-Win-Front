@@ -9,16 +9,19 @@ export default function AdminObjectsPage() {
   return (
     <main>
       <h1 className={styles.title}>{title}</h1>
-      <p className={styles.lead}>
-        <a
-          href="https://www.iloveimg.com/compress-image"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {compressLink}
-        </a>
-      </p>
-      <ObjectsLibraryClient />
+      <ObjectsLibraryClient
+        lead={
+          <p className={styles.lead}>
+            <a
+              href="https://www.iloveimg.com/compress-image"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {compressLink}
+            </a>
+          </p>
+        }
+      />
     </main>
   );
 }

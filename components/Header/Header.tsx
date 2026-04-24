@@ -82,6 +82,7 @@ export function Header({
   const [mobileMenuContentRevealed, setMobileMenuContentRevealed] = useState(false);
   const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
   const [mobileMenuExpandedId, setMobileMenuExpandedId] = useState<string | null>(null);
+  const [accountEntryHref, setAccountEntryHref] = useState('/login');
   const mobileMenuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTransitioningRef = useRef(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,6 +92,23 @@ export function Header({
   setSuperMenuOpenRef.current = setSuperMenuOpen;
   const catalogRoots = useCatalogNavRoots();
   const brandsMenuItems = useBrandsNavMenu();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/user/session', { cache: 'no-store', credentials: 'same-origin' });
+        const data = (await res.json().catch(() => ({}))) as { authenticated?: boolean };
+        if (cancelled) return;
+        setAccountEntryHref(data.authenticated ? '/account/orders' : '/login');
+      } catch {
+        if (!cancelled) setAccountEntryHref('/login');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const closeSuperMenu = () => {
     if (!superMenuOpen || superMenuClosing) return;
@@ -323,7 +341,7 @@ export function Header({
             <button type="button" className={styles.iconBtn} aria-label="Поиск">
               <img src="/icons/search-normal.svg" alt="" width={20} height={20} />
             </button>
-            <Link href="/login" className={styles.iconBtn} aria-label="Вход в аккаунт">
+            <Link href={accountEntryHref} className={styles.iconBtn} aria-label="Вход в аккаунт">
               <img src="/icons/user.svg" alt="" width={20} height={20} />
             </Link>
           </nav>
@@ -459,7 +477,7 @@ export function Header({
                 <span className={styles.mobileMenuSearchLabel}>Поиск</span>
               </button>
               <Link
-                href="/login"
+                href={accountEntryHref}
                 className={styles.mobileMenuLoginLink}
                 onClick={closeMobileMenu}
               >

@@ -26,6 +26,10 @@ export type ObjectsLibraryStrings = {
   tabDocuments: string;
   tabModels: string;
   tabVideos: string;
+  /** Верхний уровень: медиа витрины и ЛК. */
+  scopeWinwin: string;
+  scopeUser: string;
+  tablistMainScopeAria: string;
   foldersAsideLabel: string;
   foldersTitle: string;
   allLocations: string;
@@ -94,6 +98,9 @@ const ru: ObjectsLibraryStrings = {
   tabDocuments: 'Документы',
   tabModels: '3D модели',
   tabVideos: 'Видео',
+  scopeWinwin: 'Объекты Win-win',
+  scopeUser: 'Объекты пользователей',
+  tablistMainScopeAria: 'Тип библиотеки',
   foldersAsideLabel: 'Папки',
   foldersTitle: 'Папки',
   allLocations: 'Все расположения',
@@ -163,6 +170,9 @@ const zh: ObjectsLibraryStrings = {
   tabDocuments: '文档',
   tabModels: '3D 模型',
   tabVideos: '视频',
+  scopeWinwin: 'Win-win 资源',
+  scopeUser: '用户上传',
+  tablistMainScopeAria: '库类型',
   foldersAsideLabel: '文件夹',
   foldersTitle: '文件夹',
   allLocations: '全部位置',

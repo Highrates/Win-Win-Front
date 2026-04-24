@@ -110,43 +110,30 @@
 }
 
 .previewImages {
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 406px));
   gap: 16px;
   width: 100%;
   max-width: 100%;
+  align-items: start;
+  justify-content: start;
+}
+
+.previewImageSlot:not(.previewImageSlotDouble) {
+  max-width: 406px;
 }
 
 .previewImageSlot {
   position: relative;
-  flex: 1 1 0;
   min-width: 0;
-  max-width: 406px;
+  width: 100%;
 }
 
-.thumbZoomBtn {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: none;
-  background: var(--color-white);
-  cursor: pointer;
-  overflow: hidden;
-  border-bottom-right-radius: 8px;
-}
-
-.thumbZoomBtn img {
-  display: block;
-  width: 20px;
-  height: 20px;
+/* Одна обложка 4:3: до 800px; два кадра — по 406px (см. :not(.previewImageSlotDouble)). */
+.previewImageSlotDouble {
+  grid-column: 1 / -1;
+  max-width: min(100%, 800px) !important;
+  justify-self: start;
 }
 
 .previewImage {
@@ -159,12 +146,30 @@
   object-fit: cover;
 }
 
+.previewImageSlotDouble .previewImage {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  height: 393px;
+  object-fit: cover;
+  object-position: center;
+  aspect-ratio: unset;
+}
+
 .aboutSection {
   display: flex;
   flex-direction: column;
   gap: 16px;
   margin-top: 32px;
   width: 100%;
+}
+
+.aboutSectionHeaderOnly {
+  gap: 0;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .aboutHeaderRow {
@@ -480,6 +485,33 @@
   max-width: 560px;
 }
 
+.settingsBlockTitle {
+  margin: 0 0 4px;
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  text-transform: uppercase;
+  color: var(--color-ink-black);
+}
+
+.settingsHelp {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-ink-70, #666);
+  max-width: 52ch;
+}
+
+.settingsHelp strong {
+  color: var(--color-ink-black);
+  font-weight: 600;
+}
+
+.settingsMuted {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--color-ink-70, #666);
+}
+
 .settingsSection {
   display: flex;
   flex-direction: column;
@@ -732,11 +764,12 @@
   }
 
   .previewImages {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr;
   }
 
-  .previewImageSlot {
+  .previewImageSlot,
+  .previewImageSlotDouble {
+    grid-column: auto;
     max-width: none;
     width: 100%;
   }
@@ -744,4 +777,97 @@
   .previewImage {
     max-width: none;
   }
+
+  .previewImageSlotDouble .previewImage {
+    height: 393px;
+    max-width: 100%;
+  }
+}
+
+/* --- skeleton: загрузка профиля --- */
+@keyframes profilePageShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.profileLoadRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+}
+
+.profileLoadHeader {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24px;
+  width: 100%;
+}
+
+.profileLoadTextCol {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.skeletonShimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-bright-snow) 0%,
+    rgba(255, 255, 255, 0.95) 45%,
+    var(--color-bright-snow) 90%
+  );
+  background-size: 200% 100%;
+  animation: profilePageShimmer 1.2s ease-in-out infinite;
+}
+
+.skeletonLine {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.skeletonAvatar {
+  width: 82px;
+  height: 82px;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.skeletonIcon {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.profileLoadImages {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+}
+
+.skeletonRect {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 406px;
+  width: 100%;
+  aspect-ratio: 406 / 393;
+  border-radius: 10px;
+}
+
+.skeletonBlock {
+  width: 100%;
+  height: 120px;
+  margin-top: 4px;
+  border-radius: 10px;
 }

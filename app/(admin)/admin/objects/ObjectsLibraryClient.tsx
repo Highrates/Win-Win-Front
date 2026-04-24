@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@/components/Button';
 import { TBtn } from '@/components/TBtn/TBtn';
 import tbtnStyles from '@/components/TBtn/TBtn.module.css';
@@ -11,6 +11,7 @@ import {
 } from '@/lib/adminBackendFetch';
 import type {
   MediaFolderRow,
+  MediaLibraryScope,
   MediaLibraryTab,
   MediaObjectRow,
 } from '@/lib/adminMediaLibraryTypes';
@@ -57,8 +58,12 @@ function sortedFolders(rows: MediaFolderRow[]): MediaFolderRow[] {
 }
 
 const PROTECTED_FOLDER_PATH_PREFIX = 'category-backgrounds';
+const USER_PROFILES_ROOT_PATH_KEY = 'user-profiles';
 
 function isProtectedMediaFolder(f: MediaFolderRow): boolean {
+  if (f.pathKey === USER_PROFILES_ROOT_PATH_KEY) {
+    return true;
+  }
   return (
     f.pathKey === PROTECTED_FOLDER_PATH_PREFIX ||
     f.pathKey.startsWith(`${PROTECTED_FOLDER_PATH_PREFIX}/`)
@@ -74,11 +79,17 @@ function folderParentDisplayName(
   return all.find((x) => x.id === f.parentId)?.name ?? '—';
 }
 
-export function ObjectsLibraryClient() {
+type ObjectsLibraryClientProps = {
+  /** Текст под заголовком страницы (например ссылка на сжатие). */
+  lead?: ReactNode;
+};
+
+export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   const uploadInputId = useId();
   const { locale } = useAdminLocale();
   const s = useMemo(() => objectsLibraryStrings(locale), [locale]);
 
+  const [libraryScope, setLibraryScope] = useState<MediaLibraryScope>('winwin');
   const [tab, setTab] = useState<MediaLibraryTab>('all');
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
@@ -108,6 +119,11 @@ export function ObjectsLibraryClient() {
   const [detailDeleting, setDetailDeleting] = useState(false);
 
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
+
+  const userProfilesRootId = useMemo(
+    () => folders.find((f) => f.pathKey === USER_PROFILES_ROOT_PATH_KEY)?.id,
+    [folders],
+  );
 
   const childrenByParentId = useMemo(() => {
     const m = new Map<string | null, MediaFolderRow[]>();
@@ -166,6 +182,7 @@ export function ObjectsLibraryClient() {
                 type="button"
                 className={`${styles.folderBtn} ${folderFilter === f.id ? styles.folderBtnActive : ''}`}
                 onClick={() => setFolderFilter(f.id)}
+                title={f.name}
               >
                 {f.name}
               </button>
@@ -197,12 +214,14 @@ export function ObjectsLibraryClient() {
 
   const loadFolders = useCallback(async () => {
     try {
-      const data = await adminBackendJson<MediaFolderRow[]>('catalog/admin/media/folders');
+      const data = await adminBackendJson<MediaFolderRow[]>(
+        `catalog/admin/media/folders?scope=${libraryScope}`,
+      );
       setFolders(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : s.errLoadFolders);
     }
-  }, [s.errLoadFolders]);
+  }, [s.errLoadFolders, libraryScope]);
 
   const loadObjects = useCallback(async () => {
     setLoading(true);
@@ -210,6 +229,7 @@ export function ObjectsLibraryClient() {
     try {
       const sp = new URLSearchParams();
       sp.set('tab', tab);
+      sp.set('scope', libraryScope);
       if (debouncedQ) sp.set('q', debouncedQ);
       if (folderFilter) sp.set('folderId', folderFilter);
       const data = await adminBackendJson<MediaObjectRow[]>(
@@ -222,7 +242,11 @@ export function ObjectsLibraryClient() {
     } finally {
       setLoading(false);
     }
-  }, [tab, debouncedQ, folderFilter, s.errLoadObjects]);
+  }, [tab, debouncedQ, folderFilter, libraryScope, s.errLoadObjects]);
+
+  useEffect(() => {
+    setFolderFilter(null);
+  }, [libraryScope]);
 
   useEffect(() => {
     loadFolders();
@@ -234,7 +258,11 @@ export function ObjectsLibraryClient() {
 
   function openCreateFolder() {
     setCreateName('');
-    setCreateParentId(folderFilter ?? '');
+    if (libraryScope === 'user' && userProfilesRootId) {
+      setCreateParentId(folderFilter ?? userProfilesRootId);
+    } else {
+      setCreateParentId(folderFilter ?? '');
+    }
     setCreateOpen(true);
   }
 
@@ -450,6 +478,27 @@ export function ObjectsLibraryClient() {
 
   return (
     <>
+      <div className={styles.mainScopeTabs} role="tablist" aria-label={s.tablistMainScopeAria}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={libraryScope === 'winwin'}
+          className={`${styles.mainScopeTab} ${libraryScope === 'winwin' ? styles.mainScopeTabActive : ''}`}
+          onClick={() => setLibraryScope('winwin')}
+        >
+          {s.scopeWinwin}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={libraryScope === 'user'}
+          className={`${styles.mainScopeTab} ${libraryScope === 'user' ? styles.mainScopeTabActive : ''}`}
+          onClick={() => setLibraryScope('user')}
+        >
+          {s.scopeUser}
+        </button>
+      </div>
+      {libraryScope === 'winwin' ? lead : null}
       {error ? (
         <p className={catalogStyles.error} style={{ whiteSpace: 'pre-line' }}>
           {error}
@@ -471,7 +520,11 @@ export function ObjectsLibraryClient() {
           >
             {s.allLocations}
           </button>
-          {renderFolderBranch(null, 0)}
+          {libraryScope === 'user' && userProfilesRootId
+            ? renderFolderBranch(userProfilesRootId, 0)
+            : libraryScope === 'winwin'
+              ? renderFolderBranch(null, 0)
+              : null}
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button
               type="button"

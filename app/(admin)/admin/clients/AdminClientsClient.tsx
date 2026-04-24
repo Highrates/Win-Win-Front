@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminClientsStrings } from '@/lib/admin-i18n/adminClientsI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
@@ -18,6 +19,7 @@ type Row = {
 };
 
 export function AdminClientsClient() {
+  const router = useRouter();
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminClientsStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
@@ -126,7 +128,18 @@ export function AdminClientsClient() {
                   const name =
                     [u.profile?.firstName, u.profile?.lastName].filter(Boolean).join(' ') || '—';
                   return (
-                    <tr key={u.id}>
+                    <tr
+                      key={u.id}
+                      className={styles.clickableRow}
+                      tabIndex={0}
+                      onClick={() => router.push(`/admin/clients/${u.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          router.push(`/admin/clients/${u.id}`);
+                        }
+                      }}
+                    >
                       <td>{u.email ?? '—'}</td>
                       <td>{u.phone ?? '—'}</td>
                       <td>{name}</td>

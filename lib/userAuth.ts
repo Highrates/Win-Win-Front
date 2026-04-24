@@ -1,7 +1,22 @@
+import type { NextResponse } from 'next/server';
+
 /** Имя httpOnly-cookie с JWT покупателя (личный кабинет). */
 export const USER_ACCESS_TOKEN_COOKIE = 'user_access_token';
 
 export const USER_TOKEN_MAX_AGE_SEC = 60 * 60 * 24 * 30;
+
+/** Устанавливает httpOnly-cookie сессии покупателя (после логина или смены email/телефона). */
+export function setUserAccessTokenCookie(res: NextResponse, request: Request, accessToken: string): void {
+  res.cookies.set({
+    name: USER_ACCESS_TOKEN_COOKIE,
+    value: accessToken,
+    httpOnly: true,
+    secure: userCookieSecure(request),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: USER_TOKEN_MAX_AGE_SEC,
+  });
+}
 
 /**
  * Флаг Secure для cookie покупателя. По HTTPS — true; по HTTP — false,

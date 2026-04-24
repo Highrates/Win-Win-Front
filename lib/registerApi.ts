@@ -59,6 +59,9 @@ export async function registerEmailVerify(body: {
 export async function registerComplete(body: {
   completionToken: string;
   password: string;
-}): Promise<{ access_token: string; user: { id: string; email: string | null; phone: string | null; role: string } }> {
+}): Promise<{
+  access_token: string;
+  user: { id: string; email: string | null; phone: string | null; role: string; profile?: { profileOnboardingPending?: boolean } | null };
+}> {
   return postJson('complete', body);
 }

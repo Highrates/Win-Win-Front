@@ -152,6 +152,11 @@ export function RichBlock({
   const [uploadBusy, setUploadBusy] = useState<"image" | "video" | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const reactQuillRef = useRef<any>(null);
+  const uploadMediaRef = useRef<RichBlockUploadMedia | undefined>(undefined);
+  uploadMediaRef.current = uploadMedia;
+  const insertSrcAtCursorRef = useRef<
+    ((src: string, kind: "image" | "video") => void) | null
+  >(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const toolbarStackRef = useRef<HTMLDivElement>(null);
   const [QuillEditor, setQuillEditor] = useState<ComponentType<
@@ -522,6 +527,7 @@ export function RichBlock({
     }
     quill.setSelection(index + 1, 0);
   }
+  insertSrcAtCursorRef.current = insertSrcAtCursor;
 
   const insertImage = (file: File | null) => {
     if (!file) return;
@@ -584,6 +590,118 @@ export function RichBlock({
     };
     reader.readAsDataURL(file);
   };
+
+  /**
+   * Вставка/перетаскивание файла в поле редактора: тот же путь, что и «+ Изображение / + Видео» —
+   * uploadMedia (S3, папка пользователя в ЛК, объекты медиатеки и т.д.), без data URL в HTML.
+   */
+  useEffect(() => {
+    if (!QuillEditor || !uploadMedia) return;
+    const insert = (f: File) => {
+      if (f.type.startsWith("image/")) return { kind: "image" as const, file: f };
+      if (f.type.startsWith("video/")) return { kind: "video" as const, file: f };
+      return null;
+    };
+    const runUpload = (f: File) => {
+      const p = insert(f);
+      if (!p) return;
+      setUploadError(null);
+      setUploadBusy(p.kind);
+      void (async () => {
+        try {
+          const fn = uploadMediaRef.current;
+          if (!fn) return;
+          const url = await fn(p.file, p.kind);
+          const ins = insertSrcAtCursorRef.current;
+          if (ins) ins(url, p.kind);
+        } catch (e) {
+          const msg =
+            e instanceof Error
+              ? e.message
+              : p.kind === "image"
+                ? "Не удалось загрузить изображение"
+                : "Не удалось загрузить видео";
+          setUploadError(msg);
+          onUploadError?.(msg);
+        } finally {
+          setUploadBusy(null);
+        }
+      })();
+    };
+    let un: (() => void) | undefined;
+    let cancelled = false;
+    const attach = (attempt: number) => {
+      if (cancelled) return;
+      const quill = reactQuillRef.current?.getEditor?.();
+      if (!quill) {
+        if (attempt < 20) {
+          requestAnimationFrame(() => attach(attempt + 1));
+        }
+        return;
+      }
+      const el = quill.root;
+      const onPaste = (e: Event) => {
+        const ev = e as ClipboardEvent;
+        if (!uploadMediaRef.current) return;
+        const cd = ev.clipboardData;
+        if (!cd) return;
+        if (cd.files && cd.files.length) {
+          for (let i = 0; i < cd.files.length; i++) {
+            const f = cd.files[i];
+            const p = insert(f);
+            if (p) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              runUpload(f);
+              return;
+            }
+          }
+        }
+        for (const item of Array.from(cd.items)) {
+          if (item.kind !== "file") continue;
+          const f = item.getAsFile();
+          if (!f) continue;
+          if (insert(f)) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            runUpload(f);
+            return;
+          }
+        }
+      };
+      const onDragOver = (e: Event) => {
+        const d = e as DragEvent;
+        if (uploadMediaRef.current) d.preventDefault();
+      };
+      const onDrop = (e: Event) => {
+        const d = e as DragEvent;
+        if (!uploadMediaRef.current) return;
+        if (!d.dataTransfer?.files?.length) return;
+        for (const f of Array.from(d.dataTransfer.files)) {
+          if (insert(f)) {
+            d.preventDefault();
+            d.stopPropagation();
+            runUpload(f);
+            return;
+          }
+        }
+      };
+      el.addEventListener("paste", onPaste, true);
+      el.addEventListener("dragover", onDragOver, true);
+      el.addEventListener("drop", onDrop, true);
+      un = () => {
+        el.removeEventListener("paste", onPaste, true);
+        el.removeEventListener("dragover", onDragOver, true);
+        el.removeEventListener("drop", onDrop, true);
+      };
+    };
+    const id = requestAnimationFrame(() => attach(0));
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+      un?.();
+    };
+  }, [QuillEditor, uploadMedia, onUploadError]);
 
   const handleEditorClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement | null;

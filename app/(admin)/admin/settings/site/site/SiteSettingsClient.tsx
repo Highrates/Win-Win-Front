@@ -8,9 +8,10 @@ import styles from './siteSettings.module.css';
 
 type SiteSettingsAdminPayload = {
   heroImageUrls: string[];
+  designerServiceOptions: string[];
 };
 
-type TabKey = 'hero';
+type TabKey = 'hero' | 'other';
 
 export function SiteSettingsClient() {
   const [tab, setTab] = useState<TabKey>('hero');
@@ -20,6 +21,7 @@ export function SiteSettingsClient() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [heroImageUrls, setHeroImageUrls] = useState<string[]>([]);
+  const [designerServiceOptions, setDesignerServiceOptions] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -28,6 +30,11 @@ export function SiteSettingsClient() {
     try {
       const data = await adminBackendJson<SiteSettingsAdminPayload>('settings/admin/site');
       setHeroImageUrls(Array.isArray(data?.heroImageUrls) ? data.heroImageUrls : []);
+      setDesignerServiceOptions(
+        Array.isArray(data?.designerServiceOptions) && data.designerServiceOptions.length
+          ? data.designerServiceOptions.filter((x) => typeof x === 'string' && x.trim().length > 0)
+          : [''],
+      );
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить настройки');
     } finally {
@@ -81,6 +88,44 @@ export function SiteSettingsClient() {
     }
   }
 
+  function addServiceRow() {
+    setDesignerServiceOptions((prev) => [...prev, '']);
+  }
+
+  function setServiceAt(index: number, value: string) {
+    setDesignerServiceOptions((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }
+
+  function removeServiceAt(index: number) {
+    setDesignerServiceOptions((prev) => (prev.length <= 1 ? [''] : prev.filter((_, i) => i !== index)));
+  }
+
+  async function saveOther() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const list = designerServiceOptions.map((x) => x.trim()).filter((x) => x.length > 0);
+      const res = await adminBackendFetch('settings/admin/site', {
+        method: 'PATCH',
+        body: JSON.stringify({ designerServiceOptions: list }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        setSaveError(typeof j?.message === 'string' ? j.message : 'Не удалось сохранить');
+        return;
+      }
+      await load();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Не удалось сохранить');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className={styles.panel}>
       <div className={styles.tabs} role="tablist" aria-label="Настройки сайта">
@@ -92,6 +137,15 @@ export function SiteSettingsClient() {
           onClick={() => setTab('hero')}
         >
           Настройка Hero блока
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'other'}
+          className={`${styles.tabBtn} ${tab === 'other' ? styles.tabBtnActive : ''}`}
+          onClick={() => setTab('other')}
+        >
+          Прочие настройки
         </button>
       </div>
 
@@ -163,7 +217,57 @@ export function SiteSettingsClient() {
           />
         </section>
       ) : null}
+
+      {tab === 'other' ? (
+        <section aria-label="Прочие настройки">
+          <p className={catalogStyles.muted}>
+            Список услуг отображается в поле «Услуги» в редактировании профиля дизайнера.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <button type="button" className={catalogStyles.btn} onClick={addServiceRow} disabled={saving}>
+              Добавить строку
+            </button>
+            <button type="button" className={catalogStyles.btn} disabled={saving} onClick={saveOther}>
+              {saving ? 'Сохранение…' : 'Сохранить'}
+            </button>
+          </div>
+          <table className={styles.serviceTable}>
+            <thead>
+              <tr>
+                <th scope="col">Услуга</th>
+                <th scope="col" style={{ width: 100 }}>
+                  Действие
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {designerServiceOptions.map((row, index) => (
+                <tr key={index}>
+                  <td>
+                    <input
+                      type="text"
+                      className={styles.serviceInput}
+                      value={row}
+                      onChange={(e) => setServiceAt(index, e.target.value)}
+                      placeholder="Название услуги"
+                      aria-label={`Услуга ${index + 1}`}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+                      onClick={() => removeServiceAt(index)}
+                    >
+                      Удалить
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
     </div>
   );
 }
-

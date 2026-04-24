@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
-import { USER_ACCESS_TOKEN_COOKIE, USER_TOKEN_MAX_AGE_SEC, userCookieSecure } from '@/lib/userAuth';
+import { setUserAccessTokenCookie } from '@/lib/userAuth';
 
 async function readNestError(res: Response): Promise<string | null> {
   try {
@@ -76,16 +76,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Нет access_token в ответе API' }, { status: 502 });
   }
 
-  const response = NextResponse.json({ ok: true, access_token: token });
-  response.cookies.set({
-    name: USER_ACCESS_TOKEN_COOKIE,
-    value: token,
-    httpOnly: true,
-    secure: userCookieSecure(request),
-    sameSite: 'lax',
-    path: '/',
-    maxAge: USER_TOKEN_MAX_AGE_SEC,
-  });
+  let me: unknown = null;
+  try {
+    const meRes = await fetch(`${getServerApiBase()}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (meRes.ok) {
+      me = await meRes.json();
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const response = NextResponse.json({ ok: true, access_token: token, user: me });
+  setUserAccessTokenCookie(response, request, token);
   return response;
 }
 

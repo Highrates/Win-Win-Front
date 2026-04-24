@@ -170,7 +170,13 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
         body: JSON.stringify({ access_token: data.access_token }),
         credentials: 'same-origin',
       }).catch(() => {});
-      router.push('/account');
+      const pending = (data.user as { profile?: { profileOnboardingPending?: boolean } | null } | undefined)?.profile
+        ?.profileOnboardingPending;
+      if (pending === true || pending === undefined) {
+        router.push('/account/profile?tab=info&welcome=1');
+      } else {
+        router.push('/account/orders');
+      }
       router.refresh();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Не удалось завершить регистрацию');

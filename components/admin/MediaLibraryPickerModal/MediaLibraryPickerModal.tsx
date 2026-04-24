@@ -149,7 +149,9 @@ export function MediaLibraryPickerModal({
 
   const loadFolders = useCallback(async () => {
     try {
-      const data = await adminBackendJson<MediaFolderRow[]>('catalog/admin/media/folders');
+      const data = await adminBackendJson<MediaFolderRow[]>(
+        'catalog/admin/media/folders?scope=winwin',
+      );
       setFolders(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить папки');
@@ -162,6 +164,7 @@ export function MediaLibraryPickerModal({
     try {
       const sp = new URLSearchParams();
       sp.set('tab', tab);
+      sp.set('scope', 'winwin');
       if (debouncedQ) sp.set('q', debouncedQ);
       if (folderFilter) sp.set('folderId', folderFilter);
       const data = await adminBackendJson<MediaObjectRow[]>(

@@ -45,6 +45,7 @@ export function LoginEmailForm() {
             ok?: boolean;
             access_token?: string;
             error?: string;
+            user?: { profile?: { profileOnboardingPending?: boolean } | null };
           };
           if (!res.ok || !data.access_token) {
             setFormError(data.error || 'Не удалось войти');
@@ -53,7 +54,12 @@ export function LoginEmailForm() {
 
           // Для клиентских запросов (если они появятся) + совместимость с регистрацией.
           setUserAccessToken(data.access_token);
-          router.push('/account');
+          const pending = data.user?.profile?.profileOnboardingPending;
+          if (pending === true) {
+            router.push('/account/profile?tab=info&welcome=1');
+          } else {
+            router.push('/account/orders');
+          }
           router.refresh();
         } catch (err) {
           setFormError(err instanceof Error ? err.message : 'Не удалось войти');

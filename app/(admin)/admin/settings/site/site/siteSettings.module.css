@@ -59,3 +59,33 @@
   }
 }
 
+.serviceTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font: inherit;
+}
+
+.serviceTable th,
+.serviceTable td {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.serviceTable th {
+  background: rgba(0, 0, 0, 0.03);
+  font-weight: 600;
+}
+
+.serviceInput {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+}
+
