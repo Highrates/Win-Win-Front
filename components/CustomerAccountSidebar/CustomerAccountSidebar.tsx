@@ -167,6 +167,7 @@ export function CustomerAccountSidebar({
               <img src="/icons/account-sidebar/edit.svg" alt="" width={16} height={16} />
             </Link>
           </div>
+          {showDesignerNav ? <p className={styles.partnerStatus}>Партнер Win-Win</p> : <p className={styles.partnerStatus} aria-hidden />}
         </div>
 
         <nav className={styles.menuAllItems} aria-label="Разделы личного кабинета">
