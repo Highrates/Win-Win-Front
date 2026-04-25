@@ -101,6 +101,12 @@
   font-weight: 500;
 }
 
+/* Необработанные заявки партнёра — счётчик у пункта «Заявки» */
+.navLinkCount {
+  color: var(--color-red, #c53029);
+  font-weight: 600;
+}
+
 .navGroup {
   display: flex;
   flex-direction: column;

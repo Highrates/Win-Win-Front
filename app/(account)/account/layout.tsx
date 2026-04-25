@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { CustomerAccountSidebar } from '@/components/CustomerAccountSidebar/CustomerAccountSidebar';
+import { CustomerAccountSidebarContainer } from '@/components/CustomerAccountSidebar/CustomerAccountSidebarContainer';
 import { USER_ACCESS_TOKEN_COOKIE } from '@/lib/userAuth';
 import styles from './AccountLayout.module.css';
 
@@ -19,7 +19,7 @@ export default function AccountLayout({
         <div className="padding-global">
           <div className={styles.accountLayoutWrapper}>
             <div className={styles.accountSidebarSlot}>
-              <CustomerAccountSidebar />
+              <CustomerAccountSidebarContainer />
             </div>
             <div className={styles.accountContent}>{children}</div>
           </div>

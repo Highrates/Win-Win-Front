@@ -2,14 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import styles from './CustomerAccountSidebar.module.css';
 
 const BODY_DOCK_OPEN = 'account-mobile-dock-open';
 
 export type CustomerAccountSidebarProps = {
   userName?: string;
-  partnerStatus?: string;
+  /** Одобренный партнёр Win-Win (админ): видны Кейсы, Команда, Проекты и т.д. */
+  isWinWinPartner?: boolean;
+  /** Профиль с сервера загружен — до этого пункты партнёра скрыты, чтобы не мигать лишним доступом */
+  profileLoaded?: boolean;
   /** Пункты меню (href), для которых показывается точка уведомления */
   menuItemsWithNotification?: string[];
 };
@@ -26,19 +29,7 @@ const ICON = {
   contact: '/icons/sms.svg',
 } as const;
 
-const PRIMARY_ITEMS = [
-  { href: '/account/orders', iconSrc: ICON.orders, label: 'Заказы' },
-  { href: '/account/favorites', iconSrc: ICON.favorites, label: 'Избранное' },
-  { href: '/account/projects', iconSrc: ICON.projects, label: 'Проекты' },
-] as const;
-
-const MORE_ITEMS = [
-  { href: '/account/cases', iconSrc: ICON.cases, label: 'Кейсы' },
-  { href: '/account/team', iconSrc: ICON.team, label: 'Команда' },
-  { href: '/account/profile', iconSrc: ICON.profile, label: 'Профиль' },
-  { href: '/account/docs', iconSrc: ICON.docs, label: 'Документы' },
-  { href: '/account/contact', iconSrc: ICON.contact, label: 'Связаться с нами' },
-] as const;
+type MenuDef = { href: string; iconSrc: string; label: string };
 
 function isMenuItemActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
@@ -107,13 +98,42 @@ function MobileDockItem({
 
 export function CustomerAccountSidebar({
   userName = 'Имя пользователя',
-  partnerStatus = 'Партнер Win-Win',
+  isWinWinPartner = false,
+  profileLoaded = false,
   menuItemsWithNotification = [],
 }: CustomerAccountSidebarProps) {
   const pathname = usePathname() ?? '';
   const notifySet = new Set(menuItemsWithNotification);
   const [moreOpen, setMoreOpen] = useState(false);
   const sheetId = useId();
+
+  const showDesignerNav = profileLoaded && isWinWinPartner;
+
+  const { primaryItems, moreTopItems, moreBottomItems } = useMemo(() => {
+    const primary: MenuDef[] = [
+      { href: '/account/orders', iconSrc: ICON.orders, label: 'Заказы' },
+      { href: '/account/favorites', iconSrc: ICON.favorites, label: 'Избранное' },
+    ];
+    if (showDesignerNav) {
+      primary.push({ href: '/account/projects', iconSrc: ICON.projects, label: 'Проекты' });
+    }
+
+    const moreTop: MenuDef[] = [];
+    if (showDesignerNav) {
+      moreTop.push(
+        { href: '/account/cases', iconSrc: ICON.cases, label: 'Кейсы' },
+        { href: '/account/team', iconSrc: ICON.team, label: 'Команда' },
+      );
+    }
+    moreTop.push({ href: '/account/profile', iconSrc: ICON.profile, label: 'Профиль' });
+
+    const moreBottom: MenuDef[] = [
+      { href: '/account/docs', iconSrc: ICON.docs, label: 'Документы' },
+      { href: '/account/contact', iconSrc: ICON.contact, label: 'Связаться с нами' },
+    ];
+
+    return { primaryItems: primary, moreTopItems: moreTop, moreBottomItems: moreBottom };
+  }, [showDesignerNav]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -131,7 +151,7 @@ export function CustomerAccountSidebar({
   }, [moreOpen]);
 
   const closeMore = () => setMoreOpen(false);
-  const moreActive = MORE_ITEMS.some((item) => isMenuItemActive(pathname, item.href));
+  const moreActive = [...moreTopItems, ...moreBottomItems].some((item) => isMenuItemActive(pathname, item.href));
 
   return (
     <>
@@ -147,12 +167,11 @@ export function CustomerAccountSidebar({
               <img src="/icons/account-sidebar/edit.svg" alt="" width={16} height={16} />
             </Link>
           </div>
-          <p className={styles.partnerStatus}>{partnerStatus}</p>
         </div>
 
         <nav className={styles.menuAllItems} aria-label="Разделы личного кабинета">
           <div className={styles.menuItemsWrapper}>
-            {PRIMARY_ITEMS.map((item) => (
+            {primaryItems.map((item) => (
               <MenuItem
                 key={item.href}
                 href={item.href}
@@ -167,7 +186,7 @@ export function CustomerAccountSidebar({
           <hr className={styles.divider} aria-hidden />
 
           <div className={styles.menuItemsWrapper}>
-            {MORE_ITEMS.slice(0, 3).map((item) => (
+            {moreTopItems.map((item) => (
               <MenuItem
                 key={item.href}
                 href={item.href}
@@ -182,7 +201,7 @@ export function CustomerAccountSidebar({
           <hr className={styles.divider} aria-hidden />
 
           <div className={styles.menuItemsWrapper}>
-            {MORE_ITEMS.slice(3).map((item) => (
+            {moreBottomItems.map((item) => (
               <MenuItem
                 key={item.href}
                 href={item.href}
@@ -197,7 +216,7 @@ export function CustomerAccountSidebar({
       </aside>
 
       <nav className={styles.mobileDock} aria-label="Навигация личного кабинета">
-        {PRIMARY_ITEMS.map((item) => (
+        {primaryItems.map((item) => (
           <MobileDockItem
             key={item.href}
             href={item.href}
@@ -265,7 +284,6 @@ export function CustomerAccountSidebar({
                     <img src="/icons/account-sidebar/edit.svg" alt="" width={16} height={16} />
                   </Link>
                 </div>
-                <p className={styles.partnerStatus}>{partnerStatus}</p>
               </div>
               <button
                 type="button"
@@ -285,7 +303,7 @@ export function CustomerAccountSidebar({
               </button>
             </div>
             <div className={styles.mobileSheetList}>
-              {PRIMARY_ITEMS.map((item) => (
+              {primaryItems.map((item) => (
                 <MenuItem
                   key={item.href}
                   href={item.href}
@@ -297,7 +315,7 @@ export function CustomerAccountSidebar({
                 />
               ))}
               <hr className={styles.sheetDivider} aria-hidden />
-              {MORE_ITEMS.slice(0, 3).map((item) => (
+              {moreTopItems.map((item) => (
                 <MenuItem
                   key={item.href}
                   href={item.href}
@@ -309,7 +327,7 @@ export function CustomerAccountSidebar({
                 />
               ))}
               <hr className={styles.sheetDivider} aria-hidden />
-              {MORE_ITEMS.slice(3).map((item) => (
+              {moreBottomItems.map((item) => (
                 <MenuItem
                   key={item.href}
                   href={item.href}

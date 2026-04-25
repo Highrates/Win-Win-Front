@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { adminClientDetailStrings } from '@/lib/admin-i18n/adminClientDetailI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
@@ -11,6 +11,7 @@ import styles from '../clients.module.css';
 const TAB_ORDERS = 0;
 const TAB_INFO = 1;
 const TAB_CONSENTS = 2;
+const TAB_STRUCTURE = 3;
 
 type UserDetail = {
   id: string;
@@ -29,7 +30,27 @@ type UserDetail = {
     coverLayout: string | null;
     coverImageUrls: unknown;
     avatarUrl: string | null;
+    winWinPartnerApproved?: boolean;
+    winWinReferralCode?: string | null;
   };
+};
+
+type StructureL2 = {
+  id: string;
+  userId: string;
+  email: string | null;
+  name: string;
+  isPartner: boolean;
+  joinedAt: string;
+};
+type StructureL1 = {
+  id: string;
+  userId: string;
+  email: string | null;
+  name: string;
+  isPartner: boolean;
+  joinedAt: string;
+  l2: StructureL2[];
 };
 
 function formatServices(services: unknown): string {
@@ -65,6 +86,17 @@ export function AdminClientDetailClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(TAB_ORDERS);
+  const [structure, setStructure] = useState<StructureL1[] | null>(null);
+  const [structureLoading, setStructureLoading] = useState(false);
+  const [structureError, setStructureError] = useState<string | null>(null);
+  const [inviter, setInviter] = useState<null | {
+    referrerId: string;
+    email: string | null;
+    name: string;
+    winWinReferralCode: string | null;
+    joinedAt: string;
+  }>(null);
+  const [expandedL1, setExpandedL1] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,15 +120,97 @@ export function AdminClientDetailClient({ id }: { id: string }) {
     }
   }, [id, s]);
 
+  const isPartner = Boolean(data?.profile?.winWinPartnerApproved);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!isPartner && tab === TAB_STRUCTURE) {
+      setTab(TAB_ORDERS);
+    }
+  }, [isPartner, tab]);
+
+  useEffect(() => {
+    if (tab !== TAB_STRUCTURE || !isPartner) {
+      return;
+    }
+    let cancelled = false;
+    setStructureLoading(true);
+    setStructureError(null);
+    void (async () => {
+      try {
+        const invRes = await fetch(
+          `/api/admin/backend/users/admin/${encodeURIComponent(id)}/winwin-inviter`,
+          { credentials: 'same-origin', cache: 'no-store' },
+        );
+        if (!cancelled) {
+          const inv = (await invRes.json().catch(() => null)) as null | {
+            referrerId: string;
+            email: string | null;
+            name: string;
+            winWinReferralCode: string | null;
+            joinedAt: string;
+          };
+          setInviter(invRes.ok ? inv : null);
+        }
+        const res = await fetch(
+          `/api/admin/backend/users/admin/${encodeURIComponent(id)}/referral-structure`,
+          { credentials: 'same-origin', cache: 'no-store' },
+        );
+        if (!res.ok) {
+          if (!cancelled) {
+            setStructureError(s.errStatus(res.status));
+            setStructure(null);
+          }
+          return;
+        }
+        const j = (await res.json()) as { l1?: StructureL1[] };
+        if (!cancelled) {
+          const next = Array.isArray(j.l1) ? j.l1 : [];
+          setStructure(next);
+          setExpandedL1((prev) => {
+            const out: Record<string, boolean> = { ...prev };
+            for (const row of next) {
+              if (out[row.id] === undefined) out[row.id] = true;
+            }
+            return out;
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setStructureError(s.errLoad);
+          setStructure(null);
+        }
+      } finally {
+        if (!cancelled) setStructureLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, id, isPartner, s.errLoad, s.errStatus]);
 
   const name = useMemo(() => {
     if (!data?.profile) return '—';
     if (!data.profile.firstName && !data.profile.lastName) return '—';
     return [data.profile.firstName, data.profile.lastName].filter(Boolean).join(' ') || '—';
   }, [data]);
+
+  const formatStructureJoined = (iso: string) => {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleString(consLocale === 'zh' ? 'zh-CN' : 'ru-RU', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
+    } catch {
+      return '—';
+    }
+  };
 
   const coverUrls = formatCoverUrls(data?.profile?.coverImageUrls);
   const titleText = useMemo(() => {
@@ -150,6 +264,17 @@ export function AdminClientDetailClient({ id }: { id: string }) {
             >
               {s.tabConsents}
             </button>
+            {isPartner ? (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === TAB_STRUCTURE}
+                className={`${objTabStyles.mainScopeTab} ${tab === TAB_STRUCTURE ? objTabStyles.mainScopeTabActive : ''}`}
+                onClick={() => setTab(TAB_STRUCTURE)}
+              >
+                {s.tabStructure}
+              </button>
+            ) : null}
           </div>
           {tab === TAB_ORDERS ? (
             <section className={styles.tabPanel} aria-label={s.tabOrders}>
@@ -163,6 +288,16 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                   <dt>ID</dt>
                   <dd>{data.id}</dd>
                 </div>
+                <div>
+                  <dt>{s.dtStatus}</dt>
+                  <dd>{isPartner ? s.statusPartner : s.statusDefault}</dd>
+                </div>
+                {isPartner ? (
+                  <div>
+                    <dt>{s.dtReferralCode}</dt>
+                    <dd>{data.profile?.winWinReferralCode?.trim() ? data.profile.winWinReferralCode : '—'}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>{s.dtEmail}</dt>
                   <dd>{data.email ?? '—'}</dd>
@@ -252,6 +387,101 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                   </dd>
                 </div>
               </dl>
+            </section>
+          ) : null}
+          {tab === TAB_STRUCTURE && isPartner ? (
+            <section className={styles.tabPanel} aria-label={s.tabStructure}>
+              {inviter ? (
+                <p className={catalogStyles.muted} style={{ marginTop: 0, marginBottom: 12 }}>
+                  Пригласил:{' '}
+                  <Link
+                    href={`/admin/clients/${encodeURIComponent(inviter.referrerId)}`}
+                    className={catalogStyles.backLink}
+                  >
+                    {inviter.name}
+                  </Link>
+                  {inviter.winWinReferralCode?.trim() ? ` (${inviter.winWinReferralCode.trim()})` : ''}
+                </p>
+              ) : null}
+              {structureError ? (
+                <p className={styles.error} role="alert">
+                  {structureError}
+                </p>
+              ) : null}
+              {structureLoading ? <p className={catalogStyles.muted}>{s.loading}</p> : null}
+              {!structureLoading && !structureError && structure && !structure.length ? (
+                <p className={catalogStyles.muted}>{s.structureEmpty}</p>
+              ) : null}
+              {!structureLoading && structure && structure.length > 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className={catalogStyles.table}>
+                    <thead>
+                      <tr>
+                        <th>{s.thLevel}</th>
+                        <th>{s.thUser}</th>
+                        <th>{s.thEmail}</th>
+                        <th>{s.thJoined}</th>
+                        <th>{s.thPartnerCol}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {structure.map((l1) => (
+                        <Fragment key={l1.id}>
+                          <tr>
+                            <td>
+                              {l1.l2.length ? (
+                                <button
+                                  type="button"
+                                  className={catalogStyles.backLink}
+                                  onClick={() =>
+                                    setExpandedL1((p) => ({ ...p, [l1.id]: !(p[l1.id] ?? true) }))
+                                  }
+                                  aria-expanded={expandedL1[l1.id] ?? true}
+                                  title="Показать/скрыть L2"
+                                >
+                                  {(expandedL1[l1.id] ?? true) ? '▾ ' : '▸ '}
+                                  {s.levelL1}
+                                </button>
+                              ) : (
+                                s.levelL1
+                              )}
+                            </td>
+                            <td>
+                              <Link
+                                href={`/admin/clients/${encodeURIComponent(l1.userId)}`}
+                                className={catalogStyles.backLink}
+                              >
+                                {l1.name}
+                              </Link>
+                            </td>
+                            <td>{l1.email ?? '—'}</td>
+                            <td>{formatStructureJoined(l1.joinedAt)}</td>
+                            <td>{l1.isPartner ? s.partnerYes : s.partnerNo}</td>
+                          </tr>
+                          {(expandedL1[l1.id] ?? true)
+                            ? l1.l2.map((l2) => (
+                                <tr key={l2.id} className={styles.structureL2Row}>
+                                  <td>{s.levelL2}</td>
+                                  <td>
+                                    <Link
+                                      href={`/admin/clients/${encodeURIComponent(l2.userId)}`}
+                                      className={catalogStyles.backLink}
+                                    >
+                                      {l2.name}
+                                    </Link>
+                                  </td>
+                                  <td>{l2.email ?? '—'}</td>
+                                  <td>{formatStructureJoined(l2.joinedAt)}</td>
+                                  <td>{l2.isPartner ? s.partnerYes : s.partnerNo}</td>
+                                </tr>
+                              ))
+                            : null}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </section>
           ) : null}
         </>

@@ -59,6 +59,10 @@ export async function registerEmailVerify(body: {
 export async function registerComplete(body: {
   completionToken: string;
   password: string;
+  /** Публичный реф. номер Win-Win из ?ref= */
+  referralCode?: string;
+  /** JWT приглашения дизайнера — из ?designerInvite= (invite wins over URL ref на бэкенде) */
+  designerInviteToken?: string;
 }): Promise<{
   access_token: string;
   user: { id: string; email: string | null; phone: string | null; role: string; profile?: { profileOnboardingPending?: boolean } | null };

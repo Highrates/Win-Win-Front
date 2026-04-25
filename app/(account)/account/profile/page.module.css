@@ -20,6 +20,21 @@
   align-items: center;
   gap: 24px;
   width: 100%;
+  flex-wrap: wrap;
+}
+
+.previewPageTitlesActions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.profilePartnerCta {
+  align-self: center;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .profileAvatar {
@@ -52,6 +67,32 @@
   font-weight: var(--h2-weight);
   color: var(--color-ink-black);
   text-transform: uppercase;
+}
+
+.profileNameRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.profileApplicationPendingLabel {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+  white-space: normal;
+  max-width: 220px;
+  line-height: 1.35;
+}
+
+.profileApplicationRejectedLabel {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-red, #c53029);
+  white-space: normal;
+  max-width: 280px;
+  line-height: 1.35;
 }
 
 .profileServices {
@@ -102,6 +143,80 @@
   border: none;
   background: none;
   cursor: pointer;
+}
+
+/* Вертикальный поток: подпись → поле (см. модал «Стать партнёром») */
+.partnerFormField {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 24px;
+  align-self: stretch;
+  width: 100%;
+}
+
+.partnerFormTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 132px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.partnerFilePick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 10px 14px;
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.partnerFilePick:hover {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+.partnerFileInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  font-size: 0;
+}
+
+.partnerFilePickText {
+  font-size: var(--text-caption);
+  color: var(--color-ink-black);
+  word-break: break-all;
+}
+
+.partnerReferralExemptNote {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.45;
+  color: var(--color-gray);
+}
+
+.partnerSuccessText {
+  margin: 0 0 8px;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--color-ink-black);
 }
 
 .iconBlack {
@@ -291,7 +406,10 @@
 
 .aboutModalActions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
+  gap: 10px;
+  margin-top: 24px;
 }
 
 .avatarUploader {
@@ -756,6 +874,18 @@
 
   .previewPageTitlesRow {
     gap: 16px;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .previewPageTitlesActions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .profilePartnerCta {
+    align-self: flex-start;
   }
 
   .interactWrapper {

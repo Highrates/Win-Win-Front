@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { RegisterFlow } from '@/components/auth-forms/RegisterFlow';
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function RegisterPhonePage() {
-  return <RegisterFlow channel="phone" />;
+  return (
+    <Suspense fallback={null}>
+      <RegisterFlow channel="phone" />
+    </Suspense>
+  );
 }

@@ -10,9 +10,11 @@ import textFieldStyles from '@/components/TextField/TextField.module.css';
 import { MultiSelectField } from '@/components/MultiSelectField';
 import { CoverGridField } from '@/components/CoverGridField';
 import flowStyles from '@/components/auth-forms/RegisterFlow.module.css';
+import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { ProfileIncomeTab } from './ProfileIncomeTab';
 import { ProfileSettingsTab } from './ProfileSettingsTab';
+import btnStyles from '@/components/Button/Button.module.css';
 import styles from './page.module.css';
 
 const PROFILE_TAB_INFO = 0;
@@ -31,6 +33,13 @@ type ProfileDto = {
   coverImageUrls: unknown;
   avatarUrl: string | null;
   profileOnboardingPending: boolean;
+  winWinPartnerApproved?: boolean;
+  winWinReferralCode?: string | null;
+  partnerApplicationSubmittedAt?: string | null;
+  partnerApplicationRejectedAt?: string | null;
+  email?: string | null;
+  /** true — реферальный номер в заявке не требуется (первые на платформе, см. WINWIN_REFERRAL_EXEMPT_EMAILS) */
+  referralInviteCodeExempt?: boolean;
 };
 
 function CloseIcon() {
@@ -71,21 +80,6 @@ function parseStringArray(v: unknown): string[] {
 function displayName(firstName: string | null, lastName: string | null): string {
   const t = [firstName, lastName].filter((x) => x && x.trim()).join(' ').trim();
   return t || 'Имя пользователя';
-}
-
-async function readApiErrorMessage(res: Response): Promise<string> {
-  try {
-    const j = (await res.json()) as { message?: string | string[]; error?: string };
-    if (Array.isArray(j.message)) return j.message.join(', ');
-    if (typeof j.message === 'string' && j.message.trim()) return j.message;
-    if (typeof j.error === 'string' && j.error.trim()) return j.error;
-  } catch {
-    /* empty */
-  }
-  if (res.status === 429) {
-    return 'Слишком много запросов. Подождите и попробуйте снова.';
-  }
-  return res.statusText || 'Ошибка запроса';
 }
 
 function ProfilePageLoading() {
@@ -153,6 +147,20 @@ function ProfilePageContent() {
   const [aboutSaveError, setAboutSaveError] = useState<string | null>(null);
   const [aboutSaving, setAboutSaving] = useState(false);
 
+  const [partnerAppModalOpen, setPartnerAppModalOpen] = useState(false);
+  const [partnerAppPhase, setPartnerAppPhase] = useState<'form' | 'success'>('form');
+  const [partnerAppAbout, setPartnerAppAbout] = useState('');
+  const [partnerAppReferralCode, setPartnerAppReferralCode] = useState('');
+  const [partnerAppFile, setPartnerAppFile] = useState<File | null>(null);
+  const [partnerAppError, setPartnerAppError] = useState<string | null>(null);
+  const [partnerAppSubmitting, setPartnerAppSubmitting] = useState(false);
+
+  const [inviteDesignerModalOpen, setInviteDesignerModalOpen] = useState(false);
+  const [inviteDesignerEmail, setInviteDesignerEmail] = useState('');
+  const [inviteDesignerSending, setInviteDesignerSending] = useState(false);
+  const [inviteDesignerError, setInviteDesignerError] = useState<string | null>(null);
+  const [inviteDesignerDone, setInviteDesignerDone] = useState(false);
+
   const PROFILE_TABS = ['Инфо', 'Доход', 'Настройки'] as const;
   const CITY_OPTIONS = ['Москва', 'Санкт-Петербург', 'Казань', 'Сочи'] as const;
   const DEFAULT_SERVICE_OPTIONS = [
@@ -181,8 +189,26 @@ function ProfilePageContent() {
     setAboutSaveError(null);
   }, []);
 
+  const closePartnerAppModal = useCallback(() => {
+    setPartnerAppModalOpen(false);
+    setPartnerAppPhase('form');
+    setPartnerAppAbout('');
+    setPartnerAppReferralCode('');
+    setPartnerAppFile(null);
+    setPartnerAppError(null);
+  }, []);
+
+  const closeInviteDesignerModal = useCallback(() => {
+    setInviteDesignerModalOpen(false);
+    setInviteDesignerEmail('');
+    setInviteDesignerError(null);
+    setInviteDesignerDone(false);
+  }, []);
+
   useModalBodyLock(profileModalOpen, closeProfileModal);
   useModalBodyLock(aboutModalOpen, closeAboutModal);
+  useModalBodyLock(partnerAppModalOpen, closePartnerAppModal);
+  useModalBodyLock(inviteDesignerModalOpen, closeInviteDesignerModal);
 
   const applyProfileDto = useCallback((p: ProfileDto) => {
     setProfile(p);
@@ -302,6 +328,41 @@ function ProfilePageContent() {
   }, [pathname, router, searchParams]);
 
   useEffect(() => {
+    if (searchParams.get('inviteDesigner') !== '1') return;
+    if (loading) return;
+    if (!profile?.winWinPartnerApproved) {
+      router.replace(pathname, { scroll: false });
+      return;
+    }
+    setInviteDesignerError(null);
+    setInviteDesignerDone(false);
+    setInviteDesignerEmail('');
+    setInviteDesignerModalOpen(true);
+    router.replace(pathname, { scroll: false });
+  }, [loading, profile, pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get('partnerApply') !== '1') return;
+    if (loading) return;
+    if (!profile) return;
+    const prefill = searchParams.get('prefillRef')?.trim();
+    if (prefill) setPartnerAppReferralCode(prefill);
+    const pending =
+      Boolean(profile.partnerApplicationSubmittedAt) &&
+      !profile.winWinPartnerApproved &&
+      !profile.partnerApplicationRejectedAt;
+    if (pending || profile.winWinPartnerApproved) {
+      router.replace(pathname, { scroll: false });
+      return;
+    }
+    setSelectedIndex(PROFILE_TAB_INFO);
+    setPartnerAppModalOpen(true);
+    setPartnerAppPhase('form');
+    setPartnerAppError(null);
+    router.replace(pathname, { scroll: false });
+  }, [loading, profile, pathname, router, searchParams]);
+
+  useEffect(() => {
     return () => {
       const u = avatarPreviewRef.current;
       if (u.startsWith('blob:')) URL.revokeObjectURL(u);
@@ -324,6 +385,93 @@ function ProfilePageContent() {
   /** Одна обложка в превью (4:3 или 16:9) — растягиваем по ширине (до 800px). */
   const isSinglePreviewImageWide = coverUrlsForPreview.length === 1;
   const hasAbout = !!aboutRichValue.trim();
+  const winWinPartnerApproved = Boolean(profile?.winWinPartnerApproved);
+  const partnerApplicationPending = Boolean(
+    profile?.partnerApplicationSubmittedAt &&
+      !winWinPartnerApproved &&
+      !profile?.partnerApplicationRejectedAt,
+  );
+  const partnerApplicationRejected = Boolean(
+    profile?.partnerApplicationSubmittedAt &&
+      profile?.partnerApplicationRejectedAt &&
+      !winWinPartnerApproved,
+  );
+  const profileEmail = (profile?.email && String(profile.email).trim()) || '';
+  const referralInviteExempt = Boolean(profile?.referralInviteCodeExempt);
+  const myWinWinReferral = profile?.winWinReferralCode?.trim() || null;
+
+  async function submitPartnerApplication() {
+    setPartnerAppError(null);
+    const text = partnerAppAbout.trim();
+    if (text.length < 20) {
+      setPartnerAppError('Расскажите о себе: не меньше 20 символов');
+      return;
+    }
+    if (!referralInviteExempt) {
+      const ref = partnerAppReferralCode.trim();
+      if (ref.length < 3) {
+        setPartnerAppError('Укажите реферальный номер приглашающего');
+        return;
+      }
+    }
+    if (!partnerAppFile) {
+      setPartnerAppError('Прикрепите файл с CV');
+      return;
+    }
+    setPartnerAppSubmitting(true);
+    try {
+      const fd = new FormData();
+      fd.set('coverLetter', text);
+      if (!referralInviteExempt) {
+        fd.set('referralCode', partnerAppReferralCode.trim());
+      }
+      fd.set('file', partnerAppFile);
+      const res = await fetch('/api/user/partner-application', {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        setPartnerAppError(await readApiErrorMessage(res));
+        return;
+      }
+      const next = (await res.json()) as ProfileDto;
+      applyProfileDto(next);
+      setPartnerAppPhase('success');
+    } catch {
+      setPartnerAppError('Не удалось отправить заявку. Повторите попытку.');
+    } finally {
+      setPartnerAppSubmitting(false);
+    }
+  }
+
+  async function submitInviteDesigner(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setInviteDesignerError(null);
+    const em = inviteDesignerEmail.trim().toLowerCase();
+    if (!em.includes('@')) {
+      setInviteDesignerError('Введите корректный email');
+      return;
+    }
+    setInviteDesignerSending(true);
+    try {
+      const res = await fetch('/api/user/designer-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: em }),
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        setInviteDesignerError(await readApiErrorMessage(res));
+        return;
+      }
+      setInviteDesignerDone(true);
+    } catch {
+      setInviteDesignerError('Не удалось отправить. Повторите позже.');
+    } finally {
+      setInviteDesignerSending(false);
+    }
+  }
 
   function publicUrlFromUploadResponse(j: unknown): string {
     if (!j || typeof j !== 'object') {
@@ -479,20 +627,54 @@ function ProfilePageContent() {
               />
               <div className={styles.profileTitlesCol}>
                 <span className={styles.profileCity}>{cityLine}</span>
-                <h1 className={styles.profileName}>{displayName(profile?.firstName ?? null, profile?.lastName ?? null)}</h1>
+                <div className={styles.profileNameRow}>
+                  <h1 className={styles.profileName}>{displayName(profile?.firstName ?? null, profile?.lastName ?? null)}</h1>
+                  <button
+                    type="button"
+                    className={styles.editButton}
+                    aria-label="Редактировать профиль"
+                    onClick={() => {
+                      setSaveError(null);
+                      setProfileModalOpen(true);
+                    }}
+                  >
+                    <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
+                  </button>
+                </div>
                 <span className={styles.profileServices}>{servicesLine}</span>
               </div>
-              <button
-                type="button"
-                className={styles.editButton}
-                aria-label="Редактировать профиль"
-                onClick={() => {
-                  setSaveError(null);
-                  setProfileModalOpen(true);
-                }}
-              >
-                <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
-              </button>
+              <div className={styles.previewPageTitlesActions}>
+                {winWinPartnerApproved ? (
+                  <button
+                    type="button"
+                    className={`${btnStyles.btn} ${btnStyles.btnPrimary} ${styles.profilePartnerCta}`}
+                    onClick={() => {
+                      setInviteDesignerError(null);
+                      setInviteDesignerDone(false);
+                      setInviteDesignerEmail('');
+                      setInviteDesignerModalOpen(true);
+                    }}
+                  >
+                    Пригласить дизайнера
+                  </button>
+                ) : partnerApplicationPending ? (
+                  <span className={styles.profileApplicationPendingLabel}>Заявка на рассмотрении</span>
+                ) : partnerApplicationRejected ? (
+                  <span className={styles.profileApplicationRejectedLabel}>Заявка отклонена</span>
+                ) : (
+                  <button
+                    type="button"
+                    className={`${btnStyles.btn} ${btnStyles.btnPrimary} ${styles.profilePartnerCta}`}
+                    onClick={() => {
+                      setPartnerAppPhase('form');
+                      setPartnerAppError(null);
+                      setPartnerAppModalOpen(true);
+                    }}
+                  >
+                    Стать партнером Win-Win
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className={styles.interactWrapper}>
@@ -848,6 +1030,212 @@ function ProfilePageContent() {
                   {aboutSaving ? 'Сохранение…' : 'Сохранить'}
                 </Button>
               </div>
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      {partnerAppModalOpen ? (
+        <>
+          <button
+            type="button"
+            className={styles.aboutModalBackdrop}
+            aria-label="Закрыть"
+            onClick={closePartnerAppModal}
+          />
+          <section
+            className={styles.aboutModalPanel}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Заявка на партнёра Win-Win"
+          >
+            <header className={styles.aboutModalHeader}>
+              <button
+                type="button"
+                className={styles.aboutModalIconBtn}
+                onClick={closePartnerAppModal}
+                aria-label="Закрыть"
+              >
+                <CloseIcon />
+              </button>
+            </header>
+            <div className={styles.aboutModalInner}>
+              {partnerAppPhase === 'form' ? (
+                <>
+                  <h3 className={styles.aboutModalTitle}>Стать партнёром Win-Win</h3>
+                  <div className={styles.partnerFormField}>
+                    <label className={styles.fieldLabel} htmlFor="partner-app-about">
+                      Расскажите о себе
+                    </label>
+                    <textarea
+                      id="partner-app-about"
+                      className={styles.partnerFormTextarea}
+                      rows={6}
+                      value={partnerAppAbout}
+                      onChange={(e) => setPartnerAppAbout(e.target.value)}
+                      placeholder="Образование, проекты..."
+                    />
+                  </div>
+                  {referralInviteExempt ? (
+                    <p className={styles.partnerReferralExemptNote}>
+                      Реферальный номер приглашающего для вашего аккаунта не требуется — вы в числе первых партнёров на платформе.
+                    </p>
+                  ) : (
+                    <div className={styles.partnerFormField}>
+                      <TextField
+                        label="Реферальный номер приглашающего"
+                        id="partner-app-referral"
+                        value={partnerAppReferralCode}
+                        onChange={(e) => setPartnerAppReferralCode(e.target.value)}
+                        placeholder="Введите номер"
+                        autoComplete="off"
+                      />
+                    </div>
+                  )}
+                  <div className={styles.partnerFormField}>
+                    <span className={styles.fieldLabel}>Прикрепите CV</span>
+                    <label className={styles.partnerFilePick}>
+                      <input
+                        type="file"
+                        className={styles.partnerFileInput}
+                        accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp,application/pdf"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] ?? null;
+                          setPartnerAppFile(f);
+                          e.currentTarget.value = '';
+                        }}
+                      />
+                      <span className={styles.partnerFilePickText}>
+                        {partnerAppFile ? partnerAppFile.name : 'Выбрать файл'}
+                      </span>
+                    </label>
+                  </div>
+                  {partnerAppError ? (
+                    <p className={flowStyles.formError} role="alert">
+                      {partnerAppError}
+                    </p>
+                  ) : null}
+                  <div className={styles.aboutModalActions}>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={submitPartnerApplication}
+                      disabled={partnerAppSubmitting}
+                    >
+                      {partnerAppSubmitting ? 'Отправка…' : 'Подать заявку'}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className={styles.aboutModalTitle}>Заявка отправлена</h3>
+                  <p className={styles.partnerSuccessText}>
+                    {profileEmail ? (
+                      <>
+                        Ваша заявка успешно отправлена! О статусе заявки пришлём уведомление на почту:{' '}
+                        <strong>{profileEmail}</strong>.
+                      </>
+                    ) : (
+                      <>
+                        Ваша заявка успешно отправлена! Укажите email в разделе «Настройки» профиля, чтобы
+                        получать уведомления о статусе заявки.
+                      </>
+                    )}
+                  </p>
+                  <div className={styles.aboutModalActions}>
+                    {profileEmail ? null : (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          setSelectedIndex(PROFILE_TAB_SETTINGS);
+                          closePartnerAppModal();
+                        }}
+                      >
+                        Открыть настройки
+                      </Button>
+                    )}
+                    <Button type="button" variant="primary" onClick={closePartnerAppModal}>
+                      Понятно
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      {inviteDesignerModalOpen ? (
+        <>
+          <button
+            type="button"
+            className={styles.aboutModalBackdrop}
+            aria-label="Закрыть"
+            onClick={closeInviteDesignerModal}
+          />
+          <section
+            className={styles.aboutModalPanel}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Пригласить дизайнера"
+          >
+            <header className={styles.aboutModalHeader}>
+              <button
+                type="button"
+                className={styles.aboutModalIconBtn}
+                onClick={closeInviteDesignerModal}
+                aria-label="Закрыть"
+              >
+                <CloseIcon />
+              </button>
+            </header>
+            <div className={styles.aboutModalInner}>
+              {inviteDesignerDone ? (
+                <>
+                  <h3 className={styles.aboutModalTitle}>Письмо с приглашением отправлено</h3>
+                  <div className={styles.aboutModalActions}>
+                    <Button type="button" variant="primary" onClick={closeInviteDesignerModal}>
+                      Понятно
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className={styles.aboutModalTitle}>Пригласить дизайнера</h3>
+                  <form onSubmit={submitInviteDesigner} noValidate>
+                    <div className={styles.partnerFormField}>
+                      <TextField
+                        label="Email"
+                        type="email"
+                        name="email"
+                        autoComplete="email"
+                        value={inviteDesignerEmail}
+                        onChange={(e) => {
+                          setInviteDesignerEmail(e.target.value);
+                          setInviteDesignerError(null);
+                        }}
+                        error={inviteDesignerError || undefined}
+                      />
+                    </div>
+                    <div className={styles.partnerFormField}>
+                      <TextField
+                        label="Реферальный номер"
+                        type="text"
+                        name="referralCode"
+                        autoComplete="off"
+                        value={myWinWinReferral ?? ''}
+                        disabled
+                      />
+                    </div>
+                    <div className={styles.aboutModalActions}>
+                      <Button type="submit" variant="primary" disabled={inviteDesignerSending}>
+                        {inviteDesignerSending ? 'Отправка…' : 'Отправить приглашение'}
+                      </Button>
+                    </div>
+                  </form>
+                </>
+              )}
             </div>
           </section>
         </>

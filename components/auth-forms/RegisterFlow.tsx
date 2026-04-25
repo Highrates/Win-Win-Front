@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useId, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AuthPageShell } from '@/components/AuthPageShell';
 import { Button } from '@/components/Button';
@@ -26,6 +26,19 @@ type Step = 1 | 2 | 3;
 
 export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refFromUrl = useMemo(
+    () => (searchParams.get('ref') ?? searchParams.get('r') ?? '').trim() || undefined,
+    [searchParams],
+  );
+  const designerInviteToken = useMemo(
+    () => (searchParams.get('designerInvite') ?? '').trim() || undefined,
+    [searchParams],
+  );
+  const prefillEmail = useMemo(
+    () => (searchParams.get('prefillEmail') ?? '').trim().toLowerCase() || '',
+    [searchParams],
+  );
   const pdId = useId();
   const smsId = useId();
 
@@ -40,6 +53,10 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (channel === 'email' && prefillEmail) setEmail(prefillEmail);
+  }, [channel, prefillEmail]);
 
   const altRegisterHref = channel === 'phone' ? '/register/email' : '/register/phone';
   const altRegisterLabel = channel === 'phone' ? 'Регистрация по email' : 'Регистрация по номеру телефона';
@@ -69,8 +86,7 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
           consentSms,
         });
       } else {
-        const fd = new FormData(e.currentTarget);
-        const emailRaw = String(fd.get('email') ?? '');
+        const emailRaw = email.trim() || String(new FormData(e.currentTarget).get('email') ?? '');
         const eErr = validateEmailRequired(emailRaw);
         setEmailError(eErr);
         if (eErr) return;
@@ -161,7 +177,12 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     }
     setBusy(true);
     try {
-      const data = await registerComplete({ completionToken, password });
+      const data = await registerComplete({
+        completionToken,
+        password,
+        ...(refFromUrl && refFromUrl.length >= 3 ? { referralCode: refFromUrl } : {}),
+        ...(designerInviteToken ? { designerInviteToken } : {}),
+      });
       setUserAccessToken(data.access_token);
       // Чтобы server-side /account видел авторизацию (cookie httpOnly).
       await fetch('/api/user/session', {
@@ -172,7 +193,13 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
       }).catch(() => {});
       const pending = (data.user as { profile?: { profileOnboardingPending?: boolean } | null } | undefined)?.profile
         ?.profileOnboardingPending;
-      if (pending === true || pending === undefined) {
+      if (designerInviteToken) {
+        const q = new URLSearchParams();
+        q.set('tab', 'info');
+        q.set('partnerApply', '1');
+        if (refFromUrl) q.set('prefillRef', refFromUrl);
+        router.push(`/account/profile?${q.toString()}`);
+      } else if (pending === true || pending === undefined) {
         router.push('/account/profile?tab=info&welcome=1');
       } else {
         router.push('/account/orders');
@@ -269,11 +296,13 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
                 type="email"
                 name="email"
                 autoComplete="email"
-                error={emailError ?? undefined}
-                onChange={() => {
+                value={email}
+                onChange={(ev) => {
+                  setEmail(ev.target.value);
                   setEmailError(null);
                   setFormError(null);
                 }}
+                error={emailError ?? undefined}
               />
             )}
             <div className={flowStyles.labelRow}>

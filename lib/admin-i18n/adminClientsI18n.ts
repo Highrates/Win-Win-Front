@@ -13,17 +13,18 @@ export function adminClientsStrings(locale: AdminLocale) {
     inactive: pick(locale, 'Неактивен', '未活跃'),
     backAdmin: pick(locale, '← В админку', '← 返回管理后台'),
     pageTitle: pick(locale, 'Пользователи', '用户'),
-    pageLead: (total: number) =>
+    pageLead: (totals: { total: number; designers: number }) =>
       pick(
         locale,
-        `Роль «покупатель» (USER). Всего: ${total}`,
-        `购物者角色（USER）。共 ${total} 人`,
+        `Пользователи: ${totals.total}, Дизайнеры: ${totals.designers}`,
+        `用户：${totals.total}，设计师：${totals.designers}`,
       ),
     find: pick(locale, 'Найти', '查找'),
     thPhone: pick(locale, 'Телефон', '电话'),
     thName: pick(locale, 'Имя', '姓名'),
     thRegistered: pick(locale, 'Регистрация', '注册时间'),
     thStatus: pick(locale, 'Статус', '状态'),
+    statusPartner: pick(locale, 'Партнёр', '合作方'),
     emptyTable: pick(locale, 'Нет записей', '暂无记录'),
     thEmail: 'Email',
   };

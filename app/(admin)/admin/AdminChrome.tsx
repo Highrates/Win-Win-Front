@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AdminLocaleProvider } from '@/lib/admin-i18n/adminLocaleContext';
 import {
   ADMIN_LOCALE_STORAGE_KEY,
@@ -36,6 +36,7 @@ const NAV_HREFS = [
   '/admin',
   '/admin/modeling',
   '/admin/clients',
+  '/admin/applications',
   '/admin/orders',
   '/admin/brands',
   '/admin/objects',
@@ -105,6 +106,33 @@ export function AdminChrome({
   useEffect(() => {
     if (inSettings) setSettingsOpen(true);
   }, [inSettings]);
+
+  const [pendingPartnerApps, setPendingPartnerApps] = useState<number | null>(null);
+  const loadPendingPartnerApps = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/backend/users/admin/partner-applications/pending-count', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as { total?: number };
+      setPendingPartnerApps(typeof j.total === 'number' ? j.total : 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPendingPartnerApps();
+  }, [loadPendingPartnerApps, pathname]);
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void loadPendingPartnerApps();
+    };
+    document.addEventListener('admin-partner-pending-refresh', onRefresh);
+    return () => document.removeEventListener('admin-partner-pending-refresh', onRefresh);
+  }, [loadPendingPartnerApps]);
 
   function setAdminLocale(next: AdminLocale) {
     setLocale(next);
@@ -249,6 +277,8 @@ export function AdminChrome({
               </div>
               {NAV_HREFS.map((href) => {
                 const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
+                const showPendingBadge =
+                  href === '/admin/applications' && pendingPartnerApps != null && pendingPartnerApps > 0;
                 return (
                   <Link
                     key={href}
@@ -256,6 +286,9 @@ export function AdminChrome({
                     className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
                   >
                     {getNavLabel(locale, href)}
+                    {showPendingBadge ? (
+                      <span className={styles.navLinkCount}> ({pendingPartnerApps})</span>
+                    ) : null}
                   </Link>
                 );
               })}

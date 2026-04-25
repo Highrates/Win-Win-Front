@@ -1,15 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { setUserAccessToken } from '@/lib/userAuthStorage';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
-export function LoginEmailForm() {
+const INVITE_KEY = 'winwin-designer-invite';
+
+function LoginEmailFormInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromDesignerInvite = searchParams.get('fromDesignerInvite') === '1';
   const [idError, setIdError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -52,8 +56,56 @@ export function LoginEmailForm() {
             return;
           }
 
-          // Для клиентских запросов (если они появятся) + совместимость с регистрацией.
           setUserAccessToken(data.access_token);
+          await fetch('/api/user/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ access_token: data.access_token }),
+            credentials: 'same-origin',
+          }).catch(() => {});
+
+          let inviteToken: string | null = null;
+          try {
+            inviteToken = sessionStorage.getItem(INVITE_KEY);
+          } catch {
+            /* */
+          }
+
+          if (fromDesignerInvite || inviteToken) {
+            if (!inviteToken) {
+              setFormError('Сессия приглашения утеряна. Откройте ссылку из письма снова.');
+              return;
+            }
+            const cr = await fetch('/api/user/designer-invite/claim', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({ token: inviteToken }),
+              credentials: 'same-origin',
+            });
+            const cj = (await cr.json().catch(() => ({}))) as { prefillRef?: string; message?: string };
+            try {
+              sessionStorage.removeItem(INVITE_KEY);
+            } catch {
+              /* */
+            }
+            if (cr.ok) {
+              const q = new URLSearchParams();
+              q.set('tab', 'info');
+              q.set('partnerApply', '1');
+              const pr = typeof cj.prefillRef === 'string' ? cj.prefillRef.trim() : '';
+              if (pr) q.set('prefillRef', pr);
+              router.push(`/account/profile?${q.toString()}`);
+              router.refresh();
+              return;
+            }
+            setFormError(
+              typeof cj.message === 'string' && cj.message.trim()
+                ? cj.message
+                : 'Не удалось применить приглашение',
+            );
+            return;
+          }
+
           const pending = data.user?.profile?.profileOnboardingPending;
           if (pending === true) {
             router.push('/account/profile?tab=info&welcome=1');
@@ -101,5 +153,13 @@ export function LoginEmailForm() {
         {busy ? 'Вход…' : 'Войти'}
       </Button>
     </form>
+  );
+}
+
+export function LoginEmailForm() {
+  return (
+    <Suspense fallback={<p className={styles.authOtpHint}>Загрузка…</p>}>
+      <LoginEmailFormInner />
+    </Suspense>
   );
 }

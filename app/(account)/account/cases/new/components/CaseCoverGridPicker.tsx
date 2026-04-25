@@ -1,2 +1,11 @@
-export { CoverGridField as CaseCoverGridPicker } from '@/components/CoverGridField';
-export type { CoverGridFieldProps as CaseCoverGridPickerProps, CoverGrid } from '@/components/CoverGridField';
+'use client';
+
+import type { CoverGrid, CoverGridFieldProps } from '@/components/CoverGridField';
+import { CoverGridField } from '@/components/CoverGridField';
+
+export type CaseCoverGridPickerProps = CoverGridFieldProps;
+export type { CoverGrid };
+
+export function CaseCoverGridPicker(props: CaseCoverGridPickerProps) {
+  return <CoverGridField {...props} />;
+}

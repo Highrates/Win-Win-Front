@@ -15,7 +15,7 @@ type Row = {
   phone: string | null;
   isActive: boolean;
   createdAt: string;
-  profile: { firstName: string | null; lastName: string | null } | null;
+  profile: { firstName: string | null; lastName: string | null; winWinPartnerApproved?: boolean | null } | null;
 };
 
 export function AdminClientsClient() {
@@ -27,6 +27,7 @@ export function AdminClientsClient() {
 
   const [items, setItems] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
+  const [designerTotal, setDesignerTotal] = useState(0);
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,15 +47,18 @@ export function AdminClientsClient() {
           setError(res.status === 401 ? s.loginRequired : s.errStatus(res.status));
           setItems([]);
           setTotal(0);
+          setDesignerTotal(0);
           return;
         }
-        const data = (await res.json()) as { items: Row[]; total: number };
+        const data = (await res.json()) as { items: Row[]; total: number; designerTotal?: number };
         setItems(data.items ?? []);
         setTotal(data.total ?? 0);
+        setDesignerTotal(typeof data.designerTotal === 'number' ? data.designerTotal : 0);
       } catch {
         setError(s.errLoadList);
         setItems([]);
         setTotal(0);
+        setDesignerTotal(0);
       } finally {
         setLoading(false);
       }
@@ -79,7 +83,7 @@ export function AdminClientsClient() {
         </Link>
       </p>
       <h1 className={catalogStyles.title}>{s.pageTitle}</h1>
-      <p className={catalogStyles.lead}>{s.pageLead(total)}</p>
+      <p className={catalogStyles.lead}>{s.pageLead({ total, designers: designerTotal })}</p>
 
       <form className={styles.searchForm} onSubmit={onSearchSubmit}>
         <input
@@ -144,7 +148,9 @@ export function AdminClientsClient() {
                       <td>{u.phone ?? '—'}</td>
                       <td>{name}</td>
                       <td>{new Date(u.createdAt).toLocaleString(dateLocale)}</td>
-                      <td>{u.isActive ? s.active : s.inactive}</td>
+                      <td>
+                        {u.profile?.winWinPartnerApproved ? s.statusPartner : u.isActive ? s.active : s.inactive}
+                      </td>
                     </tr>
                   );
                 })

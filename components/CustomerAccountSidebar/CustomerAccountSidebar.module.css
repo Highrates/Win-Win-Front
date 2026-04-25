@@ -57,6 +57,33 @@
   color: var(--color-gray);
   margin: 0;
   line-height: 1.2;
+  min-height: 1.2em;
+}
+
+.partnerStatusLink {
+  display: inline;
+  font-size: inherit;
+  font-weight: inherit;
+  color: var(--color-gray);
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+}
+
+.partnerStatusLink:hover {
+  color: var(--color-ink-black);
+}
+
+.partnerStatusPending {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  line-height: 1.2;
 }
 
 .menuAllItems {
@@ -280,16 +307,21 @@
 
 .mobileSheetTop {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   margin-bottom: 12px;
   padding-bottom: 12px;
   border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
 }
 
 .mobileSheetProfile {
-  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: stretch;
+  gap: 6px;
+  width: 100%;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -301,8 +333,10 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  order: -1;
+  align-self: flex-end;
   padding: 4px;
-  margin: -4px;
+  margin: -4px 0 0;
   background: none;
   border: none;
   cursor: pointer;

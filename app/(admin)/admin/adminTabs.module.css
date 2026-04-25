@@ -1,0 +1,34 @@
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin: 16px 0 16px;
+  flex-wrap: wrap;
+}
+
+.tabBtn {
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--color-ink-black);
+  opacity: 0.7;
+  border-bottom: 2px solid transparent;
+}
+
+.tabBtnActive {
+  opacity: 1;
+  border-bottom-color: var(--color-ink-black);
+}
+
+.panel {
+  max-width: 980px;
+}
+
+.lead {
+  margin: 0 0 12px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+  line-height: 1.45;
+}

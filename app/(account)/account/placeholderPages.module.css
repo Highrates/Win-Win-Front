@@ -1,0 +1,23 @@
+.wrap {
+  max-width: 560px;
+  padding: 8px 0 32px;
+}
+
+.title {
+  margin: 0 0 12px;
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  color: var(--color-ink-black);
+}
+
+.lead {
+  margin: 0 0 20px;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--color-gray);
+}
+
+.back {
+  font-size: var(--text-body);
+  color: var(--color-ink-black);
+}
