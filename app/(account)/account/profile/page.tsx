@@ -11,6 +11,7 @@ import { MultiSelectField } from '@/components/MultiSelectField';
 import { CoverGridField } from '@/components/CoverGridField';
 import flowStyles from '@/components/auth-forms/RegisterFlow.module.css';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
+import { copyTextToClipboard } from '@/lib/copyToClipboard';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { ProfileIncomeTab } from './ProfileIncomeTab';
 import { ProfileSettingsTab } from './ProfileSettingsTab';
@@ -217,9 +218,9 @@ function ProfilePageContent() {
   const copyDesignerInviteLink = useCallback(async () => {
     if (!inviteDesignerInviteLink) return;
     try {
-      await navigator.clipboard.writeText(inviteDesignerInviteLink);
+      await copyTextToClipboard(inviteDesignerInviteLink);
       setInviteDesignerCopied(true);
-      window.setTimeout(() => setInviteDesignerCopied(false), 2500);
+      window.setTimeout(() => setInviteDesignerCopied(false), 3000);
     } catch {
       setInviteDesignerCopied(false);
     }
@@ -1220,20 +1221,20 @@ function ProfilePageContent() {
                 <>
                   <h3 className={styles.aboutModalTitle}>Письмо с приглашением отправлено</h3>
                   <p className={styles.partnerSuccessText}>
-                    Ссылку с приглашением можно скопировать и переслать, например, в мессенджер. Срок действия — 14
-                    дней, одно использование.
+                    Ссылку с приглашением можно скопировать и отправить напрямую! Срок действия — 14 дней, одно
+                    использование.
                   </p>
                   <div className={styles.aboutModalActions}>
                     {inviteDesignerInviteLink ? (
-                      <Button
+                      <button
                         type="button"
-                        variant="secondary"
+                        className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${inviteDesignerCopied ? styles.inviteLinkCopyBtnDone : ''}`}
                         onClick={() => {
                           void copyDesignerInviteLink();
                         }}
                       >
-                        {inviteDesignerCopied ? 'Скопировано' : 'Скопировать ссылку с приглашением'}
-                      </Button>
+                        {inviteDesignerCopied ? 'Скопировано!' : 'Скопировать ссылку с приглашением'}
+                      </button>
                     ) : null}
                     <Button type="button" variant="primary" onClick={closeInviteDesignerModal}>
                       Понятно
