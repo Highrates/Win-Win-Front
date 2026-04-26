@@ -160,6 +160,8 @@ function ProfilePageContent() {
   const [inviteDesignerSending, setInviteDesignerSending] = useState(false);
   const [inviteDesignerError, setInviteDesignerError] = useState<string | null>(null);
   const [inviteDesignerDone, setInviteDesignerDone] = useState(false);
+  const [inviteDesignerInviteLink, setInviteDesignerInviteLink] = useState<string | null>(null);
+  const [inviteDesignerCopied, setInviteDesignerCopied] = useState(false);
 
   const PROFILE_TABS = ['Инфо', 'Доход', 'Настройки'] as const;
   const CITY_OPTIONS = ['Москва', 'Санкт-Петербург', 'Казань', 'Сочи'] as const;
@@ -203,12 +205,25 @@ function ProfilePageContent() {
     setInviteDesignerEmail('');
     setInviteDesignerError(null);
     setInviteDesignerDone(false);
+    setInviteDesignerInviteLink(null);
+    setInviteDesignerCopied(false);
   }, []);
 
   useModalBodyLock(profileModalOpen, closeProfileModal);
   useModalBodyLock(aboutModalOpen, closeAboutModal);
   useModalBodyLock(partnerAppModalOpen, closePartnerAppModal);
   useModalBodyLock(inviteDesignerModalOpen, closeInviteDesignerModal);
+
+  const copyDesignerInviteLink = useCallback(async () => {
+    if (!inviteDesignerInviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteDesignerInviteLink);
+      setInviteDesignerCopied(true);
+      window.setTimeout(() => setInviteDesignerCopied(false), 2500);
+    } catch {
+      setInviteDesignerCopied(false);
+    }
+  }, [inviteDesignerInviteLink]);
 
   const applyProfileDto = useCallback((p: ProfileDto) => {
     setProfile(p);
@@ -415,7 +430,13 @@ function ProfilePageContent() {
       }
     }
     if (!partnerAppFile) {
-      setPartnerAppError('Прикрепите файл с CV');
+      setPartnerAppError('Прикрепите CV в формате PDF');
+      return;
+    }
+    const isPdf =
+      partnerAppFile.type === 'application/pdf' || partnerAppFile.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      setPartnerAppError('Нужен файл в формате PDF (.pdf)');
       return;
     }
     setPartnerAppSubmitting(true);
@@ -465,6 +486,10 @@ function ProfilePageContent() {
         setInviteDesignerError(await readApiErrorMessage(res));
         return;
       }
+      const data = (await res.json()) as { inviteLink?: string };
+      setInviteDesignerInviteLink(
+        typeof data.inviteLink === 'string' && data.inviteLink.length > 0 ? data.inviteLink : null,
+      );
       setInviteDesignerDone(true);
     } catch {
       setInviteDesignerError('Не удалось отправить. Повторите позже.');
@@ -1093,12 +1118,12 @@ function ProfilePageContent() {
                     </div>
                   )}
                   <div className={styles.partnerFormField}>
-                    <span className={styles.fieldLabel}>Прикрепите CV</span>
+                    <span className={styles.fieldLabel}>Прикрепите CV (PDF)</span>
                     <label className={styles.partnerFilePick}>
                       <input
                         type="file"
                         className={styles.partnerFileInput}
-                        accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp,application/pdf"
+                        accept="application/pdf,.pdf"
                         onChange={(e) => {
                           const f = e.target.files?.[0] ?? null;
                           setPartnerAppFile(f);
@@ -1194,7 +1219,22 @@ function ProfilePageContent() {
               {inviteDesignerDone ? (
                 <>
                   <h3 className={styles.aboutModalTitle}>Письмо с приглашением отправлено</h3>
+                  <p className={styles.partnerSuccessText}>
+                    Ссылку с приглашением можно скопировать и переслать, например, в мессенджер. Срок действия — 14
+                    дней, одно использование.
+                  </p>
                   <div className={styles.aboutModalActions}>
+                    {inviteDesignerInviteLink ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          void copyDesignerInviteLink();
+                        }}
+                      >
+                        {inviteDesignerCopied ? 'Скопировано' : 'Скопировать ссылку с приглашением'}
+                      </Button>
+                    ) : null}
                     <Button type="button" variant="primary" onClick={closeInviteDesignerModal}>
                       Понятно
                     </Button>
