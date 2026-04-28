@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { Button } from '@/components/Button';
@@ -164,7 +164,6 @@ function ProfilePageContent() {
   const [inviteDesignerInviteLink, setInviteDesignerInviteLink] = useState<string | null>(null);
   const [inviteDesignerCopied, setInviteDesignerCopied] = useState(false);
 
-  const PROFILE_TABS = ['Инфо', 'Доход', 'Настройки'] as const;
   const CITY_OPTIONS = ['Москва', 'Санкт-Петербург', 'Казань', 'Сочи'] as const;
   const DEFAULT_SERVICE_OPTIONS = [
     'Дизайн интерьера',
@@ -214,6 +213,30 @@ function ProfilePageContent() {
   useModalBodyLock(aboutModalOpen, closeAboutModal);
   useModalBodyLock(partnerAppModalOpen, closePartnerAppModal);
   useModalBodyLock(inviteDesignerModalOpen, closeInviteDesignerModal);
+
+  type ProfileTabKey = 'info' | 'income' | 'settings';
+  const winWinPartnerApproved = Boolean(profile?.winWinPartnerApproved);
+  const availableTabKeys = useMemo<readonly ProfileTabKey[]>(
+    () => (winWinPartnerApproved ? (['info', 'income', 'settings'] as const) : (['info', 'settings'] as const)),
+    [winWinPartnerApproved],
+  );
+  const availableTabLabels = useMemo(
+    () =>
+      availableTabKeys.map((k) => {
+        if (k === 'info') return 'Инфо';
+        if (k === 'income') return 'Доход';
+        return 'Настройки';
+      }),
+    [availableTabKeys],
+  );
+  const selectedTabKey: ProfileTabKey = availableTabKeys[selectedIndex] ?? 'info';
+  const selectTab = useCallback(
+    (key: ProfileTabKey) => {
+      const idx = availableTabKeys.indexOf(key);
+      setSelectedIndex(idx >= 0 ? idx : 0);
+    },
+    [availableTabKeys],
+  );
 
   const copyDesignerInviteLink = useCallback(async () => {
     if (!inviteDesignerInviteLink) return;
@@ -316,15 +339,14 @@ function ProfilePageContent() {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'income') setSelectedIndex(PROFILE_TAB_INCOME);
-    if (tab === 'settings') setSelectedIndex(PROFILE_TAB_SETTINGS);
-    if (tab === 'info' || !tab) setSelectedIndex(PROFILE_TAB_INFO);
-  }, [searchParams]);
+    const key: ProfileTabKey = tab === 'income' ? 'income' : tab === 'settings' ? 'settings' : 'info';
+    selectTab(key);
+  }, [searchParams, selectTab]);
 
   useEffect(() => {
     const welcome = searchParams.get('welcome') === '1';
     if (!welcome) return;
-    setSelectedIndex(PROFILE_TAB_INFO);
+    selectTab('info');
     void (async () => {
       try {
         await fetch('/api/user/profile/onboarding/ack', { method: 'PATCH', credentials: 'same-origin' });
@@ -334,7 +356,7 @@ function ProfilePageContent() {
         router.replace(pathname, { scroll: false });
       }
     })();
-  }, [pathname, router, searchParams]);
+  }, [pathname, router, searchParams, selectTab]);
 
   useEffect(() => {
     const shouldOpen = searchParams.get('profileEdit') === '1';
@@ -371,12 +393,12 @@ function ProfilePageContent() {
       router.replace(pathname, { scroll: false });
       return;
     }
-    setSelectedIndex(PROFILE_TAB_INFO);
+    selectTab('info');
     setPartnerAppModalOpen(true);
     setPartnerAppPhase('form');
     setPartnerAppError(null);
     router.replace(pathname, { scroll: false });
-  }, [loading, profile, pathname, router, searchParams]);
+  }, [loading, profile, pathname, router, searchParams, selectTab]);
 
   useEffect(() => {
     return () => {
@@ -401,7 +423,6 @@ function ProfilePageContent() {
   /** Одна обложка в превью (4:3 или 16:9) — растягиваем по ширине (до 800px). */
   const isSinglePreviewImageWide = coverUrlsForPreview.length === 1;
   const hasAbout = !!aboutRichValue.trim();
-  const winWinPartnerApproved = Boolean(profile?.winWinPartnerApproved);
   const partnerApplicationPending = Boolean(
     profile?.partnerApplicationSubmittedAt &&
       !winWinPartnerApproved &&
@@ -632,7 +653,7 @@ function ProfilePageContent() {
       ) : null}
 
       <AccountProjectTabs
-        projects={PROFILE_TABS}
+        projects={availableTabLabels}
         selectedIndex={selectedIndex}
         onSelect={setSelectedIndex}
         ariaLabel="Разделы профиля"
@@ -640,7 +661,7 @@ function ProfilePageContent() {
 
       {loading ? (
         <ProfilePageLoading />
-      ) : selectedIndex === PROFILE_TAB_INFO ? (
+      ) : selectedTabKey === 'info' ? (
         <>
           <div className={styles.previewPageTitlesOuter}>
             <div className={styles.previewPageTitlesRow}>
@@ -765,12 +786,16 @@ function ProfilePageContent() {
             ) : null}
           </section>
         </>
-      ) : selectedIndex === PROFILE_TAB_INCOME ? (
+      ) : selectedTabKey === 'income' ? (
         <section aria-label="Доход">
           <ProfileIncomeTab />
         </section>
-      ) : selectedIndex === PROFILE_TAB_SETTINGS ? (
-        <ProfileSettingsTab onSessionChanged={() => { void loadProfile(); }} />
+      ) : selectedTabKey === 'settings' ? (
+        <ProfileSettingsTab
+          onSessionChanged={() => {
+            void loadProfile();
+          }}
+        />
       ) : null}
 
       {profileModalOpen ? (
@@ -1174,7 +1199,7 @@ function ProfilePageContent() {
                         type="button"
                         variant="secondary"
                         onClick={() => {
-                          setSelectedIndex(PROFILE_TAB_SETTINGS);
+                          selectTab('settings');
                           closePartnerAppModal();
                         }}
                       >
@@ -1228,7 +1253,7 @@ function ProfilePageContent() {
                     {inviteDesignerInviteLink ? (
                       <button
                         type="button"
-                        className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${inviteDesignerCopied ? styles.inviteLinkCopyBtnDone : ''}`}
+                        className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${styles.inviteLinkCopyBtn} ${inviteDesignerCopied ? styles.inviteLinkCopyBtnDone : ''}`}
                         onClick={() => {
                           void copyDesignerInviteLink();
                         }}

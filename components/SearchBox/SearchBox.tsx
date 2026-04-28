@@ -1,9 +1,12 @@
+import type { ChangeEventHandler } from 'react';
 import styles from './SearchBox.module.css';
 
 type SearchBoxProps = {
   placeholder: string;
   ariaLabel: string;
   className?: string;
+  value?: string;
+  onChange?: ChangeEventHandler<HTMLInputElement>;
 };
 
 function SearchIcon({ className }: { className?: string }) {
@@ -35,12 +38,19 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-export function SearchBox({ placeholder, ariaLabel, className }: SearchBoxProps) {
+export function SearchBox({ placeholder, ariaLabel, className, value, onChange }: SearchBoxProps) {
   return (
     <div className={`${styles.searchBoxInner} ${className ?? ''}`}>
       <div className={styles.searchRow}>
         <SearchIcon className={styles.searchIcon} />
-        <input type="search" className={styles.searchInput} placeholder={placeholder} aria-label={ariaLabel} />
+        <input
+          type="search"
+          className={styles.searchInput}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          value={value}
+          onChange={onChange}
+        />
       </div>
     </div>
   );

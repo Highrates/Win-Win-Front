@@ -3,11 +3,12 @@
 import { useId, useState } from 'react';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { TBtn } from '@/components/TBtn/TBtn';
-import { TEAM_REWARD_ROWS } from '@/lib/account/teamTableMock';
-import { TEAM_BRANCH_CARDS, type TeamBranchCard } from '@/lib/account/teamTeammateLeadMock';
+import type { TeamBranchCard } from '@/lib/account/teamTeammateLeadMock';
 import styles from './page.module.css';
 
 const TEAM_RANGE_TABS = ['1 мес', '3 мес', '6 мес', 'За все время'] as const;
+
+const DASH = '—';
 
 function TeammateBranchRow({ card }: { card: TeamBranchCard }) {
   const [open, setOpen] = useState(false);
@@ -68,7 +69,7 @@ function TeammateBranchRow({ card }: { card: TeamBranchCard }) {
   );
 }
 
-export function TeamSheetSection() {
+export function TeamSheetSection({ branchCards }: { branchCards: TeamBranchCard[] }) {
   const [rangeIndex, setRangeIndex] = useState(0);
 
   return (
@@ -94,7 +95,7 @@ export function TeamSheetSection() {
         <div className={styles.tableSummary}>
           <div className={styles.tableSummaryLeft}>
             <span className={styles.tableSummaryLabel}>Доход от команды:</span>
-            <span className={styles.tableSummaryAmount}>320 000 ₽</span>
+            <span className={styles.tableSummaryAmount}>{DASH}</span>
           </div>
           <div className={styles.tableSummaryRight}>
             <TBtn type="button" variant="ghost" trailingChevronDown>
@@ -130,16 +131,14 @@ export function TeamSheetSection() {
             </tr>
           </thead>
           <tbody>
-            {TEAM_REWARD_ROWS.map((row) => (
-              <tr key={row.id}>
-                <td className={styles.tdLeftTight}>{row.date}</td>
-                <td className={styles.tdDesigner}>{row.designer}</td>
-                <td className={styles.tdCenterLevel}>{row.level}</td>
-                <td className={styles.tdRightTightFirst}>{row.turnover}</td>
-                <td className={styles.tdCenterPercent}>{row.percent}</td>
-                <td className={styles.tdRightTight}>{row.reward}</td>
-              </tr>
-            ))}
+            <tr>
+              <td className={styles.tdLeftTight}>{DASH}</td>
+              <td className={styles.tdDesigner}>{DASH}</td>
+              <td className={styles.tdCenterLevel}>{DASH}</td>
+              <td className={styles.tdRightTightFirst}>{DASH}</td>
+              <td className={styles.tdCenterPercent}>{DASH}</td>
+              <td className={styles.tdRightTight}>{DASH}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -148,9 +147,11 @@ export function TeamSheetSection() {
         <h1 className={styles.pageTitle}>Команда</h1>
 
         <div className={styles.teammateBranchesStack}>
-          {TEAM_BRANCH_CARDS.map((card) => (
-            <TeammateBranchRow key={card.id} card={card} />
-          ))}
+          {branchCards.length > 0 ? (
+            branchCards.map((card) => <TeammateBranchRow key={card.id} card={card} />)
+          ) : (
+            <p className={styles.teamEmptyHint}>В вашей команде пока нет дизайнеров</p>
+          )}
         </div>
       </div>
     </div>
