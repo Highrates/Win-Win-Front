@@ -7,7 +7,7 @@
   margin-top: 0;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: stretch;
   width: 100%;
   gap: 24px;
 }
@@ -20,7 +20,18 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 148px;
+  gap: 32px;
+}
+
+/* Как BrandPage_previewPageTitlesBody: центрирует блок с текстом по вертикали рядом с превью. */
+.previewPageTitlesBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 0;
+  width: 100%;
 }
 
 .previewPageTitlesRow {
@@ -166,53 +177,31 @@
 }
 
 .previewImages {
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 406px));
   gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  align-items: start;
+  justify-content: start;
   flex: 1 1 0;
   min-width: 0;
-  max-width: 100%;
+}
+
+.previewImageSlot:not(.previewImageSlotDouble) {
+  max-width: 406px;
 }
 
 .previewImageSlot {
   position: relative;
-  flex: 1 1 0;
   min-width: 0;
-  max-width: 406px;
+  width: 100%;
 }
 
-.thumbZoomBtn {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: none;
-  background: var(--color-white);
-  cursor: pointer;
-  overflow: hidden;
-  border-bottom-right-radius: 8px;
-}
-
-.thumbZoomBtn:hover {
-  opacity: 0.9;
-}
-
-.thumbZoomBtn:focus-visible {
-  outline: 2px solid var(--color-ink-black);
-  outline-offset: 2px;
-}
-
-.thumbZoomBtn img {
-  display: block;
-  width: 20px;
-  height: 20px;
+.previewImageSlotDouble {
+  grid-column: 1 / -1;
+  max-width: min(100%, 800px) !important;
+  justify-self: start;
 }
 
 .previewImage {
@@ -225,7 +214,16 @@
   object-fit: cover;
 }
 
-/* Секция маркета (как CategoryPage_marketSection) */
+.previewImageSlotDouble .previewImage {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  height: 393px;
+  object-fit: cover;
+  object-position: center;
+  aspect-ratio: unset;
+}
+
 .marketSection {
   margin-top: 180px;
 }
@@ -909,15 +907,23 @@
   }
 
   .previewImages {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .previewImageSlot,
+  .previewImageSlotDouble {
+    grid-column: auto;
+    max-width: none;
+    width: 100%;
   }
 
   .previewImage {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 406 / 393;
-    object-fit: cover;
+    max-width: none;
+  }
+
+  .previewImageSlotDouble .previewImage {
+    height: 393px;
+    max-width: 100%;
   }
 
   .marketSection {

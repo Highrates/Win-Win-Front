@@ -26,6 +26,7 @@ export function adminClientDetailStrings(locale: AdminLocale) {
     dtAvatar: pick(locale, 'Аватар', '头像'),
     dtCoverUrls: pick(locale, 'Обложка (URL)', '封面（链接）'),
     dtAboutTitle: pick(locale, 'Подробнее о вас', '更多介绍'),
+    dtPublication: pick(locale, 'Публикация профиля', '资料发布'),
     linkOpen: pick(locale, 'Открыть', '打开'),
     dtConsentPersonal: pick(locale, 'Согласие на обработку ПДн', '个人数据处理同意'),
     dtConsentSms: pick(locale, 'SMS: сервисные и рекламные (не OTP)', '短信：非验证码营销类'),

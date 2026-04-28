@@ -92,6 +92,28 @@ export function Header({
   setSuperMenuOpenRef.current = setSuperMenuOpen;
   const catalogRoots = useCatalogNavRoots();
   const brandsMenuItems = useBrandsNavMenu();
+  const [designersMenuLinks, setDesignersMenuLinks] = useState<{ href: string; label: string }[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/public/designers?page=1&limit=8', { cache: 'no-store' });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { items?: { slug: string; displayName: string }[] };
+        const items = (data.items ?? []).slice(0, 8).map((d) => ({
+          href: `/designers/${encodeURIComponent(d.slug)}`,
+          label: d.displayName,
+        }));
+        if (!cancelled) setDesignersMenuLinks(items);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -402,10 +424,14 @@ export function Header({
                       ? brandsMenuItems.length > 0
                         ? brandsMenuItems.map((b) => ({ href: `/brands/${b.slug}`, label: b.name }))
                         : [{ href: '/brands', label: 'Бренды' }]
-                      : (MOBILE_MENU_SUBLINKS[id] ?? []).map((sublabel, i) => ({
-                          href: `${href}#${i}`,
-                          label: sublabel,
-                        }));
+                      : id === 'designers'
+                        ? designersMenuLinks.length > 0
+                          ? designersMenuLinks.map((d) => ({ href: d.href, label: d.label }))
+                          : [{ href: '/designers', label: 'Дизайнеры' }]
+                        : (MOBILE_MENU_SUBLINKS[id] ?? []).map((sublabel, i) => ({
+                            href: `${href}#${i}`,
+                            label: sublabel,
+                          }));
                 return (
                   <div key={id} className={styles.mobileMenuItem}>
                     <div
@@ -570,6 +596,30 @@ export function Header({
                             onClick={closeSuperMenu}
                           >
                             Бренды
+                          </Link>
+                        </li>
+                      )
+                    ) : section.id === 'designers' ? (
+                      designersMenuLinks.length > 0 ? (
+                        designersMenuLinks.map((item) => (
+                          <li key={item.href}>
+                            <Link
+                              href={item.href}
+                              className={styles.superMenuItem}
+                              onClick={closeSuperMenu}
+                            >
+                              {item.label}
+                            </Link>
+                          </li>
+                        ))
+                      ) : (
+                        <li>
+                          <Link
+                            href="/designers"
+                            className={styles.superMenuItem}
+                            onClick={closeSuperMenu}
+                          >
+                            Дизайнеры
                           </Link>
                         </li>
                       )

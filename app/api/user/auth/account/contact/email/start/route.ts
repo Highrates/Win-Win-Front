@@ -1,14 +1,5 @@
-import { proxyUserBearer } from '@/lib/userBackendJsonProxy';
+import { proxyUserBearerFromRequest } from '@/lib/userBackendJsonProxy';
 
 export async function POST(request: Request) {
-  let body: string;
-  try {
-    body = await request.text();
-  } catch {
-    return new Response('Bad Request', { status: 400 });
-  }
-  return proxyUserBearer(
-    { request, backendPath: 'auth/account/contact/email/start', method: 'POST', body },
-    false,
-  );
+  return proxyUserBearerFromRequest(request, 'auth/account/contact/email/start', 'POST');
 }

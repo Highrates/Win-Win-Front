@@ -41,12 +41,19 @@ type Designer = {
 
 type Props = {
   designer: Designer;
+  aboutHtml?: string | null;
   linkClassName: string;
   textClassName: string;
   arrowClassName: string;
 };
 
-export function MoreAboutDesignerModal({ designer, linkClassName, textClassName, arrowClassName }: Props) {
+export function MoreAboutDesignerModal({
+  designer,
+  aboutHtml,
+  linkClassName,
+  textClassName,
+  arrowClassName,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -85,80 +92,82 @@ export function MoreAboutDesignerModal({ designer, linkClassName, textClassName,
     };
   }, [open, closeModal]);
 
-  if (!open) {
-    return (
+  return (
+    <>
       <button
         type="button"
         onClick={openModal}
         className={linkClassName}
         aria-label="Еще о дизайнере"
+        aria-expanded={open}
+        aria-controls="designer-about-dialog"
+        tabIndex={open ? -1 : 0}
+        style={{ visibility: open ? 'hidden' : 'visible' }}
       >
         <span className={textClassName}>Еще о дизайнере</span>
         <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={arrowClassName} />
       </button>
-    );
-  }
-
-  return (
-    <>
-      <div
-        className={styles.modalBackdrop}
-        onClick={closeModal}
-        role="presentation"
-        aria-hidden
-      />
-      <div
-        className={`${styles.modalPanel} ${fullscreen ? styles.modalPanelFullscreen : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="designer-modal-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className={styles.modalHeader}>
-          <span id="designer-modal-title" className={styles.srOnly}>
-            Еще о дизайнере
-          </span>
-          <div className={`padding-global ${styles.modalHeaderPadding}`}>
-            <button
-              type="button"
-              className={styles.modalIconBtn}
-              onClick={toggleFullscreen}
-              aria-label={fullscreen ? 'Выйти из полноэкранного режима' : 'Открыть во весь экран'}
-            >
-              {fullscreen ? <CollapseIcon /> : <ExpIcon />}
-            </button>
-            <button
-              type="button"
-              className={styles.modalIconBtn}
-              onClick={closeModal}
-              aria-label="Закрыть"
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        </header>
-        <div className={styles.modalContent}>
-          <div className="padding-global">
-            <div className={`${styles.richContent} rich-content`}>
-              <h2>О дизайнере</h2>
-              <p>
-                {designer.name}, {designer.city}. {designer.services && `Услуги: ${designer.services}.`} Опыт работы с частными и коммерческими интерьерами.
-              </p>
-              <div>
-                <img src="/images/placeholder.svg" alt="" width={640} height={360} />
+      {open ? (
+        <>
+          <div
+            className={styles.modalBackdrop}
+            onClick={closeModal}
+            role="presentation"
+            aria-hidden
+          />
+          <div
+            id="designer-about-dialog"
+            className={`${styles.modalPanel} ${fullscreen ? styles.modalPanelFullscreen : ''}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="designer-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className={styles.modalHeader}>
+              <span id="designer-modal-title" className={styles.srOnly}>
+                Еще о дизайнере
+              </span>
+              <div className={`padding-global ${styles.modalHeaderPadding}`}>
+                <button
+                  type="button"
+                  className={styles.modalIconBtn}
+                  onClick={toggleFullscreen}
+                  aria-label={fullscreen ? 'Выйти из полноэкранного режима' : 'Открыть во весь экран'}
+                >
+                  {fullscreen ? <CollapseIcon /> : <ExpIcon />}
+                </button>
+                <button
+                  type="button"
+                  className={styles.modalIconBtn}
+                  onClick={closeModal}
+                  aria-label="Закрыть"
+                >
+                  <CloseIcon />
+                </button>
               </div>
-              <h3>Подход к проектам</h3>
-              <p>
-                Индивидуальный подход к каждому заказчику, подбор материалов и мебели под бюджет и стиль. Полное ведение проекта от концепции до авторского надзора.
-              </p>
-              <h3>Портфолио</h3>
-              <p>
-                В портфолио представлены реализованные проекты квартир, домов и коммерческих пространств. Сотрудничество с ведущими брендами мебели и отделочных материалов.
-              </p>
+            </header>
+            <div className={styles.modalContent}>
+              <div className="padding-global">
+                <div className={`${styles.richContent} rich-content`}>
+                  {aboutHtml?.trim() ? (
+                    <div dangerouslySetInnerHTML={{ __html: aboutHtml }} />
+                  ) : (
+                    <>
+                      <h2>О дизайнере</h2>
+                      <p>
+                        {designer.name}
+                        {designer.city ? `, ${designer.city}` : ''}.{' '}
+                        {designer.services ? `Услуги: ${designer.services}.` : ''}{' '}
+                        Опыт работы с частными и коммерческими интерьерами.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      ) : null}
     </>
   );
 }

@@ -18,30 +18,17 @@ import { ProfileSettingsTab } from './ProfileSettingsTab';
 import btnStyles from '@/components/Button/Button.module.css';
 import styles from './page.module.css';
 
+import { useAccountProfile } from '@/hooks/useAccountProfile';
+import { useInviteDesigner } from '@/hooks/useInviteDesigner';
+import { usePartnerApplication } from '@/hooks/usePartnerApplication';
+import { useProfileUploads } from '@/hooks/useProfileUploads';
+import type { ProfileDto } from './profileTypes';
+
 const PROFILE_TAB_INFO = 0;
 const PROFILE_TAB_INCOME = 1;
 const PROFILE_TAB_SETTINGS = 2;
 
 type CoverGrid = '4:3' | '16:9';
-
-type ProfileDto = {
-  firstName: string | null;
-  lastName: string | null;
-  city: string | null;
-  services: unknown;
-  aboutHtml: string | null;
-  coverLayout: string | null;
-  coverImageUrls: unknown;
-  avatarUrl: string | null;
-  profileOnboardingPending: boolean;
-  winWinPartnerApproved?: boolean;
-  winWinReferralCode?: string | null;
-  partnerApplicationSubmittedAt?: string | null;
-  partnerApplicationRejectedAt?: string | null;
-  email?: string | null;
-  /** true — реферальный номер в заявке не требуется (первые на платформе, см. WINWIN_REFERRAL_EXEMPT_EMAILS) */
-  referralInviteCodeExempt?: boolean;
-};
 
 function CloseIcon() {
   return (
@@ -113,14 +100,27 @@ function ProfilePageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const {
+    profile,
+    setProfile: setProfileState,
+    loadProfile,
+    loading,
+    loadError,
+    patchProfile,
+    saving,
+    setSaving,
+    saveError,
+    setSaveError,
+  } = useAccountProfile();
+  const { postMultipart } = useProfileUploads();
 
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
   const [aboutModalFullscreen, setAboutModalFullscreen] = useState(false);
 
-  const [profile, setProfile] = useState<ProfileDto | null>(null);
+  const [partnerAppModalOpen, setPartnerAppModalOpen] = useState(false);
+  const [inviteDesignerModalOpen, setInviteDesignerModalOpen] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string>('/images/placeholder.svg');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -143,28 +143,8 @@ function ProfilePageContent() {
   const [remoteCoverB, setRemoteCoverB] = useState<string | null>(null);
   const [remoteCover169, setRemoteCover169] = useState<string | null>(null);
 
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [aboutSaveError, setAboutSaveError] = useState<string | null>(null);
   const [aboutSaving, setAboutSaving] = useState(false);
-
-  const [partnerAppModalOpen, setPartnerAppModalOpen] = useState(false);
-  const [partnerAppPhase, setPartnerAppPhase] = useState<'form' | 'success'>('form');
-  const [partnerAppAbout, setPartnerAppAbout] = useState('');
-  const [partnerAppReferralCode, setPartnerAppReferralCode] = useState('');
-  const [partnerAppFile, setPartnerAppFile] = useState<File | null>(null);
-  const [partnerAppError, setPartnerAppError] = useState<string | null>(null);
-  const [partnerAppSubmitting, setPartnerAppSubmitting] = useState(false);
-
-  const [inviteDesignerModalOpen, setInviteDesignerModalOpen] = useState(false);
-  const [inviteDesignerEmail, setInviteDesignerEmail] = useState('');
-  const [inviteDesignerSending, setInviteDesignerSending] = useState(false);
-  const [inviteDesignerError, setInviteDesignerError] = useState<string | null>(null);
-  const [inviteDesignerDone, setInviteDesignerDone] = useState(false);
-  const [inviteDesignerInviteLink, setInviteDesignerInviteLink] = useState<string | null>(null);
-  const [inviteDesignerCopied, setInviteDesignerCopied] = useState(false);
-
-  const CITY_OPTIONS = ['Москва', 'Санкт-Петербург', 'Казань', 'Сочи'] as const;
   const DEFAULT_SERVICE_OPTIONS = [
     'Дизайн интерьера',
     'Комплектация',
@@ -172,6 +152,7 @@ function ProfilePageContent() {
     'Планировка',
   ] as const;
   const [serviceOptions, setServiceOptions] = useState<string[]>([...DEFAULT_SERVICE_OPTIONS]);
+  const CITY_OPTIONS = ['Москва', 'Санкт-Петербург', 'Казань', 'Сочи'] as const;
 
   const avatarPreviewRef = useRef(avatarPreview);
   const coverPreviewsRef = useRef({ cover43aPreview, cover43bPreview, cover169Preview });
@@ -190,29 +171,6 @@ function ProfilePageContent() {
     setAboutModalFullscreen(false);
     setAboutSaveError(null);
   }, []);
-
-  const closePartnerAppModal = useCallback(() => {
-    setPartnerAppModalOpen(false);
-    setPartnerAppPhase('form');
-    setPartnerAppAbout('');
-    setPartnerAppReferralCode('');
-    setPartnerAppFile(null);
-    setPartnerAppError(null);
-  }, []);
-
-  const closeInviteDesignerModal = useCallback(() => {
-    setInviteDesignerModalOpen(false);
-    setInviteDesignerEmail('');
-    setInviteDesignerError(null);
-    setInviteDesignerDone(false);
-    setInviteDesignerInviteLink(null);
-    setInviteDesignerCopied(false);
-  }, []);
-
-  useModalBodyLock(profileModalOpen, closeProfileModal);
-  useModalBodyLock(aboutModalOpen, closeAboutModal);
-  useModalBodyLock(partnerAppModalOpen, closePartnerAppModal);
-  useModalBodyLock(inviteDesignerModalOpen, closeInviteDesignerModal);
 
   type ProfileTabKey = 'info' | 'income' | 'settings';
   const winWinPartnerApproved = Boolean(profile?.winWinPartnerApproved);
@@ -238,19 +196,7 @@ function ProfilePageContent() {
     [availableTabKeys],
   );
 
-  const copyDesignerInviteLink = useCallback(async () => {
-    if (!inviteDesignerInviteLink) return;
-    try {
-      await copyTextToClipboard(inviteDesignerInviteLink);
-      setInviteDesignerCopied(true);
-      window.setTimeout(() => setInviteDesignerCopied(false), 3000);
-    } catch {
-      setInviteDesignerCopied(false);
-    }
-  }, [inviteDesignerInviteLink]);
-
-  const applyProfileDto = useCallback((p: ProfileDto) => {
-    setProfile(p);
+  const syncFormsFromDto = useCallback((p: ProfileDto) => {
     setFirstName(p.firstName ?? '');
     setLastName(p.lastName ?? '');
     setCity(p.city ?? '');
@@ -289,27 +235,49 @@ function ProfilePageContent() {
     }
   }, []);
 
-  const loadProfile = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
+  const applyProfileDto = useCallback(
+    (p: ProfileDto) => {
+      setProfileState(p);
+      syncFormsFromDto(p);
+    },
+    [setProfileState, syncFormsFromDto],
+  );
+
+  const partnerApp = usePartnerApplication(applyProfileDto);
+  const inviteDesigner = useInviteDesigner();
+
+  const copyDesignerInviteLink = useCallback(async () => {
+    if (!inviteDesigner.inviteLink) return;
     try {
-      const res = await fetch('/api/user/profile', { cache: 'no-store', credentials: 'same-origin' });
-      if (!res.ok) {
-        setLoadError('Не удалось загрузить профиль');
-        return;
-      }
-      const data = (await res.json()) as ProfileDto;
-      applyProfileDto(data);
+      await copyTextToClipboard(inviteDesigner.inviteLink);
+      inviteDesigner.setCopied(true);
+      window.setTimeout(() => inviteDesigner.setCopied(false), 3000);
     } catch {
-      setLoadError('Не удалось загрузить профиль');
-    } finally {
-      setLoading(false);
+      inviteDesigner.setCopied(false);
     }
-  }, [applyProfileDto]);
+  }, [inviteDesigner.inviteLink, inviteDesigner]);
+
+  const closePartnerAppModal = useCallback(() => {
+    setPartnerAppModalOpen(false);
+    partnerApp.reset();
+  }, [partnerApp]);
+
+  const closeInviteDesignerModal = useCallback(() => {
+    setInviteDesignerModalOpen(false);
+    inviteDesigner.reset();
+  }, [inviteDesigner]);
+
+  useModalBodyLock(profileModalOpen, closeProfileModal);
+  useModalBodyLock(aboutModalOpen, closeAboutModal);
+  useModalBodyLock(partnerAppModalOpen, closePartnerAppModal);
+  useModalBodyLock(inviteDesignerModalOpen, closeInviteDesignerModal);
 
   useEffect(() => {
-    void loadProfile();
-  }, [loadProfile]);
+    void (async () => {
+      const data = await loadProfile();
+      if (data) syncFormsFromDto(data);
+    })();
+  }, [loadProfile, syncFormsFromDto]);
 
   useEffect(() => {
     void (async () => {
@@ -372,19 +340,18 @@ function ProfilePageContent() {
       router.replace(pathname, { scroll: false });
       return;
     }
-    setInviteDesignerError(null);
-    setInviteDesignerDone(false);
-    setInviteDesignerEmail('');
+    inviteDesigner.reset();
     setInviteDesignerModalOpen(true);
     router.replace(pathname, { scroll: false });
-  }, [loading, profile, pathname, router, searchParams]);
+  }, [loading, profile?.winWinPartnerApproved, pathname, router, searchParams, inviteDesigner]);
 
   useEffect(() => {
     if (searchParams.get('partnerApply') !== '1') return;
     if (loading) return;
     if (!profile) return;
     const prefill = searchParams.get('prefillRef')?.trim();
-    if (prefill) setPartnerAppReferralCode(prefill);
+    partnerApp.reset();
+    if (prefill) partnerApp.setReferralCode(prefill);
     const pending =
       Boolean(profile.partnerApplicationSubmittedAt) &&
       !profile.winWinPartnerApproved &&
@@ -395,10 +362,8 @@ function ProfilePageContent() {
     }
     selectTab('info');
     setPartnerAppModalOpen(true);
-    setPartnerAppPhase('form');
-    setPartnerAppError(null);
     router.replace(pathname, { scroll: false });
-  }, [loading, profile, pathname, router, searchParams, selectTab]);
+  }, [loading, profile, pathname, router, searchParams, selectTab, partnerApp]);
 
   useEffect(() => {
     return () => {
@@ -437,142 +402,22 @@ function ProfilePageContent() {
   const referralInviteExempt = Boolean(profile?.referralInviteCodeExempt);
   const myWinWinReferral = profile?.winWinReferralCode?.trim() || null;
 
-  async function submitPartnerApplication() {
-    setPartnerAppError(null);
-    const text = partnerAppAbout.trim();
-    if (text.length < 20) {
-      setPartnerAppError('Расскажите о себе: не меньше 20 символов');
-      return;
-    }
-    if (!referralInviteExempt) {
-      const ref = partnerAppReferralCode.trim();
-      if (ref.length < 3) {
-        setPartnerAppError('Укажите реферальный номер приглашающего');
-        return;
-      }
-    }
-    if (!partnerAppFile) {
-      setPartnerAppError('Прикрепите CV в формате PDF');
-      return;
-    }
-    const isPdf =
-      partnerAppFile.type === 'application/pdf' || partnerAppFile.name.toLowerCase().endsWith('.pdf');
-    if (!isPdf) {
-      setPartnerAppError('Нужен файл в формате PDF (.pdf)');
-      return;
-    }
-    setPartnerAppSubmitting(true);
-    try {
-      const fd = new FormData();
-      fd.set('coverLetter', text);
-      if (!referralInviteExempt) {
-        fd.set('referralCode', partnerAppReferralCode.trim());
-      }
-      fd.set('file', partnerAppFile);
-      const res = await fetch('/api/user/partner-application', {
-        method: 'POST',
-        body: fd,
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        setPartnerAppError(await readApiErrorMessage(res));
-        return;
-      }
-      const next = (await res.json()) as ProfileDto;
-      applyProfileDto(next);
-      setPartnerAppPhase('success');
-    } catch {
-      setPartnerAppError('Не удалось отправить заявку. Повторите попытку.');
-    } finally {
-      setPartnerAppSubmitting(false);
-    }
-  }
+  const submitPartnerApplication = useCallback(() => {
+    void partnerApp.submit({
+      coverLetter: partnerApp.about,
+      referralInviteExempt,
+      referralCode: partnerApp.referralCode,
+      file: partnerApp.file,
+    });
+  }, [partnerApp, referralInviteExempt]);
 
-  async function submitInviteDesigner(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setInviteDesignerError(null);
-    const em = inviteDesignerEmail.trim().toLowerCase();
-    if (!em.includes('@')) {
-      setInviteDesignerError('Введите корректный email');
-      return;
-    }
-    setInviteDesignerSending(true);
-    try {
-      const res = await fetch('/api/user/designer-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: em }),
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        setInviteDesignerError(await readApiErrorMessage(res));
-        return;
-      }
-      const data = (await res.json()) as { inviteLink?: string };
-      setInviteDesignerInviteLink(
-        typeof data.inviteLink === 'string' && data.inviteLink.length > 0 ? data.inviteLink : null,
-      );
-      setInviteDesignerDone(true);
-    } catch {
-      setInviteDesignerError('Не удалось отправить. Повторите позже.');
-    } finally {
-      setInviteDesignerSending(false);
-    }
-  }
-
-  function publicUrlFromUploadResponse(j: unknown): string {
-    if (!j || typeof j !== 'object') {
-      throw new Error('Нет URL в ответе API');
-    }
-    const o = j as Record<string, unknown>;
-    if (typeof o.publicUrl === 'string' && o.publicUrl.trim()) {
-      return o.publicUrl.trim();
-    }
-    if (typeof o.url === 'string' && o.url.trim()) {
-      return o.url.trim();
-    }
-    if (typeof o.avatarUrl === 'string' && o.avatarUrl.trim()) {
-      return o.avatarUrl.trim();
-    }
-    if (o.profile && typeof o.profile === 'object' && o.profile !== null) {
-      const p = o.profile as Record<string, unknown>;
-      if (typeof p.avatarUrl === 'string' && p.avatarUrl.trim()) {
-        return p.avatarUrl.trim();
-      }
-    }
-    throw new Error('Нет URL в ответе API');
-  }
-
-  async function readProfileUploadError(res: Response, kind: 'avatar' | 'cover' | 'rich'): Promise<string> {
-    try {
-      const j = (await res.json()) as { message?: string | string[] };
-      if (Array.isArray(j.message)) return j.message.join(', ');
-      if (typeof j.message === 'string' && j.message.trim()) return j.message;
-    } catch {
-      /* empty */
-    }
-    if (res.status === 413) {
-      if (kind === 'avatar') return 'Аватар не больше 2 МБ';
-      if (kind === 'cover') return 'Файл обложки не больше 5 МБ';
-      return 'Файл больше 100 МБ';
-    }
-    return 'Не удалось загрузить файл';
-  }
-
-  async function postMultipart(
-    url: string,
-    file: File,
-    kind: 'avatar' | 'cover' | 'rich' = 'cover',
-  ): Promise<{ publicUrl: string }> {
-    const fd = new FormData();
-    fd.set('file', file);
-    const res = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
-    if (!res.ok) {
-      throw new Error(await readProfileUploadError(res, kind));
-    }
-    const j: unknown = await res.json();
-    return { publicUrl: publicUrlFromUploadResponse(j) };
-  }
+  const submitInviteDesigner = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      void inviteDesigner.submit();
+    },
+    [inviteDesigner],
+  );
 
   async function onSaveProfile() {
     setSaveError(null);
@@ -610,27 +455,16 @@ function ProfilePageContent() {
       }
       const coverImageUrls = uploaded.length ? uploaded : null;
 
-      const res = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          firstName: firstName.trim() || null,
-          lastName: lastName.trim() || null,
-          city: city.trim() || null,
-          services: services.length ? services : null,
-          aboutHtml: aboutRichValue.trim() ? aboutRichValue : null,
-          coverLayout: coverGrid,
-          coverImageUrls,
-          avatarUrl: nextAvatarUrl,
-        }),
+      const next = await patchProfile({
+        firstName: firstName.trim() || null,
+        lastName: lastName.trim() || null,
+        city: city.trim() || null,
+        services: services.length ? services : null,
+        aboutHtml: aboutRichValue.trim() ? aboutRichValue : null,
+        coverLayout: coverGrid,
+        coverImageUrls,
+        avatarUrl: nextAvatarUrl,
       });
-      if (!res.ok) {
-        const t = await res.text();
-        setSaveError(t || 'Не удалось сохранить');
-        return;
-      }
-      const next = (await res.json()) as ProfileDto;
       applyProfileDto(next);
       setAvatarFile(null);
       setCover43a(null);
@@ -696,9 +530,7 @@ function ProfilePageContent() {
                     type="button"
                     className={`${btnStyles.btn} ${btnStyles.btnPrimary} ${styles.profilePartnerCta}`}
                     onClick={() => {
-                      setInviteDesignerError(null);
-                      setInviteDesignerDone(false);
-                      setInviteDesignerEmail('');
+                      inviteDesigner.reset();
                       setInviteDesignerModalOpen(true);
                     }}
                   >
@@ -713,8 +545,7 @@ function ProfilePageContent() {
                     type="button"
                     className={`${btnStyles.btn} ${btnStyles.btnPrimary} ${styles.profilePartnerCta}`}
                     onClick={() => {
-                      setPartnerAppPhase('form');
-                      setPartnerAppError(null);
+                      partnerApp.reset();
                       setPartnerAppModalOpen(true);
                     }}
                   >
@@ -1057,22 +888,16 @@ function ProfilePageContent() {
                     setAboutSaveError(null);
                     setAboutSaving(true);
                     try {
-                      const res = await fetch('/api/user/profile', {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ aboutHtml: aboutRichDraft.trim() ? aboutRichDraft : null }),
+                      const next = await patchProfile({
+                        aboutHtml: aboutRichDraft.trim() ? aboutRichDraft : null,
                       });
-                      if (!res.ok) {
-                        setAboutSaveError(await readApiErrorMessage(res));
-                        return;
-                      }
-                      const next = (await res.json()) as ProfileDto;
                       setAboutRichValue(aboutRichDraft);
                       applyProfileDto(next);
                       closeAboutModal();
-                    } catch {
-                      setAboutSaveError('Нет сети или сервер недоступен. Повторите попытку.');
+                    } catch (e) {
+                      setAboutSaveError(
+                        e instanceof Error ? e.message : 'Нет сети или сервер недоступен. Повторите попытку.',
+                      );
                     } finally {
                       setAboutSaving(false);
                     }
@@ -1111,7 +936,7 @@ function ProfilePageContent() {
               </button>
             </header>
             <div className={styles.aboutModalInner}>
-              {partnerAppPhase === 'form' ? (
+              {partnerApp.phase === 'form' ? (
                 <>
                   <h3 className={styles.aboutModalTitle}>Стать партнёром Win-Win</h3>
                   <div className={styles.partnerFormField}>
@@ -1122,8 +947,8 @@ function ProfilePageContent() {
                       id="partner-app-about"
                       className={styles.partnerFormTextarea}
                       rows={6}
-                      value={partnerAppAbout}
-                      onChange={(e) => setPartnerAppAbout(e.target.value)}
+                      value={partnerApp.about}
+                      onChange={(e) => partnerApp.setAbout(e.target.value)}
                       placeholder="Образование, проекты..."
                     />
                   </div>
@@ -1136,8 +961,8 @@ function ProfilePageContent() {
                       <TextField
                         label="Реферальный номер приглашающего"
                         id="partner-app-referral"
-                        value={partnerAppReferralCode}
-                        onChange={(e) => setPartnerAppReferralCode(e.target.value)}
+                        value={partnerApp.referralCode}
+                        onChange={(e) => partnerApp.setReferralCode(e.target.value)}
                         placeholder="Введите номер"
                         autoComplete="off"
                       />
@@ -1152,18 +977,18 @@ function ProfilePageContent() {
                         accept="application/pdf,.pdf"
                         onChange={(e) => {
                           const f = e.target.files?.[0] ?? null;
-                          setPartnerAppFile(f);
+                          partnerApp.setFile(f);
                           e.currentTarget.value = '';
                         }}
                       />
                       <span className={styles.partnerFilePickText}>
-                        {partnerAppFile ? partnerAppFile.name : 'Выбрать файл'}
+                        {partnerApp.file ? partnerApp.file.name : 'Выбрать файл'}
                       </span>
                     </label>
                   </div>
-                  {partnerAppError ? (
+                  {partnerApp.error ? (
                     <p className={flowStyles.formError} role="alert">
-                      {partnerAppError}
+                      {partnerApp.error}
                     </p>
                   ) : null}
                   <div className={styles.aboutModalActions}>
@@ -1171,9 +996,9 @@ function ProfilePageContent() {
                       type="button"
                       variant="primary"
                       onClick={submitPartnerApplication}
-                      disabled={partnerAppSubmitting}
+                      disabled={partnerApp.submitting}
                     >
-                      {partnerAppSubmitting ? 'Отправка…' : 'Подать заявку'}
+                      {partnerApp.submitting ? 'Отправка…' : 'Подать заявку'}
                     </Button>
                   </div>
                 </>
@@ -1242,7 +1067,7 @@ function ProfilePageContent() {
               </button>
             </header>
             <div className={styles.aboutModalInner}>
-              {inviteDesignerDone ? (
+              {inviteDesigner.done ? (
                 <>
                   <h3 className={styles.aboutModalTitle}>Письмо с приглашением отправлено</h3>
                   <p className={styles.partnerSuccessText}>
@@ -1250,15 +1075,15 @@ function ProfilePageContent() {
                     использование.
                   </p>
                   <div className={styles.aboutModalActions}>
-                    {inviteDesignerInviteLink ? (
+                    {inviteDesigner.inviteLink ? (
                       <button
                         type="button"
-                        className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${styles.inviteLinkCopyBtn} ${inviteDesignerCopied ? styles.inviteLinkCopyBtnDone : ''}`}
+                        className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${styles.inviteLinkCopyBtn} ${inviteDesigner.copied ? styles.inviteLinkCopyBtnDone : ''}`}
                         onClick={() => {
                           void copyDesignerInviteLink();
                         }}
                       >
-                        {inviteDesignerCopied ? 'Скопировано!' : 'Скопировать ссылку с приглашением'}
+                        {inviteDesigner.copied ? 'Скопировано!' : 'Скопировать ссылку с приглашением'}
                       </button>
                     ) : null}
                     <Button type="button" variant="primary" onClick={closeInviteDesignerModal}>
@@ -1276,12 +1101,12 @@ function ProfilePageContent() {
                         type="email"
                         name="email"
                         autoComplete="email"
-                        value={inviteDesignerEmail}
+                        value={inviteDesigner.email}
                         onChange={(e) => {
-                          setInviteDesignerEmail(e.target.value);
-                          setInviteDesignerError(null);
+                          inviteDesigner.setEmail(e.target.value);
+                          inviteDesigner.setError(null);
                         }}
-                        error={inviteDesignerError || undefined}
+                        error={inviteDesigner.error || undefined}
                       />
                     </div>
                     <div className={styles.partnerFormField}>
@@ -1295,8 +1120,8 @@ function ProfilePageContent() {
                       />
                     </div>
                     <div className={styles.aboutModalActions}>
-                      <Button type="submit" variant="primary" disabled={inviteDesignerSending}>
-                        {inviteDesignerSending ? 'Отправка…' : 'Отправить приглашение'}
+                      <Button type="submit" variant="primary" disabled={inviteDesigner.sending}>
+                        {inviteDesigner.sending ? 'Отправка…' : 'Отправить приглашение'}
                       </Button>
                     </div>
                   </form>

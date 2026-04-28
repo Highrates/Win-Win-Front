@@ -21,6 +21,7 @@ type UserDetail = {
   createdAt: string;
   consentPersonalDataAcceptedAt: string | null;
   consentSmsMarketingAcceptedAt: string | null;
+  designer?: { slug: string; isPublic: boolean } | null;
   profile: null | {
     firstName: string | null;
     lastName: string | null;
@@ -296,6 +297,12 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                   <div>
                     <dt>{s.dtReferralCode}</dt>
                     <dd>{data.profile?.winWinReferralCode?.trim() ? data.profile.winWinReferralCode : '—'}</dd>
+                  </div>
+                ) : null}
+                {isPartner ? (
+                  <div>
+                    <dt>{s.dtPublication}</dt>
+                    <dd>{data.designer?.isPublic === true ? s.partnerYes : s.partnerNo}</dd>
                   </div>
                 ) : null}
                 <div>

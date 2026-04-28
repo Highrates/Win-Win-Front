@@ -646,6 +646,10 @@
   gap: 24px;
 }
 
+.page_settingsSection {
+  width: 100%;
+}
+
 .settingsFields {
   display: flex;
   flex-direction: column;
@@ -680,8 +684,17 @@
   font-family: var(--font-commissioner);
 }
 
+.page_settingsSwitchRow {
+  align-items: center;
+}
+
 .settingsSwitchCheckbox {
   flex-shrink: 0;
+}
+
+/* Совмещение с productCardCheckbox: перебить mt у .productCardCheckbox (один класс) */
+.page_settingsSwitchRow .page_settingsSwitchCheckbox {
+  margin-top: 0;
 }
 
 .settingsSwitchText {
@@ -1010,4 +1023,18 @@
   height: 120px;
   margin-top: 4px;
   border-radius: 10px;
+}
+
+/* Скелетон вкладки «Настройки» профиля */
+.settingsLoadSections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.settingsLoadSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }

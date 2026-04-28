@@ -1,11 +1,37 @@
 import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
-import { SearchBox } from '@/components/SearchBox/SearchBox';
-import { DESIGNERS } from '@/lib/public/designers';
+import { getServerApiBase } from '@/lib/serverApiBase';
+import { DesignersSearchBox } from './DesignersSearchBox';
 import styles from './DesignersPage.module.css';
 
 const DESIGNERS_PER_PAGE = 48;
+
+type ListItem = {
+  slug: string;
+  displayName: string;
+  photoUrl: string | null;
+  city: string | null;
+  servicesLine: string | null;
+};
+
+async function fetchDesigners(
+  page: number,
+  limit: number,
+  q?: string,
+): Promise<{ items: ListItem[]; total: number }> {
+  const base = getServerApiBase();
+  try {
+    const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (q?.trim()) qs.set('q', q.trim());
+    const res = await fetch(`${base}/designers?${qs.toString()}`, { next: { revalidate: 60 } });
+    if (!res.ok) return { items: [], total: 0 };
+    const data = (await res.json()) as { items?: ListItem[]; total?: number };
+    return { items: data.items ?? [], total: typeof data.total === 'number' ? data.total : 0 };
+  } catch {
+    return { items: [], total: 0 };
+  }
+}
 
 function ArrowIcon({ className }: { className?: string }) {
   return (
@@ -29,22 +55,33 @@ function ArrowIcon({ className }: { className?: string }) {
   );
 }
 
+function designersListHref(opts: { page?: number; q: string }): string {
+  const sp = new URLSearchParams();
+  if (opts.q.trim()) sp.set('q', opts.q.trim());
+  if (opts.page && opts.page > 1) sp.set('page', String(opts.page));
+  const qs = sp.toString();
+  return qs ? `/designers?${qs}` : '/designers';
+}
+
 export const metadata: Metadata = {
   title: 'Дизайнеры — Win-Win',
   description: 'Каталог дизайнеров Win-Win',
 };
 
 type Props = {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 };
 
 export default async function DesignersPage({ searchParams }: Props) {
-  const { page: pageParam } = await searchParams;
-  const currentPage = Math.max(1, parseInt(String(pageParam || '1'), 10) || 1);
-  const totalPages = Math.ceil(DESIGNERS.length / DESIGNERS_PER_PAGE);
-  const page = Math.min(currentPage, totalPages) || 1;
-  const start = (page - 1) * DESIGNERS_PER_PAGE;
-  const designersOnPage = DESIGNERS.slice(start, start + DESIGNERS_PER_PAGE);
+  const { page: pageParam, q: qRaw } = await searchParams;
+  const requestedPage = Math.max(1, parseInt(String(pageParam || '1'), 10) || 1);
+  const q = typeof qRaw === 'string' ? qRaw.trim() : '';
+
+  const first = await fetchDesigners(requestedPage, DESIGNERS_PER_PAGE, q || undefined);
+  const totalPages = Math.max(1, Math.ceil(first.total / DESIGNERS_PER_PAGE));
+  const page = Math.min(requestedPage, totalPages);
+  const { items, total } = page === requestedPage ? first : await fetchDesigners(page, DESIGNERS_PER_PAGE, q || undefined);
+  const designersOnPage = items;
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -71,9 +108,7 @@ export default async function DesignersPage({ searchParams }: Props) {
               ))}
             </nav>
 
-            <div className={styles.searchBox}>
-              <SearchBox placeholder="Поиск по дизайнерам" ariaLabel="Поиск по дизайнерам" />
-            </div>
+            <DesignersSearchBox initialQuery={q} />
 
             <div className={styles.marketSectionRow}>
               <div className={styles.marketSectionRowLeft}>
@@ -101,13 +136,15 @@ export default async function DesignersPage({ searchParams }: Props) {
                   Результат:{' '}
                 </span>
                 <span className={styles.marketSectionRowResultValue}>
-                  {DESIGNERS.length}
+                  {total}
                 </span>
               </div>
             </div>
 
             <div className={styles.designersCardsWrapper}>
-              {designersOnPage.map((designer) => (
+              {designersOnPage.map((designer) => {
+                const avatar = designer.photoUrl?.trim() ? designer.photoUrl.trim() : '/images/placeholder.svg';
+                return (
                 <Link
                   key={designer.slug}
                   href={`/designers/${designer.slug}`}
@@ -115,7 +152,7 @@ export default async function DesignersPage({ searchParams }: Props) {
                 >
                   <div className={styles.designerCardInner}>
                     <img
-                      src="/images/placeholder.svg"
+                      src={avatar}
                       alt=""
                       className={styles.designerCardAvatar}
                       width={132}
@@ -124,13 +161,13 @@ export default async function DesignersPage({ searchParams }: Props) {
                     <div className={styles.designerCardContent}>
                       <div className={styles.designerCardInfo}>
                         <span className={styles.designerCardName}>
-                          {designer.name}
+                          {designer.displayName}
                         </span>
                         <span className={styles.designerCardServices}>
-                          {designer.services}
+                          {designer.servicesLine ?? ''}
                         </span>
                         <span className={styles.designerCardCity}>
-                          {designer.city}
+                          {designer.city ?? ''}
                         </span>
                       </div>
                       <div className={styles.interactWrapper}>
@@ -143,7 +180,7 @@ export default async function DesignersPage({ searchParams }: Props) {
                             className={styles.interactIcon}
                           />
                           <span className={styles.interactValue}>
-                            {designer.collections}
+                            0
                           </span>
                         </div>
                         <div className={styles.interactItem}>
@@ -155,7 +192,7 @@ export default async function DesignersPage({ searchParams }: Props) {
                             className={styles.interactIcon}
                           />
                           <span className={styles.interactValue}>
-                            {designer.likes}
+                            0
                           </span>
                         </div>
                       </div>
@@ -163,16 +200,17 @@ export default async function DesignersPage({ searchParams }: Props) {
                   </div>
                   <ArrowIcon className={styles.designerCardArrow} />
                 </Link>
-              ))}
+                );
+              })}
             </div>
 
-            {DESIGNERS.length > DESIGNERS_PER_PAGE && (
+            {total > DESIGNERS_PER_PAGE && (
               <nav className={styles.paginationWrapper} aria-label="Пагинация">
                 {page <= 1 ? (
                   <span className={styles.paginationBtnDisabled}>НАЗАД</span>
                 ) : (
                   <Link
-                    href={page - 1 === 1 ? '/designers' : `/designers?page=${page - 1}`}
+                    href={designersListHref({ page: page - 1, q })}
                     className={styles.paginationBtn}
                   >
                     НАЗАД
@@ -191,7 +229,7 @@ export default async function DesignersPage({ searchParams }: Props) {
                       ) : (
                         <Link
                           key={n}
-                          href={n === 1 ? '/designers' : `/designers?page=${n}`}
+                          href={designersListHref({ page: n, q })}
                           className={styles.paginationPage}
                         >
                           {n}
@@ -203,7 +241,7 @@ export default async function DesignersPage({ searchParams }: Props) {
                   <span className={styles.paginationBtnDisabled}>ДАЛЕЕ</span>
                 ) : (
                   <Link
-                    href={`/designers?page=${page + 1}`}
+                    href={designersListHref({ page: page + 1, q })}
                     className={styles.paginationBtn}
                   >
                     ДАЛЕЕ

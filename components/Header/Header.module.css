@@ -116,17 +116,35 @@
   display: block;
 }
 
-/* Полоса хедера — поверх супер-меню при открытии */
+/* Полоса хедера — выше содержимого супер-меню при открытии (полоса кликабельна, ссылки ниже перехватчика без «мёртвой» области) */
 .headerBar {
   position: relative;
   z-index: 10;
 }
 
-/* minimal + супер-меню открыто: полоса minimal остаётся сверху (выше .superMenu z-index: 9) */
-.headerMinimal.headerSuperMenuOpen .headerBar {
-  z-index: 11;
+/* При `.headerMinimal` уже был отдельный bump; для default/main поднимаем оба слоя согласованно */
+.headerSuperMenuOpen .superMenu {
+  z-index: 24;
 }
 
+.headerSuperMenuOpen .headerBar {
+  position: relative;
+  z-index: 25;
+  /* Строка грида выше навбара из‑за высокого бейджа; «пустота» ниже триггеров всё равно в слое headerBar (25), выше мегапанели (24) и глушит клики по ссылкам superMenuMenu — режем hit-test только у контейнера */
+  pointer-events: none;
+}
+
+.headerSuperMenuOpen .headerBar .siteHeaderWrap {
+  /* Иначе вся высота строки (из‑за бейджа) остаётся с pointer-events:auto и перехватывает клики над superMenu ниже слоя headerBar */
+  pointer-events: none;
+}
+
+.headerSuperMenuOpen .headerBar .burgerBtn,
+.headerSuperMenuOpen .headerBar .siteHeaderMenu,
+.headerSuperMenuOpen .headerBar .rightNav,
+.headerSuperMenuOpen .headerBar .logoBlock:not(:has(.heroLogoBadge)) {
+  pointer-events: auto;
+}
 /* Grid: site-header__wrap */
 .siteHeaderWrap {
   display: grid;
@@ -194,7 +212,11 @@
   pointer-events: none;
 }
 
-/* Logo block: figure, grid-column 1/span 3 — nav с 4-й колонки */
+/* При открытой мега-панели бейдж-лого (gap 96px) остаётся визуально сверху, но не блокирует клики по спискам супер-меню */
+.headerSuperMenuOpen .logoBlock:has(.heroLogoBadge) {
+  pointer-events: none;
+}
+
 .logoBlock {
   position: relative;
   pointer-events: all;
@@ -274,6 +296,15 @@
 .headerMinimal .logoImg {
   filter: brightness(0) invert(1);
   color: var(--color-white);
+}
+
+/* Когда открыта мега-панель, пропускаем клики сквозь пустые области нав (иначе высокая «прозрачная» зона nav может быть поверх выпадающего списка) */
+.headerSuperMenuOpen .siteHeaderNav {
+  pointer-events: none;
+}
+
+.headerSuperMenuOpen .siteHeaderMenu {
+  pointer-events: auto;
 }
 
 /* Nav: site-header__nav — колонки 4–11, выравнивание с superMenuMenu */
@@ -385,6 +416,7 @@
   right: 0;
   transform: translateY(-100%);
   transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  isolation: isolate;
 }
 
 .superMenu[aria-hidden='false'] .superMenuSlideWrap {
@@ -398,6 +430,7 @@
 .superMenuBg {
   position: absolute;
   inset: 0;
+  z-index: 0;
   background: var(--color-ink-black);
 }
 
@@ -481,6 +514,8 @@
   align-items: flex-end;
   justify-content: flex-end;
   margin-top: auto;
+  position: relative;
+  z-index: 2;
 }
 
 .superMenuSectionShowAll {
@@ -499,6 +534,8 @@
   grid-column: 1 / span 3;
   display: flex;
   align-items: stretch;
+  /* Пустой слот сетки не должен перехватывать клики по ссылкам в соседней колонке */
+  pointer-events: none;
   opacity: 0;
   transform: translateY(56px);
   transition:
@@ -539,6 +576,8 @@
   flex-direction: column;
   gap: 10px;
   grid-column: 4 / -1;
+  position: relative;
+  z-index: 2;
   opacity: 0;
   transform: translateY(56px);
   transition:

@@ -6,6 +6,7 @@ import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
+import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 import styles from './page.module.css';
 
 function CloseIcon() {
@@ -23,17 +24,6 @@ type MeUser = {
   consentPersonalDataAcceptedAt: string | null;
   consentSmsMarketingAcceptedAt: string | null;
 };
-
-async function errMsg(res: Response): Promise<string> {
-  try {
-    const j = (await res.json()) as { message?: string | string[] };
-    if (Array.isArray(j.message)) return j.message.join(', ');
-    if (typeof j.message === 'string') return j.message;
-  } catch {
-    /* empty */
-  }
-  return res.statusText || 'Ошибка';
-}
 
 function formatPhoneForInput(raw: string | null | undefined): string {
   if (!raw || !String(raw).trim()) return '';
@@ -84,6 +74,14 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
   const [consentInfo, setConsentInfo] = useState<string | null>(null);
   const [consentErr, setConsentErr] = useState<string | null>(null);
 
+  const [partnerVitrine, setPartnerVitrine] = useState<{
+    winWinPartnerApproved?: boolean;
+    designerSlug?: string | null;
+    designerSiteVisible?: boolean;
+  } | null>(null);
+  const [designerSiteBusy, setDesignerSiteBusy] = useState(false);
+  const [designerSiteErr, setDesignerSiteErr] = useState<string | null>(null);
+
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const closeDeleteModal = useCallback(() => setDeleteModalOpen(false), []);
   useModalBodyLock(deleteModalOpen, closeDeleteModal);
@@ -116,6 +114,28 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
   useEffect(() => {
     void loadSession();
   }, [loadSession]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setDesignerSiteErr(null);
+      try {
+        const res = await fetch('/api/user/profile', { credentials: 'same-origin', cache: 'no-store' });
+        if (!res.ok || cancelled) return;
+        const p = (await res.json()) as {
+          winWinPartnerApproved?: boolean;
+          designerSlug?: string | null;
+          designerSiteVisible?: boolean;
+        };
+        if (!cancelled) setPartnerVitrine(p);
+      } catch {
+        if (!cancelled) setPartnerVitrine(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -171,7 +191,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
         body: JSON.stringify({ email: em }),
       });
       if (!res.ok) {
-        setEmailErr(await errMsg(res));
+        setEmailErr(await readApiErrorMessage(res));
         return;
       }
       setEmailPending(true);
@@ -202,7 +222,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; user?: MeUser; message?: string };
       if (!res.ok) {
-        setEmailErr((await errMsg(res)) || data.message || 'Ошибка');
+        setEmailErr((await readApiErrorMessage(res)) || data.message || 'Ошибка');
         return;
       }
       if (data.user) {
@@ -241,7 +261,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
         body: JSON.stringify({ phone: phoneInput }),
       });
       if (!res.ok) {
-        setPhoneErr(await errMsg(res));
+        setPhoneErr(await readApiErrorMessage(res));
         return;
       }
       setPhonePending(true);
@@ -271,7 +291,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; user?: MeUser };
       if (!res.ok) {
-        setPhoneErr(await errMsg(res));
+        setPhoneErr(await readApiErrorMessage(res));
         return;
       }
       if (data.user) {
@@ -312,7 +332,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       if (!res.ok) {
-        setPasswordError(await errMsg(res));
+        setPasswordError(await readApiErrorMessage(res));
         return;
       }
       setCurrentPassword('');
@@ -341,7 +361,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
         }),
       });
       if (!res.ok) {
-        setConsentErr(await errMsg(res));
+        setConsentErr(await readApiErrorMessage(res));
         return;
       }
       const j = (await res.json()) as { consentPersonalDataAcceptedAt?: string | null; consentSmsMarketingAcceptedAt?: string | null };
@@ -362,10 +382,69 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
     }
   };
 
+  const onDesignerSiteVisibleChange = async (visible: boolean) => {
+    setDesignerSiteErr(null);
+    const prev = partnerVitrine;
+    setPartnerVitrine((v) => (v ? { ...v, designerSiteVisible: visible } : v));
+    setDesignerSiteBusy(true);
+    try {
+      const res = await fetch('/api/user/designer-site-visibility', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ visible }),
+      });
+      if (!res.ok) {
+        if (prev) setPartnerVitrine(prev);
+        setDesignerSiteErr(await readApiErrorMessage(res));
+        return;
+      }
+      const p = (await res.json()) as {
+        winWinPartnerApproved?: boolean;
+        designerSlug?: string | null;
+        designerSiteVisible?: boolean;
+      };
+      setPartnerVitrine((v) => ({
+        winWinPartnerApproved:
+          typeof p.winWinPartnerApproved === 'boolean' ? p.winWinPartnerApproved : Boolean(v?.winWinPartnerApproved),
+        designerSlug: p.designerSlug ?? v?.designerSlug ?? null,
+        designerSiteVisible: typeof p.designerSiteVisible === 'boolean' ? p.designerSiteVisible : Boolean(v?.designerSiteVisible),
+      }));
+      onSessionChanged?.();
+      router.refresh();
+    } catch {
+      if (prev) setPartnerVitrine(prev);
+      setDesignerSiteErr('Не удалось сохранить. Попробуйте позже.');
+    } finally {
+      setDesignerSiteBusy(false);
+    }
+  };
+
   if (loadingUser) {
+    const sh = styles.skeletonShimmer;
     return (
-      <div className={styles.settingsRoot} aria-busy>
-        <p className={styles.settingsMuted}>Загрузка…</p>
+      <div className={styles.settingsRoot} aria-busy aria-label="Загрузка настроек">
+        <div className={styles.settingsLoadSections}>
+          <div className={styles.settingsLoadSection}>
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '42%', height: 16 }} />
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '100%', height: 12 }} />
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '94%', height: 12 }} />
+          </div>
+          <div className={styles.settingsLoadSection}>
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '28%', height: 16 }} />
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '72%', height: 12 }} />
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '100%', maxWidth: 400, height: 40, borderRadius: 10 }} />
+          </div>
+          <div className={styles.settingsLoadSection}>
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '32%', height: 16 }} />
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '76%', height: 12 }} />
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '100%', maxWidth: 400, height: 40, borderRadius: 10 }} />
+          </div>
+          <div className={styles.settingsLoadSection}>
+            <div className={`${styles.skeletonLine} ${sh}`} style={{ width: '24%', height: 16 }} />
+            <div className={`${styles.skeletonBlock} ${sh}`} style={{ height: 140 }} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -378,9 +457,52 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
     );
   }
 
+  // Публикация в «Дизайнерах» — только одобренный партнёр (`GET /api/user/profile`).
+  const isApprovedPartnerDesigner =
+    partnerVitrine != null && partnerVitrine.winWinPartnerApproved === true;
+
   return (
     <>
       <div className={styles.settingsRoot} aria-label="Настройки аккаунта">
+        {isApprovedPartnerDesigner ? (
+          <section
+            className={`${styles.settingsSection} ${styles.page_settingsSection}`}
+            aria-label="Публикация профиля на сайте"
+          >
+            <h2 className={styles.settingsBlockTitle}>Публикация профиля на сайте</h2>
+            <p className={styles.settingsHelp}>
+              Включите, если хотите, чтобы ваш профиль отображался на сайте в разделе «Дизайнеры».
+              {partnerVitrine.designerSlug ? (
+                <>
+                  {' '}
+                  Публичный адрес: <strong>/designers/{partnerVitrine.designerSlug}</strong>.
+                </>
+              ) : null}
+            </p>
+            {designerSiteErr ? (
+              <p className={styles.settingsInlineError} role="alert">
+                {designerSiteErr}
+              </p>
+            ) : null}
+            <label
+              className={`${styles.settingsSwitchRow} ${styles.page_settingsSwitchRow}`}
+            >
+              <AccountCheckbox
+                className={`${styles.settingsSwitchCheckbox} ${styles.page_settingsSwitchCheckbox}`}
+                checked={Boolean(partnerVitrine.designerSiteVisible)}
+                disabled={designerSiteBusy}
+                onChange={(e) => {
+                  void onDesignerSiteVisibleChange(e.target.checked);
+                }}
+                aria-label="Показывать страницу дизайнера на сайте"
+              />
+              <span className={styles.settingsSwitchText}>
+                <span className={styles.settingsSwitchLabel}>Опубликовать</span>
+              </span>
+            </label>
+          </section>
+        ) : null}
+
         <section className={styles.settingsSection} aria-label="Email">
           <h2 className={styles.settingsBlockTitle}>Email</h2>
           <p className={styles.settingsHelp}>
@@ -408,7 +530,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
               }}
             />
             <div className={styles.settingsActions}>
-              <Button type="submit" variant="secondary" disabled={emailBusy} className={styles.settingsBtnSecondary}>
+              <Button type="submit" variant="primary" disabled={emailBusy}>
                 {emailBusy && !emailPending ? 'Отправка…' : 'Отправить код'}
               </Button>
             </div>
@@ -463,7 +585,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
               }}
             />
             <div className={styles.settingsActions}>
-              <Button type="submit" variant="secondary" disabled={phoneBusy} className={styles.settingsBtnSecondary}>
+              <Button type="submit" variant="primary" disabled={phoneBusy}>
                 {phoneBusy && !phonePending ? 'Отправка…' : 'Отправить код'}
               </Button>
             </div>
@@ -586,12 +708,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
             </label>
           </div>
           <div className={styles.settingsActions}>
-            <Button
-              type="submit"
-              variant="secondary"
-              className={styles.settingsBtnSecondary}
-              disabled={consentBusy}
-            >
+            <Button type="submit" variant="primary" disabled={consentBusy}>
               {consentBusy ? 'Сохранение…' : 'Сохранить согласия'}
             </Button>
           </div>

@@ -27,6 +27,16 @@ function CloseIcon() {
   );
 }
 
+function russianPluralChelovek(count: number): string {
+  const n = Math.abs(Math.floor(Number(count)));
+  const mod100 = n % 100;
+  const mod10 = n % 10;
+  if (mod100 >= 11 && mod100 <= 14) return 'человек';
+  if (mod10 === 1) return 'человек';
+  if (mod10 >= 2 && mod10 <= 4) return 'человека';
+  return 'человек';
+}
+
 type ProfileRefDto = { winWinReferralCode?: string | null };
 
 /** Контент страницы команды с модальным окном приглашения (оставляем пользователя на /account/team). */
@@ -234,7 +244,9 @@ export function TeamPageClient() {
         <div className={styles.structureRow}>
           <span className={styles.structureMeta}>
             <span className={styles.structureLabel}>Структура:</span>
-            <span className={styles.structurePeople}>{data.counts.total} человек</span>
+            <span className={styles.structurePeople}>
+              {data.counts.total} {russianPluralChelovek(data.counts.total)}
+            </span>
           </span>
           <span className={styles.structureDivider} aria-hidden />
           {data.inviter ? (
