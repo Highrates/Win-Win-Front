@@ -23,6 +23,13 @@
 .btnSecondary {
   background: var(--color-bright-snow);
   color: var(--color-ink-black);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.btnSecondary span {
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .btnSecondary:hover {

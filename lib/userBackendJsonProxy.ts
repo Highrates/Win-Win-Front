@@ -14,7 +14,7 @@ type ProxyJsonBase = {
   request: Request;
   /** путь относительно API base, напр. `users/me/profile` */
   backendPath: string;
-  method: 'GET' | 'POST' | 'PATCH';
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: string;
 };
 

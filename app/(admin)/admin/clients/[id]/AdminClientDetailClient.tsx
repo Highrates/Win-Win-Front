@@ -12,6 +12,7 @@ const TAB_ORDERS = 0;
 const TAB_INFO = 1;
 const TAB_CONSENTS = 2;
 const TAB_STRUCTURE = 3;
+const TAB_CASES = 4;
 
 type UserDetail = {
   id: string;
@@ -35,6 +36,34 @@ type UserDetail = {
     winWinReferralCode?: string | null;
   };
 };
+
+type AdminCaseRow = {
+  id: string;
+  title: string;
+  shortDescription: string | null;
+  coverImageUrls: unknown;
+  roomTypes: unknown;
+  createdAt: string;
+};
+
+function parseStringArray(v: unknown, max: number): string[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((x): x is string => typeof x === 'string')
+    .map((x) => x.trim())
+    .filter((x) => x.length > 0)
+    .slice(0, max);
+}
+
+function formatCaseRoomTypes(roomTypes: unknown): string {
+  const list = parseStringArray(roomTypes, 8);
+  return list.length ? list.join(', ') : '—';
+}
+
+function formatCaseCoverPreview(coverImageUrls: unknown): string | null {
+  const u = parseStringArray(coverImageUrls, 1);
+  return u[0] ?? null;
+}
 
 type StructureL2 = {
   id: string;
@@ -98,6 +127,11 @@ export function AdminClientDetailClient({ id }: { id: string }) {
     joinedAt: string;
   }>(null);
   const [expandedL1, setExpandedL1] = useState<Record<string, boolean>>({});
+
+  const [cases, setCases] = useState<AdminCaseRow[] | null>(null);
+  const [casesLoading, setCasesLoading] = useState(false);
+  const [casesError, setCasesError] = useState<string | null>(null);
+  const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -193,6 +227,41 @@ export function AdminClientDetailClient({ id }: { id: string }) {
     };
   }, [tab, id, isPartner, s.errLoad, s.errStatus]);
 
+  useEffect(() => {
+    if (tab !== TAB_CASES) return;
+    let cancelled = false;
+    setCasesLoading(true);
+    setCasesError(null);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/admin/backend/cases/admin/users/${encodeURIComponent(id)}`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (!res.ok) {
+          if (!cancelled) {
+            setCasesError(res.status === 404 ? s.userNotFound : s.errStatus(res.status));
+            setCases(null);
+          }
+          return;
+        }
+        const j = (await res.json()) as unknown;
+        const list = Array.isArray(j) ? (j as AdminCaseRow[]) : [];
+        if (!cancelled) setCases(list);
+      } catch {
+        if (!cancelled) {
+          setCasesError(s.errLoad);
+          setCases(null);
+        }
+      } finally {
+        if (!cancelled) setCasesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, id, s]);
+
   const name = useMemo(() => {
     if (!data?.profile) return '—';
     if (!data.profile.firstName && !data.profile.lastName) return '—';
@@ -264,6 +333,15 @@ export function AdminClientDetailClient({ id }: { id: string }) {
               onClick={() => setTab(TAB_CONSENTS)}
             >
               {s.tabConsents}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === TAB_CASES}
+              className={`${objTabStyles.mainScopeTab} ${tab === TAB_CASES ? objTabStyles.mainScopeTabActive : ''}`}
+              onClick={() => setTab(TAB_CASES)}
+            >
+              {s.tabCases}
             </button>
             {isPartner ? (
               <button
@@ -394,6 +472,103 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                   </dd>
                 </div>
               </dl>
+            </section>
+          ) : null}
+          {tab === TAB_CASES ? (
+            <section className={styles.tabPanel} aria-label={s.tabCases}>
+              {casesError ? (
+                <p className={styles.error} role="alert">
+                  {casesError}
+                </p>
+              ) : null}
+              {casesLoading ? <p className={catalogStyles.muted}>{s.loading}</p> : null}
+              {!casesLoading && !casesError && cases && cases.length === 0 ? (
+                <p className={catalogStyles.muted}>Пока нет кейсов</p>
+              ) : null}
+              {!casesLoading && !casesError && cases && cases.length > 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className={catalogStyles.table}>
+                    <thead>
+                      <tr>
+                        <th>Обложка</th>
+                        <th>Название</th>
+                        <th>Помещения</th>
+                        <th>Создан</th>
+                        <th style={{ width: 120 }}>Действие</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cases.map((c) => {
+                        const cover = formatCaseCoverPreview(c.coverImageUrls);
+                        return (
+                          <tr key={c.id}>
+                            <td>
+                              {cover ? (
+                                <a href={cover} target="_blank" rel="noreferrer">
+                                  <img
+                                    src={cover}
+                                    alt=""
+                                    style={{ width: 72, height: 52, objectFit: 'cover', borderRadius: 6 }}
+                                    loading="lazy"
+                                  />
+                                </a>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                            <td>
+                              <Link
+                                href={`/admin/clients/${encodeURIComponent(id)}/cases/${encodeURIComponent(c.id)}`}
+                                className={styles.caseTitleLink}
+                              >
+                                {c.title}
+                              </Link>
+                              {c.shortDescription?.trim() ? (
+                                <div className={catalogStyles.muted} style={{ marginTop: 2 }}>
+                                  {c.shortDescription}
+                                </div>
+                              ) : null}
+                            </td>
+                            <td>{formatCaseRoomTypes(c.roomTypes)}</td>
+                            <td>{formatConsentAt(c.createdAt, '—', consLocale)}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+                                disabled={deletingCaseId === c.id}
+                                onClick={() => {
+                                  if (!confirm('Удалить кейс?')) return;
+                                  setDeletingCaseId(c.id);
+                                  setCasesError(null);
+                                  void (async () => {
+                                    try {
+                                      const res = await fetch(
+                                        `/api/admin/backend/cases/admin/${encodeURIComponent(c.id)}`,
+                                        { method: 'DELETE', credentials: 'same-origin' },
+                                      );
+                                      if (!res.ok) {
+                                        setCasesError(s.errStatus(res.status));
+                                        return;
+                                      }
+                                      setCases((prev) => (prev ? prev.filter((x) => x.id !== c.id) : prev));
+                                    } catch {
+                                      setCasesError(s.errLoad);
+                                    } finally {
+                                      setDeletingCaseId(null);
+                                    }
+                                  })();
+                                }}
+                              >
+                                {deletingCaseId === c.id ? 'Удаление…' : 'Удалить'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </section>
           ) : null}
           {tab === TAB_STRUCTURE && isPartner ? (

@@ -9,6 +9,35 @@
   transition: opacity 0.2s ease;
 }
 
+button.productCardSmall {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+}
+
+.productCardPick {
+  border-radius: 8px;
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  transition:
+    opacity 0.2s ease,
+    outline-color 0.15s ease;
+}
+
+.productCardPick:hover {
+  opacity: 0.92;
+}
+
+.productCardPickSelected {
+  outline-color: var(--color-blue);
+  background: color-mix(in srgb, var(--color-blue) 6%, transparent);
+}
+
 .productCardSmall:hover {
   opacity: 0.85;
 }

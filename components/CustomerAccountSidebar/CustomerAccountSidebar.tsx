@@ -156,84 +156,151 @@ export function CustomerAccountSidebar({
   return (
     <>
       <aside className={styles.sidebarRoot} aria-label="Меню личного кабинета">
-        <div className={styles.menuHeader}>
-          <div className={styles.menuHeaderRow}>
-            <span className={styles.userName}>{userName}</span>
-            <Link
-              href="/account/profile?profileEdit=1"
-              className={styles.editLink}
-              aria-label="Редактировать профиль"
-            >
-              <img src="/icons/account-sidebar/edit.svg" alt="" width={16} height={16} />
-            </Link>
+        {!profileLoaded ? (
+          <div className={styles.menuHeader}>
+            <div className={styles.menuHeaderRow}>
+              <div className={styles.menuGhostName} />
+              <div className={styles.menuGhostEdit} />
+            </div>
+            <div className={styles.menuGhostPartner} />
           </div>
-          {showDesignerNav ? <p className={styles.partnerStatus}>Партнер Win-Win</p> : <p className={styles.partnerStatus} aria-hidden />}
-        </div>
-
-        <nav className={styles.menuAllItems} aria-label="Разделы личного кабинета">
-          <div className={styles.menuItemsWrapper}>
-            {primaryItems.map((item) => (
-              <MenuItem
-                key={item.href}
-                href={item.href}
-                iconSrc={item.iconSrc}
-                label={item.label}
-                active={isMenuItemActive(pathname, item.href)}
-                hasNotification={notifySet.has(item.href)}
-              />
-            ))}
+        ) : (
+          <div className={styles.menuHeader}>
+            <div className={styles.menuHeaderRow}>
+              <span className={styles.userName}>{userName}</span>
+              <Link
+                href="/account/profile?profileEdit=1"
+                className={styles.editLink}
+                aria-label="Редактировать профиль"
+              >
+                <img src="/icons/account-sidebar/edit.svg" alt="" width={16} height={16} />
+              </Link>
+            </div>
+            {showDesignerNav ? <p className={styles.partnerStatus}>Партнер Win-Win</p> : <p className={styles.partnerStatus} aria-hidden />}
           </div>
+        )}
 
-          <hr className={styles.divider} aria-hidden />
+        {!profileLoaded ? (
+          <nav className={styles.menuAllItems} aria-busy="true" aria-label="Загрузка меню">
+            <div className={styles.menuItemsWrapper}>
+              {[1, 2, 3].map((k) => (
+                <div key={k} className={styles.menuItemGhost} />
+              ))}
+            </div>
+            <hr className={styles.divider} aria-hidden />
+            <div className={styles.menuItemsWrapper}>
+              {[1, 2, 3].map((k) => (
+                <div key={`m-${k}`} className={styles.menuItemGhost} />
+              ))}
+            </div>
+            <hr className={styles.divider} aria-hidden />
+            <div className={styles.menuItemsWrapper}>
+              {[1, 2].map((k) => (
+                <div key={`b-${k}`} className={styles.menuItemGhost} />
+              ))}
+            </div>
+          </nav>
+        ) : (
+          <nav className={styles.menuAllItems} aria-label="Разделы личного кабинета">
+            <div className={styles.menuItemsWrapper}>
+              {primaryItems.map((item) => (
+                <MenuItem
+                  key={item.href}
+                  href={item.href}
+                  iconSrc={item.iconSrc}
+                  label={item.label}
+                  active={isMenuItemActive(pathname, item.href)}
+                  hasNotification={notifySet.has(item.href)}
+                />
+              ))}
+            </div>
 
-          <div className={styles.menuItemsWrapper}>
-            {moreTopItems.map((item) => (
-              <MenuItem
-                key={item.href}
-                href={item.href}
-                iconSrc={item.iconSrc}
-                label={item.label}
-                active={isMenuItemActive(pathname, item.href)}
-                hasNotification={notifySet.has(item.href)}
-              />
-            ))}
-          </div>
+            <hr className={styles.divider} aria-hidden />
 
-          <hr className={styles.divider} aria-hidden />
+            <div className={styles.menuItemsWrapper}>
+              {moreTopItems.map((item) => (
+                <MenuItem
+                  key={item.href}
+                  href={item.href}
+                  iconSrc={item.iconSrc}
+                  label={item.label}
+                  active={isMenuItemActive(pathname, item.href)}
+                  hasNotification={notifySet.has(item.href)}
+                />
+              ))}
+            </div>
 
-          <div className={styles.menuItemsWrapper}>
-            {moreBottomItems.map((item) => (
-              <MenuItem
-                key={item.href}
-                href={item.href}
-                iconSrc={item.iconSrc}
-                label={item.label}
-                active={isMenuItemActive(pathname, item.href)}
-                hasNotification={notifySet.has(item.href)}
-              />
-            ))}
-          </div>
-        </nav>
+            <hr className={styles.divider} aria-hidden />
+
+            <div className={styles.menuItemsWrapper}>
+              {moreBottomItems.map((item) => (
+                <MenuItem
+                  key={item.href}
+                  href={item.href}
+                  iconSrc={item.iconSrc}
+                  label={item.label}
+                  active={isMenuItemActive(pathname, item.href)}
+                  hasNotification={notifySet.has(item.href)}
+                />
+              ))}
+            </div>
+          </nav>
+        )}
       </aside>
 
       <nav className={styles.mobileDock} aria-label="Навигация личного кабинета">
-        {primaryItems.map((item) => (
-          <MobileDockItem
-            key={item.href}
-            href={item.href}
-            iconSrc={item.iconSrc}
-            label={item.label}
-            active={isMenuItemActive(pathname, item.href)}
-          />
-        ))}
-        <button
-          type="button"
-          className={`${styles.mobileDockBurger} ${moreOpen ? styles.mobileDockBurgerOpen : ''} ${moreActive ? styles.mobileDockItemActive : ''}`}
-          aria-expanded={moreOpen}
-          aria-controls={sheetId}
-          aria-label={moreOpen ? 'Закрыть список разделов' : 'Остальные разделы'}
-          onClick={() => setMoreOpen((o) => !o)}
-        >
+        {!profileLoaded ? (
+          <>
+            {[1, 2, 3].map((k) => (
+              <div key={k} className={styles.mobileDockGhost} aria-hidden />
+            ))}
+            <button
+              type="button"
+              className={`${styles.mobileDockBurger} ${moreOpen ? styles.mobileDockBurgerOpen : ''}`}
+              disabled
+              aria-label="Загрузка меню"
+            >
+              <span className={styles.mobileDockBurgerIcon} aria-hidden>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    className={styles.mobileDockBurgerLineMenu}
+                    d="M3 6h18M3 12h18M3 18h18"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    className={styles.mobileDockBurgerLineClose}
+                    d="M18 6L6 18M6 6l12 12"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span className={styles.mobileDockLabel}>Ещё</span>
+            </button>
+          </>
+        ) : (
+          <>
+            {primaryItems.map((item) => (
+              <MobileDockItem
+                key={item.href}
+                href={item.href}
+                iconSrc={item.iconSrc}
+                label={item.label}
+                active={isMenuItemActive(pathname, item.href)}
+              />
+            ))}
+            <button
+              type="button"
+              className={`${styles.mobileDockBurger} ${moreOpen ? styles.mobileDockBurgerOpen : ''} ${moreActive ? styles.mobileDockItemActive : ''}`}
+              aria-expanded={moreOpen}
+              aria-controls={sheetId}
+              aria-label={moreOpen ? 'Закрыть список разделов' : 'Остальные разделы'}
+              onClick={() => setMoreOpen((o) => !o)}
+            >
           <span className={styles.mobileDockBurgerIcon} aria-hidden>
             <svg width={16} height={16} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
@@ -253,11 +320,13 @@ export function CustomerAccountSidebar({
               />
             </svg>
           </span>
-          <span className={styles.mobileDockLabel}>Ещё</span>
-        </button>
+              <span className={styles.mobileDockLabel}>Ещё</span>
+            </button>
+          </>
+        )}
       </nav>
 
-      {moreOpen ? (
+      {moreOpen && profileLoaded ? (
         <div className={styles.mobileSheet} role="presentation">
           <button
             type="button"

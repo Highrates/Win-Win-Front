@@ -9,6 +9,10 @@ export interface ProductCardSmallProps {
   collections?: number;
   likes?: number;
   comments?: number;
+  /** Режим выбора в модалке: без перехода по ссылке, подсветка выбранного. */
+  pickMode?: boolean;
+  selected?: boolean;
+  onPickToggle?: () => void;
 }
 
 function formatPrice(value: number): string {
@@ -24,9 +28,12 @@ export function ProductCardSmall({
   collections = 5,
   likes = 180,
   comments = 180,
+  pickMode,
+  selected,
+  onPickToggle,
 }: ProductCardSmallProps) {
-  return (
-    <Link href={`/product/${slug}`} className={styles.productCardSmall}>
+  const inner = (
+    <>
       <img
         className={styles.productImg}
         src={imageUrl}
@@ -74,6 +81,25 @@ export function ProductCardSmall({
           </div>
         </div>
       </div>
+    </>
+  );
+
+  if (pickMode) {
+    return (
+      <button
+        type="button"
+        className={`${styles.productCardSmall} ${styles.productCardPick} ${selected ? styles.productCardPickSelected : ''}`}
+        onClick={onPickToggle}
+        aria-pressed={selected}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={`/product/${slug}`} className={styles.productCardSmall}>
+      {inner}
     </Link>
   );
 }

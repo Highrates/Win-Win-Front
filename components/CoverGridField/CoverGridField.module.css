@@ -9,8 +9,8 @@
 }
 
 .label {
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
   color: var(--color-black);
 }
 

@@ -1,31 +1,33 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/Button';
+import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
+import { useProfileUploads } from '@/hooks/useProfileUploads';
 import { CaseBasicFields } from './components/CaseBasicFields';
 import { CaseCoverGridPicker } from './components/CaseCoverGridPicker';
+import { CaseProductsField, type CaseProductPick } from './components/CaseProductsField';
 import { CaseRichDescription } from './components/CaseRichDescription';
 import { CaseRoomTypeSelect } from './components/CaseRoomTypeSelect';
+import { formatBudgetDigitsGrouped } from '@/lib/formatBudgetRub';
 import styles from './page.module.css';
 
-const ROOM_TYPES = [
-  'Гостиная',
-  'Кухня',
-  'Столовая',
-  'Спальня',
-  'Детская',
-  'Кабинет',
-  'Прихожая',
-  'Ванная',
-] as const;
-
 export default function NewCasePage() {
+  const router = useRouter();
+  const { postMultipart } = useProfileUploads();
+
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [location, setLocation] = useState('');
+  const [year, setYear] = useState('');
+  const [budgetDigits, setBudgetDigits] = useState('');
+  const [pickedProducts, setPickedProducts] = useState<CaseProductPick[]>([]);
   const [richContent, setRichContent] = useState('');
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [roomsOpen, setRoomsOpen] = useState(false);
+  const [roomTypeOptions, setRoomTypeOptions] = useState<string[]>([]);
   const [coverGrid, setCoverGrid] = useState<'4:3' | '16:9'>('4:3');
   const [cover43a, setCover43a] = useState<File | null>(null);
   const [cover43b, setCover43b] = useState<File | null>(null);
@@ -33,6 +35,8 @@ export default function NewCasePage() {
   const [cover43aPreview, setCover43aPreview] = useState<string | null>(null);
   const [cover43bPreview, setCover43bPreview] = useState<string | null>(null);
   const [cover169Preview, setCover169Preview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const toggleRoom = (room: string) => {
     setSelectedRooms((prev) => (prev.includes(room) ? prev.filter((x) => x !== room) : [...prev, room]));
@@ -72,6 +76,81 @@ export default function NewCasePage() {
     return () => URL.revokeObjectURL(url);
   }, [cover169]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/public/site-settings', { cache: 'no-store' });
+        if (!res.ok || cancelled) return;
+        const j = (await res.json()) as { caseRoomTypeOptions?: unknown };
+        const list = Array.isArray(j.caseRoomTypeOptions)
+          ? j.caseRoomTypeOptions.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+          : [];
+        if (!cancelled) setRoomTypeOptions(list);
+      } catch {
+        if (!cancelled) setRoomTypeOptions([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const normalizedYear = useMemo(() => {
+    const y = year.trim();
+    if (!y) return null;
+    const n = Number(y);
+    if (!Number.isFinite(n)) return null;
+    return n;
+  }, [year]);
+
+  async function onSave() {
+    setSaveError(null);
+    const t = title.trim();
+    if (!t) {
+      setSaveError('Введите название кейса');
+      return;
+    }
+    setSaving(true);
+    try {
+      const uploaded: string[] = [];
+      if (coverGrid === '4:3') {
+        if (cover43a) uploaded.push((await postMultipart('/api/user/cases/media', cover43a, 'rich')).publicUrl);
+        if (cover43b) uploaded.push((await postMultipart('/api/user/cases/media', cover43b, 'rich')).publicUrl);
+      } else {
+        if (cover169) uploaded.push((await postMultipart('/api/user/cases/media', cover169, 'rich')).publicUrl);
+      }
+
+      const res = await fetch('/api/user/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          title: t,
+          shortDescription: shortDescription.trim() || null,
+          location: location.trim() || null,
+          year: normalizedYear,
+          budget: budgetDigits.trim() ? formatBudgetDigitsGrouped(budgetDigits) : null,
+          descriptionHtml: richContent.trim() || null,
+          roomTypes: selectedRooms,
+          coverLayout: coverGrid,
+          coverImageUrls: uploaded.length ? uploaded : null,
+          productIds: pickedProducts.length ? pickedProducts.map((p) => p.id) : null,
+        }),
+      });
+      if (!res.ok) {
+        setSaveError(await readApiErrorMessage(res));
+        return;
+      }
+      router.push('/account/cases');
+      router.refresh();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Не удалось сохранить');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.headerRow}>
@@ -79,19 +158,27 @@ export default function NewCasePage() {
           <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={styles.backArrow} aria-hidden />
           <span className={styles.backText}>Вернуться к кейсам</span>
         </Link>
-        <Button variant="primary">Сохранить</Button>
+        <Button variant="primary" disabled={saving} onClick={onSave}>
+          {saving ? 'Сохранение…' : 'Сохранить'}
+        </Button>
       </div>
 
       <div className={styles.form}>
         <CaseBasicFields
           title={title}
           onTitleChange={setTitle}
-          description={description}
-          onDescriptionChange={setDescription}
+          shortDescription={shortDescription}
+          onShortDescriptionChange={setShortDescription}
+          location={location}
+          onLocationChange={setLocation}
+          year={year}
+          onYearChange={setYear}
+          budgetDigits={budgetDigits}
+          onBudgetDigitsChange={setBudgetDigits}
         />
 
         <CaseRoomTypeSelect
-          roomTypes={ROOM_TYPES}
+          roomTypes={roomTypeOptions}
           selectedRooms={selectedRooms}
           roomsOpen={roomsOpen}
           onToggleOpen={() => setRoomsOpen((prev) => !prev)}
@@ -120,7 +207,19 @@ export default function NewCasePage() {
           }}
         />
 
-        <CaseRichDescription value={richContent} onChange={setRichContent} />
+        <CaseProductsField value={pickedProducts} onChange={setPickedProducts} />
+
+        <CaseRichDescription
+          value={richContent}
+          onChange={setRichContent}
+          uploadMedia={async (file) => (await postMultipart('/api/user/cases/media', file, 'rich')).publicUrl}
+        />
+
+        {saveError ? (
+          <p style={{ color: 'var(--color-red)', fontSize: 'var(--text-caption)' }} role="alert">
+            {saveError}
+          </p>
+        ) : null}
       </div>
     </div>
   );

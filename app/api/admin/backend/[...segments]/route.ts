@@ -55,6 +55,8 @@ function isAllowed(segments: string[]): boolean {
   if (segments[0] === 'blog' && segments[1] === 'admin') return true;
   if (segments[0] === 'users' && segments[1] === 'admin') return true;
   if (segments[0] === 'settings' && segments[1] === 'admin') return true;
+  /** Кейсы дизайнеров: `cases/admin/users/:userId`, `cases/admin/:id` */
+  if (segments[0] === 'cases' && segments[1] === 'admin') return true;
   return false;
 }
 

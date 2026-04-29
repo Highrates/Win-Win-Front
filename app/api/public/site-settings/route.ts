@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
-const empty = { heroImageUrls: [] as string[], designerServiceOptions: [] as string[] };
+const empty = {
+  heroImageUrls: [] as string[],
+  designerServiceOptions: [] as string[],
+  caseRoomTypeOptions: [] as string[],
+};
 
 export async function GET() {
   const base = getServerApiBase();
@@ -13,6 +17,7 @@ export async function GET() {
     const j = (await res.json().catch(() => ({}))) as {
       heroImageUrls?: unknown;
       designerServiceOptions?: unknown;
+      caseRoomTypeOptions?: unknown;
     };
     const heroImageUrls = Array.isArray(j.heroImageUrls)
       ? j.heroImageUrls.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
@@ -22,7 +27,12 @@ export async function GET() {
           .map((x) => (typeof x === 'string' ? x.trim() : ''))
           .filter((x) => x.length > 0)
       : [];
-    return NextResponse.json({ heroImageUrls, designerServiceOptions });
+    const caseRoomTypeOptions = Array.isArray(j.caseRoomTypeOptions)
+      ? j.caseRoomTypeOptions
+          .map((x) => (typeof x === 'string' ? x.trim() : ''))
+          .filter((x) => x.length > 0)
+      : [];
+    return NextResponse.json({ heroImageUrls, designerServiceOptions, caseRoomTypeOptions });
   } catch {
     return NextResponse.json(empty);
   }

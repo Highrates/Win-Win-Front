@@ -9,6 +9,7 @@ import styles from './siteSettings.module.css';
 type SiteSettingsAdminPayload = {
   heroImageUrls: string[];
   designerServiceOptions: string[];
+  caseRoomTypeOptions: string[];
 };
 
 type TabKey = 'hero' | 'other';
@@ -22,6 +23,7 @@ export function SiteSettingsClient() {
 
   const [heroImageUrls, setHeroImageUrls] = useState<string[]>([]);
   const [designerServiceOptions, setDesignerServiceOptions] = useState<string[]>([]);
+  const [caseRoomTypeOptions, setCaseRoomTypeOptions] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -33,6 +35,11 @@ export function SiteSettingsClient() {
       setDesignerServiceOptions(
         Array.isArray(data?.designerServiceOptions) && data.designerServiceOptions.length
           ? data.designerServiceOptions.filter((x) => typeof x === 'string' && x.trim().length > 0)
+          : [''],
+      );
+      setCaseRoomTypeOptions(
+        Array.isArray(data?.caseRoomTypeOptions) && data.caseRoomTypeOptions.length
+          ? data.caseRoomTypeOptions.filter((x) => typeof x === 'string' && x.trim().length > 0)
           : [''],
       );
     } catch (e) {
@@ -104,14 +111,34 @@ export function SiteSettingsClient() {
     setDesignerServiceOptions((prev) => (prev.length <= 1 ? [''] : prev.filter((_, i) => i !== index)));
   }
 
+  function addRoomTypeRow() {
+    setCaseRoomTypeOptions((prev) => [...prev, '']);
+  }
+
+  function setRoomTypeAt(index: number, value: string) {
+    setCaseRoomTypeOptions((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }
+
+  function removeRoomTypeAt(index: number) {
+    setCaseRoomTypeOptions((prev) => (prev.length <= 1 ? [''] : prev.filter((_, i) => i !== index)));
+  }
+
   async function saveOther() {
     setSaving(true);
     setSaveError(null);
     try {
       const list = designerServiceOptions.map((x) => x.trim()).filter((x) => x.length > 0);
+      const roomTypes = caseRoomTypeOptions.map((x) => x.trim()).filter((x) => x.length > 0);
       const res = await adminBackendFetch('settings/admin/site', {
         method: 'PATCH',
-        body: JSON.stringify({ designerServiceOptions: list }),
+        body: JSON.stringify({
+          designerServiceOptions: list,
+          caseRoomTypeOptions: roomTypes,
+        }),
       });
       const j = (await res.json().catch(() => ({}))) as { message?: string };
       if (!res.ok) {
@@ -258,6 +285,50 @@ export function SiteSettingsClient() {
                       type="button"
                       className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
                       onClick={() => removeServiceAt(index)}
+                    >
+                      Удалить
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <p className={catalogStyles.muted} style={{ marginTop: 18 }}>
+            Список типов помещений отображается в поле «Выберите типы помещений» при создании кейса дизайнера.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <button type="button" className={catalogStyles.btn} onClick={addRoomTypeRow} disabled={saving}>
+              Добавить строку
+            </button>
+          </div>
+          <table className={styles.serviceTable} style={{ marginTop: 8 }}>
+            <thead>
+              <tr>
+                <th scope="col">Тип помещения</th>
+                <th scope="col" style={{ width: 100 }}>
+                  Действие
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {caseRoomTypeOptions.map((row, index) => (
+                <tr key={index}>
+                  <td>
+                    <input
+                      type="text"
+                      className={styles.serviceInput}
+                      value={row}
+                      onChange={(e) => setRoomTypeAt(index, e.target.value)}
+                      placeholder="Название помещения"
+                      aria-label={`Тип помещения ${index + 1}`}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+                      onClick={() => removeRoomTypeAt(index)}
                     >
                       Удалить
                     </button>
