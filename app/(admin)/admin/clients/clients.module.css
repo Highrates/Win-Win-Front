@@ -83,6 +83,14 @@
   max-width: 960px;
 }
 
+/** Вкладка «Кейсы»: таблица на всю ширину контентной колонки */
+.tabPanelWide {
+  max-width: none;
+  width: 100%;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
 .aboutHtml {
   max-width: 100%;
   overflow-x: auto;

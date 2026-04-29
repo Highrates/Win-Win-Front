@@ -60,11 +60,6 @@ function formatCaseRoomTypes(roomTypes: unknown): string {
   return list.length ? list.join(', ') : '—';
 }
 
-function formatCaseCoverPreview(coverImageUrls: unknown): string | null {
-  const u = parseStringArray(coverImageUrls, 1);
-  return u[0] ?? null;
-}
-
 type StructureL2 = {
   id: string;
   userId: string;
@@ -475,7 +470,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
             </section>
           ) : null}
           {tab === TAB_CASES ? (
-            <section className={styles.tabPanel} aria-label={s.tabCases}>
+            <section className={`${styles.tabPanel} ${styles.tabPanelWide}`} aria-label={s.tabCases}>
               {casesError ? (
                 <p className={styles.error} role="alert">
                   {casesError}
@@ -490,7 +485,6 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                   <table className={catalogStyles.table}>
                     <thead>
                       <tr>
-                        <th>Обложка</th>
                         <th>Название</th>
                         <th>Помещения</th>
                         <th>Создан</th>
@@ -499,23 +493,8 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                     </thead>
                     <tbody>
                       {cases.map((c) => {
-                        const cover = formatCaseCoverPreview(c.coverImageUrls);
                         return (
                           <tr key={c.id}>
-                            <td>
-                              {cover ? (
-                                <a href={cover} target="_blank" rel="noreferrer">
-                                  <img
-                                    src={cover}
-                                    alt=""
-                                    style={{ width: 72, height: 52, objectFit: 'cover', borderRadius: 6 }}
-                                    loading="lazy"
-                                  />
-                                </a>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
                             <td>
                               <Link
                                 href={`/admin/clients/${encodeURIComponent(id)}/cases/${encodeURIComponent(c.id)}`}
@@ -523,11 +502,6 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                               >
                                 {c.title}
                               </Link>
-                              {c.shortDescription?.trim() ? (
-                                <div className={catalogStyles.muted} style={{ marginTop: 2 }}>
-                                  {c.shortDescription}
-                                </div>
-                              ) : null}
                             </td>
                             <td>{formatCaseRoomTypes(c.roomTypes)}</td>
                             <td>{formatConsentAt(c.createdAt, '—', consLocale)}</td>
