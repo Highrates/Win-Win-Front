@@ -1,4 +1,8 @@
 import Link from 'next/link';
+import {
+  normalizeProductCardImageUrls,
+  productCardImageOnError,
+} from '@/lib/productCardImageUrls';
 import styles from './ProductCardSmall.module.css';
 
 export interface ProductCardSmallProps {
@@ -6,6 +10,8 @@ export interface ProductCardSmallProps {
   name: string;
   price: number;
   imageUrl?: string;
+  /** Как у `ProductCard`: при непустом списке превью — первый кадр из галереи. */
+  imageUrls?: string[];
   collections?: number;
   likes?: number;
   comments?: number;
@@ -24,7 +30,8 @@ export function ProductCardSmall({
   slug,
   name,
   price,
-  imageUrl = '/images/placeholder.svg',
+  imageUrl,
+  imageUrls,
   collections = 5,
   likes = 180,
   comments = 180,
@@ -32,14 +39,16 @@ export function ProductCardSmall({
   selected,
   onPickToggle,
 }: ProductCardSmallProps) {
+  const primarySrc = normalizeProductCardImageUrls(imageUrl, imageUrls)[0];
   const inner = (
     <>
       <img
         className={styles.productImg}
-        src={imageUrl}
+        src={primarySrc}
         alt=""
         width={130}
         height={140}
+        onError={productCardImageOnError}
       />
       <div className={styles.productDetails}>
         <div className={styles.productTitles}>

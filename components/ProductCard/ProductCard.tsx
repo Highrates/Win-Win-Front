@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { normalizeProductCardImageUrls, productCardImageOnError } from '@/lib/productCardImageUrls';
 import styles from './ProductCard.module.css';
 
-const PLACEHOLDER = '/images/placeholder.svg';
 const SLIDE_MS = 380;
 
 export interface ProductCardProps {
@@ -43,23 +43,6 @@ function formatCardPrice(value: number, priceMin?: number, priceMax?: number): s
   return `~${fmt(Math.round(p))} ₽`;
 }
 
-function normalizeImageUrls(imageUrl: string | undefined, imageUrls: string[] | undefined): string[] {
-  const fromList = (imageUrls ?? []).map((u) => u?.trim()).filter(Boolean) as string[];
-  if (fromList.length > 0) {
-    const seen = new Set<string>();
-    return fromList.filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
-  }
-  if (imageUrl?.trim()) return [imageUrl.trim()];
-  return [PLACEHOLDER];
-}
-
-function imgOnError(ev: React.SyntheticEvent<HTMLImageElement>) {
-  const el = ev.currentTarget;
-  if (el.src !== PLACEHOLDER && !el.src.endsWith(PLACEHOLDER)) {
-    el.src = PLACEHOLDER;
-  }
-}
-
 export function ProductCard({
   slug,
   name,
@@ -74,7 +57,7 @@ export function ProductCard({
   comments = 180,
   heartActive = false,
 }: ProductCardProps) {
-  const urls = useMemo(() => normalizeImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
+  const urls = useMemo(() => normalizeProductCardImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
   const urlsKey = urls.join('\0');
   const [index, setIndex] = useState(0);
   const [slide, setSlide] = useState<null | { from: number; to: number; dir: 'next' | 'prev' }>(null);
@@ -194,7 +177,7 @@ export function ProductCard({
               src={urls[0]}
               alt=""
               draggable={false}
-              onError={imgOnError}
+              onError={productCardImageOnError}
             />
           ) : !slide ? (
             <img
@@ -202,7 +185,7 @@ export function ProductCard({
               src={urls[index]}
               alt=""
               draggable={false}
-              onError={imgOnError}
+              onError={productCardImageOnError}
             />
           ) : (
             <div className={styles.imgSlideWrap}>
@@ -220,7 +203,7 @@ export function ProductCard({
                         src={urls[slide.from]}
                         alt=""
                         draggable={false}
-                        onError={imgOnError}
+                        onError={productCardImageOnError}
                       />
                     </div>
                     <div className={styles.imgSlideCell}>
@@ -229,7 +212,7 @@ export function ProductCard({
                         src={urls[slide.to]}
                         alt=""
                         draggable={false}
-                        onError={imgOnError}
+                        onError={productCardImageOnError}
                       />
                     </div>
                   </>
@@ -241,7 +224,7 @@ export function ProductCard({
                         src={urls[slide.to]}
                         alt=""
                         draggable={false}
-                        onError={imgOnError}
+                        onError={productCardImageOnError}
                       />
                     </div>
                     <div className={styles.imgSlideCell}>
@@ -250,7 +233,7 @@ export function ProductCard({
                         src={urls[slide.from]}
                         alt=""
                         draggable={false}
-                        onError={imgOnError}
+                        onError={productCardImageOnError}
                       />
                     </div>
                   </>

@@ -48,11 +48,6 @@ function hitPrice(hit: CatalogProductSearchHit): number {
   return typeof n === 'number' && Number.isFinite(n) ? n : 0;
 }
 
-function hitThumb(hit: CatalogProductSearchHit): string | undefined {
-  const u = hit.thumbUrl ?? hit.imageUrls?.[0];
-  return typeof u === 'string' && u.trim() ? u : undefined;
-}
-
 function CloseIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -291,7 +286,10 @@ export function CaseProductsField({ value, onChange }: Props) {
                     slug={hit.slug}
                     name={hit.name}
                     price={hitPrice(hit)}
-                    imageUrl={hitThumb(hit)}
+                    imageUrl={
+                      typeof hit.thumbUrl === 'string' && hit.thumbUrl.trim() ? hit.thumbUrl : undefined
+                    }
+                    imageUrls={hit.imageUrls}
                     pickMode
                     selected={value.some((v) => v.id === hit.id)}
                     onPickToggle={() => toggleHit(hit)}
