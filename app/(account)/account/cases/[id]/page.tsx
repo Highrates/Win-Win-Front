@@ -12,34 +12,12 @@ import { CaseCoverGridPicker } from '../new/components/CaseCoverGridPicker';
 import { CaseProductsField, type CaseProductPick } from '../new/components/CaseProductsField';
 import { CaseRichDescription } from '../new/components/CaseRichDescription';
 import { CaseRoomTypeSelect } from '../new/components/CaseRoomTypeSelect';
+import {
+  coverUrlsFromUnknown,
+  parseApiCaseRow,
+  stringArrayFromUnknown,
+} from '@/lib/account/caseApiSchema';
 import styles from '../new/page.module.css';
-
-type CaseDto = {
-  id: string;
-  title: string;
-  shortDescription: string | null;
-  location: string | null;
-  year: number | null;
-  budget: string | null;
-  descriptionHtml: string | null;
-  coverLayout: '4:3' | '16:9' | null;
-  coverImageUrls: unknown;
-  roomTypes: unknown;
-  productIds: unknown;
-};
-
-function parseStringArray(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
-}
-
-function parseProductIds(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  return v
-    .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
-    .map((x) => x.trim())
-    .slice(0, 80);
-}
 
 export default function EditCasePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -112,14 +90,18 @@ export default function EditCasePage({ params }: { params: Promise<{ id: string 
           if (!cancelled) setLoadError(await readApiErrorMessage(res));
           return;
         }
-        const dto = (await res.json()) as CaseDto;
+        const dto = parseApiCaseRow(await res.json());
         if (cancelled) return;
+        if (!dto) {
+          setLoadError('Некорректный ответ сервера');
+          return;
+        }
         setTitle(dto.title ?? '');
         setShortDescription(dto.shortDescription ?? '');
         setLocation(dto.location ?? '');
         setYear(dto.year ? String(dto.year) : '');
         setBudgetDigits(parseBudgetDigits(dto.budget ?? ''));
-        const pids = parseProductIds(dto.productIds);
+        const pids = stringArrayFromUnknown(dto.productIds, 80);
         setPickedProducts(pids.map((id) => ({ id, slug: '', name: 'Товар' })));
         if (pids.length && !cancelled) {
           try {
@@ -140,11 +122,11 @@ export default function EditCasePage({ params }: { params: Promise<{ id: string 
           }
         }
         setRichContent(dto.descriptionHtml ?? '');
-        setSelectedRooms(parseStringArray(dto.roomTypes));
+        setSelectedRooms(stringArrayFromUnknown(dto.roomTypes, 64));
 
         const layout = dto.coverLayout === '16:9' ? '16:9' : '4:3';
         setCoverGrid(layout);
-        const urls = parseStringArray(dto.coverImageUrls);
+        const urls = coverUrlsFromUnknown(dto.coverImageUrls, 8);
         if (layout === '16:9') {
           const u0 = urls[0] ?? null;
           setRemoteCover169(u0);

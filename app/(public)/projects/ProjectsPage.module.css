@@ -165,9 +165,8 @@ section.projectsPageMarketSection {
     display: none;
   }
 
+  /* /projects: на мобилке без полосы тегов (чипы только на десктопе) */
   .marketRoomGroupMobile {
-    display: flex;
-    width: auto;
-    flex: 0 1 auto;
+    display: none;
   }
 }

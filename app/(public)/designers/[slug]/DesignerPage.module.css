@@ -253,6 +253,13 @@
   text-transform: uppercase;
 }
 
+.projectsEmpty {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
 .viewToggleGroup {
   display: inline-flex;
   justify-content: flex-start;
@@ -485,27 +492,48 @@
   color: var(--color-gray);
 }
 
+/* Список проектов: обложки как account/profile; единая высота ряда 393px (1 или 2 кадра) */
 .projectImagesWrapper {
   align-self: stretch;
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 406px));
+  grid-template-rows: 393px;
   gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  align-items: stretch;
+  justify-content: start;
+  height: 393px;
+  min-height: 393px;
+  box-sizing: border-box;
+}
+
+.projectThumbSlot:not(.projectThumbSlotDouble) {
+  max-width: 406px;
 }
 
 .projectThumbSlot {
-  flex: 1 1 0;
+  position: relative;
   min-width: 0;
-  aspect-ratio: 3 / 4;
-  border-radius: 8px;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
   overflow: hidden;
 }
 
+.projectThumbSlotDouble {
+  grid-column: 1 / -1;
+  max-width: min(100%, 800px) !important;
+  justify-self: start;
+}
+
 .projectThumbImg {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  object-position: center;
 }
 
 /* Вид сеткой: сетка обложек (4 колонки на десктопе) */
@@ -587,6 +615,13 @@
   padding-bottom: 24px;
 }
 
+.projectProductsScrollInner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: min-content;
+}
+
 .projectProductsScrollFade {
   position: absolute;
   bottom: 0;
@@ -617,6 +652,14 @@
   height: 24px;
   color: var(--color-gray);
   transform: rotate(90deg);
+}
+
+.projectProductsScrollEmpty {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+  padding: 8px 0;
 }
 
 /* Модальное окно «Еще о дизайнере» (как BrandPage) */
@@ -892,6 +935,20 @@
   overflow-y: auto;
 }
 
+.modalProjectProductsEmpty {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
+.modalProjectNoDescription {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
 @media (max-width: 768px) {
   .previewPageSection {
     margin-top: 78px;
@@ -937,7 +994,7 @@
 
   /* flex: 1 1 0 + overflow: hidden на десктопе давали на мобилке нулевую/обрезанную высоту блока с текстом */
   .projectBlockLeft {
-    padding: 24px;
+    padding: 16px;
     flex: 0 1 auto;
     align-self: stretch;
     overflow: visible;
@@ -957,17 +1014,33 @@
     align-items: stretch;
   }
 
-  /* В колонке flex: 1 1 0 на слоте задаёт базу по высоте → при height: auto у родителя слоты схлопываются в 0 (остаётся только gap ≈16px). На ряду та же схема работала по ширине. */
   .projectImagesWrapper {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    width: 100%;
+    height: auto;
+    min-height: 0;
     align-items: stretch;
+  }
+
+  .projectThumbSlot,
+  .projectThumbSlotDouble {
+    grid-column: auto;
+    max-width: none;
     width: 100%;
   }
 
-  .projectThumbSlot {
-    flex: 0 0 auto;
-    width: 100%;
-    align-self: stretch;
+  /* Две обложки — по-прежнему 393px; одна широкая — компактнее 216px */
+  .projectThumbSlot:not(.projectThumbSlotDouble) {
+    height: 393px;
+  }
+
+  .projectThumbSlotDouble {
+    height: 216px;
+  }
+
+  .projectThumbImg {
+    max-width: none;
   }
 
   .sliderCoversGrid {

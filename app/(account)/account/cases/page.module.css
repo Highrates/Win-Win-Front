@@ -192,6 +192,54 @@
   color: var(--color-black);
 }
 
+/* Превью обложек кейса — как на account/profile (previewImages) */
+.previewImages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 406px));
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  align-items: start;
+  justify-content: start;
+  margin-top: 16px;
+}
+
+.previewImageSlot:not(.previewImageSlotDouble) {
+  max-width: 406px;
+}
+
+.previewImageSlot {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+}
+
+.previewImageSlotDouble {
+  grid-column: 1 / -1;
+  max-width: min(100%, 800px) !important;
+  justify-self: start;
+}
+
+.previewImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 406 / 393;
+  max-width: 406px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.previewImageSlotDouble .previewImage {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  height: 393px;
+  object-fit: cover;
+  object-position: center;
+  aspect-ratio: unset;
+}
+
 .caseSkeletonWrapper {
   align-self: stretch;
   width: 100%;
@@ -307,5 +355,25 @@
     flex-direction: column;
     gap: 16px;
     padding: 20px;
+  }
+
+  .previewImages {
+    grid-template-columns: 1fr;
+  }
+
+  .previewImageSlot,
+  .previewImageSlotDouble {
+    grid-column: auto;
+    max-width: none;
+    width: 100%;
+  }
+
+  .previewImage {
+    max-width: none;
+  }
+
+  .previewImageSlotDouble .previewImage {
+    height: 393px;
+    max-width: 100%;
   }
 }

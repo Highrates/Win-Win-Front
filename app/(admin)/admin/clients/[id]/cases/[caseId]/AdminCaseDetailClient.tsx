@@ -4,32 +4,12 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import catalogStyles from '../../../../catalog/catalogAdmin.module.css';
 import clientsStyles from '../../../clients.module.css';
-
-type AdminCaseDetail = {
-  id: string;
-  userId: string;
-  title: string;
-  shortDescription: string | null;
-  location: string | null;
-  year: number | null;
-  budget: string | null;
-  descriptionHtml: string | null;
-  coverLayout: string | null;
-  coverImageUrls: unknown;
-  roomTypes: unknown;
-  productIds: unknown;
-  createdAt: string;
-  updatedAt: string;
-};
-
-function parseStringArray(v: unknown, max: number): string[] {
-  if (!Array.isArray(v)) return [];
-  return v
-    .filter((x): x is string => typeof x === 'string')
-    .map((x) => x.trim())
-    .filter((x) => x.length > 0)
-    .slice(0, max);
-}
+import {
+  type ApiCase,
+  coverUrlsFromUnknown,
+  parseApiCaseRow,
+  stringArrayFromUnknown,
+} from '@/lib/account/caseApiSchema';
 
 function formatRuDate(iso: string | undefined) {
   if (!iso) return '—';
@@ -49,7 +29,7 @@ export function AdminCaseDetailClient({
   clientId: string;
   caseId: string;
 }) {
-  const [row, setRow] = useState<AdminCaseDetail | null>(null);
+  const [row, setRow] = useState<ApiCase | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [productLabels, setProductLabels] = useState<{ id: string; name: string; slug: string }[]>([]);
@@ -68,15 +48,20 @@ export function AdminCaseDetailClient({
           if (!cancelled) setError(`Ошибка ${res.status}`);
           return;
         }
-        const dto = (await res.json()) as AdminCaseDetail;
+        const dto = parseApiCaseRow(await res.json());
         if (cancelled) return;
+        if (!dto) {
+          setRow(null);
+          setError('Некорректный ответ сервера');
+          return;
+        }
         if (dto.userId !== clientId) {
           setError('Кейс принадлежит другому клиенту');
           setRow(null);
           return;
         }
         setRow(dto);
-        const pids = parseStringArray(dto.productIds, 80);
+        const pids = stringArrayFromUnknown(dto.productIds, 80);
         if (pids.length) {
           const pr = await fetch('/api/public/catalog/products/resolve-ids', {
             method: 'POST',
@@ -101,8 +86,8 @@ export function AdminCaseDetailClient({
     };
   }, [clientId, caseId]);
 
-  const covers = useMemo(() => parseStringArray(row?.coverImageUrls, 4), [row?.coverImageUrls]);
-  const rooms = useMemo(() => parseStringArray(row?.roomTypes, 20), [row?.roomTypes]);
+  const covers = useMemo(() => coverUrlsFromUnknown(row?.coverImageUrls, 4), [row?.coverImageUrls]);
+  const rooms = useMemo(() => stringArrayFromUnknown(row?.roomTypes, 20), [row?.roomTypes]);
 
   return (
     <div className={clientsStyles.tabPanel}>

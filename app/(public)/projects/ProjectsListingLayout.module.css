@@ -254,6 +254,13 @@
   text-transform: uppercase;
 }
 
+.projectsEmpty {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
 .viewToggleGroup {
   display: inline-flex;
   justify-content: flex-start;
@@ -486,27 +493,48 @@
   color: var(--color-gray);
 }
 
+/* Список проектов: обложки как account/profile; единая высота ряда 393px (1 или 2 кадра) */
 .projectImagesWrapper {
   align-self: stretch;
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 406px));
+  grid-template-rows: 393px;
   gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  align-items: stretch;
+  justify-content: start;
+  height: 393px;
+  min-height: 393px;
+  box-sizing: border-box;
+}
+
+.projectThumbSlot:not(.projectThumbSlotDouble) {
+  max-width: 406px;
 }
 
 .projectThumbSlot {
-  flex: 1 1 0;
+  position: relative;
   min-width: 0;
-  aspect-ratio: 3 / 4;
-  border-radius: 8px;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
   overflow: hidden;
 }
 
+.projectThumbSlotDouble {
+  grid-column: 1 / -1;
+  max-width: min(100%, 800px) !important;
+  justify-self: start;
+}
+
 .projectThumbImg {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  object-position: center;
 }
 
 /* Вид сеткой: сетка обложек (4 колонки на десктопе) */
@@ -586,6 +614,21 @@
   flex-direction: column;
   gap: 10px;
   padding-bottom: 24px;
+}
+
+.projectProductsScrollInner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: min-content;
+}
+
+.projectProductsScrollEmpty {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+  padding: 8px 0;
 }
 
 .projectProductsScrollFade {
@@ -753,9 +796,22 @@
   padding-bottom: 24px;
 }
 
+.richContent {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
 /* Аккордеон в модалке (как ProductPage) */
+.modalAccordionsOuter {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 .modalAccordionsWrapper {
   align-self: stretch;
+  max-width: 48rem;
+  width: 100%;
   padding: 0 16px;
   border-radius: 8px;
   border: 0.5px solid rgba(0, 0, 0, 0.2);
@@ -763,7 +819,6 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
-  width: 100%;
   box-sizing: border-box;
 }
 
@@ -859,7 +914,8 @@
   font-size: var(--h2-size);
   font-weight: var(--h2-weight);
   color: var(--color-ink-black);
-  margin: 0 0 8px;
+  max-width: 48rem;
+  margin: 0 auto 8px;
   text-transform: uppercase;
 }
 
@@ -867,7 +923,8 @@
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   color: var(--color-gray);
-  margin: 0 0 16px;
+  max-width: 48rem;
+  margin: 0 auto 16px;
 }
 
 .modalProjectProductsScroll {
@@ -876,6 +933,20 @@
   gap: 10px;
   max-height: 60vh;
   overflow-y: auto;
+}
+
+.modalProjectProductsEmpty {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
+.modalProjectNoDescription {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
 }
 
 @media (max-width: 768px) {
@@ -915,7 +986,7 @@
 
   /* flex: 1 1 0 + overflow: hidden на десктопе давали на мобилке нулевую/обрезанную высоту блока с текстом */
   .projectBlockLeft {
-    padding: 24px;
+    padding: 16px;
     flex: 0 1 auto;
     align-self: stretch;
     overflow: visible;
@@ -935,17 +1006,33 @@
     align-items: stretch;
   }
 
-  /* В колонке flex: 1 1 0 на слоте задаёт базу по высоте -> при height: auto у родителя слоты схлопываются в 0 (остаётся только gap ~16px). На ряду та же схема работала по ширине. */
   .projectImagesWrapper {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    width: 100%;
+    height: auto;
+    min-height: 0;
     align-items: stretch;
+  }
+
+  .projectThumbSlot,
+  .projectThumbSlotDouble {
+    grid-column: auto;
+    max-width: none;
     width: 100%;
   }
 
-  .projectThumbSlot {
-    flex: 0 0 auto;
-    width: 100%;
-    align-self: stretch;
+  /* Две обложки — по-прежнему 393px; одна широкая — компактнее 216px */
+  .projectThumbSlot:not(.projectThumbSlotDouble) {
+    height: 393px;
+  }
+
+  .projectThumbSlotDouble {
+    height: 216px;
+  }
+
+  .projectThumbImg {
+    max-width: none;
   }
 
   .sliderCoversGrid {

@@ -4,25 +4,55 @@ import { ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/adminAuth';
 
 const HERO_ROTATION_COOKIE = 'winwin-hero-idx';
 
-const DESIGNER_PUBLIC_CSP = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "img-src 'self' https: data: blob:",
-  "media-src 'self' https:",
-  "font-src 'self' data:",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "connect-src 'self' https:",
-].join('; ');
+/**
+ * Абсолютные URL медиа с бэкенда (uploads) часто идут как http://127.0.0.1:3001/...
+ * В CSP `https:` их не покрывает; `'self'` — только origin фронта (Next).
+ * Собираем origin из тех же переменных, что и API, плюс типичные dev-хосты.
+ */
+function backendOriginsForCsp(): string {
+  const origins = new Set<string>();
+  for (const key of ['NEXT_PUBLIC_API_URL', 'API_URL', 'BACKEND_INTERNAL_URL'] as const) {
+    const v = process.env[key];
+    if (!v?.trim()) continue;
+    try {
+      origins.add(new URL(v.trim()).origin);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (process.env.NODE_ENV === 'development') {
+    origins.add('http://127.0.0.1:3001');
+    origins.add('http://localhost:3001');
+  }
+  return Array.from(origins).join(' ');
+}
+
+function publicVitrineCsp(): string {
+  const extra = backendOriginsForCsp();
+  const img = extra
+    ? `img-src 'self' https: data: blob: ${extra}`
+    : "img-src 'self' https: data: blob:";
+  const media = extra ? `media-src 'self' https: ${extra}` : "media-src 'self' https:";
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    img,
+    media,
+    "font-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "connect-src 'self' https:",
+  ].join('; ');
+}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/designers')) {
+  if (pathname.startsWith('/designers') || pathname.startsWith('/projects')) {
     const res = NextResponse.next();
-    res.headers.set('Content-Security-Policy', DESIGNER_PUBLIC_CSP);
+    res.headers.set('Content-Security-Policy', publicVitrineCsp());
     return res;
   }
 
@@ -54,5 +84,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/designers/:path*', '/admin', '/admin/:path*'],
+  matcher: ['/', '/designers/:path*', '/projects', '/projects/:path*', '/admin', '/admin/:path*'],
 };

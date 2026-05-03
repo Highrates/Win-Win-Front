@@ -6,12 +6,13 @@ import { Button } from '@/components/Button';
 import { DesignerProjectsSection } from '../DesignerProjectsSection';
 import { MoreAboutDesignerModal } from './MoreAboutDesignerModal';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import {
+  mapPublicCaseToProjectData,
+  parseCoverUrls,
+  type PublicCasePayload,
+} from '@/lib/mapPublicCaseToProjectData';
+import { parseNestPublicCaseItem } from '@/lib/parseNestPublicCase';
 import styles from './DesignerPage.module.css';
-
-function parseCoverUrls(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter((x): x is string => typeof x === 'string' && !!x.trim()).map((x) => x.trim());
-}
 
 type PublicDesignerPayload = {
   slug: string;
@@ -22,6 +23,7 @@ type PublicDesignerPayload = {
   coverLayout: '4:3' | '16:9';
   coverImageUrls: string[];
   aboutHtml: string | null;
+  cases: PublicCasePayload[];
 };
 
 async function fetchDesigner(slug: string): Promise<PublicDesignerPayload | null> {
@@ -35,6 +37,13 @@ async function fetchDesigner(slug: string): Promise<PublicDesignerPayload | null
     const raw = (await res.json()) as Record<string, unknown>;
     const coverUrls = parseCoverUrls(raw.coverImageUrls);
     const layoutRaw = raw.coverLayout === '16:9' ? '16:9' : '4:3';
+    const cases: PublicCasePayload[] = [];
+    if (Array.isArray(raw.cases)) {
+      for (const row of raw.cases) {
+        const parsed = parseNestPublicCaseItem(row);
+        if (parsed) cases.push(parsed.case);
+      }
+    }
     return {
       slug: String(raw.slug ?? slug),
       displayName: String(raw.displayName ?? ''),
@@ -44,6 +53,7 @@ async function fetchDesigner(slug: string): Promise<PublicDesignerPayload | null
       coverLayout: layoutRaw,
       coverImageUrls: coverUrls,
       aboutHtml: typeof raw.aboutHtml === 'string' ? raw.aboutHtml : null,
+      cases,
     };
   } catch {
     return null;
@@ -63,62 +73,6 @@ export async function generateMetadata({
     description: `Страница дизайнера ${name}`,
   };
 }
-
-const DESIGNER_PROJECTS = [
-  { slug: 'sofa-classic', name: 'Диван Classic', price: 135090, collections: 5, likes: 180, comments: 12 },
-  { slug: 'kreslo-lounge', name: 'Кресло Lounge', price: 45000, collections: 8, likes: 92, comments: 5 },
-  { slug: 'stolik-round', name: 'Столик Round', price: 28500, collections: 3, likes: 45, comments: 2 },
-  { slug: 'konsol-wood', name: 'Консоль Wood', price: 67200, collections: 12, likes: 210, comments: 18 },
-  { slug: 'stul-comfort', name: 'Стул Comfort', price: 19900, collections: 6, likes: 78, comments: 4 },
-  { slug: 'puf-velvet', name: 'Пуф Velvet', price: 12400, collections: 2, likes: 34, comments: 1 },
-  { slug: 'shkaf-modern', name: 'Шкаф Modern', price: 89000, collections: 15, likes: 256, comments: 22 },
-  { slug: 'lampa-arc', name: 'Лампа Arc', price: 35090, collections: 9, likes: 120, comments: 8 },
-  { slug: 'krovat-dream', name: 'Кровать Dream', price: 156000, collections: 7, likes: 189, comments: 14 },
-  { slug: 'tumba-night', name: 'Тумба Night', price: 24300, collections: 4, likes: 56, comments: 3 },
-  { slug: 'zerkalo-wall', name: 'Зеркало Wall', price: 31500, collections: 11, likes: 95, comments: 6 },
-  { slug: 'polka-open', name: 'Полка Open', price: 14700, collections: 3, likes: 41, comments: 2 },
-  { slug: 'stol-dining', name: 'Стол Dining', price: 78000, collections: 18, likes: 302, comments: 19 },
-  { slug: 'bra-minimal', name: 'Бра Minimal', price: 9800, collections: 5, likes: 67, comments: 5 },
-];
-
-const DESIGNER_PROJECTS_LIST = [
-  {
-    title: 'Название проекта',
-    places: 'Гостиная, Кухня',
-    description:
-      'Короткое описание проекта: интерьер в светлых тонах с акцентом на натуральные материалы и функциональную мебель.',
-    products: DESIGNER_PROJECTS,
-    coverImage: '/images/placeholder.svg',
-    coverImage2: '/images/placeholder.svg',
-  },
-  {
-    title: 'Светлая гостиная',
-    places: 'Гостиная, Прихожая',
-    description:
-      'Современный интерьер с панорамными окнами и нейтральной палитрой. Акцент на текстиле и освещении.',
-    products: DESIGNER_PROJECTS,
-    coverImage: '/images/placeholder.svg',
-    coverImage2: '/images/placeholder.svg',
-  },
-  {
-    title: 'Минималистичная кухня',
-    places: 'Кухня',
-    description:
-      'Кухня-гостиная с островом и встроенной техникой. Материалы: массив дуба, кварц, матовая керамика.',
-    products: DESIGNER_PROJECTS,
-    coverImage: '/images/placeholder.svg',
-    coverImage2: '/images/placeholder.svg',
-  },
-  {
-    title: 'Спальня с гардеробной',
-    places: 'Спальня, Гардеробная',
-    description:
-      'Комфортная спальня с зонированием и встроенной гардеробной. Тёплые оттенки и мягкое освещение.',
-    products: DESIGNER_PROJECTS,
-    coverImage: '/images/placeholder.svg',
-    coverImage2: '/images/placeholder.svg',
-  },
-];
 
 export default async function DesignerPage({
   params,
@@ -261,7 +215,10 @@ export default async function DesignerPage({
       <section className={styles.marketSection} aria-label="Работы дизайнера">
         <div className="padding-global">
           <div className={styles.marketSectionInner}>
-            <DesignerProjectsSection projects={DESIGNER_PROJECTS_LIST} stylesModule={styles} />
+            <DesignerProjectsSection
+              projects={designer.cases.map((c) => mapPublicCaseToProjectData(c))}
+              stylesModule={styles}
+            />
           </div>
         </div>
       </section>

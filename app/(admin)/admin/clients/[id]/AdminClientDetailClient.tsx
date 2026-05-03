@@ -7,6 +7,7 @@ import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
 import objTabStyles from '../../objects/objectsLibrary.module.css';
 import styles from '../clients.module.css';
+import { parseApiCaseList, roomTypesCommaSeparated, type ApiCase } from '@/lib/account/caseApiSchema';
 
 const TAB_ORDERS = 0;
 const TAB_INFO = 1;
@@ -36,29 +37,6 @@ type UserDetail = {
     winWinReferralCode?: string | null;
   };
 };
-
-type AdminCaseRow = {
-  id: string;
-  title: string;
-  shortDescription: string | null;
-  coverImageUrls: unknown;
-  roomTypes: unknown;
-  createdAt: string;
-};
-
-function parseStringArray(v: unknown, max: number): string[] {
-  if (!Array.isArray(v)) return [];
-  return v
-    .filter((x): x is string => typeof x === 'string')
-    .map((x) => x.trim())
-    .filter((x) => x.length > 0)
-    .slice(0, max);
-}
-
-function formatCaseRoomTypes(roomTypes: unknown): string {
-  const list = parseStringArray(roomTypes, 8);
-  return list.length ? list.join(', ') : '—';
-}
 
 type StructureL2 = {
   id: string;
@@ -123,7 +101,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
   }>(null);
   const [expandedL1, setExpandedL1] = useState<Record<string, boolean>>({});
 
-  const [cases, setCases] = useState<AdminCaseRow[] | null>(null);
+  const [cases, setCases] = useState<ApiCase[] | null>(null);
   const [casesLoading, setCasesLoading] = useState(false);
   const [casesError, setCasesError] = useState<string | null>(null);
   const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
@@ -241,8 +219,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
           return;
         }
         const j = (await res.json()) as unknown;
-        const list = Array.isArray(j) ? (j as AdminCaseRow[]) : [];
-        if (!cancelled) setCases(list);
+        if (!cancelled) setCases(parseApiCaseList(j));
       } catch {
         if (!cancelled) {
           setCasesError(s.errLoad);
@@ -503,7 +480,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                                 {c.title}
                               </Link>
                             </td>
-                            <td>{formatCaseRoomTypes(c.roomTypes)}</td>
+                            <td>{roomTypesCommaSeparated(c.roomTypes) || '—'}</td>
                             <td>{formatConsentAt(c.createdAt, '—', consLocale)}</td>
                             <td>
                               <button

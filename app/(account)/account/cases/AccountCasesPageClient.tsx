@@ -5,30 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/Button';
 import { SearchBox } from '@/components/SearchBox/SearchBox';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
+import {
+  type ApiCase,
+  coverUrlsFromUnknown,
+  parseApiCaseList,
+  roomTypesCommaSeparated,
+} from '@/lib/account/caseApiSchema';
 import styles from './page.module.css';
-
-type CaseRow = {
-  id: string;
-  title: string;
-  shortDescription: string | null;
-  roomTypes: unknown;
-  createdAt: string;
-};
-
-function roomTypesLine(roomTypes: unknown): string {
-  if (!Array.isArray(roomTypes)) return '';
-  return roomTypes
-    .filter((x): x is string => typeof x === 'string')
-    .map((x) => x.trim())
-    .filter((x) => x.length > 0)
-    .join(', ');
-}
 
 export function AccountCasesPageClient() {
   const router = useRouter();
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [items, setItems] = useState<CaseRow[]>([]);
+  const [items, setItems] = useState<ApiCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -38,8 +27,7 @@ export function AccountCasesPageClient() {
     const res = await fetch('/api/user/cases', { credentials: 'same-origin', cache: 'no-store' });
     if (!res.ok) throw new Error(await readApiErrorMessage(res));
     const j = (await res.json()) as unknown;
-    const list = Array.isArray(j) ? (j as CaseRow[]) : [];
-    return list;
+    return parseApiCaseList(j);
   }, []);
 
   useEffect(() => {
@@ -226,9 +214,30 @@ export function AccountCasesPageClient() {
                   <div className={styles.casesWrapperInner}>
                     <div className={styles.caseHead}>
                       <div className={styles.caseTitle}>{item.title}</div>
-                      <div className={styles.caseMeta}>{roomTypesLine(item.roomTypes)}</div>
+                      <div className={styles.caseMeta}>{roomTypesCommaSeparated(item.roomTypes)}</div>
                     </div>
                     <div className={styles.caseDescription}>{item.shortDescription ?? ''}</div>
+                    {(() => {
+                      const max =
+                        item.coverLayout === '16:9' ? 1 : 2;
+                      const urls = coverUrlsFromUnknown(item.coverImageUrls, max);
+                      if (!urls.length) return null;
+                      const single = urls.length === 1;
+                      return (
+                        <div className={styles.previewImages}>
+                          {urls.map((url, i) => (
+                            <div
+                              key={`${item.id}-${i}-${url.slice(0, 48)}`}
+                              className={`${styles.previewImageSlot} ${
+                                single && i === 0 ? styles.previewImageSlotDouble : ''
+                              }`}
+                            >
+                              <img src={url} alt="" className={styles.previewImage} />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <button
