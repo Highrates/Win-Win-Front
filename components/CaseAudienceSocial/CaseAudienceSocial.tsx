@@ -1,8 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import { getCachedIsAuthenticated } from '@/lib/userSessionClient';
+import { useToggleLike } from '@/hooks/useToggleLike';
 
 type ClassNames = {
   interactItem: string;
@@ -18,70 +16,15 @@ type Props = {
 };
 
 export function CaseAudienceSocial({ caseId, likesDisplayCount, classNames: cn }: Props) {
-  const router = useRouter();
-  const [auth, setAuth] = useState<boolean | null>(null);
-  const [liked, setLiked] = useState<boolean | null>(null);
-  const [count, setCount] = useState(likesDisplayCount);
-  const [busy, setBusy] = useState(false);
+  const like = useToggleLike({
+    kind: 'case',
+    id: caseId,
+    likesDisplayCount,
+    enabled: true,
+    mode: 'uncontrolled',
+  });
 
-  useEffect(() => {
-    setCount(likesDisplayCount);
-  }, [likesDisplayCount]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const ok = await getCachedIsAuthenticated();
-      if (cancelled) return;
-      setAuth(ok);
-      if (!ok) return;
-      try {
-        const res = await fetch(`/api/user/likes/cases/${encodeURIComponent(caseId)}/me`, {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!res.ok) return;
-        const j = (await res.json()) as { liked?: boolean };
-        if (!cancelled) setLiked(j.liked === true);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [caseId]);
-
-  const toggle = useCallback(async () => {
-    const ok = auth ?? (await getCachedIsAuthenticated());
-    if (!ok) {
-      router.push('/login');
-      return;
-    }
-    if (liked === null) return;
-    setBusy(true);
-    const next = !liked;
-    const prev = count;
-    setLiked(next);
-    setCount((c) => c + (next ? 1 : -1));
-    try {
-      const res = await fetch(`/api/user/likes/cases/${encodeURIComponent(caseId)}`, {
-        method: next ? 'POST' : 'DELETE',
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        setLiked(!next);
-        setCount(prev);
-      }
-    } catch {
-      setLiked(!next);
-      setCount(prev);
-    } finally {
-      setBusy(false);
-    }
-  }, [auth, liked, count, caseId, router]);
-
-  const showHeart = auth === true;
+  const showHeart = like.auth === true;
 
   return (
     <>
@@ -89,11 +32,11 @@ export function CaseAudienceSocial({ caseId, likesDisplayCount, classNames: cn }
         <button
           type="button"
           className={cn.interactItem}
-          disabled={busy || liked === null}
-          aria-label={liked ? 'Убрать из избранного' : 'Добавить в избранное'}
-          onClick={() => void toggle()}
+          disabled={like.busy || !like.interactiveReady}
+          aria-label={like.liked ? 'Убрать лайк' : 'Поставить лайк'}
+          onClick={() => void like.toggle()}
         >
-          {liked ? (
+          {like.liked ? (
             <svg
               className={cn.heartActive}
               width={20}
@@ -114,7 +57,7 @@ export function CaseAudienceSocial({ caseId, likesDisplayCount, classNames: cn }
           ) : (
             <img src="/icons/heart.svg" alt="" width={20} height={20} className={cn.interactIcon} />
           )}
-          <span className={cn.interactValue}>{Math.max(0, count)}</span>
+          <span className={cn.interactValue}>{Math.max(0, like.count)}</span>
         </button>
       ) : null}
       <div className={cn.interactItem}>

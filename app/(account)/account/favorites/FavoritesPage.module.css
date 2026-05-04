@@ -1,3 +1,29 @@
+.loadMoreWrap {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.loadMoreBtn {
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-ink-black, #111);
+  background: rgba(5, 24, 38, 0.06);
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.loadMoreBtn:hover:not(:disabled) {
+  background: rgba(5, 24, 38, 0.1);
+}
+
+.loadMoreBtn:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
 .muted {
   margin: 12px 0 0;
   color: rgba(0, 0, 0, 0.55);
@@ -20,13 +46,25 @@
   row-gap: 32px;
 }
 
-/* Только вкладка «Проекты и концепции» на /account/favorites (мержится с классами секций). */
+/* Обёртка вкладки «Проекты и концепции»: без margin из Recommendations.section (там 80px на мобилке). */
 .favoritesProjectsRecommendationsSection {
   margin-top: 32px;
+  width: 100%;
+  align-self: stretch;
 }
 
 .favoritesProjectsSliderCoversGrid {
   margin-top: 32px;
+}
+
+@media (max-width: 768px) {
+  .favoritesProjectsRecommendationsSection {
+    margin-top: 20px;
+  }
+
+  .favoritesProjectsSliderCoversGrid {
+    margin-top: 20px;
+  }
 }
 
 @media (min-width: 769px) {

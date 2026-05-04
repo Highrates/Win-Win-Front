@@ -1,8 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import { getCachedIsAuthenticated } from '@/lib/userSessionClient';
+import { useToggleLike } from '@/hooks/useToggleLike';
 import styles from './ProductPage.module.css';
 
 type Props = {
@@ -12,70 +10,15 @@ type Props = {
 
 /** Только лайк + счётчик; блок коллекций и комментариев остаётся в RSC `page.tsx`. */
 export function ProductPdpHeartInteract({ productId, likesDisplayCount }: Props) {
-  const router = useRouter();
-  const [auth, setAuth] = useState<boolean | null>(null);
-  const [liked, setLiked] = useState<boolean | null>(null);
-  const [count, setCount] = useState(likesDisplayCount);
-  const [busy, setBusy] = useState(false);
+  const like = useToggleLike({
+    kind: 'product',
+    id: productId,
+    likesDisplayCount,
+    enabled: true,
+    mode: 'uncontrolled',
+  });
 
-  useEffect(() => {
-    setCount(likesDisplayCount);
-  }, [likesDisplayCount]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const ok = await getCachedIsAuthenticated();
-      if (cancelled) return;
-      setAuth(ok);
-      if (!ok) return;
-      try {
-        const res = await fetch(`/api/user/likes/products/${encodeURIComponent(productId)}/me`, {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!res.ok) return;
-        const j = (await res.json()) as { liked?: boolean };
-        if (!cancelled) setLiked(j.liked === true);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [productId]);
-
-  const toggleLike = useCallback(async () => {
-    const ok = auth ?? (await getCachedIsAuthenticated());
-    if (!ok) {
-      router.push('/login');
-      return;
-    }
-    if (liked === null) return;
-    setBusy(true);
-    const next = !liked;
-    const prev = count;
-    setLiked(next);
-    setCount((c) => c + (next ? 1 : -1));
-    try {
-      const res = await fetch(`/api/user/likes/products/${encodeURIComponent(productId)}`, {
-        method: next ? 'POST' : 'DELETE',
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        setLiked(!next);
-        setCount(prev);
-      }
-    } catch {
-      setLiked(!next);
-      setCount(prev);
-    } finally {
-      setBusy(false);
-    }
-  }, [auth, liked, count, productId, router]);
-
-  if (auth !== true) {
+  if (like.auth !== true) {
     return null;
   }
 
@@ -83,11 +26,11 @@ export function ProductPdpHeartInteract({ productId, likesDisplayCount }: Props)
     <button
       type="button"
       className={styles.productDetailsInteractItem}
-      disabled={busy || liked === null}
-      aria-label={liked ? 'Убрать из избранного' : 'Добавить в избранное'}
-      onClick={() => void toggleLike()}
+      disabled={like.busy || !like.interactiveReady}
+      aria-label={like.liked ? 'Убрать лайк' : 'Поставить лайк'}
+      onClick={() => void like.toggle()}
     >
-      {liked ? (
+      {like.liked ? (
         <svg
           className={styles.productDetailsHeartActive}
           width={20}
@@ -114,7 +57,7 @@ export function ProductPdpHeartInteract({ productId, likesDisplayCount }: Props)
           className={styles.productDetailsInteractIcon}
         />
       )}
-      <span className={styles.productDetailsInteractValue}>{Math.max(0, count)}</span>
+      <span className={styles.productDetailsInteractValue}>{Math.max(0, like.count)}</span>
     </button>
   );
 }

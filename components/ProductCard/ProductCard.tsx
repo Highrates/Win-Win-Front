@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useToggleLike } from '@/hooks/useToggleLike';
 import { normalizeProductCardImageUrls, productCardImageOnError } from '@/lib/productCardImageUrls';
-import { getCachedIsAuthenticated } from '@/lib/userSessionClient';
 import styles from './ProductCard.module.css';
 
 const SLIDE_MS = 380;
@@ -27,12 +26,12 @@ export interface ProductCardProps {
   collections?: number;
   likes?: number;
   comments?: number;
-  /** Иконка избранного с обводкой (страница «Избранное» в ЛК или явное значение). */
+  /** Сердце с обводкой: в ЛК при списке лайков или явное значение с сервера. */
   heartActive?: boolean;
   /** С `productId`: вызывать POST/DELETE лайка (по умолчанию true). */
   likesInteractive?: boolean;
-  /** После успешного POST/DELETE лайка (для сброса списка избранного и т.п.). */
-  onLikedChange?: (liked: boolean) => void;
+  /** После успешного POST/DELETE лайка (серверные liked и likesDisplayCount). */
+  onLikedChange?: (state: { liked: boolean; likesDisplayCount: number; productId: string }) => void;
 }
 
 function formatCardPrice(value: number, priceMin?: number, priceMax?: number): string {
@@ -68,17 +67,12 @@ export function ProductCard({
   likesInteractive = true,
   onLikedChange,
 }: ProductCardProps) {
-  const router = useRouter();
   const urls = useMemo(() => normalizeProductCardImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
   const urlsKey = urls.join('\0');
   const [index, setIndex] = useState(0);
   const [slide, setSlide] = useState<null | { from: number; to: number; dir: 'next' | 'prev' }>(null);
   const [slideRun, setSlideRun] = useState(false);
   const [cardHovered, setCardHovered] = useState(false);
-  const [auth, setAuth] = useState<boolean | null>(null);
-  const [likedFromApi, setLikedFromApi] = useState<boolean | null>(null);
-  const [likeCount, setLikeCount] = useState(likes);
-  const [likeBusy, setLikeBusy] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const blockLinkClickRef = useRef(false);
 
@@ -91,42 +85,34 @@ export function ProductCard({
     if (controlledInteractive) setControlledLiked(!!heartActive);
   }, [heartActive, controlledInteractive]);
 
+  const likeInteractive = !!(productId && likesInteractive);
+  const onLikeMutationSuccess = useCallback(
+    (s: { liked: boolean; likesDisplayCount: number; id: string }) => {
+      onLikedChange?.({ liked: s.liked, likesDisplayCount: s.likesDisplayCount, productId: s.id });
+    },
+    [onLikedChange],
+  );
+  const like = useToggleLike({
+    kind: 'product',
+    id: productId,
+    likesDisplayCount: likes,
+    enabled: likeInteractive,
+    mode: controlledInteractive ? 'controlled' : 'uncontrolled',
+    controlledLiked: controlledInteractive ? controlledLiked : undefined,
+    setControlledLiked: controlledInteractive ? setControlledLiked : undefined,
+    onMutationSuccess: onLikedChange ? onLikeMutationSuccess : undefined,
+  });
+
   const heartFilled =
     heartFilledControlled && !controlledInteractive
       ? !!heartActive
       : controlledInteractive
         ? controlledLiked
-        : !!likedFromApi;
+        : likeInteractive
+          ? like.liked
+          : false;
 
-  useEffect(() => {
-    setLikeCount(likes);
-  }, [likes]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const ok = await getCachedIsAuthenticated();
-      if (cancelled) return;
-      setAuth(ok);
-      if (!ok || !productId || !likesInteractive || heartFilledControlled) return;
-      try {
-        const res = await fetch(`/api/user/likes/products/${encodeURIComponent(productId)}/me`, {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!res.ok) return;
-        const j = (await res.json()) as { liked?: boolean };
-        if (!cancelled) setLikedFromApi(j.liked === true);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [productId, likesInteractive, heartFilledControlled]);
-
-  const showLikesColumn = auth === true;
+  const showLikesColumn = like.auth === true;
 
   useEffect(() => {
     setIndex(0);
@@ -377,55 +363,18 @@ export function ProductCard({
                 ) : (
                   <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
                 )}
-                <span className={styles.interactValue}>{Math.max(0, likeCount)}</span>
+                <span className={styles.interactValue}>{Math.max(0, like.count)}</span>
               </div>
             ) : (
               <button
                 type="button"
                 className={styles.interactItem}
-                disabled={
-                  likeBusy ||
-                  (controlledInteractive ? false : likedFromApi === null)
-                }
-                aria-label={heartFilled ? 'Убрать из избранного' : 'Добавить в избранное'}
-                onClick={async (e) => {
+                disabled={like.busy || (!controlledInteractive && !like.interactiveReady)}
+                aria-label={heartFilled ? 'Убрать лайк' : 'Поставить лайк'}
+                onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const ok = auth ?? (await getCachedIsAuthenticated());
-                  if (!ok) {
-                    router.push('/login');
-                    return;
-                  }
-                  const currentLiked = controlledInteractive ? controlledLiked : likedFromApi === true;
-                  if (!controlledInteractive && likedFromApi === null) return;
-                  setLikeBusy(true);
-                  const nextLiked = !currentLiked;
-                  const prevCount = likeCount;
-                  if (controlledInteractive) setControlledLiked(nextLiked);
-                  else setLikedFromApi(nextLiked);
-                  setLikeCount((c) => c + (nextLiked ? 1 : -1));
-                  try {
-                    const res = await fetch(
-                      `/api/user/likes/products/${encodeURIComponent(productId!)}`,
-                      {
-                        method: nextLiked ? 'POST' : 'DELETE',
-                        credentials: 'same-origin',
-                      },
-                    );
-                    if (!res.ok) {
-                      if (controlledInteractive) setControlledLiked(currentLiked);
-                      else setLikedFromApi(currentLiked);
-                      setLikeCount(prevCount);
-                    } else {
-                      onLikedChange?.(nextLiked);
-                    }
-                  } catch {
-                    if (controlledInteractive) setControlledLiked(currentLiked);
-                    else setLikedFromApi(currentLiked);
-                    setLikeCount(prevCount);
-                  } finally {
-                    setLikeBusy(false);
-                  }
+                  void like.toggle();
                 }}
               >
                 {heartFilled ? (
@@ -449,7 +398,7 @@ export function ProductCard({
                 ) : (
                   <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
                 )}
-                <span className={styles.interactValue}>{Math.max(0, likeCount)}</span>
+                <span className={styles.interactValue}>{Math.max(0, like.count)}</span>
               </button>
             )
           ) : null}

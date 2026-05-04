@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { ProductCard } from '@/components/ProductCard/ProductCard';
 import { ProjectsMarketSection } from '@/app/(public)/projects/ProjectsMarketSection';
@@ -10,10 +10,11 @@ import { parseNestPublicCaseItem } from '@/lib/parseNestPublicCase';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import type { ProjectData } from '@/app/(public)/designers/DesignerProjectsSection';
 import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
-import recStyles from '@/sections/home/Recommendations/Recommendations.module.css';
 import styles from './FavoritesPage.module.css';
 
 const TAB_NAMES = ['Товары', 'Проекты и концепции'] as const;
+
+const PAGE_SIZE = 36;
 
 type CollectionProduct = {
   id: string;
@@ -29,24 +30,69 @@ type CollectionProduct = {
 type CollectionJson = {
   products?: CollectionProduct[];
   cases?: unknown[];
+  productsTotal?: number;
+  casesTotal?: number;
 };
+
+function collectionUrl(params: {
+  productsLimit: number;
+  productsOffset: number;
+  casesLimit: number;
+  casesOffset: number;
+}) {
+  const q = new URLSearchParams({
+    productsLimit: String(params.productsLimit),
+    productsOffset: String(params.productsOffset),
+    casesLimit: String(params.casesLimit),
+    casesOffset: String(params.casesOffset),
+  });
+  return `/api/user/likes/collection?${q.toString()}`;
+}
+
+function mapCases(rawCases: unknown[]): ProjectData[] {
+  const mapped: ProjectData[] = [];
+  for (const row of rawCases) {
+    const parsed = parseNestPublicCaseItem(row, { requireDesignerMeta: false });
+    if (!parsed) continue;
+    const designer = parsed.designer;
+    mapped.push(
+      mapPublicCaseToProjectData(
+        parsed.case,
+        designer ? { slug: designer.slug, name: designer.name, photoUrl: designer.photoUrl } : undefined,
+      ),
+    );
+  }
+  return mapped;
+}
 
 export function FavoritesPageClient() {
   const [tab, setTab] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
+  const [loadingMoreCases, setLoadingMoreCases] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<CollectionProduct[]>([]);
   const [caseProjects, setCaseProjects] = useState<ProjectData[]>([]);
+  const [productsTotal, setProductsTotal] = useState(0);
+  const [casesTotal, setCasesTotal] = useState(0);
+  const prevTabRef = useRef(0);
 
-  const load = useCallback(async () => {
+  const loadFull = useCallback(async () => {
     setLoading(true);
+    setLoadingMoreProducts(false);
+    setLoadingMoreCases(false);
     setError(null);
     try {
-      const res = await fetch('/api/user/likes/collection', { credentials: 'same-origin', cache: 'no-store' });
+      const res = await fetch(collectionUrl({ productsLimit: PAGE_SIZE, productsOffset: 0, casesLimit: PAGE_SIZE, casesOffset: 0 }), {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
       if (res.status === 401) {
-        setError('Войдите в аккаунт, чтобы видеть избранное.');
+        setError('Войдите в аккаунт, чтобы видеть товары и проекты с вашим лайком.');
         setProducts([]);
         setCaseProjects([]);
+        setProductsTotal(0);
+        setCasesTotal(0);
         return;
       }
       if (!res.ok) {
@@ -56,22 +102,11 @@ export function FavoritesPageClient() {
       const data = (await res.json()) as CollectionJson;
       const rawProducts = Array.isArray(data.products) ? data.products : [];
       setProducts(rawProducts);
-      const rawCases = Array.isArray(data.cases) ? data.cases : [];
-      const mapped: ProjectData[] = [];
-      for (const row of rawCases) {
-        const parsed = parseNestPublicCaseItem(row, { requireDesignerMeta: false });
-        if (!parsed) continue;
-        const designer = parsed.designer;
-        mapped.push(
-          mapPublicCaseToProjectData(
-            parsed.case,
-            designer
-              ? { slug: designer.slug, name: designer.name, photoUrl: designer.photoUrl }
-              : undefined,
-          ),
-        );
-      }
-      setCaseProjects(mapped);
+      setCaseProjects(mapCases(Array.isArray(data.cases) ? data.cases : []));
+      setProductsTotal(typeof data.productsTotal === 'number' ? data.productsTotal : rawProducts.length);
+      setCasesTotal(
+        typeof data.casesTotal === 'number' ? data.casesTotal : (Array.isArray(data.cases) ? data.cases.length : 0),
+      );
     } catch {
       setError('Сеть или сервер недоступны');
     } finally {
@@ -79,9 +114,76 @@ export function FavoritesPageClient() {
     }
   }, []);
 
+  const loadMoreProducts = useCallback(async () => {
+    if (loadingMoreProducts || products.length >= productsTotal) return;
+    setLoadingMoreProducts(true);
+    setError(null);
+    try {
+      const offset = products.length;
+      const res = await fetch(
+        collectionUrl({
+          productsLimit: PAGE_SIZE,
+          productsOffset: offset,
+          casesLimit: 0,
+          casesOffset: 0,
+        }),
+        { credentials: 'same-origin', cache: 'no-store' },
+      );
+      if (!res.ok) {
+        setError(`Не удалось подгрузить товары (${res.status})`);
+        return;
+      }
+      const data = (await res.json()) as CollectionJson;
+      const raw = Array.isArray(data.products) ? data.products : [];
+      setProducts((prev) => [...prev, ...raw]);
+      if (typeof data.productsTotal === 'number') setProductsTotal(data.productsTotal);
+    } catch {
+      setError('Сеть или сервер недоступны');
+    } finally {
+      setLoadingMoreProducts(false);
+    }
+  }, [loadingMoreProducts, products.length, productsTotal]);
+
+  const loadMoreCases = useCallback(async () => {
+    if (loadingMoreCases || caseProjects.length >= casesTotal) return;
+    setLoadingMoreCases(true);
+    setError(null);
+    try {
+      const offset = caseProjects.length;
+      const res = await fetch(
+        collectionUrl({
+          productsLimit: 0,
+          productsOffset: 0,
+          casesLimit: PAGE_SIZE,
+          casesOffset: offset,
+        }),
+        { credentials: 'same-origin', cache: 'no-store' },
+      );
+      if (!res.ok) {
+        setError(`Не удалось подгрузить проекты (${res.status})`);
+        return;
+      }
+      const data = (await res.json()) as CollectionJson;
+      const rawCases = Array.isArray(data.cases) ? data.cases : [];
+      const chunk = mapCases(rawCases);
+      setCaseProjects((prev) => [...prev, ...chunk]);
+      if (typeof data.casesTotal === 'number') setCasesTotal(data.casesTotal);
+    } catch {
+      setError('Сеть или сервер недоступны');
+    } finally {
+      setLoadingMoreCases(false);
+    }
+  }, [loadingMoreCases, caseProjects.length, casesTotal]);
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadFull();
+  }, [loadFull]);
+
+  useEffect(() => {
+    const prev = prevTabRef.current;
+    prevTabRef.current = tab;
+    if (tab === 0 && prev !== 0) void loadFull();
+  }, [tab, loadFull]);
 
   const empty = useMemo(
     () => !loading && tab === 0 && products.length === 0,
@@ -92,18 +194,13 @@ export function FavoritesPageClient() {
     [loading, tab, caseProjects.length],
   );
 
+  const hasMoreProducts = products.length < productsTotal;
+  const hasMoreCases = caseProjects.length < casesTotal;
+
   const favoritesProjectsStyles = useMemo(
     () => ({
       ...listingLayoutStyles,
       sliderCoversGrid: `${listingLayoutStyles.sliderCoversGrid} ${styles.favoritesProjectsSliderCoversGrid}`,
-    }),
-    [],
-  );
-
-  const favoritesRecSectionStyles = useMemo(
-    () => ({
-      ...recStyles,
-      section: `${recStyles.section} ${styles.favoritesProjectsRecommendationsSection}`,
     }),
     [],
   );
@@ -115,7 +212,7 @@ export function FavoritesPageClient() {
           projects={TAB_NAMES as unknown as string[]}
           selectedIndex={tab}
           onSelect={setTab}
-          ariaLabel="Избранное"
+          ariaLabel="Лайкнутые товары и проекты"
         />
       </div>
 
@@ -123,7 +220,7 @@ export function FavoritesPageClient() {
 
       {loading ? (
         tab === 0 ? (
-          <div className={styles.skeletonGrid} aria-busy="true" aria-label="Загрузка избранного">
+          <div className={styles.skeletonGrid} aria-busy="true" aria-label="Загрузка лайков на товары">
             {Array.from({ length: 6 }, (_, i) => (
               <div key={i} className={styles.skeletonCard}>
                 <div className={styles.skeletonThumb} />
@@ -133,7 +230,7 @@ export function FavoritesPageClient() {
             ))}
           </div>
         ) : (
-          <div className={styles.skeletonProjectsBlock} aria-busy="true" aria-label="Загрузка избранного">
+          <div className={styles.skeletonProjectsBlock} aria-busy="true" aria-label="Загрузка лайков на проекты">
             <div className={styles.skeletonProjectsHeader} />
             <div className={styles.skeletonProjectsRow}>
               {Array.from({ length: 4 }, (_, i) => (
@@ -147,50 +244,85 @@ export function FavoritesPageClient() {
       {!loading && tab === 0 ? (
         <>
           {empty ? (
-            <p className={styles.muted}>Пока нет товаров в избранном.</p>
+            <p className={styles.muted}>Пока нет товаров с вашим лайком.</p>
           ) : (
-            <div className={styles.grid}>
-              {products.map((p) => {
-                const rawGallery = Array.isArray(p.imageUrls) ? p.imageUrls : [];
-                const resolvedGallery =
-                  rawGallery.length > 0
-                    ? rawGallery.map((u) => resolveMediaUrlForServer(u)).filter(Boolean)
-                    : [];
-                return (
-                  <ProductCard
-                    key={p.id}
-                    slug={p.slug}
-                    name={p.name}
-                    price={p.price}
-                    productId={p.id}
-                    imageUrl={p.imageUrl ? resolveMediaUrlForServer(p.imageUrl) : undefined}
-                    imageUrls={resolvedGallery.length > 1 ? resolvedGallery : undefined}
-                    collections={p.casesLinkedCount}
-                    likes={p.likesDisplayCount}
-                    heartActive
-                    likesInteractive
-                    onLikedChange={(liked) => {
-                      if (!liked) void load();
-                    }}
-                  />
-                );
-              })}
-            </div>
+            <>
+              <div className={styles.grid}>
+                {products.map((p) => {
+                  const rawGallery = Array.isArray(p.imageUrls) ? p.imageUrls : [];
+                  const resolvedGallery =
+                    rawGallery.length > 0
+                      ? rawGallery.map((u) => resolveMediaUrlForServer(u)).filter(Boolean)
+                      : [];
+                  return (
+                    <ProductCard
+                      key={p.id}
+                      slug={p.slug}
+                      name={p.name}
+                      price={p.price}
+                      productId={p.id}
+                      imageUrl={p.imageUrl ? resolveMediaUrlForServer(p.imageUrl) : undefined}
+                      imageUrls={resolvedGallery.length > 1 ? resolvedGallery : undefined}
+                      collections={p.casesLinkedCount}
+                      likes={p.likesDisplayCount}
+                      heartActive
+                      likesInteractive
+                      onLikedChange={({ liked, productId }) => {
+                        if (!liked) {
+                          setProducts((prev) => prev.filter((x) => x.id !== productId));
+                          setProductsTotal((t) => Math.max(0, t - 1));
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              {hasMoreProducts ? (
+                <div className={styles.loadMoreWrap}>
+                  <button
+                    type="button"
+                    className={styles.loadMoreBtn}
+                    disabled={loadingMoreProducts}
+                    aria-busy={loadingMoreProducts}
+                    aria-label="Подгрузить ещё товары с лайком"
+                    onClick={() => void loadMoreProducts()}
+                  >
+                    {loadingMoreProducts ? 'Загрузка…' : 'Показать ещё'}
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </>
       ) : null}
 
       {!loading && tab === 1 ? (
         emptyCases ? (
-          <p className={styles.muted}>Пока нет проектов в избранном.</p>
+          <p className={styles.muted}>Пока нет проектов с вашим лайком.</p>
         ) : (
-          <div className={favoritesRecSectionStyles.section}>
-            <ProjectsMarketSection
-              projects={caseProjects}
-              stylesModule={favoritesProjectsStyles}
-              gridOnly
-            />
-          </div>
+          <>
+            <div className={styles.favoritesProjectsRecommendationsSection}>
+              <ProjectsMarketSection
+                projects={caseProjects}
+                stylesModule={favoritesProjectsStyles}
+                gridOnly
+              />
+            </div>
+            {hasMoreCases ? (
+              <div className={styles.loadMoreWrap}>
+                <button
+                  type="button"
+                  className={styles.loadMoreBtn}
+                  disabled={loadingMoreCases}
+                  aria-busy={loadingMoreCases}
+                  aria-label="Подгрузить ещё проекты с лайком"
+                  onClick={() => void loadMoreCases()}
+                >
+                  {loadingMoreCases ? 'Загрузка…' : 'Показать ещё'}
+                </button>
+              </div>
+            ) : null}
+          </>
         )
       ) : null}
     </div>

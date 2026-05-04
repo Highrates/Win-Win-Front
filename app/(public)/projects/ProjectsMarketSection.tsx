@@ -23,7 +23,7 @@ type Props = {
   projects: ProjectData[];
   stylesModule: Record<string, string>;
   productFilter?: { id: string; label: string } | null;
-  /** Скрыть переключатель вида, всегда сетка (избранное). */
+  /** Скрыть переключатель вида, всегда сетка (страница лайков в ЛК). */
   gridOnly?: boolean;
 };
 
