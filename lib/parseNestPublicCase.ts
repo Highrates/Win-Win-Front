@@ -13,11 +13,17 @@ export type ParseNestPublicCaseOptions = {
 };
 
 function parseProductRow(q: Record<string, unknown>): PublicCaseProduct {
+  const id = typeof q.id === 'string' && q.id.trim() ? q.id.trim() : '';
+  const ccr = q.casesLinkedCount;
+  const casesLinkedCount =
+    typeof ccr === 'number' && Number.isFinite(ccr) ? Math.max(0, Math.floor(ccr)) : 0;
   return {
+    id,
     slug: typeof q.slug === 'string' ? q.slug : '',
     name: typeof q.name === 'string' ? q.name : 'Товар',
     price: typeof q.price === 'number' && Number.isFinite(q.price) ? q.price : 0,
     imageUrl: typeof q.imageUrl === 'string' ? q.imageUrl : null,
+    casesLinkedCount,
   };
 }
 

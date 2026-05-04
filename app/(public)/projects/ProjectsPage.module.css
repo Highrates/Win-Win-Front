@@ -25,6 +25,65 @@ section.projectsPageMarketSection {
   text-transform: uppercase;
 }
 
+/* Колонка: опционально тег товара, затем строка с чипами помещений */
+.marketRoomToolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: min(100%, 1200px);
+}
+
+.marketProductFilterRow {
+  width: 100%;
+  min-width: 0;
+}
+
+.marketProductFilterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 8px 16px 8px 16px;
+  border-radius: 6px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  font-family: inherit;
+  border: var(--account-hairline-width) solid var(--color-ink-black);
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+}
+
+.marketProductFilterLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marketProductFilterClear {
+  display: inline;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 0 0 4px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-weight: 300;
+  font-size: calc(1.32 * var(--text-caption));
+  line-height: 1;
+  color: var(--color-gray);
+  cursor: pointer;
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+.marketProductFilterClear:hover {
+  color: var(--color-ink-black);
+}
+
 /* Как DesignersPage_marketSectionRowLeft + группа выбора */
 .marketSectionRowLeft {
   display: inline-flex;
@@ -153,6 +212,11 @@ section.projectsPageMarketSection {
 }
 
 @media (max-width: 768px) {
+  .marketRoomToolbar {
+    max-width: 100%;
+    width: 100%;
+  }
+
   .marketSectionRowLeft {
     flex-direction: row;
     flex-wrap: wrap;

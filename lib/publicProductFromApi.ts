@@ -66,6 +66,7 @@ export type PublicProductElementApi = {
 };
 
 export type PublicProductFromApi = {
+  id: string;
   slug: string;
   name: string;
   /** Задано только при выбранном SKU (`?v` / `?vs`) */
@@ -73,6 +74,8 @@ export type PublicProductFromApi = {
   /** Диапазон активных вариантов (всегда отдаём для подписи) */
   priceMin?: unknown;
   priceMax?: unknown;
+  /** Сколько кейсов партнёров ссылается на товар (страница «Проекты»). */
+  casesLinkedCount: number;
   shortDescription: string | null;
   description: string | null;
   seoTitle: string | null;
@@ -250,6 +253,13 @@ export function pickPublicProductVariant(
 export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
   if (!isRecord(raw)) return null;
   if (typeof raw.slug !== 'string' || typeof raw.name !== 'string') return null;
+  const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : '';
+  if (!id) return null;
+  const casesLinkedCountRaw = raw.casesLinkedCount;
+  const casesLinkedCount =
+    typeof casesLinkedCountRaw === 'number' && Number.isFinite(casesLinkedCountRaw)
+      ? Math.max(0, Math.floor(casesLinkedCountRaw))
+      : 0;
   const variants = parseVariants(raw.variants);
   const defaultVariantId =
     typeof raw.defaultVariantId === 'string' && raw.defaultVariantId.trim()
@@ -260,11 +270,13 @@ export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
       ? raw.defaultModificationId.trim()
       : null;
   return {
+    id,
     slug: raw.slug,
     name: raw.name,
     price: raw.price,
     priceMin: raw.priceMin,
     priceMax: raw.priceMax,
+    casesLinkedCount,
     shortDescription: typeof raw.shortDescription === 'string' ? raw.shortDescription : null,
     description: typeof raw.description === 'string' ? raw.description : null,
     seoTitle: typeof raw.seoTitle === 'string' ? raw.seoTitle : null,

@@ -58,6 +58,7 @@
   cursor: pointer;
   color: var(--color-gray);
   line-height: 1;
+  font-size: var(--text-caption);
 }
 
 .chevron {

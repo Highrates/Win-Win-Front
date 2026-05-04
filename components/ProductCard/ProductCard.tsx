@@ -20,6 +20,8 @@ export interface ProductCardProps {
   imageUrl?: string;
   /** Несколько изображений для листания; если задано и непустое — имеет приоритет над imageUrl */
   imageUrls?: string[];
+  /** id товара в каталоге — для ссылки на проекты с этим товаром */
+  productId?: string;
   collections?: number;
   likes?: number;
   comments?: number;
@@ -52,7 +54,8 @@ export function ProductCard({
   variantId,
   imageUrl,
   imageUrls,
-  collections = 5,
+  productId,
+  collections = 0,
   likes = 180,
   comments = 180,
   heartActive = false,
@@ -156,14 +159,18 @@ export function ProductCard({
   const gallery = urls.length > 1;
 
   const productHref = `/product/${encodeURIComponent(slug)}`;
+  const projectsCollectionsHref =
+    productId && collections > 0
+      ? `/projects?product=${encodeURIComponent(productId)}`
+      : null;
 
   return (
-    <Link
-      href={productHref}
+    <div
       className={cardClassName}
       onMouseEnter={() => setCardHovered(true)}
       onMouseLeave={() => setCardHovered(false)}
     >
+      <Link href={productHref} className={styles.productCardMainLink}>
       <div className={styles.productContent}>
         <div
           className={styles.productImgWrapper}
@@ -267,12 +274,26 @@ export function ProductCard({
           <span className={styles.productPrice}>{formatCardPrice(price, priceMin, priceMax)}</span>
         </div>
       </div>
+      </Link>
       <div className={styles.productInteract}>
         <div className={styles.interactWrapper}>
-          <div className={styles.interactItem}>
-            <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.interactIcon} />
-            <span className={styles.interactValue}>{collections}</span>
-          </div>
+          {projectsCollectionsHref ? (
+            <Link
+              href={projectsCollectionsHref}
+              className={`${styles.interactItem} ${styles.interactItemLink}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              prefetch={false}
+            >
+              <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.interactIcon} />
+              <span className={styles.interactValue}>{collections}</span>
+            </Link>
+          ) : (
+            <div className={styles.interactItem}>
+              <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.interactIcon} />
+              <span className={styles.interactValue}>{collections}</span>
+            </div>
+          )}
           <div className={styles.interactItem}>
             {heartActive ? (
               <svg
@@ -303,6 +324,6 @@ export function ProductCard({
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

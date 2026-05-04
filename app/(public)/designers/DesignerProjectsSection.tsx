@@ -268,11 +268,12 @@ export function DesignerProjectsSection({ projects, stylesModule, titlesLeft }: 
               <ProjectProductsWithScrollCue key="products" stylesModule={stylesModule}>
                 {project.products.map((p) => (
                   <ProductCardSmall
-                    key={p.slug}
+                    key={p.productId ?? p.slug}
                     slug={p.slug}
                     name={p.name}
                     price={p.price}
                     imageUrl={p.imageUrl}
+                    productId={p.productId}
                     collections={p.collections}
                     likes={p.likes}
                     comments={p.comments}

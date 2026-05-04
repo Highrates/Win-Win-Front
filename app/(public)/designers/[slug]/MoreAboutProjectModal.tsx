@@ -5,6 +5,8 @@ import { ProductCardSmall } from '@/components/ProductCardSmall';
 import styles from './DesignerPage.module.css';
 
 export type ProjectProduct = {
+  /** id товара в каталоге — для ссылки «коллекции» → /projects?product= */
+  productId?: string;
   slug: string;
   name: string;
   price: number;
@@ -207,11 +209,12 @@ export function MoreAboutProjectModal({ project, linkClassName, textClassName, a
                             {project.products.length > 0 ? (
                               project.products.map((p) => (
                                 <ProductCardSmall
-                                  key={p.slug}
+                                  key={p.productId ?? p.slug}
                                   slug={p.slug}
                                   name={p.name}
                                   price={p.price}
                                   imageUrl={p.imageUrl}
+                                  productId={p.productId}
                                   collections={p.collections}
                                   likes={p.likes}
                                   comments={p.comments}

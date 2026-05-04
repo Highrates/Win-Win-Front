@@ -114,12 +114,24 @@ a.productBrandName:hover {
   justify-content: flex-start;
   align-items: center;
   gap: 6px;
+  text-decoration: none;
+  color: inherit;
+  cursor: default;
+}
+
+a.productDetailsInteractItem {
+  cursor: pointer;
+}
+
+.productDetailsInteractItem:hover .productDetailsInteractIcon {
+  opacity: 0.72;
 }
 
 .productDetailsInteractIcon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+  transition: opacity 0.15s ease;
 }
 
 .productDetailsInteractValue {

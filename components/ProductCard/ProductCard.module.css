@@ -9,6 +9,24 @@
   color: inherit;
 }
 
+/** Верх карточки (превью + название) ведёт на PDP; нижняя полоса — отдельно. */
+.productCardMainLink {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.interactItemLink {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
 .productContent {
   align-self: stretch;
   display: inline-flex;
@@ -199,10 +217,16 @@
   gap: 6px;
 }
 
+.interactItem:hover .interactIcon,
+.interactItem:hover .heartIconActive {
+  opacity: 0.72;
+}
+
 .interactIcon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+  transition: opacity 0.15s ease;
 }
 
 .heartIconActive {
@@ -211,6 +235,7 @@
   width: 20px;
   height: 20px;
   color: var(--color-red);
+  transition: opacity 0.15s ease;
 }
 
 .interactValue {

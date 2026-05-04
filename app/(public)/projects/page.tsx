@@ -17,10 +17,35 @@ export const metadata: Metadata = {
   description: 'Проекты и концепции интерьеров',
 };
 
-async function fetchPublicProjectsListing(): Promise<ProjectData[]> {
+async function fetchProductTitleForFilter(productId: string): Promise<string | null> {
+  const id = productId.trim();
+  if (!id) return null;
   const base = getServerApiBase();
   try {
-    const res = await fetch(`${base}/designers/cases`, {
+    const res = await fetch(`${base}/catalog/products/resolve-ids`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id] }),
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { items?: Array<{ id: string; name: string }> };
+    const item = data.items?.find((i) => i.id === id);
+    const name = item?.name?.trim();
+    return name && name.length > 0 ? name : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchPublicProjectsListing(productFilterId?: string | null): Promise<ProjectData[]> {
+  const base = getServerApiBase();
+  const qs =
+    productFilterId && productFilterId.trim()
+      ? `?product=${encodeURIComponent(productFilterId.trim())}`
+      : '';
+  try {
+    const res = await fetch(`${base}/designers/cases${qs}`, {
       next: { revalidate: 120 },
     });
     if (!res.ok) return [];
@@ -45,8 +70,24 @@ async function fetchPublicProjectsListing(): Promise<ProjectData[]> {
   }
 }
 
-export default async function ProjectsPage() {
-  const projects = await fetchPublicProjectsListing();
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ product?: string }>;
+}) {
+  const productQuery = searchParams ? (await searchParams)?.product : undefined;
+  const productIdTrimmed = productQuery?.trim() || '';
+  const [projects, productTitle] = await Promise.all([
+    fetchPublicProjectsListing(productQuery),
+    productIdTrimmed ? fetchProductTitleForFilter(productIdTrimmed) : Promise.resolve(null),
+  ]);
+  const productFilter =
+    productIdTrimmed.length > 0
+      ? {
+          id: productIdTrimmed,
+          label: productTitle ?? 'Товар',
+        }
+      : null;
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -93,7 +134,11 @@ export default async function ProjectsPage() {
       >
         <div className="padding-global">
           <div className={listingLayoutStyles.marketSectionInner}>
-            <ProjectsMarketSection projects={projects} stylesModule={listingLayoutStyles} />
+            <ProjectsMarketSection
+              projects={projects}
+              stylesModule={listingLayoutStyles}
+              productFilter={productFilter}
+            />
           </div>
         </div>
       </section>

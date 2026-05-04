@@ -22,9 +22,10 @@ function buildRoomChips(projects: ProjectData[]): string[] {
 type Props = {
   projects: ProjectData[];
   stylesModule: Record<string, string>;
+  productFilter?: { id: string; label: string } | null;
 };
 
-export function ProjectsMarketSection({ projects, stylesModule }: Props) {
+export function ProjectsMarketSection({ projects, stylesModule, productFilter }: Props) {
   const roomChips = useMemo(() => buildRoomChips(projects), [projects]);
   const [activeRoom, setActiveRoom] = useState(ALL_SPACES_LABEL);
 
@@ -50,6 +51,7 @@ export function ProjectsMarketSection({ projects, stylesModule }: Props) {
           roomChips={roomChips}
           activeLabel={activeRoom}
           onActiveChange={setActiveRoom}
+          productFilter={productFilter ?? null}
         />
       }
     />

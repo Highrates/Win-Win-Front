@@ -113,6 +113,8 @@ export type CatalogProductSearchHit = {
   thumbUrl?: string | null;
   /** До 6 URL для мини-галереи в карточке (после реиндекса Meilisearch / актуального API). */
   imageUrls?: string[];
+  /** Кейсы партнёров с этим товаром (Meilisearch / Prisma). */
+  casesLinkedCount?: number;
 };
 
 export type CatalogProductSearchResponse = {

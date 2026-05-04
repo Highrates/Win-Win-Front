@@ -45,6 +45,15 @@ import { ProductModificationsSection } from './ProductModificationsSection';
 
 type GalleryItem = { id: string; url: string; serverId?: string };
 
+type LinkedCaseRow = {
+  caseId: string;
+  title: string;
+  createdAt: string;
+  designerSlug: string | null;
+  designerDisplayName: string | null;
+  ownerEmail: string | null;
+};
+
 function rowId() {
   return createClientRandomId();
 }
@@ -146,6 +155,8 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const [picker, setPicker] = useState<
     null | { filter: 'image' | 'video' | 'all'; title: string; multi?: boolean }
   >(null);
+  const [linkedCases, setLinkedCases] = useState<LinkedCaseRow[] | null>(null);
+  const [linkedCasesError, setLinkedCasesError] = useState<string | null>(null);
   const pickTarget = useRef<null | { kind: 'gallery'; id: string } | { kind: 'rich' }>(null);
   const richPickResolver = useRef<((url: string | null) => void) | null>(null);
 
@@ -210,6 +221,33 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       cancelled = true;
     };
   }, [productId, applyProduct, s]);
+
+  useEffect(() => {
+    if (!productId) {
+      setLinkedCases(null);
+      setLinkedCasesError(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      setLinkedCases(null);
+      setLinkedCasesError(null);
+      try {
+        const data = await adminBackendJson<{ items: LinkedCaseRow[] }>(
+          `catalog/admin/products/${encodeURIComponent(productId)}/cases`,
+        );
+        if (!cancelled) setLinkedCases(data.items);
+      } catch (e) {
+        if (!cancelled) {
+          setLinkedCasesError(e instanceof Error ? e.message : c.errLoad);
+          setLinkedCases([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, c.errLoad]);
 
   useEffect(() => {
     if (!categoryId) return;
@@ -529,6 +567,50 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                 {s.brandHint}
               </span>
             </label>
+
+            {isEdit && productId ? (
+              <div className={pn.section}>
+                <h2 className={pn.sectionTitle}>Кейсы с этим товаром</h2>
+                <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
+                  Партнёрские проекты, где в материалах указан этот товар.
+                </p>
+                {linkedCasesError ? <p className={catalogStyles.error}>{linkedCasesError}</p> : null}
+                {linkedCases === null ? (
+                  <p className={catalogStyles.muted}>Загрузка…</p>
+                ) : linkedCases.length === 0 ? (
+                  <p className={catalogStyles.muted}>Нет кейсов с этим товаром.</p>
+                ) : (
+                  <div className={catalogStyles.tableWrap}>
+                    <table className={catalogStyles.table}>
+                      <thead>
+                        <tr>
+                          <th>Кейс</th>
+                          <th>Дизайнер</th>
+                          <th>Автор (email)</th>
+                          <th>Дата</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {linkedCases.map((row) => (
+                          <tr key={row.caseId}>
+                            <td>{row.title}</td>
+                            <td>
+                              {row.designerSlug && row.designerDisplayName ? (
+                                <span>{row.designerDisplayName}</span>
+                              ) : (
+                                <span className={catalogStyles.muted}>—</span>
+                              )}
+                            </td>
+                            <td>{row.ownerEmail ?? '—'}</td>
+                            <td>{new Date(row.createdAt).toLocaleString(locale === 'zh' ? 'zh-CN' : 'ru-RU')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <div className={pn.section}>
               <h2 className={pn.sectionTitle}>{s.galleryTitle}</h2>

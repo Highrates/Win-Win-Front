@@ -1,3 +1,33 @@
+/** Обёртка: превью и текст — отдельные ссылки на PDP; полоса метрик — с публичной ссылкой на проекты. */
+.productCardSmallOuter {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.productCardSmallOuter:hover {
+  opacity: 0.85;
+}
+
+.productCardSmallThumb {
+  flex-shrink: 0;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.productCardSmallTitleLink {
+  align-self: stretch;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
 .productCardSmall {
   align-self: stretch;
   display: inline-flex;
@@ -40,6 +70,12 @@ button.productCardSmall {
 
 .productCardSmall:hover {
   opacity: 0.85;
+}
+
+.interactItemLink {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .productImg {
@@ -113,10 +149,15 @@ button.productCardSmall {
   gap: 6px;
 }
 
+.interactItem:hover .interactIcon {
+  opacity: 0.72;
+}
+
 .interactIcon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+  transition: opacity 0.15s ease;
 }
 
 .interactValue {

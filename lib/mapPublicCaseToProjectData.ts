@@ -22,10 +22,12 @@ export function parseRoomTypesArray(v: unknown): string[] {
 }
 
 export type PublicCaseProduct = {
+  id: string;
   slug: string;
   name: string;
   price: number;
   imageUrl: string | null;
+  casesLinkedCount: number;
 };
 
 export type PublicCasePayload = {
@@ -68,11 +70,12 @@ export function mapPublicCaseToProjectData(
     products: c.products
       .filter((p) => p.slug.trim().length > 0)
       .map((p) => ({
+        productId: p.id,
         slug: p.slug,
         name: p.name,
         price: p.price,
         imageUrl: p.imageUrl ? resolveMediaUrlForServer(p.imageUrl) : undefined,
-        collections: 0,
+        collections: p.casesLinkedCount,
         likes: 0,
         comments: 0,
       })),

@@ -23,9 +23,11 @@ function makeVariant(overrides: Partial<PublicProductVariantApi> = {}): PublicPr
 
 function makeProduct(overrides: Partial<PublicProductFromApi> = {}): PublicProductFromApi {
   return {
+    id: 'prod-id',
     slug: 'p',
     name: 'Product',
     price: 100,
+    casesLinkedCount: 0,
     shortDescription: null,
     description: null,
     seoTitle: null,
@@ -79,6 +81,7 @@ describe('pickPublicProductVariant', () => {
 describe('parsePublicProduct', () => {
   it('parses minimal payload', () => {
     const raw = {
+      id: 'pid',
       slug: 's',
       name: 'N',
       price: 0,

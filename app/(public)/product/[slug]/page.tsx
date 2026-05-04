@@ -151,10 +151,23 @@ export default async function ProductPage({
           <h1 className={styles.productName}>{productTitleText}</h1>
         </div>
         <div className={styles.productDetailsInteract}>
-          <div className={styles.productDetailsInteractItem}>
-            <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
-            <span className={styles.productDetailsInteractValue}>0</span>
-          </div>
+          {product.casesLinkedCount > 0 ? (
+            <Link
+              href={`/projects?product=${encodeURIComponent(product.id)}`}
+              className={styles.productDetailsInteractItem}
+              target="_blank"
+              rel="noopener noreferrer"
+              prefetch={false}
+            >
+              <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
+              <span className={styles.productDetailsInteractValue}>{product.casesLinkedCount}</span>
+            </Link>
+          ) : (
+            <div className={styles.productDetailsInteractItem}>
+              <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
+              <span className={styles.productDetailsInteractValue}>0</span>
+            </div>
+          )}
           <div className={styles.productDetailsInteractItem}>
             <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
             <span className={styles.productDetailsInteractValue}>0</span>

@@ -138,11 +138,13 @@ export function CategoryCatalogContent({
                     key={hit.id}
                     slug={hit.slug}
                     name={hit.name}
+                    productId={hit.id}
                     price={price}
                     priceMin={priceMin}
                     priceMax={priceMax}
                     imageUrl={useGallery ? galleryResolved[0] : thumb}
                     imageUrls={useGallery ? galleryResolved : undefined}
+                    collections={hit.casesLinkedCount ?? 0}
                   />
                 );
               })}

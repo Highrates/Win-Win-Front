@@ -12,6 +12,7 @@ export interface ProductCardSmallProps {
   imageUrl?: string;
   /** Как у `ProductCard`: при непустом списке превью — первый кадр из галереи. */
   imageUrls?: string[];
+  productId?: string;
   collections?: number;
   likes?: number;
   comments?: number;
@@ -32,7 +33,8 @@ export function ProductCardSmall({
   price,
   imageUrl,
   imageUrls,
-  collections = 5,
+  productId,
+  collections = 0,
   likes = 180,
   comments = 180,
   pickMode,
@@ -40,57 +42,54 @@ export function ProductCardSmall({
   onPickToggle,
 }: ProductCardSmallProps) {
   const primarySrc = normalizeProductCardImageUrls(imageUrl, imageUrls)[0];
-  const inner = (
-    <>
-      <img
-        className={styles.productImg}
-        src={primarySrc}
-        alt=""
-        width={130}
-        height={140}
-        onError={productCardImageOnError}
-      />
-      <div className={styles.productDetails}>
-        <div className={styles.productTitles}>
-          <span className={styles.productName}>{name}</span>
-          <span className={styles.productPrice}>{formatPrice(price)}</span>
-        </div>
-        <div className={styles.productInteract}>
-          <div className={styles.interactWrapper}>
-            <div className={styles.interactItem}>
-              <img
-                src="/icons/collections.svg"
-                alt=""
-                width={20}
-                height={20}
-                className={styles.interactIcon}
-              />
-              <span className={styles.interactValue}>{collections}</span>
-            </div>
-            <div className={styles.interactItem}>
-              <img
-                src="/icons/heart.svg"
-                alt=""
-                width={20}
-                height={20}
-                className={styles.interactIcon}
-              />
-              <span className={styles.interactValue}>{likes}</span>
-            </div>
-            <div className={styles.interactItem}>
-              <img
-                src="/icons/message.svg"
-                alt=""
-                width={20}
-                height={20}
-                className={styles.interactIcon}
-              />
-              <span className={styles.interactValue}>{comments}</span>
-            </div>
+  const productHref = `/product/${encodeURIComponent(slug)}`;
+  const projectsCollectionsHref =
+    productId && collections > 0
+      ? `/projects?product=${encodeURIComponent(productId)}`
+      : null;
+
+  const interact = (
+    <div className={styles.productInteract}>
+      <div className={styles.interactWrapper}>
+        {projectsCollectionsHref ? (
+          <Link
+            href={projectsCollectionsHref}
+            className={`${styles.interactItem} ${styles.interactItemLink}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            prefetch={false}
+          >
+            <img
+              src="/icons/collections.svg"
+              alt=""
+              width={20}
+              height={20}
+              className={styles.interactIcon}
+            />
+            <span className={styles.interactValue}>{collections}</span>
+          </Link>
+        ) : (
+          <div className={styles.interactItem}>
+            <img
+              src="/icons/collections.svg"
+              alt=""
+              width={20}
+              height={20}
+              className={styles.interactIcon}
+            />
+            <span className={styles.interactValue}>{collections}</span>
           </div>
+        )}
+        <div className={styles.interactItem}>
+          <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
+          <span className={styles.interactValue}>{likes}</span>
+        </div>
+        <div className={styles.interactItem}>
+          <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.interactIcon} />
+          <span className={styles.interactValue}>{comments}</span>
         </div>
       </div>
-    </>
+    </div>
   );
 
   if (pickMode) {
@@ -101,14 +100,46 @@ export function ProductCardSmall({
         onClick={onPickToggle}
         aria-pressed={selected}
       >
-        {inner}
+        <img
+          className={styles.productImg}
+          src={primarySrc}
+          alt=""
+          width={130}
+          height={140}
+          onError={productCardImageOnError}
+        />
+        <div className={styles.productDetails}>
+          <div className={styles.productTitles}>
+            <span className={styles.productName}>{name}</span>
+            <span className={styles.productPrice}>{formatPrice(price)}</span>
+          </div>
+          {interact}
+        </div>
       </button>
     );
   }
 
   return (
-    <Link href={`/product/${slug}`} className={styles.productCardSmall}>
-      {inner}
-    </Link>
+    <div className={styles.productCardSmallOuter}>
+      <Link href={productHref} className={styles.productCardSmallThumb}>
+        <img
+          className={styles.productImg}
+          src={primarySrc}
+          alt=""
+          width={130}
+          height={140}
+          onError={productCardImageOnError}
+        />
+      </Link>
+      <div className={styles.productDetails}>
+        <Link href={productHref} className={styles.productCardSmallTitleLink}>
+          <div className={styles.productTitles}>
+            <span className={styles.productName}>{name}</span>
+            <span className={styles.productPrice}>{formatPrice(price)}</span>
+          </div>
+        </Link>
+        {interact}
+      </div>
+    </div>
   );
 }
