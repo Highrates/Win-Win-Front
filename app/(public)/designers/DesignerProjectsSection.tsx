@@ -43,6 +43,8 @@ type Props = {
   stylesModule: Record<string, string>;
   /** Вместо заголовка «Проекты» в строке с переключателем вида */
   titlesLeft?: ReactNode;
+  /** Стартовый режим списка/сетки (на `/projects` — `grid`). */
+  defaultView?: ViewMode;
 };
 
 /** Градиент и подсказка скролла — только если контент реально не помещается по высоте. */
@@ -121,8 +123,13 @@ function SliderCoverArrow() {
   );
 }
 
-export function DesignerProjectsSection({ projects, stylesModule, titlesLeft }: Props) {
-  const [activeView, setActiveView] = useState<ViewMode>('list');
+export function DesignerProjectsSection({
+  projects,
+  stylesModule,
+  titlesLeft,
+  defaultView = 'list',
+}: Props) {
+  const [activeView, setActiveView] = useState<ViewMode>(defaultView);
   const [modalProject, setModalProject] = useState<ProjectData | null>(null);
 
   const openProjectModal = useCallback((project: ProjectData) => {

@@ -46,6 +46,7 @@ export function ProjectsMarketSection({ projects, stylesModule, productFilter }:
     <DesignerProjectsSection
       projects={visibleProjects}
       stylesModule={stylesModule}
+      defaultView="grid"
       titlesLeft={
         <ProjectsRoomFilter
           roomChips={roomChips}
