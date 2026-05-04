@@ -8,6 +8,7 @@ import { parsePublicProduct, pickPublicProductVariant } from '@/lib/publicProduc
 import { parseProductPriceFromApi } from '@/lib/productSpecsFromApi';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import ProductInteractive from './ProductInteractive';
+import { ProductPdpHeartInteract } from './ProductPdpSocialRow';
 import styles from './ProductPage.module.css';
 
 export async function generateMetadata({
@@ -150,7 +151,7 @@ export default async function ProductPage({
           )}
           <h1 className={styles.productName}>{productTitleText}</h1>
         </div>
-        <div className={styles.productDetailsInteract}>
+          <div className={styles.productDetailsInteract}>
           {product.casesLinkedCount > 0 ? (
             <Link
               href={`/projects?product=${encodeURIComponent(product.id)}`}
@@ -168,10 +169,10 @@ export default async function ProductPage({
               <span className={styles.productDetailsInteractValue}>0</span>
             </div>
           )}
-          <div className={styles.productDetailsInteractItem}>
-            <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
-            <span className={styles.productDetailsInteractValue}>0</span>
-          </div>
+          <ProductPdpHeartInteract
+            productId={product.id}
+            likesDisplayCount={product.likesDisplayCount}
+          />
           <div className={styles.productDetailsInteractItem}>
             <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.productDetailsInteractIcon} />
             <span className={styles.productDetailsInteractValue}>0</span>

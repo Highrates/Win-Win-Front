@@ -28,6 +28,7 @@ export type PublicCaseProduct = {
   price: number;
   imageUrl: string | null;
   casesLinkedCount: number;
+  likesDisplayCount: number;
 };
 
 export type PublicCasePayload = {
@@ -41,6 +42,7 @@ export type PublicCasePayload = {
   coverLayout: '4:3' | '16:9';
   coverImageUrls: string[];
   products: PublicCaseProduct[];
+  likesDisplayCount: number;
 };
 
 export function mapPublicCaseToProjectData(
@@ -76,12 +78,13 @@ export function mapPublicCaseToProjectData(
         price: p.price,
         imageUrl: p.imageUrl ? resolveMediaUrlForServer(p.imageUrl) : undefined,
         collections: p.casesLinkedCount,
-        likes: 0,
+        likes: p.likesDisplayCount,
         comments: 0,
       })),
     coverImage,
     coverImage2,
     gridCoverImage,
+    likesDisplayCount: c.likesDisplayCount,
   };
   if (designer) {
     out.designer = {

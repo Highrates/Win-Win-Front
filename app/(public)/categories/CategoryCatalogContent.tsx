@@ -145,6 +145,7 @@ export function CategoryCatalogContent({
                     imageUrl={useGallery ? galleryResolved[0] : thumb}
                     imageUrls={useGallery ? galleryResolved : undefined}
                     collections={hit.casesLinkedCount ?? 0}
+                    likes={typeof hit.likesDisplayCount === 'number' ? hit.likesDisplayCount : 0}
                   />
                 );
               })}

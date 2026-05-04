@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProductCardImageUrls, productCardImageOnError } from '@/lib/productCardImageUrls';
+import { getCachedIsAuthenticated } from '@/lib/userSessionClient';
 import styles from './ProductCard.module.css';
 
 const SLIDE_MS = 380;
@@ -25,8 +27,12 @@ export interface ProductCardProps {
   collections?: number;
   likes?: number;
   comments?: number;
-  /** Иконка избранного с обводкой --color-red (например, страница «Избранное» в ЛК) */
+  /** Иконка избранного с обводкой (страница «Избранное» в ЛК или явное значение). */
   heartActive?: boolean;
+  /** С `productId`: вызывать POST/DELETE лайка (по умолчанию true). */
+  likesInteractive?: boolean;
+  /** После успешного POST/DELETE лайка (для сброса списка избранного и т.п.). */
+  onLikedChange?: (liked: boolean) => void;
 }
 
 function formatCardPrice(value: number, priceMin?: number, priceMax?: number): string {
@@ -56,18 +62,71 @@ export function ProductCard({
   imageUrls,
   productId,
   collections = 0,
-  likes = 180,
+  likes = 0,
   comments = 180,
-  heartActive = false,
+  heartActive,
+  likesInteractive = true,
+  onLikedChange,
 }: ProductCardProps) {
+  const router = useRouter();
   const urls = useMemo(() => normalizeProductCardImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
   const urlsKey = urls.join('\0');
   const [index, setIndex] = useState(0);
   const [slide, setSlide] = useState<null | { from: number; to: number; dir: 'next' | 'prev' }>(null);
   const [slideRun, setSlideRun] = useState(false);
   const [cardHovered, setCardHovered] = useState(false);
+  const [auth, setAuth] = useState<boolean | null>(null);
+  const [likedFromApi, setLikedFromApi] = useState<boolean | null>(null);
+  const [likeCount, setLikeCount] = useState(likes);
+  const [likeBusy, setLikeBusy] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const blockLinkClickRef = useRef(false);
+
+  const heartFilledControlled = heartActive !== undefined;
+  const controlledInteractive = Boolean(
+    productId && likesInteractive && heartFilledControlled,
+  );
+  const [controlledLiked, setControlledLiked] = useState(() => !!heartActive);
+  useEffect(() => {
+    if (controlledInteractive) setControlledLiked(!!heartActive);
+  }, [heartActive, controlledInteractive]);
+
+  const heartFilled =
+    heartFilledControlled && !controlledInteractive
+      ? !!heartActive
+      : controlledInteractive
+        ? controlledLiked
+        : !!likedFromApi;
+
+  useEffect(() => {
+    setLikeCount(likes);
+  }, [likes]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const ok = await getCachedIsAuthenticated();
+      if (cancelled) return;
+      setAuth(ok);
+      if (!ok || !productId || !likesInteractive || heartFilledControlled) return;
+      try {
+        const res = await fetch(`/api/user/likes/products/${encodeURIComponent(productId)}/me`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const j = (await res.json()) as { liked?: boolean };
+        if (!cancelled) setLikedFromApi(j.liked === true);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, likesInteractive, heartFilledControlled]);
+
+  const showLikesColumn = auth === true;
 
   useEffect(() => {
     setIndex(0);
@@ -294,30 +353,106 @@ export function ProductCard({
               <span className={styles.interactValue}>{collections}</span>
             </div>
           )}
-          <div className={styles.interactItem}>
-            {heartActive ? (
-              <svg
-                className={styles.heartIconActive}
-                width={20}
-                height={20}
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden
-              >
-                <path
-                  d="M10.5167 17.3416C10.2334 17.4416 9.76669 17.4416 9.48335 17.3416C7.06669 16.5166 1.66669 13.0749 1.66669 7.24159C1.66669 4.66659 3.74169 2.58325 6.30002 2.58325C7.81669 2.58325 9.15835 3.31659 10 4.44992C10.8417 3.31659 12.1917 2.58325 13.7 2.58325C16.2584 2.58325 18.3334 4.66659 18.3334 7.24159C18.3334 13.0749 12.9334 16.5166 10.5167 17.3416Z"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+          {showLikesColumn ? (
+            !productId || !likesInteractive ? (
+              <div className={styles.interactItem}>
+                {heartFilled ? (
+                  <svg
+                    className={styles.heartIconActive}
+                    width={20}
+                    height={20}
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden
+                  >
+                    <path
+                      d="M10.5167 17.3416C10.2334 17.4416 9.76669 17.4416 9.48335 17.3416C7.06669 16.5166 1.66669 13.0749 1.66669 7.24159C1.66669 4.66659 3.74169 2.58325 6.30002 2.58325C7.81669 2.58325 9.15835 3.31659 10 4.44992C10.8417 3.31659 12.1917 2.58325 13.7 2.58325C16.2584 2.58325 18.3334 4.66659 18.3334 7.24159C18.3334 13.0749 12.9334 16.5166 10.5167 17.3416Z"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
+                )}
+                <span className={styles.interactValue}>{Math.max(0, likeCount)}</span>
+              </div>
             ) : (
-              <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
-            )}
-            <span className={styles.interactValue}>{likes}</span>
-          </div>
+              <button
+                type="button"
+                className={styles.interactItem}
+                disabled={
+                  likeBusy ||
+                  (controlledInteractive ? false : likedFromApi === null)
+                }
+                aria-label={heartFilled ? 'Убрать из избранного' : 'Добавить в избранное'}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const ok = auth ?? (await getCachedIsAuthenticated());
+                  if (!ok) {
+                    router.push('/login');
+                    return;
+                  }
+                  const currentLiked = controlledInteractive ? controlledLiked : likedFromApi === true;
+                  if (!controlledInteractive && likedFromApi === null) return;
+                  setLikeBusy(true);
+                  const nextLiked = !currentLiked;
+                  const prevCount = likeCount;
+                  if (controlledInteractive) setControlledLiked(nextLiked);
+                  else setLikedFromApi(nextLiked);
+                  setLikeCount((c) => c + (nextLiked ? 1 : -1));
+                  try {
+                    const res = await fetch(
+                      `/api/user/likes/products/${encodeURIComponent(productId!)}`,
+                      {
+                        method: nextLiked ? 'POST' : 'DELETE',
+                        credentials: 'same-origin',
+                      },
+                    );
+                    if (!res.ok) {
+                      if (controlledInteractive) setControlledLiked(currentLiked);
+                      else setLikedFromApi(currentLiked);
+                      setLikeCount(prevCount);
+                    } else {
+                      onLikedChange?.(nextLiked);
+                    }
+                  } catch {
+                    if (controlledInteractive) setControlledLiked(currentLiked);
+                    else setLikedFromApi(currentLiked);
+                    setLikeCount(prevCount);
+                  } finally {
+                    setLikeBusy(false);
+                  }
+                }}
+              >
+                {heartFilled ? (
+                  <svg
+                    className={styles.heartIconActive}
+                    width={20}
+                    height={20}
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden
+                  >
+                    <path
+                      d="M10.5167 17.3416C10.2334 17.4416 9.76669 17.4416 9.48335 17.3416C7.06669 16.5166 1.66669 13.0749 1.66669 7.24159C1.66669 4.66659 3.74169 2.58325 6.30002 2.58325C7.81669 2.58325 9.15835 3.31659 10 4.44992C10.8417 3.31659 12.1917 2.58325 13.7 2.58325C16.2584 2.58325 18.3334 4.66659 18.3334 7.24159C18.3334 13.0749 12.9334 16.5166 10.5167 17.3416Z"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
+                )}
+                <span className={styles.interactValue}>{Math.max(0, likeCount)}</span>
+              </button>
+            )
+          ) : null}
           <div className={styles.interactItem}>
             <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.interactIcon} />
             <span className={styles.interactValue}>{comments}</span>

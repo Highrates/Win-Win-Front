@@ -139,7 +139,7 @@ button.productCardSmall {
   display: inline-flex;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 32px;
+  gap: 16px;
 }
 
 .interactItem {
@@ -149,8 +149,31 @@ button.productCardSmall {
   gap: 6px;
 }
 
+button.interactItem {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.interactItem:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .interactItem:hover .interactIcon {
   opacity: 0.72;
+}
+
+.heartIconActive {
+  display: block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--color-red);
 }
 
 .interactIcon {
@@ -164,11 +187,15 @@ button.productCardSmall {
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   color: var(--color-black);
+  min-width: 3ch;
+  display: inline-block;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 768px) {
   .interactWrapper {
-    gap: 22px;
+    gap: 16px;
   }
 
   .interactIcon {

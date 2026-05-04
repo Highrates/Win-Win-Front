@@ -115,6 +115,8 @@ export type CatalogProductSearchHit = {
   imageUrls?: string[];
   /** Кейсы партнёров с этим товаром (Meilisearch / Prisma). */
   casesLinkedCount?: number;
+  /** Публичный счётчик лайков (реальные + админ). */
+  likesDisplayCount?: number;
 };
 
 export type CatalogProductSearchResponse = {

@@ -28,6 +28,8 @@ export type PublicBrandProductRow = {
   price: unknown;
   currency: string;
   images: { url: string; sortOrder: number }[];
+  casesLinkedCount?: number;
+  likesDisplayCount?: number;
 };
 
 export type PublicBrandDetailPayload = PublicBrandListRow & {

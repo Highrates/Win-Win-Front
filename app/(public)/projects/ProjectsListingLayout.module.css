@@ -405,7 +405,7 @@
   display: inline-flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 32px;
+  gap: 16px;
 }
 
 .projectInteractItem {
@@ -418,10 +418,40 @@
   color: var(--color-black);
 }
 
+button.projectInteractItem {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.projectInteractItem:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.projectHeartActive {
+  display: block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--color-red);
+}
+
 .projectInteractIcon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+.projectInteractValue {
+  min-width: 3ch;
+  display: inline-block;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
 }
 
 .moreAboutProjectLink {

@@ -17,6 +17,9 @@ function parseProductRow(q: Record<string, unknown>): PublicCaseProduct {
   const ccr = q.casesLinkedCount;
   const casesLinkedCount =
     typeof ccr === 'number' && Number.isFinite(ccr) ? Math.max(0, Math.floor(ccr)) : 0;
+  const ldr = q.likesDisplayCount;
+  const likesDisplayCount =
+    typeof ldr === 'number' && Number.isFinite(ldr) ? Math.max(0, Math.floor(ldr)) : 0;
   return {
     id,
     slug: typeof q.slug === 'string' ? q.slug : '',
@@ -24,6 +27,7 @@ function parseProductRow(q: Record<string, unknown>): PublicCaseProduct {
     price: typeof q.price === 'number' && Number.isFinite(q.price) ? q.price : 0,
     imageUrl: typeof q.imageUrl === 'string' ? q.imageUrl : null,
     casesLinkedCount,
+    likesDisplayCount,
   };
 }
 
@@ -64,6 +68,9 @@ export function parseNestPublicCaseItem(
 
   if (opts?.requireDesignerMeta && !designer) return null;
 
+  const ldc = o.likesDisplayCount;
+  const likesDisplayCount =
+    typeof ldc === 'number' && Number.isFinite(ldc) ? Math.max(0, Math.floor(ldc)) : 0;
   const casePayload: PublicCasePayload = {
     id,
     title: String(o.title ?? ''),
@@ -74,6 +81,7 @@ export function parseNestPublicCaseItem(
     coverLayout: o.coverLayout === '16:9' ? '16:9' : '4:3',
     coverImageUrls: parseCoverUrls(o.coverImageUrls),
     products: parseProductsArray(o.products),
+    likesDisplayCount,
   };
 
   return { case: casePayload, designer };

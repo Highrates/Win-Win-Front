@@ -28,6 +28,7 @@ function makeProduct(overrides: Partial<PublicProductFromApi> = {}): PublicProdu
     name: 'Product',
     price: 100,
     casesLinkedCount: 0,
+    likesDisplayCount: 0,
     shortDescription: null,
     description: null,
     seoTitle: null,

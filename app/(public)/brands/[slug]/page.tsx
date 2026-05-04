@@ -74,6 +74,9 @@ export default async function BrandPage({
       price: productPriceToNumber(p.price),
       imageUrl: galleryUrls[0] ?? '/images/placeholder.svg',
       imageUrls: useGallery ? galleryUrls : undefined,
+      productId: p.id,
+      collections: typeof p.casesLinkedCount === 'number' ? p.casesLinkedCount : 0,
+      likes: typeof p.likesDisplayCount === 'number' ? p.likesDisplayCount : 0,
     };
   });
 
@@ -176,6 +179,9 @@ export default async function BrandPage({
                   price={p.price}
                   imageUrl={p.imageUrl}
                   imageUrls={p.imageUrls}
+                  productId={p.productId}
+                  collections={p.collections}
+                  likes={p.likes}
                 />
               ))}
             </div>

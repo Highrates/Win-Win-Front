@@ -76,6 +76,8 @@ export type PublicProductFromApi = {
   priceMax?: unknown;
   /** Сколько кейсов партнёров ссылается на товар (страница «Проекты»). */
   casesLinkedCount: number;
+  /** Публичный счётчик лайков (реальные + админская «накрутка»). */
+  likesDisplayCount: number;
   shortDescription: string | null;
   description: string | null;
   seoTitle: string | null;
@@ -260,6 +262,9 @@ export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
     typeof casesLinkedCountRaw === 'number' && Number.isFinite(casesLinkedCountRaw)
       ? Math.max(0, Math.floor(casesLinkedCountRaw))
       : 0;
+  const likesRaw = raw.likesDisplayCount;
+  const likesDisplayCount =
+    typeof likesRaw === 'number' && Number.isFinite(likesRaw) ? Math.max(0, Math.floor(likesRaw)) : 0;
   const variants = parseVariants(raw.variants);
   const defaultVariantId =
     typeof raw.defaultVariantId === 'string' && raw.defaultVariantId.trim()
@@ -277,6 +282,7 @@ export function parsePublicProduct(raw: unknown): PublicProductFromApi | null {
     priceMin: raw.priceMin,
     priceMax: raw.priceMax,
     casesLinkedCount,
+    likesDisplayCount,
     shortDescription: typeof raw.shortDescription === 'string' ? raw.shortDescription : null,
     description: typeof raw.description === 'string' ? raw.description : null,
     seoTitle: typeof raw.seoTitle === 'string' ? raw.seoTitle : null,

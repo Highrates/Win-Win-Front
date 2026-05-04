@@ -23,9 +23,16 @@ type Props = {
   projects: ProjectData[];
   stylesModule: Record<string, string>;
   productFilter?: { id: string; label: string } | null;
+  /** Скрыть переключатель вида, всегда сетка (избранное). */
+  gridOnly?: boolean;
 };
 
-export function ProjectsMarketSection({ projects, stylesModule, productFilter }: Props) {
+export function ProjectsMarketSection({
+  projects,
+  stylesModule,
+  productFilter,
+  gridOnly = false,
+}: Props) {
   const roomChips = useMemo(() => buildRoomChips(projects), [projects]);
   const [activeRoom, setActiveRoom] = useState(ALL_SPACES_LABEL);
 
@@ -47,6 +54,7 @@ export function ProjectsMarketSection({ projects, stylesModule, productFilter }:
       projects={visibleProjects}
       stylesModule={stylesModule}
       defaultView="grid"
+      gridOnly={gridOnly}
       titlesLeft={
         <ProjectsRoomFilter
           roomChips={roomChips}

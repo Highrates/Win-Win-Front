@@ -76,6 +76,8 @@ export type ProductAdminDetail = {
   technicalSpecs: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  likesUserCount: number;
+  likesAdminBoost: number;
   category: { id: string; name: string };
   brand: { id: string; name: string } | null;
   variants: AdminProductVariantSummary[];

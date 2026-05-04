@@ -6,9 +6,11 @@ import {
   useCallback,
   useRef,
   useLayoutEffect,
+  useEffect,
   type ReactNode,
 } from 'react';
 import { ProductCardSmall } from '@/components/ProductCardSmall';
+import { CaseAudienceSocial } from '@/components/CaseAudienceSocial/CaseAudienceSocial';
 import { DesignerViewToggle, type ViewMode } from './[slug]/DesignerViewToggle';
 import { MoreAboutProjectModal, type ProjectProduct } from './[slug]/MoreAboutProjectModal';
 
@@ -36,6 +38,8 @@ export type ProjectData = {
   gridCoverImage?: string;
   /** Ссылка на дизайнера (страница проектов и т.п.) */
   designer?: ProjectDesignerLink;
+  /** Публичный счётчик лайков кейса */
+  likesDisplayCount: number;
 };
 
 type Props = {
@@ -45,6 +49,8 @@ type Props = {
   titlesLeft?: ReactNode;
   /** Стартовый режим списка/сетки (на `/projects` — `grid`). */
   defaultView?: ViewMode;
+  /** Только сетка, без переключателя «список / сетка» (вкладка избранного). */
+  gridOnly?: boolean;
 };
 
 /** Градиент и подсказка скролла — только если контент реально не помещается по высоте. */
@@ -128,8 +134,9 @@ export function DesignerProjectsSection({
   stylesModule,
   titlesLeft,
   defaultView = 'list',
+  gridOnly = false,
 }: Props) {
-  const [activeView, setActiveView] = useState<ViewMode>(defaultView);
+  const [activeView, setActiveView] = useState<ViewMode>(gridOnly ? 'grid' : defaultView);
   const [modalProject, setModalProject] = useState<ProjectData | null>(null);
 
   const openProjectModal = useCallback((project: ProjectData) => {
@@ -140,11 +147,15 @@ export function DesignerProjectsSection({
     setModalProject(null);
   }, []);
 
+  useEffect(() => {
+    if (gridOnly) setActiveView('grid');
+  }, [gridOnly]);
+
   return (
     <>
       <div className={stylesModule.titlesWrapper}>
         {titlesLeft ?? <h5 className={stylesModule.titlesWrapperH5}>Проекты</h5>}
-        {projects.length > 0 ? (
+        {projects.length > 0 && !gridOnly ? (
           <DesignerViewToggle
             styles={stylesModule}
             activeView={activeView}
@@ -157,7 +168,7 @@ export function DesignerProjectsSection({
         <p className={stylesModule.projectsEmpty}>У дизайнера пока нет опубликованных кейсов.</p>
       ) : null}
 
-      {activeView === 'list' && projects.length > 0 ? (
+      {!gridOnly && activeView === 'list' && projects.length > 0 ? (
         <div className={stylesModule.projectsList}>
           {projects.map((project, index) => {
             const isReversed = index % 2 === 1;
@@ -175,26 +186,43 @@ export function DesignerProjectsSection({
                         </div>
                         <p className={stylesModule.projectDescription}>{project.description}</p>
                         <div className={stylesModule.projectInteractWrapper}>
-                          <div className={stylesModule.projectInteractItem}>
-                            <img
-                              src="/icons/heart.svg"
-                              alt=""
-                              width={20}
-                              height={20}
-                              className={stylesModule.projectInteractIcon}
+                          {project.id ? (
+                            <CaseAudienceSocial
+                              caseId={project.id}
+                              likesDisplayCount={project.likesDisplayCount}
+                              classNames={{
+                                interactItem: stylesModule.projectInteractItem,
+                                interactIcon: stylesModule.projectInteractIcon,
+                                interactValue: stylesModule.projectInteractValue,
+                                heartActive: stylesModule.projectHeartActive,
+                              }}
                             />
-                            <span>24</span>
-                          </div>
-                          <div className={stylesModule.projectInteractItem}>
-                            <img
-                              src="/icons/message.svg"
-                              alt=""
-                              width={20}
-                              height={20}
-                              className={stylesModule.projectInteractIcon}
-                            />
-                            <span>8</span>
-                          </div>
+                          ) : (
+                            <>
+                              <div className={stylesModule.projectInteractItem}>
+                                <img
+                                  src="/icons/heart.svg"
+                                  alt=""
+                                  width={20}
+                                  height={20}
+                                  className={stylesModule.projectInteractIcon}
+                                />
+                                <span className={stylesModule.projectInteractValue}>
+                                  {project.likesDisplayCount ?? 0}
+                                </span>
+                              </div>
+                              <div className={stylesModule.projectInteractItem}>
+                                <img
+                                  src="/icons/message.svg"
+                                  alt=""
+                                  width={20}
+                                  height={20}
+                                  className={stylesModule.projectInteractIcon}
+                                />
+                                <span className={stylesModule.projectInteractValue}>0</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                       <MoreAboutProjectModal
@@ -303,7 +331,7 @@ export function DesignerProjectsSection({
         </div>
       ) : null}
 
-      {activeView === 'grid' && projects.length > 0 ? (
+      {(gridOnly || activeView === 'grid') && projects.length > 0 ? (
         <div className={stylesModule.sliderCoversGrid}>
           {projects.map((project) => (
             <button

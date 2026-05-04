@@ -106,7 +106,7 @@ a.productBrandName:hover {
   display: inline-flex;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 32px;
+  gap: 16px;
 }
 
 .productDetailsInteractItem {
@@ -119,11 +119,30 @@ a.productBrandName:hover {
   cursor: default;
 }
 
+button.productDetailsInteractItem {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.productDetailsInteractItem:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 a.productDetailsInteractItem {
   cursor: pointer;
 }
 
 .productDetailsInteractItem:hover .productDetailsInteractIcon {
+  opacity: 0.72;
+}
+
+.productDetailsInteractItem:hover .productDetailsHeartActive {
   opacity: 0.72;
 }
 
@@ -134,10 +153,23 @@ a.productDetailsInteractItem {
   transition: opacity 0.15s ease;
 }
 
+.productDetailsHeartActive {
+  display: block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--color-red);
+  transition: opacity 0.15s ease;
+}
+
 .productDetailsInteractValue {
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   color: var(--color-black);
+  min-width: 3ch;
+  display: inline-block;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
 }
 
 .productDetailsRight {
@@ -866,7 +898,7 @@ a.productDetailsInteractItem {
   }
 
   .productDetailsInteract {
-    gap: 32px;
+    gap: 16px;
   }
 
   .productDetailsInteractIcon {

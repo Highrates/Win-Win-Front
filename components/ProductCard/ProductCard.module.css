@@ -1,24 +1,29 @@
 .productCard {
   align-self: stretch;
-  display: inline-flex;
+  height: 100%;
+  display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
   gap: 12px;
   text-decoration: none;
   color: inherit;
+  min-width: 0;
 }
 
 /** Верх карточки (превью + название) ведёт на PDP; нижняя полоса — отдельно. */
 .productCardMainLink {
   align-self: stretch;
-  display: inline-flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
   gap: 12px;
   text-decoration: none;
   color: inherit;
+  min-width: 0;
 }
 
 .interactItemLink {
@@ -29,15 +34,19 @@
 
 .productContent {
   align-self: stretch;
-  display: inline-flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
   gap: 12px;
+  min-width: 0;
 }
 
 .productImgWrapper {
   align-self: stretch;
+  flex-shrink: 0;
   aspect-ratio: 372 / 400;
   position: relative;
   border-radius: 10px;
@@ -171,7 +180,10 @@
 
 .productTitles {
   align-self: stretch;
-  display: inline-flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
@@ -179,9 +191,17 @@
 }
 
 .productName {
+  align-self: stretch;
   font-size: var(--text-card-16-300);
   font-weight: 300;
+  line-height: 1.25;
   color: var(--color-ink-black);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .productPrice {
@@ -193,9 +213,11 @@
 
 .productInteract {
   align-self: stretch;
+  flex-shrink: 0;
+  margin-top: auto;
   padding-top: 12px;
   border-top: 0.5px solid rgba(0, 0, 0, 0.16);
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
@@ -207,7 +229,7 @@
   display: inline-flex;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 32px;
+  gap: 16px;
 }
 
 .interactItem {
@@ -217,8 +239,22 @@
   gap: 6px;
 }
 
-.interactItem:hover .interactIcon,
-.interactItem:hover .heartIconActive {
+button.interactItem {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.interactItem:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.interactItem:hover .interactIcon {
   opacity: 0.72;
 }
 
@@ -235,18 +271,21 @@
   width: 20px;
   height: 20px;
   color: var(--color-red);
-  transition: opacity 0.15s ease;
 }
 
 .interactValue {
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   color: var(--color-black);
+  min-width: 3ch;
+  display: inline-block;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 768px) {
   .interactWrapper {
-    gap: 22px;
+    gap: 16px;
   }
 
   .interactIcon {

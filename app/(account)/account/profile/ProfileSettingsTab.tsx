@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
+import { resetUserSessionClientCache } from '@/lib/userSessionClient';
 import styles from './page.module.css';
 
 function CloseIcon() {
@@ -141,10 +142,12 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
     setLoggingOut(true);
     try {
       await fetch('/api/user/logout', { method: 'POST', credentials: 'same-origin' });
+      resetUserSessionClientCache();
       router.push('/');
       router.refresh();
     } catch {
       /* cookie всё равно мог очиститься; ведём на главную */
+      resetUserSessionClientCache();
       router.push('/');
       router.refresh();
     } finally {
@@ -154,6 +157,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
 
   const afterAuthSuccess = useCallback(
     (nextUser: MeUser | null) => {
+      resetUserSessionClientCache();
       if (nextUser) {
         setUser(nextUser);
         setEmailInput((nextUser.email ?? '').trim());

@@ -1,4 +1,51 @@
+.muted {
+  margin: 12px 0 0;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 15px;
+}
+
+.error {
+  margin: 12px 0 0;
+  color: var(--color-red, #c00);
+  font-size: 15px;
+}
+
 .grid {
+  margin-top: 32px;
+  align-self: stretch;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 16px;
+  row-gap: 32px;
+}
+
+/* Только вкладка «Проекты и концепции» на /account/favorites (мержится с классами секций). */
+.favoritesProjectsRecommendationsSection {
+  margin-top: 32px;
+}
+
+.favoritesProjectsSliderCoversGrid {
+  margin-top: 32px;
+}
+
+@media (min-width: 769px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .grid,
+  .skeletonGrid {
+    column-gap: 8px;
+    row-gap: 32px;
+  }
+}
+
+/* Скелетон при первой загрузке коллекции */
+.skeletonGrid {
+  margin-top: 32px;
   align-self: stretch;
   width: 100%;
   display: grid;
@@ -8,7 +55,109 @@
 }
 
 @media (min-width: 769px) {
-  .grid {
+  .skeletonGrid {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.skeletonThumb {
+  width: 100%;
+  aspect-ratio: 372 / 400;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 24, 38, 0.06) 0%,
+    rgba(5, 24, 38, 0.12) 50%,
+    rgba(5, 24, 38, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: favoritesSkShimmer 1.1s ease-in-out infinite;
+}
+
+.skeletonTitleLine {
+  width: 88%;
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 24, 38, 0.06) 0%,
+    rgba(5, 24, 38, 0.12) 50%,
+    rgba(5, 24, 38, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: favoritesSkShimmer 1.1s ease-in-out infinite;
+}
+
+.skeletonPriceLine {
+  width: 40%;
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 24, 38, 0.06) 0%,
+    rgba(5, 24, 38, 0.12) 50%,
+    rgba(5, 24, 38, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: favoritesSkShimmer 1.1s ease-in-out infinite;
+}
+
+.skeletonProjectsHeader {
+  width: min(100%, 280px);
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 24, 38, 0.06) 0%,
+    rgba(5, 24, 38, 0.12) 50%,
+    rgba(5, 24, 38, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: favoritesSkShimmer 1.1s ease-in-out infinite;
+}
+
+.skeletonProjectsBlock {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.skeletonProjectsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.skeletonProjectCard {
+  flex: 1 1 280px;
+  min-height: 200px;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 24, 38, 0.06) 0%,
+    rgba(5, 24, 38, 0.12) 50%,
+    rgba(5, 24, 38, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: favoritesSkShimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes favoritesSkShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }

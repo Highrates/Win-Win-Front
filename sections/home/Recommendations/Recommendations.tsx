@@ -78,6 +78,7 @@ export function Recommendations({ title = 'Рекомендации', id, static
                 price={p.price}
                 variantId={p.variantId}
                 imageUrls={p.imageUrls}
+                likes={180}
               />
             ))}
           </div>
@@ -92,7 +93,7 @@ export function Recommendations({ title = 'Рекомендации', id, static
         <h5 className={styles.title}>{title}</h5>
         <div className={styles.grid}>
           {items.map((p) => (
-            <ProductCard key={p.key} slug={p.slug} name={p.name} price={p.price} />
+            <ProductCard key={p.key} slug={p.slug} name={p.name} price={p.price} likes={180} />
           ))}
         </div>
         <div className={styles.loadMoreWrapper}>
