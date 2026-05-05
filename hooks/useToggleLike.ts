@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { markDesignerListLikeStateStale } from '@/lib/designerListLikesStale';
 import { getCachedIsAuthenticated } from '@/lib/userSessionClient';
 
-export type ToggleLikeKind = 'product' | 'case';
+export type ToggleLikeKind = 'product' | 'case' | 'designer';
 
 export type UseToggleLikeOptions = {
   kind: ToggleLikeKind;
@@ -23,13 +24,17 @@ export type UseToggleLikeOptions = {
 function mePath(kind: ToggleLikeKind, id: string): string {
   return kind === 'product'
     ? `/api/user/likes/products/${encodeURIComponent(id)}/me`
-    : `/api/user/likes/cases/${encodeURIComponent(id)}/me`;
+    : kind === 'case'
+      ? `/api/user/likes/cases/${encodeURIComponent(id)}/me`
+      : `/api/user/likes/designers/${encodeURIComponent(id)}/me`;
 }
 
 function togglePath(kind: ToggleLikeKind, id: string): string {
   return kind === 'product'
     ? `/api/user/likes/products/${encodeURIComponent(id)}`
-    : `/api/user/likes/cases/${encodeURIComponent(id)}`;
+    : kind === 'case'
+      ? `/api/user/likes/cases/${encodeURIComponent(id)}`
+      : `/api/user/likes/designers/${encodeURIComponent(id)}`;
 }
 
 function parseMutationBody(data: unknown): { liked?: boolean; likesDisplayCount?: number } {
@@ -59,6 +64,10 @@ export function useToggleLike(options: UseToggleLikeOptions) {
   const [likedFromApi, setLikedFromApi] = useState<boolean | null>(null);
   const [count, setCount] = useState(likesDisplayCount);
   const [busy, setBusy] = useState(false);
+  const countRef = useRef(count);
+  useEffect(() => {
+    countRef.current = count;
+  }, [count]);
 
   const isControlled = mode === 'controlled';
 
@@ -108,7 +117,7 @@ export function useToggleLike(options: UseToggleLikeOptions) {
 
     setBusy(true);
     const nextLiked = !currentLiked;
-    const prevCount = count;
+    const prevCount = countRef.current;
     if (isControlled) setControlledLiked?.(nextLiked);
     else setLikedFromApi(nextLiked);
     setCount((c) => c + (nextLiked ? 1 : -1));
@@ -149,25 +158,14 @@ export function useToggleLike(options: UseToggleLikeOptions) {
       if (isControlled) setControlledLiked?.(serverLiked);
       else setLikedFromApi(serverLiked);
       setCount(finalCount);
+      if (kind === 'designer') markDesignerListLikeStateStale();
       onMutationSuccess?.({ liked: serverLiked, likesDisplayCount: finalCount, id });
     } catch {
       rollback();
     } finally {
       setBusy(false);
     }
-  }, [
-    auth,
-    kind,
-    id,
-    enabled,
-    isControlled,
-    controlledLiked,
-    likedFromApi,
-    count,
-    router,
-    setControlledLiked,
-    onMutationSuccess,
-  ]);
+  }, [auth, kind, id, enabled, isControlled, controlledLiked, likedFromApi, router, setControlledLiked, onMutationSuccess]);
 
   return {
     auth,

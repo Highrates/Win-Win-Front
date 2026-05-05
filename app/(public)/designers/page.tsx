@@ -3,16 +3,20 @@ import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import { DesignersSearchBox } from './DesignersSearchBox';
+import { DesignersCardsClient } from './DesignersCardsClient';
 import styles from './DesignersPage.module.css';
 
 const DESIGNERS_PER_PAGE = 48;
 
 type ListItem = {
+  id: string;
   slug: string;
   displayName: string;
   photoUrl: string | null;
   city: string | null;
   servicesLine: string | null;
+  likesDisplayCount?: number;
+  casesCount?: number;
 };
 
 async function fetchDesigners(
@@ -141,68 +145,7 @@ export default async function DesignersPage({ searchParams }: Props) {
               </div>
             </div>
 
-            <div className={styles.designersCardsWrapper}>
-              {designersOnPage.map((designer) => {
-                const avatar = designer.photoUrl?.trim() ? designer.photoUrl.trim() : '/images/placeholder.svg';
-                return (
-                <Link
-                  key={designer.slug}
-                  href={`/designers/${designer.slug}`}
-                  className={styles.designerCard}
-                >
-                  <div className={styles.designerCardInner}>
-                    <img
-                      src={avatar}
-                      alt=""
-                      className={styles.designerCardAvatar}
-                      width={132}
-                      height={132}
-                    />
-                    <div className={styles.designerCardContent}>
-                      <div className={styles.designerCardInfo}>
-                        <span className={styles.designerCardName}>
-                          {designer.displayName}
-                        </span>
-                        <span className={styles.designerCardServices}>
-                          {designer.servicesLine ?? ''}
-                        </span>
-                        <span className={styles.designerCardCity}>
-                          {designer.city ?? ''}
-                        </span>
-                      </div>
-                      <div className={styles.interactWrapper}>
-                        <div className={styles.interactItem}>
-                          <img
-                            src="/icons/collections.svg"
-                            alt=""
-                            width={20}
-                            height={20}
-                            className={styles.interactIcon}
-                          />
-                          <span className={styles.interactValue}>
-                            0
-                          </span>
-                        </div>
-                        <div className={styles.interactItem}>
-                          <img
-                            src="/icons/heart.svg"
-                            alt=""
-                            width={20}
-                            height={20}
-                            className={styles.interactIcon}
-                          />
-                          <span className={styles.interactValue}>
-                            0
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowIcon className={styles.designerCardArrow} />
-                </Link>
-                );
-              })}
-            </div>
+            <DesignersCardsClient items={designersOnPage} />
 
             {total > DESIGNERS_PER_PAGE && (
               <nav className={styles.paginationWrapper} aria-label="Пагинация">

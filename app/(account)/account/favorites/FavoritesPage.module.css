@@ -57,12 +57,20 @@
   margin-top: 32px;
 }
 
+.favoritesDesignersCardsWrapper {
+  margin-top: 32px;
+}
+
 @media (max-width: 768px) {
   .favoritesProjectsRecommendationsSection {
     margin-top: 20px;
   }
 
   .favoritesProjectsSliderCoversGrid {
+    margin-top: 20px;
+  }
+
+  .favoritesDesignersCardsWrapper {
     margin-top: 20px;
   }
 }

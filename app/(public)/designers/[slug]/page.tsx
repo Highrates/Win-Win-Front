@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation';
 import { Button } from '@/components/Button';
 import { DesignerProjectsSection } from '../DesignerProjectsSection';
 import { MoreAboutDesignerModal } from './MoreAboutDesignerModal';
+import { DesignerLikeInteract } from '@/components/DesignerLikeInteract/DesignerLikeInteract';
+import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import {
   mapPublicCaseToProjectData,
@@ -15,11 +17,14 @@ import { parseNestPublicCaseItem } from '@/lib/parseNestPublicCase';
 import styles from './DesignerPage.module.css';
 
 type PublicDesignerPayload = {
+  id: string;
   slug: string;
   displayName: string;
   photoUrl: string | null;
   city: string | null;
   servicesLine: string | null;
+  likesDisplayCount: number;
+  casesCount: number;
   coverLayout: '4:3' | '16:9';
   coverImageUrls: string[];
   aboutHtml: string | null;
@@ -44,12 +49,17 @@ async function fetchDesigner(slug: string): Promise<PublicDesignerPayload | null
         if (parsed) cases.push(parsed.case);
       }
     }
+    const casesCount =
+      typeof raw.casesCount === 'number' ? raw.casesCount : Array.isArray(raw.cases) ? cases.length : 0;
     return {
+      id: String(raw.id ?? ''),
       slug: String(raw.slug ?? slug),
       displayName: String(raw.displayName ?? ''),
       photoUrl: typeof raw.photoUrl === 'string' ? raw.photoUrl : null,
       city: typeof raw.city === 'string' ? raw.city : null,
       servicesLine: typeof raw.servicesLine === 'string' ? raw.servicesLine : null,
+      likesDisplayCount: typeof raw.likesDisplayCount === 'number' ? raw.likesDisplayCount : 0,
+      casesCount,
       coverLayout: layoutRaw,
       coverImageUrls: coverUrls,
       aboutHtml: typeof raw.aboutHtml === 'string' ? raw.aboutHtml : null,
@@ -167,18 +177,24 @@ export default async function DesignerPage({
                         height={20}
                         className={styles.interactIcon}
                       />
-                      <span>0</span>
+                      <span>{Math.max(0, designer.casesCount ?? 0)}</span>
                     </div>
-                    <div className={styles.interactItem}>
-                      <img
-                        src="/icons/heart.svg"
-                        alt=""
-                        width={20}
-                        height={20}
-                        className={styles.interactIcon}
+                    {designer.id ? (
+                      <DesignerLikeInteract
+                        designerId={designer.id}
+                        likesDisplayCount={Math.max(0, designer.likesDisplayCount ?? 0)}
+                        classNames={{
+                          interactItem: styles.interactItem,
+                          interactIcon: styles.interactIcon,
+                          heartIconActive: styles.heartIconActive,
+                        }}
                       />
-                      <span>0</span>
-                    </div>
+                    ) : (
+                      <div className={styles.interactItem}>
+                        <LikeHeartSvg className={styles.interactIcon} />
+                        <span>0</span>
+                      </div>
+                    )}
                   </div>
                   <MoreAboutDesignerModal
                     designer={{

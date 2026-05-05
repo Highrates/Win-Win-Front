@@ -18,4 +18,6 @@ export type ProfileDto = {
   referralInviteCodeExempt?: boolean;
   designerSlug?: string | null;
   designerSiteVisible?: boolean;
+  designerLikesUserCount?: number | null;
+  designerCasesCount?: number | null;
 };

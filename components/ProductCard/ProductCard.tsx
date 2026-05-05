@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useToggleLike } from '@/hooks/useToggleLike';
+import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
 import { normalizeProductCardImageUrls, productCardImageOnError } from '@/lib/productCardImageUrls';
 import styles from './ProductCard.module.css';
 
@@ -112,7 +113,7 @@ export function ProductCard({
           ? like.liked
           : false;
 
-  const showLikesColumn = like.auth === true;
+  const showLikesColumn = true;
 
   useEffect(() => {
     setIndex(0);
@@ -340,29 +341,23 @@ export function ProductCard({
             </div>
           )}
           {showLikesColumn ? (
-            !productId || !likesInteractive ? (
+            like.auth !== true ? (
+              <button
+                type="button"
+                className={styles.interactItem}
+                disabled
+                aria-disabled="true"
+                aria-label="Войдите, чтобы поставить лайк"
+              >
+                <LikeHeartSvg className={styles.interactIcon} />
+                <span className={styles.interactValue}>{Math.max(0, likes)}</span>
+              </button>
+            ) : !productId || !likesInteractive ? (
               <div className={styles.interactItem}>
-                {heartFilled ? (
-                  <svg
-                    className={styles.heartIconActive}
-                    width={20}
-                    height={20}
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden
-                  >
-                    <path
-                      d="M10.5167 17.3416C10.2334 17.4416 9.76669 17.4416 9.48335 17.3416C7.06669 16.5166 1.66669 13.0749 1.66669 7.24159C1.66669 4.66659 3.74169 2.58325 6.30002 2.58325C7.81669 2.58325 9.15835 3.31659 10 4.44992C10.8417 3.31659 12.1917 2.58325 13.7 2.58325C16.2584 2.58325 18.3334 4.66659 18.3334 7.24159C18.3334 13.0749 12.9334 16.5166 10.5167 17.3416Z"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                ) : (
-                  <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
-                )}
+                <LikeHeartSvg
+                  active={heartFilled}
+                  className={heartFilled ? styles.heartIconActive : styles.interactIcon}
+                />
                 <span className={styles.interactValue}>{Math.max(0, like.count)}</span>
               </div>
             ) : (
@@ -377,27 +372,10 @@ export function ProductCard({
                   void like.toggle();
                 }}
               >
-                {heartFilled ? (
-                  <svg
-                    className={styles.heartIconActive}
-                    width={20}
-                    height={20}
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden
-                  >
-                    <path
-                      d="M10.5167 17.3416C10.2334 17.4416 9.76669 17.4416 9.48335 17.3416C7.06669 16.5166 1.66669 13.0749 1.66669 7.24159C1.66669 4.66659 3.74169 2.58325 6.30002 2.58325C7.81669 2.58325 9.15835 3.31659 10 4.44992C10.8417 3.31659 12.1917 2.58325 13.7 2.58325C16.2584 2.58325 18.3334 4.66659 18.3334 7.24159C18.3334 13.0749 12.9334 16.5166 10.5167 17.3416Z"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                ) : (
-                  <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
-                )}
+                <LikeHeartSvg
+                  active={heartFilled}
+                  className={heartFilled ? styles.heartIconActive : styles.interactIcon}
+                />
                 <span className={styles.interactValue}>{Math.max(0, like.count)}</span>
               </button>
             )

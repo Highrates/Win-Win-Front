@@ -130,8 +130,11 @@ button.productDetailsInteractItem {
 }
 
 button.productDetailsInteractItem:disabled {
+  color: var(--color-gray);
+}
+
+button.productDetailsInteractItem:disabled {
   cursor: default;
-  opacity: 0.55;
 }
 
 a.productDetailsInteractItem {

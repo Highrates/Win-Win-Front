@@ -11,8 +11,10 @@ import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import type { ProjectData } from '@/app/(public)/designers/DesignerProjectsSection';
 import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
 import styles from './FavoritesPage.module.css';
+import designerCardStyles from '@/app/(public)/designers/DesignersPage.module.css';
+import { FavoriteDesignerCard, type FavoriteDesignerDto } from './FavoriteDesignerCard';
 
-const TAB_NAMES = ['Товары', 'Проекты и концепции'] as const;
+const TAB_NAMES = ['Товары', 'Проекты и концепции', 'Дизайнеры'] as const;
 
 const PAGE_SIZE = 36;
 
@@ -30,8 +32,18 @@ type CollectionProduct = {
 type CollectionJson = {
   products?: CollectionProduct[];
   cases?: unknown[];
+  designers?: Array<{
+    id: string;
+    slug: string;
+    displayName: string;
+    photoUrl: string | null;
+    city: string | null;
+    servicesLine: string | null;
+    likesDisplayCount: number;
+  }>;
   productsTotal?: number;
   casesTotal?: number;
+  designersTotal?: number;
 };
 
 function collectionUrl(params: {
@@ -39,12 +51,16 @@ function collectionUrl(params: {
   productsOffset: number;
   casesLimit: number;
   casesOffset: number;
+  designersLimit: number;
+  designersOffset: number;
 }) {
   const q = new URLSearchParams({
     productsLimit: String(params.productsLimit),
     productsOffset: String(params.productsOffset),
     casesLimit: String(params.casesLimit),
     casesOffset: String(params.casesOffset),
+    designersLimit: String(params.designersLimit),
+    designersOffset: String(params.designersOffset),
   });
   return `/api/user/likes/collection?${q.toString()}`;
 }
@@ -70,11 +86,14 @@ export function FavoritesPageClient() {
   const [loading, setLoading] = useState(true);
   const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
   const [loadingMoreCases, setLoadingMoreCases] = useState(false);
+  const [loadingMoreDesigners, setLoadingMoreDesigners] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<CollectionProduct[]>([]);
   const [caseProjects, setCaseProjects] = useState<ProjectData[]>([]);
+  const [designers, setDesigners] = useState<FavoriteDesignerDto[]>([]);
   const [productsTotal, setProductsTotal] = useState(0);
   const [casesTotal, setCasesTotal] = useState(0);
+  const [designersTotal, setDesignersTotal] = useState(0);
   const prevTabRef = useRef(0);
 
   const loadFull = useCallback(async () => {
@@ -83,7 +102,7 @@ export function FavoritesPageClient() {
     setLoadingMoreCases(false);
     setError(null);
     try {
-      const res = await fetch(collectionUrl({ productsLimit: PAGE_SIZE, productsOffset: 0, casesLimit: PAGE_SIZE, casesOffset: 0 }), {
+      const res = await fetch(collectionUrl({ productsLimit: PAGE_SIZE, productsOffset: 0, casesLimit: PAGE_SIZE, casesOffset: 0, designersLimit: PAGE_SIZE, designersOffset: 0 }), {
         credentials: 'same-origin',
         cache: 'no-store',
       });
@@ -91,8 +110,10 @@ export function FavoritesPageClient() {
         setError('Войдите в аккаунт, чтобы видеть товары и проекты с вашим лайком.');
         setProducts([]);
         setCaseProjects([]);
+        setDesigners([]);
         setProductsTotal(0);
         setCasesTotal(0);
+        setDesignersTotal(0);
         return;
       }
       if (!res.ok) {
@@ -103,10 +124,13 @@ export function FavoritesPageClient() {
       const rawProducts = Array.isArray(data.products) ? data.products : [];
       setProducts(rawProducts);
       setCaseProjects(mapCases(Array.isArray(data.cases) ? data.cases : []));
+      const rawDesigners = Array.isArray(data.designers) ? (data.designers as FavoriteDesignerDto[]) : [];
+      setDesigners(rawDesigners);
       setProductsTotal(typeof data.productsTotal === 'number' ? data.productsTotal : rawProducts.length);
       setCasesTotal(
         typeof data.casesTotal === 'number' ? data.casesTotal : (Array.isArray(data.cases) ? data.cases.length : 0),
       );
+      setDesignersTotal(typeof data.designersTotal === 'number' ? data.designersTotal : rawDesigners.length);
     } catch {
       setError('Сеть или сервер недоступны');
     } finally {
@@ -126,6 +150,8 @@ export function FavoritesPageClient() {
           productsOffset: offset,
           casesLimit: 0,
           casesOffset: 0,
+          designersLimit: 0,
+          designersOffset: 0,
         }),
         { credentials: 'same-origin', cache: 'no-store' },
       );
@@ -156,6 +182,8 @@ export function FavoritesPageClient() {
           productsOffset: 0,
           casesLimit: PAGE_SIZE,
           casesOffset: offset,
+          designersLimit: 0,
+          designersOffset: 0,
         }),
         { credentials: 'same-origin', cache: 'no-store' },
       );
@@ -175,6 +203,38 @@ export function FavoritesPageClient() {
     }
   }, [loadingMoreCases, caseProjects.length, casesTotal]);
 
+  const loadMoreDesigners = useCallback(async () => {
+    if (loadingMoreDesigners || designers.length >= designersTotal) return;
+    setLoadingMoreDesigners(true);
+    setError(null);
+    try {
+      const offset = designers.length;
+      const res = await fetch(
+        collectionUrl({
+          productsLimit: 0,
+          productsOffset: 0,
+          casesLimit: 0,
+          casesOffset: 0,
+          designersLimit: PAGE_SIZE,
+          designersOffset: offset,
+        }),
+        { credentials: 'same-origin', cache: 'no-store' },
+      );
+      if (!res.ok) {
+        setError(`Не удалось подгрузить дизайнеров (${res.status})`);
+        return;
+      }
+      const data = (await res.json()) as CollectionJson;
+      const raw = Array.isArray(data.designers) ? (data.designers as FavoriteDesignerDto[]) : [];
+      setDesigners((prev) => [...prev, ...raw]);
+      if (typeof data.designersTotal === 'number') setDesignersTotal(data.designersTotal);
+    } catch {
+      setError('Сеть или сервер недоступны');
+    } finally {
+      setLoadingMoreDesigners(false);
+    }
+  }, [loadingMoreDesigners, designers.length, designersTotal]);
+
   useEffect(() => {
     void loadFull();
   }, [loadFull]);
@@ -193,9 +253,14 @@ export function FavoritesPageClient() {
     () => !loading && tab === 1 && caseProjects.length === 0,
     [loading, tab, caseProjects.length],
   );
+  const emptyDesigners = useMemo(
+    () => !loading && tab === 2 && designers.length === 0,
+    [loading, tab, designers.length],
+  );
 
   const hasMoreProducts = products.length < productsTotal;
   const hasMoreCases = caseProjects.length < casesTotal;
+  const hasMoreDesigners = designers.length < designersTotal;
 
   const favoritesProjectsStyles = useMemo(
     () => ({
@@ -319,6 +384,41 @@ export function FavoritesPageClient() {
                   onClick={() => void loadMoreCases()}
                 >
                   {loadingMoreCases ? 'Загрузка…' : 'Показать ещё'}
+                </button>
+              </div>
+            ) : null}
+          </>
+        )
+      ) : null}
+
+      {!loading && tab === 2 ? (
+        emptyDesigners ? (
+          <p className={styles.muted}>Пока нет дизайнеров с вашим лайком.</p>
+        ) : (
+          <>
+            <div className={`${designerCardStyles.designersCardsWrapper} ${styles.favoritesDesignersCardsWrapper}`}>
+              {designers.map((d) => (
+                <FavoriteDesignerCard
+                  key={d.id}
+                  designer={d}
+                  onUnliked={(id) => {
+                    setDesigners((prev) => prev.filter((x) => x.id !== id));
+                    setDesignersTotal((t) => Math.max(0, t - 1));
+                  }}
+                />
+              ))}
+            </div>
+            {hasMoreDesigners ? (
+              <div className={styles.loadMoreWrap}>
+                <button
+                  type="button"
+                  className={styles.loadMoreBtn}
+                  disabled={loadingMoreDesigners}
+                  aria-busy={loadingMoreDesigners}
+                  aria-label="Подгрузить ещё дизайнеров с лайком"
+                  onClick={() => void loadMoreDesigners()}
+                >
+                  {loadingMoreDesigners ? 'Загрузка…' : 'Показать ещё'}
                 </button>
               </div>
             ) : null}

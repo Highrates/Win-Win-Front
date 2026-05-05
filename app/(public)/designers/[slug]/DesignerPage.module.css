@@ -112,10 +112,32 @@
   color: var(--color-black);
 }
 
+button.interactItem {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.interactItem:disabled {
+  color: var(--color-gray);
+}
+
 .interactIcon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+.heartIconActive {
+  display: block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--color-red);
 }
 
 .moreAboutDesignerLink {
@@ -429,7 +451,7 @@ button.projectInteractItem {
 
 button.projectInteractItem:disabled {
   cursor: default;
-  opacity: 0.55;
+  color: var(--color-gray);
 }
 
 .projectHeartActive {
@@ -451,6 +473,7 @@ button.projectInteractItem:disabled {
   display: inline-block;
   text-align: left;
   font-variant-numeric: tabular-nums;
+  color: var(--color-black);
 }
 
 .moreAboutProjectLink {
@@ -583,6 +606,60 @@ button.projectInteractItem:disabled {
   cursor: pointer;
   background: var(--color-bright-snow);
   aspect-ratio: 3 / 4;
+}
+
+.sliderCoverOpenBtn {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.sliderCoverLikeBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+}
+
+.sliderCoverLikeBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sliderCoverLikeIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.sliderCoverLikeIconActive {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+  color: var(--color-red);
+}
+
+.sliderCoverLikeValue {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-ink-black);
+  font-variant-numeric: tabular-nums;
 }
 
 .sliderCoverImg {
@@ -1076,6 +1153,12 @@ button.projectInteractItem:disabled {
   .sliderCoversGrid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+  }
+
+  .sliderCoverLikeBtn {
+    top: 8px;
+    right: 8px;
+    padding: 5px 7px;
   }
 
   .designerLinkArrow {

@@ -252,7 +252,7 @@ button.interactItem {
 
 button.interactItem:disabled {
   cursor: default;
-  opacity: 0.55;
+  color: var(--color-gray);
 }
 
 .interactItem:hover .interactIcon {

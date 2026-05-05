@@ -11,6 +11,8 @@ import {
 } from 'react';
 import { ProductCardSmall } from '@/components/ProductCardSmall';
 import { CaseAudienceSocial } from '@/components/CaseAudienceSocial/CaseAudienceSocial';
+import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
+import { useToggleLike } from '@/hooks/useToggleLike';
 import { DesignerViewToggle, type ViewMode } from './[slug]/DesignerViewToggle';
 import { MoreAboutProjectModal, type ProjectProduct } from './[slug]/MoreAboutProjectModal';
 
@@ -41,6 +43,58 @@ export type ProjectData = {
   /** Публичный счётчик лайков кейса */
   likesDisplayCount: number;
 };
+
+function CaseCoverLikeButton({
+  caseId,
+  likesDisplayCount,
+  classNames,
+}: {
+  caseId: string;
+  likesDisplayCount: number;
+  classNames: {
+    btn: string;
+    icon: string;
+    iconActive: string;
+    value: string;
+  };
+}) {
+  const like = useToggleLike({ kind: 'case', id: caseId, likesDisplayCount, enabled: true, mode: 'uncontrolled' });
+  const show = true;
+  if (like.auth !== true) {
+    return (
+      <button
+        type="button"
+        className={classNames.btn}
+        disabled
+        aria-disabled="true"
+        aria-label="Войдите, чтобы поставить лайк"
+      >
+        <LikeHeartSvg className={classNames.icon} />
+        <span className={classNames.value}>{Math.max(0, likesDisplayCount)}</span>
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={classNames.btn}
+      disabled={like.busy || !like.interactiveReady}
+      aria-label={like.liked ? 'Убрать лайк' : 'Поставить лайк'}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void like.toggle();
+      }}
+    >
+      {like.liked ? (
+        <LikeHeartSvg active className={classNames.iconActive} />
+      ) : (
+        <LikeHeartSvg className={classNames.icon} />
+      )}
+      <span className={classNames.value}>{Math.max(0, like.count)}</span>
+    </button>
+  );
+}
 
 type Props = {
   projects: ProjectData[];
@@ -200,13 +254,7 @@ export function DesignerProjectsSection({
                           ) : (
                             <>
                               <div className={stylesModule.projectInteractItem}>
-                                <img
-                                  src="/icons/heart.svg"
-                                  alt=""
-                                  width={20}
-                                  height={20}
-                                  className={stylesModule.projectInteractIcon}
-                                />
+                                <LikeHeartSvg className={stylesModule.projectInteractIcon} />
                                 <span className={stylesModule.projectInteractValue}>
                                   {project.likesDisplayCount ?? 0}
                                 </span>
@@ -334,23 +382,36 @@ export function DesignerProjectsSection({
       {(gridOnly || activeView === 'grid') && projects.length > 0 ? (
         <div className={stylesModule.sliderCoversGrid}>
           {projects.map((project) => (
-            <button
-              key={project.id ?? project.title}
-              type="button"
-              className={stylesModule.sliderCoverCard}
-              onClick={() => openProjectModal(project)}
-              aria-label={`О проекте: ${project.title}`}
-            >
+            <div key={project.id ?? project.title} className={stylesModule.sliderCoverCard}>
               <img
                 src={project.gridCoverImage ?? project.coverImage}
                 alt=""
                 className={stylesModule.sliderCoverImg}
               />
+              {project.id ? (
+                <CaseCoverLikeButton
+                  caseId={project.id}
+                  likesDisplayCount={project.likesDisplayCount}
+                  classNames={{
+                    btn: stylesModule.sliderCoverLikeBtn,
+                    icon: stylesModule.sliderCoverLikeIcon,
+                    iconActive: stylesModule.sliderCoverLikeIconActive,
+                    value: stylesModule.sliderCoverLikeValue,
+                  }}
+                />
+              ) : null}
               <span className={stylesModule.sliderCoverOverlay} aria-hidden />
               <span className={stylesModule.sliderCoverArrow}>
                 <SliderCoverArrow />
               </span>
-            </button>
+              <button
+                key={`${project.id ?? project.title}-open`}
+                type="button"
+                className={stylesModule.sliderCoverOpenBtn}
+                onClick={() => openProjectModal(project)}
+                aria-label={`О проекте: ${project.title}`}
+              />
+            </div>
           ))}
         </div>
       ) : null}

@@ -173,6 +173,7 @@
 }
 
 .designerCard {
+  position: relative;
   align-self: stretch;
   padding: 8px 14px 8px 8px;
   background: var(--color-bright-snow);
@@ -181,8 +182,16 @@
   justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  text-decoration: none;
   color: inherit;
+  text-decoration: none;
+}
+
+.designerCardLinkOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 8px;
+  text-decoration: none;
 }
 
 .designerCardInner {
@@ -193,6 +202,8 @@
   justify-content: flex-start;
   align-items: center;
   gap: 24px;
+  /* Карточка кликабельна через overlay-link; контент не должен перехватывать клики */
+  pointer-events: none;
 }
 
 .designerCardAvatar {
@@ -260,10 +271,32 @@
   gap: 6px;
 }
 
+button.interactItem {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.interactItem:disabled {
+  color: var(--color-gray);
+}
+
 .interactIcon {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+.heartIconActive {
+  display: block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--color-red);
 }
 
 .interactValue {
@@ -278,6 +311,9 @@
   height: 22px;
   color: var(--color-gray);
   transform: rotate(0deg);
+  pointer-events: none;
+  position: relative;
+  z-index: 2;
 }
 
 /* Пагинация (как CategoryPage) */

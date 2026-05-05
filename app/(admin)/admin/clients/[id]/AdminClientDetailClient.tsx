@@ -23,7 +23,7 @@ type UserDetail = {
   createdAt: string;
   consentPersonalDataAcceptedAt: string | null;
   consentSmsMarketingAcceptedAt: string | null;
-  designer?: { slug: string; isPublic: boolean } | null;
+  designer?: { slug: string; isPublic: boolean; likesUserCount?: number } | null;
   profile: null | {
     firstName: string | null;
     lastName: string | null;
@@ -353,6 +353,12 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                   <div>
                     <dt>{s.dtPublication}</dt>
                     <dd>{data.designer?.isPublic === true ? s.partnerYes : s.partnerNo}</dd>
+                  </div>
+                ) : null}
+                {isPartner ? (
+                  <div>
+                    <dt>Лайки дизайнера</dt>
+                    <dd>{Math.max(0, data.designer?.likesUserCount ?? 0)}</dd>
                   </div>
                 ) : null}
                 <div>

@@ -567,11 +567,11 @@ function ProfilePageContent() {
               </Button>
               <div className={styles.interactItem}>
                 <img src="/icons/collections.svg" alt="" width={20} height={20} className={styles.interactIcon} />
-                <span>0</span>
+                <span>{Math.max(0, profile?.designerCasesCount ?? 0)}</span>
               </div>
               <div className={styles.interactItem}>
                 <img src="/icons/heart.svg" alt="" width={20} height={20} className={styles.interactIcon} />
-                <span>0</span>
+                <span>{Math.max(0, profile?.designerLikesUserCount ?? 0)}</span>
               </div>
             </div>
           </div>
