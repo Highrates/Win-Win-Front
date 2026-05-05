@@ -40,6 +40,7 @@ type CollectionJson = {
     city: string | null;
     servicesLine: string | null;
     likesDisplayCount: number;
+    casesCount?: number;
   }>;
   productsTotal?: number;
   casesTotal?: number;

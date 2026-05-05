@@ -14,6 +14,7 @@ export type FavoriteDesignerDto = {
   city: string | null;
   servicesLine: string | null;
   likesDisplayCount: number;
+  casesCount?: number;
 };
 
 export function FavoriteDesignerCard({
@@ -52,7 +53,7 @@ export function FavoriteDesignerCard({
           <div className={designerCardStyles.interactWrapper}>
             <div className={designerCardStyles.interactItem}>
               <img src="/icons/collections.svg" alt="" width={20} height={20} className={designerCardStyles.interactIcon} />
-              <span className={designerCardStyles.interactValue}>0</span>
+              <span className={designerCardStyles.interactValue}>{Math.max(0, designer.casesCount ?? 0)}</span>
             </div>
             <div style={{ position: 'relative', zIndex: 3, pointerEvents: 'auto' }}>
               <button
