@@ -83,7 +83,12 @@
   width: 100%;
 }
 
-/* Слот под горизонтальные карточки подкатегорий (ScrollCatalog cardsWrapper) после превью */
+/* Табы + полоса карточек на странице `/catalog` */
+.catalogSectionsSlot {
+  margin-top: 48px;
+}
+
+/* Горизонтальная полоса подкатегорий на странице `/catalog/[slug]` (корень с детьми) */
 .categoryScrollCatalogSlot {
   margin-top: 96px;
 }
@@ -177,6 +182,10 @@
     gap: 56px;
   }
 
+  .catalogSectionsSlot {
+    margin-top: 48px;
+  }
+
   .categoryScrollCatalogSlot {
     margin-top: 48px;
   }
@@ -258,6 +267,20 @@
   justify-content: flex-start;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
+}
+
+.paginationEllipsis {
+  width: 26px;
+  padding-bottom: 10px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: flex-end;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+  user-select: none;
+  box-sizing: border-box;
 }
 
 .paginationPage,

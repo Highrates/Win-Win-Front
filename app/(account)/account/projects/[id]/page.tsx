@@ -1,9 +1,6 @@
-/** Account: Project — страница одного проекта (коллекции) */
-export default function AccountProjectPage({ params }: { params: { id: string } }) {
-  return (
-    <div>
-      <h1>Проект #{params.id}</h1>
-      <p>Товары в проекте, шаринг по ссылке</p>
-    </div>
-  );
+import { redirect } from 'next/navigation';
+
+/** Отдельной страницы проекта нет — список и переключатель табов на `/account/projects`. */
+export default function AccountProjectLegacyIdRedirect() {
+  redirect('/account/projects');
 }

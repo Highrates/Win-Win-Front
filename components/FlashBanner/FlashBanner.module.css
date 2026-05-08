@@ -1,0 +1,67 @@
+.root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10050;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  font-size: var(--text-body);
+  line-height: 1.4;
+  box-shadow: 0 4px 24px rgba(5, 24, 38, 0.12);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  animation: flashBannerIn 0.2s ease;
+}
+
+@keyframes flashBannerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.error {
+  background: #fff5f5;
+  color: var(--color-ink-black);
+  border-bottom: 1px solid rgba(180, 40, 40, 0.25);
+}
+
+.success {
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.dismiss {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.65;
+  border-radius: 6px;
+}
+
+.dismiss:hover {
+  opacity: 1;
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}

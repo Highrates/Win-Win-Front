@@ -27,8 +27,8 @@ export function Footer() {
   const menuColumns = useMemo(() => {
     const catalogLinks =
       catalogRoots.length > 0
-        ? catalogRoots.map((c) => ({ href: `/categories/${c.slug}`, label: c.name, key: c.slug }))
-        : [{ href: '/categories', label: 'Каталог', key: 'catalog-fallback' }];
+        ? catalogRoots.map((c) => ({ href: `/catalog/${c.slug}`, label: c.name, key: c.slug }))
+        : [{ href: '/catalog', label: 'Каталог', key: 'catalog-fallback' }];
 
     return [
       { title: 'Информация', links: infoLinks.map((l, i) => ({ ...l, key: `info-${i}` })) },

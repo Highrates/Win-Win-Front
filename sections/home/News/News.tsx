@@ -29,6 +29,7 @@ export async function News() {
               width={280}
               height={41}
               className={styles.logo}
+              priority
             />
             <div className={styles.categoriesWrapper}>
               {categories.map((c) => (
@@ -53,13 +54,18 @@ export async function News() {
                     <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={styles.arrow} />
                   </span>
                 </div>
-                <img
-                  className={styles.articleCover}
-                  src={featuredCover}
-                  alt=""
-                  width={340}
-                  height={516}
-                />
+                <span className={styles.articleCoverWrap}>
+                  <Image
+                    src={featuredCover}
+                    alt=""
+                    fill
+                    className={styles.articleCover}
+                    sizes="(max-width: 768px) 100vw, 340px"
+                    priority
+                    fetchPriority="high"
+                    unoptimized
+                  />
+                </span>
               </Link>
             </div>
             <div className={styles.rightCol}>
@@ -76,7 +82,17 @@ export async function News() {
                         <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={styles.arrow} />
                       </span>
                     </div>
-                    <img className={styles.articleCardCover} src={cover} alt="" width={140} height={140} />
+                    <span className={styles.articleCardCoverWrap}>
+                      <Image
+                        src={cover}
+                        alt=""
+                        fill
+                        className={styles.articleCardCover}
+                        sizes="140px"
+                        loading="lazy"
+                        unoptimized
+                      />
+                    </span>
                   </Link>
                 );
               })}

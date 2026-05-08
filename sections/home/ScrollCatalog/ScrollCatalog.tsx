@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useId } from 'react';
 import { homeRootsFromPublicTreeClient, type HomeCatalogRoot } from '@/lib/homeCatalog';
 import { animateScrollStripBy } from './scrollStripScroll';
 import styles from './ScrollCatalog.module.css';
@@ -14,7 +13,6 @@ type Props = {
 };
 
 export function ScrollCatalog({ roots: initialRoots }: Props) {
-  const pathname = usePathname();
   const [roots, setRoots] = useState<HomeCatalogRoot[]>(initialRoots);
   const tabsWrapperRef = useRef<HTMLDivElement>(null);
   const tabBtnRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -22,7 +20,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
 
   const pullTree = useCallback(async () => {
     try {
-      const res = await fetch('/api/catalog/tree', { cache: 'no-store' });
+      const res = await fetch('/api/catalog/tree');
       if (!res.ok) return;
       const data = await res.json();
       if (data?.roots && Array.isArray(data.roots)) {
@@ -33,17 +31,24 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     }
   }, []);
 
+  const reactUiId = useId().replace(/:/g, '');
+  const tabIdsPrefix = `home-catalog-${reactUiId}`;
+  const cardsPanelId = `${tabIdsPrefix}-cards-panel`;
+
   useEffect(() => {
     setRoots(initialRoots);
   }, [initialRoots]);
 
-  useEffect(() => {
-    pullTree();
-  }, [pathname, pullTree]);
+  const lastTreePullRef = useRef(0);
+  const TREE_PULL_MIN_INTERVAL_MS = 10 * 60 * 1000;
 
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === 'visible') pullTree();
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastTreePullRef.current < TREE_PULL_MIN_INTERVAL_MS) return;
+      lastTreePullRef.current = now;
+      void pullTree();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
@@ -105,8 +110,9 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     if (!roots.length) return [];
     const root = roots.find((r) => r.id === activeId) ?? roots[0];
     if (!root) return [];
-    if (root.children.length > 0) {
-      return root.children.map((c) => ({
+    const direct = root.children ?? [];
+    if (direct.length > 0) {
+      return direct.map((c) => ({
         slug: c.slug,
         name: c.name,
         image: c.cardImageUrl,
@@ -222,9 +228,9 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
               key={tab.id}
               type="button"
               role="tab"
-              id={`catalog-tab-${tab.id}`}
+              id={`${tabIdsPrefix}-tab-${tab.id}`}
               aria-selected={tab.id === activeId}
-              aria-controls="catalog-cards-panel"
+              aria-controls={cardsPanelId}
               className={tab.id === activeId ? styles.tabActive : styles.tab}
               onClick={() => setActiveId(tab.id)}
               onMouseEnter={() => setHoverTabId(tab.id)}
@@ -241,9 +247,9 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
         <div className={`${styles.stripHostFlex} ${styles.stripHostFlexHome}`}>
           <div className={styles.stripPanel}>
             <div
-              id="catalog-cards-panel"
+              id={cardsPanelId}
               role="tabpanel"
-              aria-labelledby={activeRoot ? `catalog-tab-${activeRoot.id}` : undefined}
+              aria-labelledby={activeRoot ? `${tabIdsPrefix}-tab-${activeRoot.id}` : undefined}
               ref={wrapperRef}
               className={styles.cardsWrapper}
               onMouseDown={handlePointerDown}
@@ -255,7 +261,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
               {stripCards.map((card, index) => (
                 <Link
                   key={card.slug}
-                  href={`/categories/${card.slug}`}
+                  href={`/catalog/${card.slug}`}
                   className={styles.card}
                   onClick={handleLinkClick}
                 >
@@ -310,7 +316,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
       <div className={styles.mobileWrapper}>
         <div className={styles.mobileCardsWrapper}>
           {roots.map((tab) => (
-            <Link key={tab.id} href={`/categories/${tab.slug}`} className={styles.mobileCard}>
+            <Link key={tab.id} href={`/catalog/${tab.slug}`} className={styles.mobileCard}>
               <div className={styles.mobileCardImgWrap}>
                 <img
                   src={tab.cardImageUrl}

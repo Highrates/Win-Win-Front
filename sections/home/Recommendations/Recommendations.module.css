@@ -18,28 +18,6 @@
   row-gap: 32px;
 }
 
-.loadMoreWrapper {
-  display: flex;
-  justify-content: center;
-  margin-top: 32px;
-}
-
-.loadMoreBtn {
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-  color: var(--color-gray);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  font-family: inherit;
-  transition: opacity 0.2s ease;
-}
-
-.loadMoreBtn:hover {
-  opacity: 0.7;
-}
-
 @media (max-width: 768px) {
   .section {
     margin-top: 80px;

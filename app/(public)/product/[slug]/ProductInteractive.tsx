@@ -1,8 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@/components/Button';
+import { buildPdpProjectDraftPayload } from '@/lib/designerProjects/buildPdpDraftPayload';
+import {
+  fetchDesignerProjectDetail,
+  fetchDesignerProjectList,
+  updateDesignerProject,
+} from '@/lib/designerProjects/clientApi';
+import { savePayloadWithAppendedPdpLine } from '@/lib/designerProjects/payload';
+import { writePdpProjectDraft, type PdpProjectDraftPayload } from '@/lib/designerProjects/pdpDraft';
+import { CreateEditProjectModal } from '@/app/(account)/account/projects/components/CreateEditProjectModal';
 import { ProductGallery } from '@/components/ProductGallery';
 import {
   formatProductPriceRangeRub,
@@ -15,9 +24,12 @@ import type {
   PublicProductVariantApi,
 } from '@/lib/publicProductFromApi';
 import ProductAccordions from './ProductAccordions';
+import { FlashBanner } from '@/components/FlashBanner/FlashBanner';
+import { useFlashBanner } from '@/hooks/useFlashBanner';
 import { ProductDetailsStickyBar } from './ProductDetailsStickyBar';
 import ProductElementTabs from './ProductElementTabs';
 import ProductModifications from './ProductModifications';
+import { ProductOrderSplit, type ProductOrderProjectOption } from './ProductOrderSplit';
 import styles from './ProductPage.module.css';
 
 type BrandInfo = {
@@ -28,6 +40,8 @@ type BrandInfo = {
 };
 
 type Props = {
+  productId: string;
+  productSlug: string;
   productName: string;
   /** Пре-резолвнутые картинки товара (fallback для галереи). */
   productImages: string[];
@@ -98,6 +112,8 @@ function findExactVariant(
 
 export default function ProductInteractive(props: Props) {
   const {
+    productId,
+    productSlug,
     productName,
     productImages,
     variantImagesMap,
@@ -127,6 +143,13 @@ export default function ProductInteractive(props: Props) {
     [variants, elements, modificationId, selections],
   );
 
+  /** Достаточно для строки проекта: модификация + материал-цвет по каждому элементу (SKU может не существовать). */
+  const configurationReadyForProject = useMemo(() => {
+    if (!modificationId) return false;
+    const required = elements.filter((el) => el.availabilities.length > 0);
+    return required.every((el) => Boolean(selections[el.id]));
+  }, [modificationId, elements, selections]);
+
   const priceText = useMemo(() => {
     if (matchedVariant) {
       const n = parseProductPriceFromApi(matchedVariant.price);
@@ -147,12 +170,108 @@ export default function ProductInteractive(props: Props) {
     return productImages;
   }, [matchedVariant, variantImagesMap, productImages]);
 
+  const [designerProjects, setDesignerProjects] = useState<ProductOrderProjectOption[]>([]);
+  const [designerProjectsLoading, setDesignerProjectsLoading] = useState(false);
+  const [projectLineSaving, setProjectLineSaving] = useState(false);
+  const [projectAddedMessage, setProjectAddedMessage] = useState<string | null>(null);
+  const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
+  const [pendingLineDraftForModal, setPendingLineDraftForModal] = useState<PdpProjectDraftPayload | null>(null);
+  const { flash, pushError, dismiss } = useFlashBanner();
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setDesignerProjectsLoading(true);
+      try {
+        const data = await fetchDesignerProjectList();
+        if (cancelled) return;
+        setDesignerProjects(
+          data.projects.map((p) => ({
+            id: p.id,
+            name: p.name.trim() || 'Без названия',
+          })),
+        );
+      } catch {
+        if (!cancelled) setDesignerProjects([]);
+      } finally {
+        if (!cancelled) setDesignerProjectsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!projectAddedMessage) return;
+    const timer = window.setTimeout(() => setProjectAddedMessage(null), 7000);
+    return () => window.clearTimeout(timer);
+  }, [projectAddedMessage]);
+
+  function buildProjectLineDraft(): PdpProjectDraftPayload | null {
+    if (!configurationReadyForProject) return null;
+    const thumbUrl = galleryImages[0] ?? null;
+    return buildPdpProjectDraftPayload({
+      productId,
+      productSlug,
+      productDisplayName: productName,
+      modifications,
+      elements,
+      thumbUrl,
+      modificationId,
+      selections,
+      matchedVariant,
+      catalogPriceMinRub: priceMin,
+      catalogPriceMaxRub: priceMax,
+    });
+  }
+
+  async function handleAddToExistingProject(projectId: string) {
+    if (!configurationReadyForProject || projectLineSaving) return;
+    const draft = buildProjectLineDraft();
+    if (!draft) return;
+    setProjectLineSaving(true);
+    try {
+      const detail = await fetchDesignerProjectDetail(projectId);
+      await updateDesignerProject(projectId, savePayloadWithAppendedPdpLine(detail, draft));
+      const label = designerProjects.find((p) => p.id === projectId)?.name?.trim() || 'Проект';
+      setProjectAddedMessage(`Товар добавлен в проект: ${label}`);
+      try {
+        const data = await fetchDesignerProjectList();
+        setDesignerProjects(
+          data.projects.map((p) => ({
+            id: p.id,
+            name: p.name.trim() || 'Без названия',
+          })),
+        );
+      } catch {
+        /* ignore */
+      }
+    } catch (e) {
+      pushError(
+        e instanceof Error ? e.message : 'Не удалось добавить товар в проект. Попробуйте снова.',
+      );
+    } finally {
+      setProjectLineSaving(false);
+    }
+  }
+
+  function handleCreateNewProject() {
+    if (!configurationReadyForProject) return;
+    const draft = buildProjectLineDraft();
+    if (!draft) return;
+    writePdpProjectDraft(draft);
+    setPendingLineDraftForModal(draft);
+    setCreateProjectModalOpen(true);
+  }
+
   function handleSelect(elementId: string, brandMaterialColorId: string) {
     setSelections((prev) => ({ ...prev, [elementId]: brandMaterialColorId }));
   }
 
   return (
     <>
+      <FlashBanner flash={flash} onDismiss={dismiss} />
       <div className={styles.productImgsWrapper}>
         <ProductGallery images={galleryImages} productName={productName} />
       </div>
@@ -160,6 +279,19 @@ export default function ProductInteractive(props: Props) {
       <div className={styles.productDetails}>
         {leftColumn}
         <div className={styles.productDetailsRight}>
+          {projectAddedMessage ? (
+            <div className={styles.pdpProjectAddedBanner} role="status">
+              <span>{projectAddedMessage}</span>
+              <button
+                type="button"
+                className={styles.pdpProjectAddedBannerDismiss}
+                onClick={() => setProjectAddedMessage(null)}
+                aria-label="Закрыть уведомление"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <div className={styles.productDetailsRightRow}>
             <span className={styles.productDetailsPrice}>{priceText}</span>
             <div className={styles.productDetailsBtnsWrapper}>
@@ -177,12 +309,29 @@ export default function ProductInteractive(props: Props) {
                   aria-label="Скачать 3D модель"
                 />
               </div>
-              <Button variant="primary" className={styles.productDetailsBtnPrimary}>
-                Добавить к заказу
-              </Button>
+              <ProductOrderSplit
+                configurationReadyForProject={configurationReadyForProject}
+                projects={designerProjects}
+                projectsLoading={designerProjectsLoading}
+                projectActionBusy={projectLineSaving}
+                onAddToExistingProject={handleAddToExistingProject}
+                onCreateNewProject={handleCreateNewProject}
+              />
             </div>
           </div>
-          <ProductDetailsStickyBar priceText={priceText} />
+          <ProductDetailsStickyBar
+            priceText={priceText}
+            orderSplit={
+              <ProductOrderSplit
+                configurationReadyForProject={configurationReadyForProject}
+                projects={designerProjects}
+                projectsLoading={designerProjectsLoading}
+                projectActionBusy={projectLineSaving}
+                onAddToExistingProject={handleAddToExistingProject}
+                onCreateNewProject={handleCreateNewProject}
+              />
+            }
+          />
 
           <div className={styles.descriptionWrapper}>
             <p className={styles.descriptionText}>{bodyText}</p>
@@ -256,6 +405,38 @@ export default function ProductInteractive(props: Props) {
           ) : null}
         </div>
       </div>
+
+      <CreateEditProjectModal
+        open={createProjectModalOpen}
+        onClose={() => {
+          setCreateProjectModalOpen(false);
+          setPendingLineDraftForModal(null);
+        }}
+        mode="create"
+        projectId={null}
+        initialDetail={null}
+        pendingLineDraft={pendingLineDraftForModal}
+        onSaveError={pushError}
+        onSaved={(ctx) => {
+          const name = ctx?.createdProjectName?.trim() || 'Проект';
+          setProjectAddedMessage(`Товар добавлен в проект: ${name}`);
+          setCreateProjectModalOpen(false);
+          setPendingLineDraftForModal(null);
+          void (async () => {
+            try {
+              const data = await fetchDesignerProjectList();
+              setDesignerProjects(
+                data.projects.map((p) => ({
+                  id: p.id,
+                  name: p.name.trim() || 'Без названия',
+                })),
+              );
+            } catch {
+              /* ignore */
+            }
+          })();
+        }}
+      />
     </>
   );
 }

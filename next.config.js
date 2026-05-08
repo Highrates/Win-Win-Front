@@ -27,6 +27,12 @@ const nextConfig = {
   async rewrites() {
     return [{ source: '/favicon.ico', destination: '/images/favicon.svg' }];
   },
+  async redirects() {
+    return [
+      { source: '/categories', destination: '/catalog', permanent: true },
+      { source: '/categories/:slug', destination: '/catalog/:slug', permanent: true },
+    ];
+  },
   /**
    * Лимит тела для Server Actions (не для Route Handlers).
    * Multipart через прокси `app/api/admin/backend` — потоком, без `formData()` (см. route.ts).

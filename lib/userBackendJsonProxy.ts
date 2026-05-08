@@ -14,7 +14,7 @@ type ProxyJsonBase = {
   request: Request;
   /** путь относительно API base, напр. `users/me/profile` */
   backendPath: string;
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: string;
 };
 
@@ -158,7 +158,7 @@ export async function proxyUserBearerFormDataPost(request: Request, backendPath:
 export async function proxyUserBearerFromRequest(
   request: Request,
   backendPath: string,
-  method: 'PATCH' | 'POST',
+  method: 'PATCH' | 'POST' | 'PUT',
   opts?: {
     setCookieFromAccessToken?: boolean;
     /** Если после trim тело пустое — подставить (напр. "{}" для invite/claim). */

@@ -1,0 +1,273 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(5, 24, 38, 0.45);
+  box-sizing: border-box;
+}
+
+.panel {
+  width: min(960px, 100%);
+  max-height: min(92vh, 880px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-white);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(5, 24, 38, 0.18);
+}
+
+.panelHead {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: var(--text-card-20-400);
+  font-weight: 400;
+  color: var(--color-ink-black);
+}
+
+.closeBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-ink-black);
+  border-radius: 8px;
+}
+
+.closeBtn:hover {
+  background: var(--color-bright-snow);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subLabel {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+}
+
+.roomToolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roomControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.roomNameField {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+}
+
+.emptyProducts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 0;
+}
+
+.catalogBtn {
+  align-self: flex-start;
+}
+
+.emptyHint {
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.catalogBtnSecondary {
+  align-self: flex-start;
+}
+
+.lineFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.roomPick {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.roomPickLabel {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+}
+
+.roomPickSelect {
+  min-width: 180px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  font-family: inherit;
+  font-size: var(--text-body);
+}
+
+.removeLineBtn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+  text-decoration: underline;
+  padding: 4px 0;
+}
+
+.removeLineBtn:hover {
+  color: var(--color-ink-black);
+}
+
+.panelFooter {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Вложенный каталог */
+.catalogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(5, 24, 38, 0.55);
+  box-sizing: border-box;
+}
+
+.catalogPanel {
+  width: min(920px, 100%);
+  max-height: min(88vh, 700px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-white);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(5, 24, 38, 0.22);
+}
+
+.catalogHead {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+
+.catalogTitle {
+  margin: 0;
+  font-size: var(--text-card-20-400);
+  font-weight: 400;
+}
+
+.catalogToolbar {
+  padding: 12px 18px 8px;
+}
+
+.catalogSearch {
+  width: 100%;
+}
+
+.catalogScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 18px 18px;
+}
+
+.catalogGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.catalogLoading,
+.catalogEnd {
+  padding: 12px 0;
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+}
+
+.catalogFooter {
+  flex-shrink: 0;
+  padding: 14px 18px;
+  border-top: var(--account-hairline-width) solid var(--account-hairline-color);
+  display: flex;
+  justify-content: flex-end;
+}

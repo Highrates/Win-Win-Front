@@ -1,286 +1,301 @@
 'use client';
 
-import { useState } from 'react';
-import { AccountDetailedProductRow } from '@/components/AccountProductList/AccountDetailedProductRow';
-import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { FlashBanner } from '@/components/FlashBanner/FlashBanner';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
-import { ACCOUNT_PROJECT_NAMES } from '@/components/AccountProjectTabs/accountProjectNames';
 import { Button } from '@/components/Button';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useFlashBanner } from '@/hooks/useFlashBanner';
+import { fetchDesignerProjectDetail } from '@/lib/designerProjects/clientApi';
+import { readPdpProjectDraft, type PdpProjectDraftPayload } from '@/lib/designerProjects/pdpDraft';
+import { AccountProjectsPageSkeleton } from './AccountProjectsPageSkeleton';
+import { AccountProjectsCta } from './components/AccountProjectsCta';
+import { AccountProjectsLinesList } from './components/AccountProjectsLinesList';
+import { AccountProjectsSectionToolbar } from './components/AccountProjectsSectionToolbar';
+import { CreateEditProjectModal } from './components/CreateEditProjectModal';
+import { useDesignerProjectsBootstrap } from './hooks/useDesignerProjectsBootstrap';
+import { useDesignerProjectDetail } from './hooks/useDesignerProjectDetail';
+import { useProjectLineMutations } from './hooks/useProjectLineMutations';
+import { useProjectLinesDerived } from './hooks/useProjectLinesDerived';
 import styles from './page.module.css';
 
-const PROJECT_SECTION_TABS = [
-  { id: 'all', label: 'Все' },
-  { id: 'living', label: 'Гостиная' },
-  { id: 'dining', label: 'Столовая' },
-  { id: 'light', label: 'Свет' },
-  { id: 'office', label: 'Офис' },
-] as const;
-
-const FALLBACK_PROJECT_NAMES = ['Проект'] as const;
-
-type ProjectProduct = {
-  id: string;
-  name: string;
-  price: string;
-  color: string;
-  material: string;
-  size: string;
-};
-
-const PROJECT_PRODUCTS: ProjectProduct[] = [
-  {
-    id: '1',
-    name: 'Кресло Otto Soft',
-    price: '~ 185 990',
-    color: 'Светло-серый',
-    material: 'Массив дуба, текстиль',
-    size: '82 × 76 × 90 см',
-  },
-  {
-    id: '2',
-    name: 'Диван Bergen',
-    price: '~ 412 500',
-    color: 'Тёмно-синий',
-    material: 'Велюр, дерево',
-    size: '240 × 95 × 85 см',
-  },
-  {
-    id: '3',
-    name: 'Стол обеденный Nord',
-    price: '~ 89 900',
-    color: 'Натуральный дуб',
-    material: 'Массив дуба',
-    size: '180 × 90 × 75 см',
-  },
-  {
-    id: '4',
-    name: 'Ковёр Artisan',
-    price: '~ 45 200',
-    color: 'Бежевый',
-    material: 'Шерсть',
-    size: '200 × 300 см',
-  },
-  {
-    id: '5',
-    name: 'Торшер Linea',
-    price: '~ 32 400',
-    color: 'Чёрный / латунь',
-    material: 'Металл, стекло',
-    size: 'Ø 35 см, H 165 см',
-  },
-];
-
-function CtaAccordionChevronIcon({ open }: { open: boolean }) {
-  return (
-    <span className={styles.ctaAccordionChevron} data-open={open || undefined} aria-hidden>
-      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-        <path d="M11 4v14M4 11h14" />
-      </svg>
-    </span>
-  );
-}
-
-function AccountProjectCtaDetails() {
-  return (
-    <>
-      <div className={styles.ctaLeftInfo}>
-        <div className={styles.ctaLabel}>Общая сумма:</div>
-        <div className={styles.ctaCount}>(16 товаров)</div>
-      </div>
-      <div className={styles.ctaRightInfo}>
-        <div className={styles.ctaPrice}>~ 10 185 990</div>
-        <div className={styles.ctaBonus}>
-          <img src="/icons/wallet-add.svg" alt="" width={16} height={16} aria-hidden />
-          <span>
-            <span className={styles.ctaBonusLabel}>Ожидаемый бонус: </span>
-            <span className={styles.ctaBonusValue}>1 180 590 р.</span>
-          </span>
-        </div>
-      </div>
-    </>
-  );
-}
+const PROJECT_Q = 'project';
+const PENDING_LINE_Q = 'pendingLine';
 
 export function AccountProjectsPageClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { summaries, loadErr, refreshList, listReady } = useDesignerProjectsBootstrap();
+  const { flash, pushError, dismiss } = useFlashBanner();
+  const onMutationError = useCallback((message: string) => pushError(message), [pushError]);
+
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [sectionTab, setSectionTab] = useState<(typeof PROJECT_SECTION_TABS)[number]['id']>('all');
+  const activeSummary = summaries[selectedIndex] ?? null;
+  const { detail, setDetail } = useDesignerProjectDetail(activeSummary?.id ?? null, {
+    onDetailError: pushError,
+  });
+
+  const [sectionTab, setSectionTab] = useState<string>('all');
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [ctaAccordionOpen, setCtaAccordionOpen] = useState(false);
   const isCtaAccordionLayout = useMediaQuery('(max-width: 768px)');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingLineDraft, setPendingLineDraft] = useState<PdpProjectDraftPayload | null>(null);
 
-  const projectNames =
-    Array.isArray(ACCOUNT_PROJECT_NAMES) && ACCOUNT_PROJECT_NAMES.length > 0
-      ? ACCOUNT_PROJECT_NAMES
-      : FALLBACK_PROJECT_NAMES;
-  const projectName = projectNames[selectedIndex] ?? projectNames[0];
+  const { sectionTabs, visibleLines, displayTotal, itemCount } = useProjectLinesDerived(detail, sectionTab);
 
-  const onSelectAllToggle = () => {
-    if (selectionMode) {
-      setSelectionMode(false);
-      setSelectedIds(new Set());
-    } else {
-      setSelectionMode(true);
-      setSelectedIds(new Set(PROJECT_PRODUCTS.map((p) => p.id)));
+  const onRemovedLines = useCallback((removedIds: string[]) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      for (const id of removedIds) n.delete(id);
+      return n;
+    });
+    setSelectionMode(false);
+    setCtaAccordionOpen(false);
+  }, []);
+
+  const { confirmRemoveLines, confirmRemoveSingleLine, updateQuantity } = useProjectLineMutations({
+    detail,
+    setDetail,
+    activeSummary,
+    refreshList,
+    onRemovedLines,
+    onMutationError,
+  });
+
+  /** Выбранный проект в query для шаринга и устойчивости к порядку в списке */
+  const handleProjectTabSelect = useCallback(
+    (index: number) => {
+      setSelectedIndex(index);
+      const id = summaries[index]?.id;
+      if (!id) return;
+      const next = new URLSearchParams(searchParams.toString());
+      next.set(PROJECT_Q, id);
+      router.replace(`/account/projects?${next.toString()}`, { scroll: false });
+    },
+    [summaries, searchParams, router],
+  );
+
+  useEffect(() => {
+    if (summaries.length === 0) return;
+    const pid = searchParams.get(PROJECT_Q);
+    if (!pid) return;
+    const idx = summaries.findIndex((p) => p.id === pid);
+    if (idx < 0) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete(PROJECT_Q);
+      const q = next.toString();
+      router.replace(q ? `/account/projects?${q}` : '/account/projects', { scroll: false });
+      return;
+    }
+    setSelectedIndex(idx);
+  }, [summaries, searchParams, router]);
+
+  useEffect(() => {
+    if (summaries.length === 0) return;
+    if (searchParams.get(PROJECT_Q)) return;
+    const id = summaries[selectedIndex]?.id ?? summaries[0]?.id;
+    if (!id) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.set(PROJECT_Q, id);
+    router.replace(`/account/projects?${next.toString()}`, { scroll: false });
+  }, [summaries, selectedIndex, searchParams, router]);
+
+  useEffect(() => {
+    if (searchParams.get(PENDING_LINE_Q) !== '1') return;
+    setPendingLineDraft(readPdpProjectDraft());
+    setModalMode('create');
+    setEditingId(null);
+    setModalOpen(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete(PENDING_LINE_Q);
+    const q = next.toString();
+    router.replace(q ? `/account/projects?${q}` : '/account/projects', { scroll: false });
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, [selectedIndex, sectionTab]);
+
+  useEffect(() => {
+    setSectionTab('all');
+  }, [selectedIndex]);
+
+  useEffect(() => {
+    if (summaries.length === 0) {
+      setSelectedIndex(0);
+      return;
+    }
+    if (selectedIndex >= summaries.length) setSelectedIndex(summaries.length - 1);
+  }, [summaries.length, selectedIndex]);
+
+  useEffect(() => {
+    if (detail && detail.lines.length === 0) setSectionTab('all');
+  }, [detail?.lines.length]);
+
+  const projectNames = useMemo(
+    () => summaries.map((p) => p.name.trim() || 'Без названия'),
+    [summaries],
+  );
+
+  const openCreate = () => {
+    setModalMode('create');
+    setEditingId(null);
+    setPendingLineDraft(null);
+    setModalOpen(true);
+  };
+
+  const openEdit = () => {
+    if (!activeSummary) return;
+    setModalMode('edit');
+    setEditingId(activeSummary.id);
+    setPendingLineDraft(null);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingId(null);
+    setPendingLineDraft(null);
+  };
+
+  const onModalSaved = () => {
+    void refreshList();
+    if (activeSummary?.id) {
+      void fetchDesignerProjectDetail(activeSummary.id).then(setDetail);
     }
   };
 
-  const onProductCheckChange = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
+  const onSelectAllEnter = () => {
+    setSelectionMode(true);
+    setSelectedIds(new Set(visibleLines.map((l) => l.id)));
   };
 
+  const onSelectAllCancel = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const onLineSelectedChange = useCallback((lineId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (checked) n.add(lineId);
+      else n.delete(lineId);
+      return n;
+    });
+  }, []);
+
   return (
-    <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <AccountProjectTabs selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
-        <Button variant="primary" className={styles.createProjectButton}>
-          Создать проект
-        </Button>
-      </div>
-
-      <div className={styles.projectHeader}>
-        <div className={styles.projectTitleRow}>
-          <span className={styles.projectTitle}>{projectName}</span>
-          <button type="button" className={styles.iconButton} aria-label="Редактировать проект">
-            <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
-          </button>
+    <>
+      <FlashBanner flash={flash} onDismiss={dismiss} />
+      {loadErr ? (
+        <div className={styles.page}>
+          <p className={styles.emptyText}>{loadErr}</p>
+          <Button type="button" variant="primary" onClick={() => void refreshList()}>
+            Повторить
+          </Button>
         </div>
-        <div className={styles.projectTools}>
-          <button type="button" className={styles.specLink} aria-label="Скачать спецификацию PDF">
-            <img
-              src="/icons/document-download.svg"
-              alt=""
-              width={20}
-              height={20}
-              className={styles.specIcon}
-              aria-hidden
-            />
-            <span>Спецификация PDF</span>
-          </button>
-          <button type="button" className={styles.iconButton} aria-label="Заметки по проекту">
-            <img src="/icons/note.svg" alt="" width={20} height={20} aria-hidden />
-          </button>
-        </div>
-      </div>
-
-      <p className={styles.projectAddress}>Адрес: ул. Красных молдавских партизан 16</p>
-
-      {isCtaAccordionLayout ? (
-        <div className={styles.ctaAccordionWrapper}>
-          <div className={styles.ctaAccordion}>
-            <button
-              type="button"
-              className={styles.ctaAccordionTrigger}
-              onClick={() => setCtaAccordionOpen((o) => !o)}
-              aria-expanded={ctaAccordionOpen}
-              aria-controls="account-project-cta-panel"
-              id="account-project-cta-trigger"
-            >
-              <div className={styles.ctaAccordionTriggerInner}>
-                <div className={styles.ctaAccordionTriggerLeft}>
-                  <div className={styles.ctaLabel}>Общая сумма:</div>
-                  <div className={styles.ctaCount}>(16 товаров)</div>
-                </div>
-                <span className={styles.ctaAccordionTriggerPrice}>~ 10 185 990</span>
-              </div>
-              <CtaAccordionChevronIcon open={ctaAccordionOpen} />
-            </button>
-            <div
-              id="account-project-cta-panel"
-              role="region"
-              aria-labelledby="account-project-cta-trigger"
-              className={styles.ctaAccordionPanel}
-              data-open={ctaAccordionOpen || undefined}
-            >
-              <div className={styles.ctaAccordionContent}>
-                <div className={styles.ctaAccordionSnowStack}>
-                  <AccountProjectCtaDetails />
-                </div>
-                <button type="button" className={styles.ctaCheckoutBtn}>
-                  <span>Оформить</span>
-                  <span aria-hidden>→</span>
-                </button>
-              </div>
-            </div>
+      ) : !listReady ? (
+        <AccountProjectsPageSkeleton />
+      ) : summaries.length === 0 ? (
+        <div className={styles.page}>
+          <div className={styles.toolbar}>
+            <div />
+            <Button variant="primary" className={styles.createProjectButton} type="button" onClick={openCreate}>
+              Создать проект
+            </Button>
           </div>
+          <p className={styles.emptyProjectsOnly}>Проектов пока нет</p>
         </div>
       ) : (
-        <div className={styles.ctaRow}>
-          <div className={styles.ctaSnowPanel}>
-            <AccountProjectCtaDetails />
+        <div className={styles.page}>
+          <div className={styles.toolbar}>
+            <AccountProjectTabs selectedIndex={selectedIndex} onSelect={handleProjectTabSelect} projects={projectNames} />
+            <Button variant="primary" className={styles.createProjectButton} type="button" onClick={openCreate}>
+              Создать проект
+            </Button>
           </div>
-          <button type="button" className={styles.ctaCheckoutBtn}>
-            <span>Оформить</span>
-            <span aria-hidden>→</span>
-          </button>
+
+          <div className={styles.projectHeader}>
+            <div className={styles.projectTitleRow}>
+              <span className={styles.projectTitle}>{activeSummary?.name.trim() || 'Проект'}</span>
+              <button type="button" className={styles.iconButton} aria-label="Редактировать проект" onClick={openEdit}>
+                <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
+              </button>
+            </div>
+            <div className={styles.projectTools}>
+              <button type="button" className={styles.specLink} aria-label="Скачать спецификацию PDF">
+                <img src="/icons/document-download.svg" alt="" width={20} height={20} className={styles.specIcon} aria-hidden />
+                <span>Спецификация PDF</span>
+              </button>
+              <button type="button" className={styles.iconButton} aria-label="Заметки по проекту">
+                <img src="/icons/note.svg" alt="" width={20} height={20} />
+              </button>
+            </div>
+          </div>
+
+          <p className={styles.projectAddress}>
+            {detail?.address?.trim() ? <>Адрес: {detail.address.trim()}</> : <>Адрес не указан</>}
+          </p>
+
+          <AccountProjectsCta
+            isAccordionLayout={isCtaAccordionLayout}
+            ctaAccordionOpen={ctaAccordionOpen}
+            onToggleAccordion={() => setCtaAccordionOpen((o) => !o)}
+            itemCount={itemCount}
+            displayTotal={displayTotal}
+          />
+
+          {detail && detail.lines.length === 0 ? (
+            <div className={styles.emptyProjectCatalog}>
+              <Button
+                type="button"
+                variant="secondary"
+                className={styles.openCatalogButton}
+                onClick={() => window.open('/catalog', '_blank', 'noopener,noreferrer')}
+              >
+                Открыть каталог
+              </Button>
+            </div>
+          ) : (
+            <AccountProjectsSectionToolbar
+              sectionTabs={sectionTabs}
+              sectionTab={sectionTab}
+              onSectionTabChange={setSectionTab}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onSelectAllEnter={onSelectAllEnter}
+              onSelectAllCancel={onSelectAllCancel}
+              onDeleteSelected={() => confirmRemoveLines(Array.from(selectedIds))}
+            />
+          )}
+
+          <AccountProjectsLinesList
+            visibleLines={visibleLines}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onLineSelectedChange={onLineSelectedChange}
+            onRemoveLine={confirmRemoveSingleLine}
+            onQuantityDelta={(lineId, d) => void updateQuantity(lineId, d)}
+          />
         </div>
       )}
 
-      <div
-        className={`${styles.sectionTabsWrapper} ${styles.tabsOffset}`}
-        role="tablist"
-        aria-label="Разделы проекта"
-      >
-        {PROJECT_SECTION_TABS.map((tab) => {
-          const isActive = tab.id === sectionTab;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              className={isActive ? styles.sectionTabActive : styles.sectionTab}
-              onClick={() => setSectionTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className={styles.productsTopRow}>
-        <div className={styles.marketSectionRowLeft}>
-          <div className={styles.marketFilterGroup}>
-            <button type="button" aria-label="Фильтр">
-              <img src="/icons/filter.svg" alt="" width={20} height={20} />
-              <span>Фильтр</span>
-            </button>
-          </div>
-        </div>
-        <button
-          type="button"
-          className={styles.selectAllButton}
-          onClick={onSelectAllToggle}
-          aria-pressed={selectionMode}
-        >
-          {selectionMode ? (
-            <>
-              <span>Отменить</span>
-              <img src="/icons/delete.svg" alt="" width={20} height={20} className={styles.iconBlack} />
-            </>
-          ) : (
-            'Выбрать все'
-          )}
-        </button>
-      </div>
-
-      <div className={productListStyles.productCardDetailedWrapper}>
-        {PROJECT_PRODUCTS.map((product) => (
-          <AccountDetailedProductRow
-            key={product.id}
-            product={product}
-            selectionMode={selectionMode}
-            selected={selectedIds.has(product.id)}
-            onSelectedChange={(checked) => onProductCheckChange(product.id, checked)}
-          />
-        ))}
-      </div>
-    </div>
+      <CreateEditProjectModal
+        open={modalOpen}
+        onClose={closeModal}
+        mode={modalMode}
+        projectId={editingId}
+        initialDetail={modalMode === 'edit' && detail && editingId === detail.id ? detail : null}
+        pendingLineDraft={pendingLineDraft}
+        onSaved={onModalSaved}
+        onSaveError={pushError}
+      />
+    </>
   );
 }

@@ -9,11 +9,25 @@ export async function GET() {
     const base = getServerApiBase();
     const res = await fetch(`${base}/catalog/categories/tree`, { next: catalogPublicFetchNext() });
     if (!res.ok) {
-      return NextResponse.json({ roots: [] }, { status: 200 });
+      return NextResponse.json({ roots: [] }, {
+        status: 200,
+        headers: {
+          'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+        },
+      });
     }
     const data = await jsonFromResponse(res, { roots: [] });
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, max-age=120, stale-while-revalidate=600',
+      },
+    });
   } catch {
-    return NextResponse.json({ roots: [] }, { status: 200 });
+    return NextResponse.json({ roots: [] }, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+      },
+    });
   }
 }

@@ -1,14 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { SiteOverlays } from '@/components/SiteOverlays';
 
+/** Без ленивого импорта: оверлеи и лоадер попадают в первый клиентский чанк и монтируются сразу после гидрации. */
 export function ClientOnlyOverlays() {
-  const [Overlays, setOverlays] = useState<React.ComponentType | null>(null);
-
-  useEffect(() => {
-    import('@/components/SiteOverlays').then((m) => setOverlays(() => m.SiteOverlays));
-  }, []);
-
-  if (!Overlays) return null;
-  return <Overlays />;
+  return <SiteOverlays />;
 }

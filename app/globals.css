@@ -197,11 +197,20 @@ body.header-super-menu-open {
   overflow: hidden;
 }
 
+/* SSR + до гидрации: перекрывает вьюпорт, пока клиент не снимет слой в SiteLoader */
+.site-boot-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--color-ink-black);
+  pointer-events: none;
+}
+
 /* --- Site loader (first load only) --- */
 .site-loader {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 10001;
   overflow: hidden;
   pointer-events: auto;
 }

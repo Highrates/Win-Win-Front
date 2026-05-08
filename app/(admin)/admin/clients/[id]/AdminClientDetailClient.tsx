@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { adminClientDetailStrings } from '@/lib/admin-i18n/adminClientDetailI18n';
+import { adminDesignerProjectsPage } from '@/lib/admin-i18n/adminMiscPagesI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
 import objTabStyles from '../../objects/objectsLibrary.module.css';
 import styles from '../clients.module.css';
+import { DesignerProjectsAdminClient } from '../../designer-projects/DesignerProjectsAdminClient';
 import { parseApiCaseList, roomTypesCommaSeparated, type ApiCase } from '@/lib/account/caseApiSchema';
 
 const TAB_ORDERS = 0;
@@ -14,6 +16,8 @@ const TAB_INFO = 1;
 const TAB_CONSENTS = 2;
 const TAB_STRUCTURE = 3;
 const TAB_CASES = 4;
+
+const TAB_PROJECTS = 5;
 
 type UserDetail = {
   id: string;
@@ -85,6 +89,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
   const { locale: adminLoc } = useAdminLocale();
   const s = useMemo(() => adminClientDetailStrings(adminLoc), [adminLoc]);
   const consLocale: 'ru' | 'zh' = adminLoc === 'zh' ? 'zh' : 'ru';
+  const projPage = useMemo(() => adminDesignerProjectsPage(adminLoc), [adminLoc]);
   const [data, setData] = useState<UserDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -315,6 +320,15 @@ export function AdminClientDetailClient({ id }: { id: string }) {
             >
               {s.tabCases}
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === TAB_PROJECTS}
+              className={`${objTabStyles.mainScopeTab} ${tab === TAB_PROJECTS ? objTabStyles.mainScopeTabActive : ''}`}
+              onClick={() => setTab(TAB_PROJECTS)}
+            >
+              {s.tabProjects}
+            </button>
             {isPartner ? (
               <button
                 type="button"
@@ -526,6 +540,27 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                   </table>
                 </div>
               ) : null}
+            </section>
+          ) : null}
+          {tab === TAB_PROJECTS ? (
+            <section className={styles.tabPanel} aria-label={s.tabProjects}>
+              <DesignerProjectsAdminClient
+                embedded
+                filterUserId={id}
+                title={projPage.title}
+                lead={projPage.lead}
+                searchPlaceholder={projPage.searchPlaceholder}
+                thProject={projPage.thProject}
+                thUser={projPage.thUser}
+                thLines={projPage.thLines}
+                thRooms={projPage.thRooms}
+                thTotal={projPage.thTotal}
+                thUpdated={projPage.thUpdated}
+                empty={projPage.empty}
+                loadingLabel={projPage.loading}
+                prev={projPage.prev}
+                next={projPage.next}
+              />
             </section>
           ) : null}
           {tab === TAB_STRUCTURE && isPartner ? (

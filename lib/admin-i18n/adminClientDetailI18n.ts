@@ -17,6 +17,7 @@ export function adminClientDetailStrings(locale: AdminLocale) {
     tabInfo: pick(locale, 'Инфо', '信息'),
     tabConsents: pick(locale, 'Уведомления', '通知与同意'),
     tabCases: pick(locale, 'Кейсы', '案例'),
+    tabProjects: pick(locale, 'Проекты (ЛК)', '账户选配项目'),
     tabsAria: pick(locale, 'Разделы карточки клиента', '客户区段'),
     ordersEmpty: pick(locale, 'Пока нет заказов', '暂无订单'),
     dtEmail: 'Email',

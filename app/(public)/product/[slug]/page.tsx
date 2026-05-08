@@ -115,16 +115,17 @@ export default async function ProductPage({
     { label: 'Главная', href: '/', current: false },
   ];
   if (category) {
+    breadcrumbs.push({ label: 'Каталог', href: '/catalog', current: false });
     if (category.parent) {
       breadcrumbs.push({
         label: category.parent.name,
-        href: `/categories/${category.parent.slug}`,
+        href: `/catalog/${category.parent.slug}`,
         current: false,
       });
     }
     breadcrumbs.push({
       label: category.name,
-      href: `/categories/${category.slug}`,
+      href: `/catalog/${category.slug}`,
       current: false,
     });
   }
@@ -203,6 +204,8 @@ export default async function ProductPage({
             </nav>
 
             <ProductInteractive
+              productId={product.id}
+              productSlug={slug}
               productName={productTitleText}
               productImages={productImages}
               variantImagesMap={variantImagesMap}
@@ -236,11 +239,7 @@ export default async function ProductPage({
         </div>
       </section>
       {setSiblingCards.length > 0 ? (
-        <Recommendations
-          id="product-recommendations"
-          title="Наборы"
-          staticItems={setSiblingCards}
-        />
+        <Recommendations id="product-recommendations" title="Наборы" items={setSiblingCards} />
       ) : null}
     </main>
   );

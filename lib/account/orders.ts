@@ -6,25 +6,31 @@ export const ORDER_PRODUCTS: OrderProduct[] = [
   {
     id: '1',
     name: 'Кресло Otto Soft',
-    price: '~ 185 990',
-    color: 'Светло-серый',
-    material: 'Массив дуба, текстиль',
-    size: '82 × 76 × 90 см',
+    price: '~ 185 990 ₽',
+    metaRows: [
+      { label: 'Цвет', value: 'Светло-серый' },
+      { label: 'Материал', value: 'Массив дуба, текстиль' },
+      { label: 'Размер', value: '82 × 76 × 90 см' },
+    ],
   },
   {
     id: '2',
     name: 'Диван Bergen',
-    price: '~ 412 500',
-    color: 'Тёмно-синий',
-    material: 'Велюр, дерево',
-    size: '240 × 95 × 85 см',
+    price: '~ 412 500 ₽',
+    metaRows: [
+      { label: 'Цвет', value: 'Тёмно-синий' },
+      { label: 'Материал', value: 'Велюр, дерево' },
+      { label: 'Размер', value: '240 × 95 × 85 см' },
+    ],
   },
   {
     id: '3',
     name: 'Стол обеденный Nord',
-    price: '~ 89 900',
-    color: 'Натуральный дуб',
-    material: 'Массив дуба',
-    size: '180 × 90 × 75 см',
+    price: '~ 89 900 ₽',
+    metaRows: [
+      { label: 'Цвет', value: 'Натуральный дуб' },
+      { label: 'Материал', value: 'Массив дуба' },
+      { label: 'Размер', value: '180 × 90 × 75 см' },
+    ],
   },
 ];

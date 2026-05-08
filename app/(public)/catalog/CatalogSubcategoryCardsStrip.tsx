@@ -6,12 +6,12 @@ import { animateScrollStripBy } from '@/sections/home/ScrollCatalog/scrollStripS
 import styles from '@/sections/home/ScrollCatalog/ScrollCatalog.module.css';
 import { useMatchMinWidth } from '@/sections/home/ScrollCatalog/useMatchMinWidth';
 
-export type CategoryCardItem = { slug: string; name: string; imageSrc: string };
+export type CatalogSubcategoryCardItem = { slug: string; name: string; imageSrc: string };
 
 const DRAG_THRESHOLD = 5;
 
-/** Горизонтальная полоса подкатегорий — та же вёрстка и поведение, что у ScrollCatalogCardsStrip на главной. */
-export function CategoryCardsStrip({ items }: { items: CategoryCardItem[] }) {
+/** Горизонтальная полоса подкатегорий на `/catalog/[slug]` (вёрстка как у полосы на главной). */
+export function CatalogSubcategoryCardsStrip({ items }: { items: CatalogSubcategoryCardItem[] }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const scrollStripAnimCancelRef = useRef<(() => void) | null>(null);
   const didDragRef = useRef(false);
@@ -98,7 +98,7 @@ export function CategoryCardsStrip({ items }: { items: CategoryCardItem[] }) {
     () => () => {
       scrollStripAnimCancelRef.current?.();
     },
-    []
+    [],
   );
 
   const scrollStrip = useCallback((dir: -1 | 1) => {
@@ -129,7 +129,7 @@ export function CategoryCardsStrip({ items }: { items: CategoryCardItem[] }) {
           {items.map((card, index) => (
             <Link
               key={card.slug}
-              href={`/categories/${card.slug}`}
+              href={`/catalog/${card.slug}`}
               className={styles.card}
               onClick={handleLinkClick}
             >

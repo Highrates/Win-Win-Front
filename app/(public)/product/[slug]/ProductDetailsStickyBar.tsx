@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/Button';
+import { useEffect, useState, type ReactNode } from 'react';
 import styles from './ProductPage.module.css';
 
 type ProductDetailsStickyBarProps = {
   priceText: string;
+  /** Сплит-кнопка «К заказу» + меню (мобильный sticky). */
+  orderSplit: ReactNode;
 };
 
 const RECOMMENDATIONS_SECTION_ID = 'product-recommendations';
 
-export function ProductDetailsStickyBar({ priceText }: ProductDetailsStickyBarProps) {
+export function ProductDetailsStickyBar({ priceText, orderSplit }: ProductDetailsStickyBarProps) {
   const [recommendationsInView, setRecommendationsInView] = useState(false);
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function ProductDetailsStickyBar({ priceText }: ProductDetailsStickyBarPr
       data-hidden={recommendationsInView || undefined}
     >
       <span className={styles.productDetailsStickyPrice}>{priceText}</span>
-      <Button variant="primary">Добавить к заказу</Button>
+      {orderSplit}
     </div>
   );
 }

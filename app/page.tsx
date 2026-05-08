@@ -1,5 +1,6 @@
-import { fetchCuratedBrandCollectionBySlug } from '@/lib/catalogPublic';
+import { fetchCuratedBrandCollectionBySlug, fetchCuratedProductCollectionBySlug } from '@/lib/catalogPublic';
 import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
+import { mapBrandProductRowsToRecommendationItems } from '@/lib/publicCollectionsPublic';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import { fetchPublicSiteSettings } from '@/lib/siteSettingsPublic';
 import {
@@ -13,12 +14,16 @@ import {
 import { cookies } from 'next/headers';
 
 const HOME_BRAND_COLLECTION_SLUG = 'luchshie-brendy-mesyatsa';
+const HOME_RECOMMENDATIONS_COLLECTION_SLUG = 'rekomendatsii';
 const HERO_ROTATION_COOKIE = 'winwin-hero-idx';
 
 export default async function HomePage() {
-  const catalogRoots = await fetchHomeCatalogRoots();
-  const brandCollection = await fetchCuratedBrandCollectionBySlug(HOME_BRAND_COLLECTION_SLUG);
-  const siteSettings = await fetchPublicSiteSettings();
+  const [catalogRoots, brandCollection, siteSettings, recommendationsCollection] = await Promise.all([
+    fetchHomeCatalogRoots(),
+    fetchCuratedBrandCollectionBySlug(HOME_BRAND_COLLECTION_SLUG),
+    fetchPublicSiteSettings(),
+    fetchCuratedProductCollectionBySlug(HOME_RECOMMENDATIONS_COLLECTION_SLUG),
+  ]);
 
   let bestBrands: { sectionTitle: string; brands: BestBrandsBrandItem[] } | null = null;
   if (brandCollection?.brands?.length) {
@@ -35,6 +40,12 @@ export default async function HomePage() {
     bestBrands = { sectionTitle, brands };
   }
 
+  const recommendationItems = recommendationsCollection?.products?.length
+    ? mapBrandProductRowsToRecommendationItems(recommendationsCollection.products)
+    : null;
+  const recommendationsTitle =
+    recommendationsCollection?.name?.trim() || 'Рекомендации';
+
   const heroImages = Array.isArray(siteSettings?.heroImageUrls) ? siteSettings.heroImageUrls : [];
   const idxRaw = cookies().get(HERO_ROTATION_COOKIE)?.value ?? '0';
   const idx = Number.parseInt(idxRaw, 10);
@@ -49,7 +60,9 @@ export default async function HomePage() {
       <ScrollCatalog roots={catalogRoots} />
       {bestBrands ? <BestBrands sectionTitle={bestBrands.sectionTitle} brands={bestBrands.brands} /> : null}
       <News />
-      <Recommendations />
+      {recommendationItems?.length ? (
+        <Recommendations title={recommendationsTitle} items={recommendationItems} />
+      ) : null}
     </main>
   );
 }

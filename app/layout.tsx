@@ -26,6 +26,8 @@ export default async function RootLayout({
   return (
     <html lang="ru">
       <body>
+        {/* Первый кадр до гидрации: без этого видна разметка страницы до клиентского SiteLoader */}
+        <div id="site-boot-loader" className="site-boot-loader" aria-hidden />
         <SiteTransitionProvider>
           <ClientOnlyOverlays />
           <CatalogNavProvider initialRoots={catalogRoots}>

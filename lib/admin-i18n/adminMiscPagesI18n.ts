@@ -248,3 +248,40 @@ export function adminSettingsStaffPage(locale: AdminLocale) {
     devNote: pick(locale, 'Раздел в разработке.', '该分区开发中。'),
   };
 }
+
+export function adminDesignerProjectsPage(locale: AdminLocale) {
+  return {
+    title: pick(locale, 'Проекты комплектации (ЛК)', '账户选配项目'),
+    lead: pick(
+      locale,
+      'Операционная видимость: владелец, строки и суммы по актуальным ценам каталога.',
+      '运营视图：所有者、行项与按目录现价估算的金额。',
+    ),
+    searchPlaceholder: pick(locale, 'Поиск: название, адрес, email пользователя…', '搜索：名称、地址、用户邮箱…'),
+    thProject: pick(locale, 'Проект', '项目'),
+    thUser: pick(locale, 'Пользователь', '用户'),
+    thLines: pick(locale, 'Строк', '行'),
+    thRooms: pick(locale, 'Комнат', '房间'),
+    thTotal: pick(locale, 'Сумма', '金额'),
+    thUpdated: pick(locale, 'Обновлён', '更新'),
+    empty: pick(locale, 'Ничего не найдено', '无结果'),
+    loading: pick(locale, 'Загрузка…', '加载中…'),
+    prev: pick(locale, 'Назад', '上一页'),
+    next: pick(locale, 'Вперёд', '下一页'),
+    pageOf: (page: number, pages: number) =>
+      pick(locale, `Стр. ${page} из ${pages}`, `第 ${page} / ${pages} 页`),
+    detailBack: pick(locale, '← К списку проектов', '← 返回项目列表'),
+    detailUser: pick(locale, 'Пользователь', '用户'),
+    detailAddress: pick(locale, 'Адрес', '地址'),
+    detailUpdated: pick(locale, 'Обновлён', '更新'),
+    detailTotal: pick(locale, 'Итого (оценка)', '合计（估算）'),
+    linesTitle: pick(locale, 'Строки спецификации', '规格行'),
+    lineProduct: pick(locale, 'Товар', '商品'),
+    lineCategory: pick(locale, 'Категория', '类别'),
+    lineQty: pick(locale, 'Кол-во', '数量'),
+    lineUnit: pick(locale, 'Ед.', '单位'),
+    lineVariant: pick(locale, 'Вариант SKU', 'SKU'),
+    lineTotal: pick(locale, 'Сумма строки', '行金额'),
+    errLoad: pick(locale, 'Не удалось загрузить', '加载失败'),
+  };
+}

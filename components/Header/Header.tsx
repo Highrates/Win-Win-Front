@@ -8,7 +8,7 @@ import { useCatalogNavRoots } from '@/components/CatalogNavContext';
 import styles from './Header.module.css';
 
 const MENU_SECTIONS = [
-  { id: 'categories', href: '/categories', label: 'Каталог' },
+  { id: 'categories', href: '/catalog', label: 'Каталог' },
   { id: 'brands', href: '/brands', label: 'Бренды' },
   { id: 'designers', href: '/designers', label: 'Дизайнеры' },
   { id: 'projects', href: '/projects', label: 'Проекты и концепции' },
@@ -418,8 +418,8 @@ export function Header({
                 const sublinks =
                   id === 'categories'
                     ? catalogRoots.length > 0
-                      ? catalogRoots.map((c) => ({ href: `/categories/${c.slug}`, label: c.name }))
-                      : [{ href: '/categories', label: 'Каталог' }]
+                      ? catalogRoots.map((c) => ({ href: `/catalog/${c.slug}`, label: c.name }))
+                      : [{ href: '/catalog', label: 'Каталог' }]
                     : id === 'brands'
                       ? brandsMenuItems.length > 0
                         ? brandsMenuItems.map((b) => ({ href: `/brands/${b.slug}`, label: b.name }))
@@ -556,7 +556,7 @@ export function Header({
                         catalogRoots.map((c) => (
                           <li key={c.slug}>
                             <Link
-                              href={`/categories/${c.slug}`}
+                              href={`/catalog/${c.slug}`}
                               className={styles.superMenuItem}
                               onClick={closeSuperMenu}
                             >
@@ -567,7 +567,7 @@ export function Header({
                       ) : (
                         <li>
                           <Link
-                            href="/categories"
+                            href="/catalog"
                             className={styles.superMenuItem}
                             onClick={closeSuperMenu}
                           >

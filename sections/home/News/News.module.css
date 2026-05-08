@@ -125,12 +125,17 @@
   padding-bottom: 0;
 }
 
-.articleCardCover {
+.articleCardCoverWrap {
+  position: relative;
   width: 140px;
   height: 140px;
-  border-radius: 10px;
-  object-fit: cover;
   flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.articleCardCover {
+  object-fit: cover;
 }
 
 .articleTitles {
@@ -154,11 +159,18 @@
   color: var(--color-black);
 }
 
-.articleCover {
+.articleCoverWrap {
+  position: relative;
   align-self: stretch;
-  border-radius: 10px;
-  object-fit: cover;
+  width: 340px;
+  aspect-ratio: 340 / 516;
   flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.articleCover {
+  object-fit: cover;
 }
 
 .newsLink {
@@ -251,18 +263,17 @@
     gap: 32px;
   }
 
-  .articleCover {
+  .articleCoverWrap {
     width: 100%;
-    height: auto;
+    aspect-ratio: 340 / 516;
     border-radius: 5px;
-    object-fit: cover;
   }
 
-  .articleCardCover {
+  .articleCardCoverWrap {
     width: 100%;
     height: auto;
+    aspect-ratio: 1;
     border-radius: 5px;
-    object-fit: cover;
   }
 
   .rightCol {

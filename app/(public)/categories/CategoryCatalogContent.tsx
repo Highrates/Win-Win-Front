@@ -1,8 +1,16 @@
 import Link from 'next/link';
-import { Fragment } from 'react';
+import Image from 'next/image';
+import { Fragment, type ReactNode } from 'react';
+import {
+  CatalogSubcategoryCardsStrip,
+  type CatalogSubcategoryCardItem,
+} from '@/app/(public)/catalog/CatalogSubcategoryCardsStrip';
 import { ProductCard } from '@/components/ProductCard';
-import { CategoryCardsStrip, type CategoryCardItem } from './CategoryCardsStrip';
-import { CATEGORY_PER_PAGE, categoryCatalogPageHref } from './categoryCatalogData';
+import {
+  CATEGORY_PER_PAGE,
+  buildCatalogPaginationEntries,
+  categoryCatalogPageHref,
+} from './categoryCatalogData';
 import type { CatalogProductSearchHit } from '@/lib/catalogPublic';
 import { parseProductPriceFromApi } from '@/lib/productSpecsFromApi';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
@@ -20,16 +28,18 @@ type Props = {
   /** Строка над H1 (родитель); на странице «Гостиная» — null */
   parentCategoryName: string | null;
   breadcrumbs: CategoryBreadcrumb[];
-  /** База URL для пагинации: `/categories` или `/categories/<slug>` */
+  /** База URL для пагинации: `/catalog` или `/catalog/<slug>` */
   paginationBasePath: string;
   /** Текущая страница каталога (уже сжата к допустимому диапазону) */
   catalogPage: number;
   catalogHits: CatalogProductSearchHit[];
   catalogTotal: number;
-  /** Родительская категория: полоса карточек подкатегорий после превью */
-  showSubcategoryCardsStrip?: boolean;
   previewImageSrc?: string;
-  subcategoryItems?: CategoryCardItem[];
+  /** Только `/catalog`: табы разделов + полоса карточек после превью */
+  belowPreview?: ReactNode;
+  /** `/catalog/[slug]`: корневая категория — полоса прямых подкатегорий */
+  showSubcategoryCardsStrip?: boolean;
+  subcategoryItems?: CatalogSubcategoryCardItem[];
 };
 
 export function CategoryCatalogContent({
@@ -40,8 +50,9 @@ export function CategoryCatalogContent({
   catalogPage,
   catalogHits,
   catalogTotal,
-  showSubcategoryCardsStrip = false,
   previewImageSrc = '/images/placeholder.svg',
+  belowPreview,
+  showSubcategoryCardsStrip = false,
   subcategoryItems,
 }: Props) {
   const totalPages = Math.max(1, Math.ceil(catalogTotal / CATEGORY_PER_PAGE));
@@ -74,20 +85,35 @@ export function CategoryCatalogContent({
                 <h1 className={styles.previewCurrentName}>{categoryTitle}</h1>
               </div>
             </div>
-            <img
-              src={previewImageSrc}
-              alt=""
-              width={768}
-              height={393}
-              className={styles.previewImage}
-            />
+            {previewImageSrc.startsWith('/') ? (
+              <Image
+                src={previewImageSrc}
+                alt=""
+                width={768}
+                height={393}
+                className={styles.previewImage}
+                sizes="(max-width: 768px) 100vw, min(768px, 55vw)"
+                priority
+                unoptimized
+              />
+            ) : (
+              <img
+                src={previewImageSrc}
+                alt=""
+                width={768}
+                height={393}
+                className={styles.previewImage}
+              />
+            )}
           </div>
         </div>
       </section>
 
+      {belowPreview}
+
       {showSubcategoryCardsStrip && subcategoryItems && subcategoryItems.length > 0 ? (
         <div className={styles.categoryScrollCatalogSlot} aria-label="Подкатегории">
-          <CategoryCardsStrip items={subcategoryItems} />
+          <CatalogSubcategoryCardsStrip items={subcategoryItems} />
         </div>
       ) : null}
 
@@ -162,20 +188,28 @@ export function CategoryCatalogContent({
                 </Link>
               )}
               <div className={styles.paginationPages}>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) =>
-                  n === page ? (
-                    <span key={n} className={styles.paginationPageCurrent}>
-                      {n}
+                {buildCatalogPaginationEntries(page, totalPages).map((entry, idx) =>
+                  entry === 'ellipsis' ? (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className={styles.paginationEllipsis}
+                      aria-hidden="true"
+                    >
+                      …
+                    </span>
+                  ) : entry === page ? (
+                    <span key={entry} className={styles.paginationPageCurrent}>
+                      {entry}
                     </span>
                   ) : (
                     <Link
-                      key={n}
-                      href={categoryCatalogPageHref(paginationBasePath, n)}
+                      key={entry}
+                      href={categoryCatalogPageHref(paginationBasePath, entry)}
                       className={styles.paginationPage}
                     >
-                      {n}
+                      {entry}
                     </Link>
-                  )
+                  ),
                 )}
               </div>
               {page >= totalPages ? (

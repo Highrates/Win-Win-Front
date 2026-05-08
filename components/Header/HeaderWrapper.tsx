@@ -97,7 +97,7 @@ export function HeaderWrapper() {
   const showHeroLogoBadge = pathname === '/' && variant === 'minimal';
   const isMainOverlayOnHome =
     (pathname === '/' && variant === 'main') ||
-    pathname.startsWith('/categories/') ||
+    (pathname === '/catalog' || pathname.startsWith('/catalog/')) ||
     pathname.startsWith('/product/') ||
     pathname.startsWith('/brands');
 

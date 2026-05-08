@@ -1,4 +1,6 @@
+import type { PublicBrandProductRow } from './brandsPublic';
 import { CATALOG_PUBLIC_TAG, catalogPublicFetchNext } from './catalogCache';
+import { dedupeById } from './dedupeById';
 import { jsonFromResponse } from './jsonFromResponse';
 import { getServerApiBase } from './serverApiBase';
 
@@ -9,6 +11,7 @@ export type PublicCategoryTreeChild = {
   name: string;
   sortOrder: number;
   backgroundImageUrl: string | null;
+  children?: PublicCategoryTreeChild[];
 };
 
 export type PublicCategoryTreeRoot = PublicCategoryTreeChild & {
@@ -127,7 +130,7 @@ export type CatalogProductSearchResponse = {
 };
 
 export async function fetchProductsSearch(params: {
-  categoryId: string;
+  categoryId?: string;
   page?: number;
   limit?: number;
 }): Promise<CatalogProductSearchResponse> {
@@ -135,10 +138,10 @@ export async function fetchProductsSearch(params: {
   const page = Math.max(1, params.page ?? 1);
   const limit = Math.min(Math.max(1, params.limit ?? 20), 100);
   const qs = new URLSearchParams({
-    categoryId: params.categoryId,
     page: String(page),
     limit: String(limit),
   });
+  if (params.categoryId?.trim()) qs.set('categoryId', params.categoryId.trim());
   try {
     const res = await fetch(`${base}/catalog/products/search?${qs}`, {
       next: catalogPublicFetchNext(),
@@ -186,7 +189,40 @@ export async function fetchCuratedBrandCollectionBySlug(
     );
     if (res.status === 404) return null;
     if (!res.ok) return null;
-    return await jsonFromResponse<PublicBrandCollectionPayload | null>(res, null);
+    const data = await jsonFromResponse<
+      (PublicBrandCollectionPayload | PublicProductCollectionPayload) | null
+    >(res, null);
+    if (!data || data.kind !== 'BRAND') return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/** Тот же эндпоинт `GET /catalog/curated-collections/:slug`, ответ при `kind: PRODUCT`. */
+export type PublicProductCollectionPayload = {
+  slug: string;
+  name: string;
+  kind: 'PRODUCT';
+  products: PublicBrandProductRow[];
+};
+
+export async function fetchCuratedProductCollectionBySlug(
+  slug: string,
+): Promise<PublicProductCollectionPayload | null> {
+  const base = getServerApiBase();
+  try {
+    const res = await fetch(
+      `${base}/catalog/curated-collections/${encodeURIComponent(slug)}`,
+      { next: catalogPublicFetchNext() },
+    );
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    const data = await jsonFromResponse<
+      (PublicBrandCollectionPayload | PublicProductCollectionPayload) | null
+    >(res, null);
+    if (!data || data.kind !== 'PRODUCT' || !Array.isArray(data.products)) return null;
+    return { ...data, products: dedupeById(data.products) };
   } catch {
     return null;
   }

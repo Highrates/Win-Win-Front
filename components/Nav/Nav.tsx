@@ -5,7 +5,7 @@ import { useState } from 'react';
 import styles from './Nav.module.css';
 
 const links = [
-  { href: '/categories', label: 'Каталог' },
+  { href: '/catalog', label: 'Каталог' },
   { href: '/brands', label: 'Бренды' },
   { href: '/designers', label: 'Дизайнеры' },
   { href: '/projects', label: 'Проекты' },

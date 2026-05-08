@@ -1,4 +1,8 @@
-import { fetchCategoryTree, type PublicCategoryTreeRoot } from './catalogPublic';
+import {
+  fetchCategoryTree,
+  type PublicCategoryTreeChild,
+  type PublicCategoryTreeRoot,
+} from './catalogPublic';
 import { resolveMediaUrlForClient, resolveMediaUrlForServer } from './publicMediaUrl';
 
 export type HomeCatalogChild = {
@@ -7,19 +11,22 @@ export type HomeCatalogChild = {
   name: string;
   sortOrder: number;
   cardImageUrl: string;
+  children?: HomeCatalogChild[];
 };
 
 export type HomeCatalogRoot = HomeCatalogChild & {
   children: HomeCatalogChild[];
 };
 
-function mapChild(c: PublicCategoryTreeRoot['children'][number]): HomeCatalogChild {
+function mapChild(c: PublicCategoryTreeChild): HomeCatalogChild {
+  const nested = c.children?.length ? c.children.map(mapChild) : undefined;
   return {
     id: c.id,
     slug: c.slug,
     name: c.name,
     sortOrder: c.sortOrder,
     cardImageUrl: resolveMediaUrlForServer(c.backgroundImageUrl),
+    ...(nested && nested.length > 0 ? { children: nested } : {}),
   };
 }
 
@@ -30,17 +37,19 @@ function mapRoot(r: PublicCategoryTreeRoot): HomeCatalogRoot {
     name: r.name,
     sortOrder: r.sortOrder,
     cardImageUrl: resolveMediaUrlForServer(r.backgroundImageUrl),
-    children: r.children.map(mapChild),
+    children: (r.children ?? []).map(mapChild),
   };
 }
 
-function mapChildClient(c: PublicCategoryTreeRoot['children'][number]): HomeCatalogChild {
+function mapChildClient(c: PublicCategoryTreeChild): HomeCatalogChild {
+  const nested = c.children?.length ? c.children.map(mapChildClient) : undefined;
   return {
     id: c.id,
     slug: c.slug,
     name: c.name,
     sortOrder: c.sortOrder,
     cardImageUrl: resolveMediaUrlForClient(c.backgroundImageUrl),
+    ...(nested && nested.length > 0 ? { children: nested } : {}),
   };
 }
 
@@ -51,7 +60,7 @@ function mapRootClient(r: PublicCategoryTreeRoot): HomeCatalogRoot {
     name: r.name,
     sortOrder: r.sortOrder,
     cardImageUrl: resolveMediaUrlForClient(r.backgroundImageUrl),
-    children: r.children.map(mapChildClient),
+    children: (r.children ?? []).map(mapChildClient),
   };
 }
 

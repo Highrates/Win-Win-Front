@@ -121,7 +121,7 @@ export function ScrollCatalogCardsStrip() {
           {catalogCards.map((card, index) => (
             <Link
               key={card.slug}
-              href={`/categories/${card.slug}`}
+              href={`/catalog/${card.slug}`}
               className={styles.card}
               onClick={handleLinkClick}
             >
