@@ -16,6 +16,7 @@ import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { ProfileIncomeTab } from './ProfileIncomeTab';
 import { ProfileSettingsTab } from './ProfileSettingsTab';
 import btnStyles from '@/components/Button/Button.module.css';
+import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import styles from './page.module.css';
 
 import { useAccountProfile } from '@/hooks/useAccountProfile';
@@ -633,23 +634,23 @@ function ProfilePageContent() {
         <>
           <button
             type="button"
-            className={styles.aboutModalBackdrop}
+            className={panelModal.backdrop}
             aria-label="Закрыть редактирование профиля"
             onClick={closeProfileModal}
           />
           <section
-            className={styles.aboutModalPanel}
+            className={panelModal.panel}
             role="dialog"
             aria-modal="true"
             aria-label="Редактирование профиля"
           >
-            <header className={styles.aboutModalHeader}>
-              <button type="button" className={styles.aboutModalIconBtn} onClick={closeProfileModal} aria-label="Закрыть">
+            <header className={panelModal.header}>
+              <button type="button" className={panelModal.iconBtn} onClick={closeProfileModal} aria-label="Закрыть">
                 <CloseIcon />
               </button>
             </header>
-            <div className={styles.aboutModalInner}>
-              <h3 className={styles.aboutModalTitle}>Редактирование профиля</h3>
+            <div className={panelModal.inner}>
+              <h3 className={panelModal.title}>Редактирование профиля</h3>
 
               <div className={styles.avatarUploader}>
                 <span className={styles.avatarUploaderLabel}>Фото</span>
@@ -827,7 +828,7 @@ function ProfilePageContent() {
                 </p>
               ) : null}
 
-              <div className={styles.aboutModalActions}>
+              <div className={panelModal.actions}>
                 <Button variant="primary" onClick={onSaveProfile} disabled={saving}>
                   {saving ? 'Сохранение…' : 'Сохранить'}
                 </Button>
@@ -841,31 +842,31 @@ function ProfilePageContent() {
         <>
           <button
             type="button"
-            className={styles.aboutModalBackdrop}
+            className={panelModal.backdrop}
             aria-label="Закрыть редактирование"
             onClick={closeAboutModal}
           />
           <section
-            className={`${styles.aboutModalPanel} ${aboutModalFullscreen ? styles.aboutModalPanelFullscreen : ''}`}
+            className={`${panelModal.panel} ${aboutModalFullscreen ? panelModal.panelFullscreen : ''}`}
             role="dialog"
             aria-modal="true"
             aria-label="Редактирование блока подробнее о вас"
           >
-            <header className={styles.aboutModalHeader}>
+            <header className={panelModal.header}>
               <button
                 type="button"
-                className={`${styles.aboutModalIconBtn} ${styles.aboutModalFullscreenBtn}`}
+                className={`${panelModal.iconBtn} ${panelModal.fullscreenBtn}`}
                 onClick={() => setAboutModalFullscreen((v) => !v)}
                 aria-label={aboutModalFullscreen ? 'Выйти из полноэкранного режима' : 'Открыть во весь экран'}
               >
                 {aboutModalFullscreen ? <CollapseIcon /> : <ExpIcon />}
               </button>
-              <button type="button" className={styles.aboutModalIconBtn} onClick={closeAboutModal} aria-label="Закрыть">
+              <button type="button" className={panelModal.iconBtn} onClick={closeAboutModal} aria-label="Закрыть">
                 <CloseIcon />
               </button>
             </header>
-            <div className={styles.aboutModalInner}>
-              <h3 className={styles.aboutModalTitle}>Подробнее о вас</h3>
+            <div className={panelModal.inner}>
+              <h3 className={panelModal.title}>Подробнее о вас</h3>
               <RichBlock
                 value={aboutRichDraft}
                 onChange={setAboutRichDraft}
@@ -880,7 +881,7 @@ function ProfilePageContent() {
                   {aboutSaveError}
                 </p>
               ) : null}
-              <div className={styles.aboutModalActions}>
+              <div className={panelModal.actions}>
                 <Button
                   variant="primary"
                   disabled={aboutSaving}
@@ -915,30 +916,30 @@ function ProfilePageContent() {
         <>
           <button
             type="button"
-            className={styles.aboutModalBackdrop}
+            className={panelModal.backdrop}
             aria-label="Закрыть"
             onClick={closePartnerAppModal}
           />
           <section
-            className={styles.aboutModalPanel}
+            className={panelModal.panel}
             role="dialog"
             aria-modal="true"
             aria-label="Заявка на партнёра Win-Win"
           >
-            <header className={styles.aboutModalHeader}>
+            <header className={panelModal.header}>
               <button
                 type="button"
-                className={styles.aboutModalIconBtn}
+                className={panelModal.iconBtn}
                 onClick={closePartnerAppModal}
                 aria-label="Закрыть"
               >
                 <CloseIcon />
               </button>
             </header>
-            <div className={styles.aboutModalInner}>
+            <div className={panelModal.inner}>
               {partnerApp.phase === 'form' ? (
                 <>
-                  <h3 className={styles.aboutModalTitle}>Стать партнёром Win-Win</h3>
+                  <h3 className={panelModal.title}>Стать партнёром Win-Win</h3>
                   <div className={styles.partnerFormField}>
                     <label className={styles.fieldLabel} htmlFor="partner-app-about">
                       Расскажите о себе
@@ -991,7 +992,7 @@ function ProfilePageContent() {
                       {partnerApp.error}
                     </p>
                   ) : null}
-                  <div className={styles.aboutModalActions}>
+                  <div className={panelModal.actions}>
                     <Button
                       type="button"
                       variant="primary"
@@ -1004,7 +1005,7 @@ function ProfilePageContent() {
                 </>
               ) : (
                 <>
-                  <h3 className={styles.aboutModalTitle}>Заявка отправлена</h3>
+                  <h3 className={panelModal.title}>Заявка отправлена</h3>
                   <p className={styles.partnerSuccessText}>
                     {profileEmail ? (
                       <>
@@ -1018,7 +1019,7 @@ function ProfilePageContent() {
                       </>
                     )}
                   </p>
-                  <div className={styles.aboutModalActions}>
+                  <div className={panelModal.actions}>
                     {profileEmail ? null : (
                       <Button
                         type="button"
@@ -1046,35 +1047,35 @@ function ProfilePageContent() {
         <>
           <button
             type="button"
-            className={styles.aboutModalBackdrop}
+            className={panelModal.backdrop}
             aria-label="Закрыть"
             onClick={closeInviteDesignerModal}
           />
           <section
-            className={styles.aboutModalPanel}
+            className={panelModal.panel}
             role="dialog"
             aria-modal="true"
             aria-label="Пригласить дизайнера"
           >
-            <header className={styles.aboutModalHeader}>
+            <header className={panelModal.header}>
               <button
                 type="button"
-                className={styles.aboutModalIconBtn}
+                className={panelModal.iconBtn}
                 onClick={closeInviteDesignerModal}
                 aria-label="Закрыть"
               >
                 <CloseIcon />
               </button>
             </header>
-            <div className={styles.aboutModalInner}>
+            <div className={panelModal.inner}>
               {inviteDesigner.done ? (
                 <>
-                  <h3 className={styles.aboutModalTitle}>Письмо с приглашением отправлено</h3>
+                  <h3 className={panelModal.title}>Письмо с приглашением отправлено</h3>
                   <p className={styles.partnerSuccessText}>
                     Ссылку с приглашением можно скопировать и отправить напрямую! Срок действия — 14 дней, одно
                     использование.
                   </p>
-                  <div className={styles.aboutModalActions}>
+                  <div className={panelModal.actions}>
                     {inviteDesigner.inviteLink ? (
                       <button
                         type="button"
@@ -1093,7 +1094,7 @@ function ProfilePageContent() {
                 </>
               ) : (
                 <>
-                  <h3 className={styles.aboutModalTitle}>Пригласить дизайнера</h3>
+                  <h3 className={panelModal.title}>Пригласить дизайнера</h3>
                   <form onSubmit={submitInviteDesigner} noValidate>
                     <div className={styles.partnerFormField}>
                       <TextField
@@ -1119,7 +1120,7 @@ function ProfilePageContent() {
                         disabled
                       />
                     </div>
-                    <div className={styles.aboutModalActions}>
+                    <div className={panelModal.actions}>
                       <Button type="submit" variant="primary" disabled={inviteDesigner.sending}>
                         {inviteDesigner.sending ? 'Отправка…' : 'Отправить приглашение'}
                       </Button>

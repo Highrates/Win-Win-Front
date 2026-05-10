@@ -11,6 +11,7 @@ import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 import { copyTextToClipboard } from '@/lib/copyToClipboard';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { mapWinWinL1ToBranchCards, type WinWinTeamOverviewDto } from '@/lib/winWinTeam';
+import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import profileSheetStyles from '../profile/page.module.css';
 import { TeamSheetSection } from './TeamSheetSection';
 import styles from './page.module.css';
@@ -277,35 +278,35 @@ export function TeamPageClient() {
         <>
           <button
             type="button"
-            className={profileSheetStyles.aboutModalBackdrop}
+            className={panelModal.backdrop}
             aria-label="Закрыть"
             onClick={closeInviteDesignerModal}
           />
           <section
-            className={profileSheetStyles.aboutModalPanel}
+            className={panelModal.panel}
             role="dialog"
             aria-modal="true"
             aria-label="Пригласить дизайнера"
           >
-            <header className={profileSheetStyles.aboutModalHeader}>
+            <header className={panelModal.header}>
               <button
                 type="button"
-                className={profileSheetStyles.aboutModalIconBtn}
+                className={panelModal.iconBtn}
                 onClick={closeInviteDesignerModal}
                 aria-label="Закрыть"
               >
                 <CloseIcon />
               </button>
             </header>
-            <div className={profileSheetStyles.aboutModalInner}>
+            <div className={panelModal.inner}>
               {inviteDesignerDone ? (
                 <>
-                  <h3 className={profileSheetStyles.aboutModalTitle}>Письмо с приглашением отправлено</h3>
+                  <h3 className={panelModal.title}>Письмо с приглашением отправлено</h3>
                   <p className={profileSheetStyles.partnerSuccessText}>
                     Ссылку с приглашением можно скопировать и отправить напрямую! Срок действия — 14 дней, одно
                     использование.
                   </p>
-                  <div className={profileSheetStyles.aboutModalActions}>
+                  <div className={panelModal.actions}>
                     {inviteDesignerInviteLink ? (
                       <button
                         type="button"
@@ -324,7 +325,7 @@ export function TeamPageClient() {
                 </>
               ) : (
                 <>
-                  <h3 className={profileSheetStyles.aboutModalTitle}>Пригласить дизайнера</h3>
+                  <h3 className={panelModal.title}>Пригласить дизайнера</h3>
                   <form onSubmit={submitInviteDesigner} noValidate>
                     <div className={profileSheetStyles.partnerFormField}>
                       <TextField
@@ -350,7 +351,7 @@ export function TeamPageClient() {
                         disabled
                       />
                     </div>
-                    <div className={profileSheetStyles.aboutModalActions}>
+                    <div className={panelModal.actions}>
                       <Button type="submit" variant="primary" disabled={inviteDesignerSending}>
                         {inviteDesignerSending ? 'Отправка…' : 'Отправить приглашение'}
                       </Button>

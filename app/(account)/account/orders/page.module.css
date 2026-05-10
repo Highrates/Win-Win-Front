@@ -1,6 +1,31 @@
-.productsTopRowOrders {
-  height: 20px;
+.ordersToolbarOuter {
+  align-self: stretch;
+  width: 100%;
+  margin-top: 32px;
+  display: flex;
   justify-content: flex-end;
+  align-items: center;
+  min-height: 20px;
+  box-sizing: border-box;
+}
+
+.inWorkList {
+  align-self: stretch;
+  width: 100%;
+  margin-top: 32px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.inWorkEmpty {
+  margin-top: 32px;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  font-family: var(--font-commissioner);
 }
 
 .ordersMainContent {
@@ -82,6 +107,100 @@
   color: var(--color-gray);
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
+}
+
+.orderDetailsPlan {
+  font-family: var(--font-commissioner);
+}
+
+.orderDetailsPlanIntro {
+  margin: 0 0 12px;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.45;
+}
+
+.orderDetailsPlanList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orderDetailsPlanItem {
+  margin: 0;
+}
+
+.orderDetailsPlanTerm {
+  margin: 0 0 4px;
+  color: var(--color-black);
+  font-size: var(--text-caption);
+  font-weight: var(--text-body-weight);
+}
+
+.orderDetailsPlanDesc {
+  margin: 0;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.45;
+}
+
+.orderDetailsFields {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.orderDetailsFields :is(input, textarea) {
+  background: var(--color-white);
+}
+
+.orderDetailsFields :is(input, textarea):focus,
+.orderDetailsFields :is(input, textarea):focus-visible {
+  background: var(--color-white);
+}
+
+.orderCommentTextarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: var(--text-body-long-height, 1.5);
+}
+
+.emptyOrderCatalog {
+  margin-top: 16px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.openCatalogButton {
+  align-self: flex-start;
+}
+
+.ordersSelectionToolbar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.orderPrepError {
+  margin: 0 0 8px;
+  color: #b42318;
+  font-size: var(--text-caption);
+  font-family: var(--font-commissioner);
+}
+
+.orderPrepMuted {
+  margin: 0 0 8px;
+  color: var(--color-gray);
+  font-size: var(--text-body);
+  font-family: var(--font-commissioner);
 }
 
 .orderSummaryCard {
@@ -215,8 +334,13 @@
 }
 
 @media (max-width: 768px) {
-  .productsTopRowOrders {
+  .ordersToolbarOuter {
     margin-top: 24px;
+  }
+
+  .inWorkList {
+    margin-top: 24px;
+    gap: 32px;
   }
 
   .productCardDetailedWrapperOrders {
@@ -231,10 +355,6 @@
     margin-top: 24px;
   }
 
-  .ordersSidebar {
-    order: -1;
-  }
-
   .orderSummaryCard {
     display: none;
   }
@@ -243,4 +363,187 @@
     display: inline-flex;
     width: 100%;
   }
+}
+
+/* --- скелетоны загрузки: Подготовка / В работе --- */
+@keyframes ordersPageShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.ordersPrepSkeletonList {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ordersInWorkSkeleton {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.orderWrapperSkeleton {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.skeletonInWorkCta {
+  width: 134px;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.skeletonInWorkCtaBtn {
+  flex: 1;
+  min-height: 120px;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.skeletonShimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-bright-snow) 0%,
+    rgba(255, 255, 255, 0.95) 45%,
+    var(--color-bright-snow) 90%
+  );
+  background-size: 200% 100%;
+  animation: ordersPageShimmer 1.2s ease-in-out infinite;
+}
+
+.skeletonPrepRow {
+  align-self: stretch;
+  width: 100%;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+  box-sizing: border-box;
+}
+
+.skeletonPrepRow:last-of-type {
+  border-bottom: none;
+}
+
+.skeletonPrepThumb {
+  width: 72px;
+  height: 78px;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+
+.skeletonPrepLines {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.skeletonPrepLine {
+  height: 12px;
+  border-radius: 6px;
+  max-width: 100%;
+}
+
+.skeletonSidebarBlock {
+  width: 100%;
+  padding: 18px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonSidebarTitle {
+  height: 14px;
+  width: 42%;
+  border-radius: 6px;
+}
+
+.skeletonSidebarField {
+  height: 40px;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.skeletonSummaryCard {
+  width: 100%;
+  padding: 18px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeletonInWorkCard {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  width: 100%;
+  min-height: 140px;
+  padding: 16px 18px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeletonInWorkTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.skeletonInWorkLines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.skeletonInWorkLine {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.skeletonInWorkDots {
+  display: flex;
+  gap: 8px;
+}
+
+.skeletonInWorkDot {
+  width: 68px;
+  height: 73px;
+  border-radius: 6px;
+  flex-shrink: 0;
 }

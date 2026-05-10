@@ -8,6 +8,7 @@ import { TextField } from '@/components/TextField';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 import { resetUserSessionClientCache } from '@/lib/userSessionClient';
+import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import styles from './page.module.css';
 
 function CloseIcon() {
@@ -759,7 +760,7 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
             aria-labelledby="settings-delete-title"
           >
             <header className={styles.settingsConfirmHeader}>
-              <button type="button" className={styles.aboutModalIconBtn} onClick={closeDeleteModal} aria-label="Закрыть">
+              <button type="button" className={panelModal.iconBtn} onClick={closeDeleteModal} aria-label="Закрыть">
                 <CloseIcon />
               </button>
             </header>

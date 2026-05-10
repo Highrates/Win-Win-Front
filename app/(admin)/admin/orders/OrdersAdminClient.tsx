@@ -1,13 +1,15 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderStatusLabels, adminOrdersStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import styles from '../catalog/catalogAdmin.module.css';
 
-const STATUSES = ['ORDERED', 'PAID', 'RECEIVED'] as const;
+const STATUSES = ['PENDING_APPROVAL', 'ORDERED', 'PAID', 'RECEIVED'] as const;
 type OrderStatus = (typeof STATUSES)[number];
 
 type AdminOrderRow = {
@@ -119,169 +121,131 @@ export function OrdersAdminClient() {
     }
   }
 
+  function applySearch() {
+    setPage(1);
+    setQActive(q);
+  }
+
   return (
     <>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20, alignItems: 'center' }}>
+      <div className={styles.toolbar}>
         <input
           type="search"
-          style={{
-            flex: '1 1 200px',
-            maxWidth: 320,
-            padding: '8px 12px',
-            border: '1px solid var(--account-hairline-color, #e2e6e8)',
-            fontSize: '0.9375rem',
-          }}
+          className={styles.search}
           placeholder={s.searchPh}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              setPage(1);
-              setQActive(q);
-            }
+            if (e.key === 'Enter') applySearch();
           }}
+          aria-label={s.searchPh}
         />
-        <button
-          type="button"
-          className={styles.backLink}
-          style={{
-            border: '1px solid var(--account-hairline-color, #e2e6e8)',
-            padding: '8px 16px',
-            background: 'transparent',
-            cursor: 'pointer',
-          }}
-          onClick={() => {
-            setPage(1);
-            setQActive(q);
-          }}
-        >
+        <button type="button" className={styles.btn} onClick={applySearch}>
           {s.find}
         </button>
       </div>
-      {error ? (
-        <p className={styles.lead} style={{ color: '#b42318' }}>
-          {error}
-        </p>
+
+      {error ? <p className={styles.error}>{error}</p> : null}
+
+      {loading && !data ? <p className={styles.muted}>{c.loading}</p> : null}
+
+      {!loading && data?.items.length === 0 ? <p className={styles.muted}>{s.empty}</p> : null}
+
+      {data && data.items.length > 0 ? (
+        <div className={styles.tableWrap} style={loading ? { opacity: 0.65 } : undefined}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{s.thDate}</th>
+                <th>{s.thOrder}</th>
+                <th>{s.thClient}</th>
+                <th>{s.thSum}</th>
+                <th>{s.thStatus}</th>
+                <th aria-label={s.save} />
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((row) => {
+                const current = statusForRow(row);
+                const dirty = current !== row.status;
+                return (
+                  <tr key={row.id}>
+                    <td>{formatDate(row.createdAt, dateLocale)}</td>
+                    <td>
+                      <Link
+                        href={`/admin/orders/${row.id}`}
+                        className={styles.backLink}
+                        title={row.id}
+                      >
+                        <code style={{ fontSize: '0.8125rem' }}>{formatOrderDisplayId(row.id)}</code>
+                      </Link>
+                      <div className={styles.cardNote} style={{ marginTop: 6 }}>
+                        {s.itemsCount(row.items.length)}
+                      </div>
+                    </td>
+                    <td>
+                      {row.user.email || '—'}
+                      {row.user.phone ? (
+                        <>
+                          <br />
+                          {row.user.phone}
+                        </>
+                      ) : null}
+                    </td>
+                    <td>{formatMoney(row.totalAmount, row.currency, numberLocale)}</td>
+                    <td>
+                      <select
+                        className={styles.input}
+                        value={current}
+                        onChange={(e) =>
+                          setDraftStatus((d) => ({
+                            ...d,
+                            [row.id]: e.target.value as OrderStatus,
+                          }))
+                        }
+                        aria-label={s.thStatus}
+                      >
+                        {STATUSES.map((st) => (
+                          <option key={st} value={st}>
+                            {statusLabels[st]}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        disabled={!dirty || savingId === row.id}
+                        className={styles.btn}
+                        onClick={() => void saveStatus(row.id, current)}
+                      >
+                        {savingId === row.id ? s.saving : s.save}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : null}
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>{s.thDate}</th>
-              <th>{s.thOrder}</th>
-              <th>{s.thClient}</th>
-              <th>{s.thSum}</th>
-              <th>{s.thStatus}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={6}>{c.loading}</td>
-              </tr>
-            ) : null}
-            {!loading && data?.items.length === 0 ? (
-              <tr>
-                <td colSpan={6}>{s.empty}</td>
-              </tr>
-            ) : null}
-            {data?.items.map((row) => {
-              const current = statusForRow(row);
-              const dirty = current !== row.status;
-              return (
-                <tr key={row.id}>
-                  <td>{formatDate(row.createdAt, dateLocale)}</td>
-                  <td style={{ maxWidth: 200, wordBreak: 'break-all', fontSize: '0.85rem' }}>
-                    <code>{row.id}</code>
-                    <div style={{ color: 'var(--color-gray, #9d9d9d)', marginTop: 4 }}>
-                      {s.itemsCount(row.items.length)}
-                    </div>
-                  </td>
-                  <td style={{ fontSize: '0.9rem' }}>
-                    {row.user.email || '—'}
-                    {row.user.phone ? (
-                      <>
-                        <br />
-                        {row.user.phone}
-                      </>
-                    ) : null}
-                  </td>
-                  <td>{formatMoney(row.totalAmount, row.currency, numberLocale)}</td>
-                  <td>
-                    <select
-                      value={current}
-                      onChange={(e) =>
-                        setDraftStatus((d) => ({
-                          ...d,
-                          [row.id]: e.target.value as OrderStatus,
-                        }))
-                      }
-                      style={{
-                        padding: '6px 8px',
-                        border: '1px solid var(--account-hairline-color, #e2e6e8)',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      {STATUSES.map((st) => (
-                        <option key={st} value={st}>
-                          {statusLabels[st]}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      disabled={!dirty || savingId === row.id}
-                      className={styles.backLink}
-                      style={{
-                        border: '1px solid var(--account-hairline-color, #e2e6e8)',
-                        padding: '6px 12px',
-                        background: 'transparent',
-                        cursor: dirty && savingId !== row.id ? 'pointer' : 'not-allowed',
-                        opacity: dirty ? 1 : 0.45,
-                        whiteSpace: 'nowrap',
-                      }}
-                      onClick={() => void saveStatus(row.id, current)}
-                    >
-                      {savingId === row.id ? s.saving : s.save}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+
       {data && totalPages > 1 ? (
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 16 }}>
+        <div className={styles.toolbar} style={{ marginTop: 16 }}>
           <button
             type="button"
-            className={styles.backLink}
-            style={{
-              border: '1px solid var(--account-hairline-color, #e2e6e8)',
-              padding: '6px 12px',
-              background: 'transparent',
-              cursor: page <= 1 ? 'not-allowed' : 'pointer',
-              opacity: page <= 1 ? 0.5 : 1,
-            }}
+            className={styles.btn}
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
             {s.back}
           </button>
-          <span style={{ fontSize: '0.9rem' }}>{s.pageOf(page, totalPages, data.total)}</span>
+          <span className={styles.cardNote}>
+            {s.pageOf(page, totalPages, data.total)}
+          </span>
           <button
             type="button"
-            className={styles.backLink}
-            style={{
-              border: '1px solid var(--account-hairline-color, #e2e6e8)',
-              padding: '6px 12px',
-              background: 'transparent',
-              cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-              opacity: page >= totalPages ? 0.5 : 1,
-            }}
+            className={styles.btn}
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >

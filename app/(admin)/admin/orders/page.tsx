@@ -9,7 +9,6 @@ export default function AdminOrdersPage() {
   return (
     <main>
       <h1 className={styles.title}>{t.title}</h1>
-      <p className={styles.lead}>{t.lead}</p>
       <OrdersAdminClient />
     </main>
   );

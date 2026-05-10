@@ -9,7 +9,8 @@ import {
   fetchDesignerProjectList,
   updateDesignerProject,
 } from '@/lib/designerProjects/clientApi';
-import { savePayloadWithAppendedPdpLine } from '@/lib/designerProjects/payload';
+import { pdpDraftToLineSnapshot, savePayloadWithAppendedPdpLine } from '@/lib/designerProjects/payload';
+import { addOrderPreparationLine } from '@/lib/orderPreparation/clientApi';
 import { writePdpProjectDraft, type PdpProjectDraftPayload } from '@/lib/designerProjects/pdpDraft';
 import { CreateEditProjectModal } from '@/app/(account)/account/projects/components/CreateEditProjectModal';
 import { ProductGallery } from '@/components/ProductGallery';
@@ -173,7 +174,9 @@ export default function ProductInteractive(props: Props) {
   const [designerProjects, setDesignerProjects] = useState<ProductOrderProjectOption[]>([]);
   const [designerProjectsLoading, setDesignerProjectsLoading] = useState(false);
   const [projectLineSaving, setProjectLineSaving] = useState(false);
+  const [orderLineSaving, setOrderLineSaving] = useState(false);
   const [projectAddedMessage, setProjectAddedMessage] = useState<string | null>(null);
+  const [orderAddedMessage, setOrderAddedMessage] = useState<string | null>(null);
   const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
   const [pendingLineDraftForModal, setPendingLineDraftForModal] = useState<PdpProjectDraftPayload | null>(null);
   const { flash, pushError, dismiss } = useFlashBanner();
@@ -208,6 +211,12 @@ export default function ProductInteractive(props: Props) {
     return () => window.clearTimeout(timer);
   }, [projectAddedMessage]);
 
+  useEffect(() => {
+    if (!orderAddedMessage) return;
+    const timer = window.setTimeout(() => setOrderAddedMessage(null), 7000);
+    return () => window.clearTimeout(timer);
+  }, [orderAddedMessage]);
+
   function buildProjectLineDraft(): PdpProjectDraftPayload | null {
     if (!configurationReadyForProject) return null;
     const thumbUrl = galleryImages[0] ?? null;
@@ -224,6 +233,31 @@ export default function ProductInteractive(props: Props) {
       catalogPriceMinRub: priceMin,
       catalogPriceMaxRub: priceMax,
     });
+  }
+
+  async function handleAddToOrder() {
+    if (!configurationReadyForProject || orderLineSaving) return;
+    const draft = buildProjectLineDraft();
+    if (!draft) return;
+    setOrderLineSaving(true);
+    try {
+      await addOrderPreparationLine({
+        productId: draft.productId,
+        productVariantId: draft.variantId,
+        quantity: 1,
+        unit: 'шт',
+        snapshot: {
+          ...pdpDraftToLineSnapshot(draft),
+          productSlug: draft.productSlug,
+          productName: draft.productName,
+        },
+      });
+      setOrderAddedMessage('Товар добавлен в заказ');
+    } catch (e) {
+      pushError(e instanceof Error ? e.message : 'Не удалось добавить товар в заказ. Попробуйте снова.');
+    } finally {
+      setOrderLineSaving(false);
+    }
   }
 
   async function handleAddToExistingProject(projectId: string) {
@@ -292,6 +326,19 @@ export default function ProductInteractive(props: Props) {
               </button>
             </div>
           ) : null}
+          {orderAddedMessage ? (
+            <div className={styles.pdpProjectAddedBanner} role="status">
+              <span>{orderAddedMessage}</span>
+              <button
+                type="button"
+                className={styles.pdpProjectAddedBannerDismiss}
+                onClick={() => setOrderAddedMessage(null)}
+                aria-label="Закрыть уведомление"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <div className={styles.productDetailsRightRow}>
             <span className={styles.productDetailsPrice}>{priceText}</span>
             <div className={styles.productDetailsBtnsWrapper}>
@@ -314,8 +361,10 @@ export default function ProductInteractive(props: Props) {
                 projects={designerProjects}
                 projectsLoading={designerProjectsLoading}
                 projectActionBusy={projectLineSaving}
+                orderActionBusy={orderLineSaving}
                 onAddToExistingProject={handleAddToExistingProject}
                 onCreateNewProject={handleCreateNewProject}
+                onAddToOrder={handleAddToOrder}
               />
             </div>
           </div>
@@ -327,8 +376,10 @@ export default function ProductInteractive(props: Props) {
                 projects={designerProjects}
                 projectsLoading={designerProjectsLoading}
                 projectActionBusy={projectLineSaving}
+                orderActionBusy={orderLineSaving}
                 onAddToExistingProject={handleAddToExistingProject}
                 onCreateNewProject={handleCreateNewProject}
+                onAddToOrder={handleAddToOrder}
               />
             }
           />

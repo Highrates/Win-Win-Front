@@ -25,6 +25,8 @@ type AccountDetailedProductRowProps = {
   /** Путь на PDP для меню «⋯» и копирования ссылки. */
   productPagePath?: string | null;
   onRemoveFromProject?: () => void;
+  /** Подпись пункта меню удаления (по умолчанию — для проектов). */
+  removeMenuItemText?: string;
   quantity?: number;
   unit?: string;
   onQuantityDelta?: (delta: number) => void;
@@ -43,6 +45,7 @@ export function AccountDetailedProductRow({
   nameHref,
   productPagePath,
   onRemoveFromProject,
+  removeMenuItemText = 'Удалить из проекта',
   quantity = 1,
   unit = 'шт',
   onQuantityDelta,
@@ -154,7 +157,7 @@ export function AccountDetailedProductRow({
                         onRemoveFromProject();
                       }}
                     >
-                      Удалить из проекта
+                      {removeMenuItemText}
                     </button>
                   ) : null}
                 </div>

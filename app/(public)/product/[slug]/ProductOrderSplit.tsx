@@ -12,8 +12,10 @@ type ProductOrderSplitProps = {
   projects: ProductOrderProjectOption[];
   projectsLoading: boolean;
   projectActionBusy: boolean;
+  orderActionBusy: boolean;
   onAddToExistingProject: (projectId: string) => void | Promise<void>;
   onCreateNewProject: () => void;
+  onAddToOrder: () => void | Promise<void>;
 };
 
 export function ProductOrderSplit({
@@ -21,8 +23,10 @@ export function ProductOrderSplit({
   projects,
   projectsLoading,
   projectActionBusy,
+  orderActionBusy,
   onAddToExistingProject,
   onCreateNewProject,
+  onAddToOrder,
 }: ProductOrderSplitProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -46,7 +50,13 @@ export function ProductOrderSplit({
 
   return (
     <div ref={wrapRef} className={styles.productDetailsOrderSplit}>
-      <Button variant="primary" type="button" className={styles.productDetailsBtnPrimarySegment}>
+      <Button
+        variant="primary"
+        type="button"
+        className={styles.productDetailsBtnPrimarySegment}
+        disabled={!configurationReadyForProject || orderActionBusy}
+        onClick={() => void onAddToOrder()}
+      >
         Добавить к заказу
       </Button>
       <div className={styles.productDetailsOrderSplitDivider} aria-hidden />
