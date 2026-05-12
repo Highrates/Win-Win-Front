@@ -93,6 +93,11 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   const [orderComment, setOrderComment] = useState('');
   const [submitModalOpen, setSubmitModalOpen] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  /** Подсветка пустых ФИО/адреса при нажатии «Отправить на согласование» до открытия модалки. */
+  const [submitGateHighlight, setSubmitGateHighlight] = useState<{ name: boolean; address: boolean }>({
+    name: false,
+    address: false,
+  });
   const [inWorkOrders, setInWorkOrders] = useState<UserOrderListItemApi[]>([]);
   const [inWorkLoading, setInWorkLoading] = useState(false);
   const [inWorkError, setInWorkError] = useState<string | null>(null);
@@ -270,6 +275,18 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
 
   const openSubmitModal = () => {
     if (selectedPreviewLines.length < 1 || !draft?.lines.length) return;
+    const name = customerName.trim();
+    const addr = deliveryAddress.trim();
+    if (!name || !addr) {
+      setSubmitGateHighlight({ name: !name, address: !addr });
+      const focusId = !name ? 'order-customer-name' : 'order-delivery-address';
+      requestAnimationFrame(() => {
+        document.getElementById(focusId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById(focusId)?.focus({ preventScroll: true });
+      });
+      return;
+    }
+    setSubmitGateHighlight({ name: false, address: false });
     setSubmitModalOpen(true);
   };
 
@@ -454,14 +471,22 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
                   label="ФИО заказчика"
                   id="order-customer-name"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  error={submitGateHighlight.name}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    setSubmitGateHighlight((h) => ({ ...h, name: false }));
+                  }}
                   autoComplete="name"
                 />
                 <TextField
                   label="Адрес доставки"
                   id="order-delivery-address"
                   value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  error={submitGateHighlight.address}
+                  onChange={(e) => {
+                    setDeliveryAddress(e.target.value);
+                    setSubmitGateHighlight((h) => ({ ...h, address: false }));
+                  }}
                   autoComplete="street-address"
                 />
                 <div className={textFieldStyles.field}>
