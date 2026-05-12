@@ -33,7 +33,7 @@ const navRu: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin/applications': 'Заявки',
   '/admin/orders': 'Заказы',
   '/admin/brands': 'Бренды',
-  '/admin/objects': 'Объекты',
+  '/admin/objects': 'Медиафайлы',
   '/admin/blog': 'Блог',
   '/admin/pages': 'Страницы',
   '/admin/journal': 'Журнал',
@@ -46,7 +46,7 @@ const navZh: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin/applications': '申请',
   '/admin/orders': '订单',
   '/admin/brands': '品牌',
-  '/admin/objects': '对象',
+  '/admin/objects': '媒体文件',
   '/admin/blog': '博客',
   '/admin/pages': '页面',
   '/admin/journal': '日志',
@@ -161,12 +161,12 @@ export function adminDashboardStrings(locale: AdminLocale) {
 export function adminObjectsPageStrings(locale: AdminLocale) {
   if (locale === 'zh') {
     return {
-      title: '对象',
+      title: '媒体文件',
       compressLink: '在此压缩',
     };
   }
   return {
-    title: 'Объекты',
+    title: 'Медиафайлы',
     compressLink: 'Сжимать тут',
   };
 }

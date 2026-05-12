@@ -10,6 +10,7 @@ export function adminOrderStatusLabels(locale: AdminLocale): Record<string, stri
       ORDERED: '已下单',
       PAID: '已付款',
       RECEIVED: '已收货',
+      REJECTED: '已拒绝',
     };
   }
   return {
@@ -18,6 +19,7 @@ export function adminOrderStatusLabels(locale: AdminLocale): Record<string, stri
     ORDERED: 'Заказано',
     PAID: 'Оплачено',
     RECEIVED: 'Получено',
+    REJECTED: 'Отклонён',
   };
 }
 
@@ -32,6 +34,7 @@ export function adminOrdersStrings(locale: AdminLocale) {
     thClient: pick(locale, 'Клиент', '客户'),
     thSum: pick(locale, 'Сумма', '金额'),
     thStatus: pick(locale, 'Статус', '状态'),
+    thChat: pick(locale, 'Сообщения', '消息'),
     loading: pick(locale, 'Загрузка…', '加载中…'),
     empty: pick(locale, 'Нет заказов', '暂无订单'),
     itemsCount: (n: number) => pick(locale, `${n} поз.`, `${n} 项`),
@@ -41,6 +44,10 @@ export function adminOrdersStrings(locale: AdminLocale) {
     pageOf: (page: number, totalPages: number, total: number) =>
       pick(locale, `Стр. ${page} из ${totalPages} (${total})`, `第 ${page} / ${totalPages} 页（${total}）`),
     forward: pick(locale, 'Вперёд', '下一页'),
+    tabsAria: pick(locale, 'Разделы списка заказов', '订单列表分区'),
+    tabNew: pick(locale, 'Новые заказы', '新订单'),
+    tabActive: pick(locale, 'В работе', '进行中'),
+    tabRejected: pick(locale, 'Отклонённые', '已拒绝'),
   };
 }
 
@@ -58,7 +65,7 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     labelStatus: pick(locale, 'Статус', '状态'),
     labelCreated: pick(locale, 'Создан', '创建于'),
     labelUpdated: pick(locale, 'Обновлён', '更新于'),
-    labelUserId: pick(locale, 'ID пользователя', '用户 ID'),
+    labelAccount: pick(locale, 'Клиент', '客户'),
     labelEmail: pick(locale, 'Email', 'Email'),
     labelPhone: pick(locale, 'Телефон', '电话'),
     labelTotal: pick(locale, 'Сумма', '合计'),
@@ -70,6 +77,7 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     errSaveStatus: pick(locale, 'Не удалось сохранить статус', '无法保存状态'),
     openProduct: pick(locale, 'Товар в каталоге', '在目录中打开'),
     thProduct: pick(locale, 'Товар', '商品'),
+    thQtyUnit: pick(locale, 'Кол-во', '数量'),
     thQty: pick(locale, 'Кол-во', '数量'),
     thUnit: pick(locale, 'Ед.', '单位'),
     thPrice: pick(locale, 'Цена', '单价'),
@@ -79,5 +87,40 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     noDocs: pick(locale, 'Нет прикреплённых ссылок', '无附件链接'),
     snapshotModification: pick(locale, 'Модификация', '配置'),
     snapshotElementFallback: pick(locale, 'Элемент', '部件'),
+    chatAsideAria: pick(locale, 'Чат и записки по заказу', '订单沟通与备注'),
+    chatTitle: pick(locale, 'Чат', '沟通'),
+    tabChat: pick(locale, 'Чат', '聊天'),
+    tabNotes: pick(locale, 'Записки', '备注'),
+    notesPlaceholder: pick(locale, 'Внутренние заметки по заказу…', '内部订单备注…'),
+    notesHint: pick(locale, 'Видно только в админке; сохранение на сервере — позже.', '仅管理端可见；稍后支持服务端保存。'),
+    chatPlaceholder: pick(locale, 'Сообщение…', '消息…'),
+    chatEmpty: pick(locale, 'Пока нет сообщений', '暂无消息'),
+    footerSumLabel: pick(locale, 'Сумма', '合计'),
+    actionPrepareCp: pick(locale, 'Сформировать КП', '生成报价单'),
+    actionReject: pick(locale, 'Отклонить заказ', '拒绝订单'),
+    actionDeleteRejected: pick(locale, 'Удалить заказ', '删除订单'),
+    actionsHintPrepareCp: pick(locale, 'Формирование КП — в следующих итерациях.', '报价单生成将在后续版本接入。'),
+    rejectModalReminder: pick(
+      locale,
+      'Перед отклонением напишите в чате справа причину — клиент увидит её в личном кабинете.',
+      '拒绝前请在右侧沟通栏写明原因，客户将在个人中心看到。',
+    ),
+    rejectModalTitle: pick(locale, 'Отклонить заказ?', '要拒绝此订单吗？'),
+    rejectModalConfirm: pick(locale, 'Отклонить', '确认拒绝'),
+    rejectModalCancel: pick(locale, 'Отмена', '取消'),
+    deleteModalTitle: pick(locale, 'Удалить заказ навсегда?', '永久删除订单？'),
+    deleteModalBody: pick(
+      locale,
+      'Запись и переписка будут удалены без восстановления.',
+      '订单与沟通记录将永久删除。',
+    ),
+    deleteModalConfirm: pick(locale, 'Удалить', '删除'),
+    deleteModalCancel: pick(locale, 'Отмена', '取消'),
+    errDeleteOrder: pick(locale, 'Не удалось удалить заказ', '删除失败'),
+    statusRejectedHint: pick(
+      locale,
+      'Заказ отклонён. Смена статуса недоступна — при необходимости удалите запись во вкладке «Отклонённые».',
+      '订单已拒绝，不可再改状态；可在「已拒绝」标签中删除记录。',
+    ),
   };
 }

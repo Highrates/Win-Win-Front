@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountOrderDetailModal } from '@/components/AccountOrders/AccountOrderDetailModal';
 import { AccountOrderWorkCard } from '@/components/AccountOrders/AccountOrderWorkCard';
@@ -18,7 +19,7 @@ import {
 } from '@/lib/orderPreparation/clientApi';
 import { mapOrderLineToAccountProduct } from '@/lib/orderPreparation/mapLineToAccountProduct';
 import type { OrderPreparationDraftApi, OrderPreparationLineApi } from '@/lib/orderPreparation/types';
-import { ORDER_TABS } from '@/lib/account/orders';
+import { ORDER_TABS, orderTabQueryParamForUrl } from '@/lib/account/orders';
 import { fetchUserOrdersList } from '@/lib/userOrders/clientApi';
 import {
   filterInWorkOrders,
@@ -61,8 +62,27 @@ function sumSelectedUnits(lines: OrderPreparationLineApi[], selected: Set<string
   return Math.round(s * 1000) / 1000;
 }
 
-export function AccountOrdersPageClient() {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabIndex?: number } = {}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [selectedIndex, setSelectedIndex] = useState(initialTabIndex);
+
+  useEffect(() => {
+    setSelectedIndex(initialTabIndex);
+  }, [initialTabIndex]);
+
+  const onSelectOrderTab = useCallback(
+    (index: number) => {
+      setSelectedIndex(index);
+      const q = orderTabQueryParamForUrl(index);
+      if (q == null) {
+        router.replace(pathname, { scroll: false });
+      } else {
+        router.replace(`${pathname}?tab=${encodeURIComponent(q)}`, { scroll: false });
+      }
+    },
+    [pathname, router],
+  );
   const [selectionMode, setSelectionMode] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState<OrderPreparationDraftApi | null>(null);
@@ -283,7 +303,7 @@ export function AccountOrdersPageClient() {
   return (
     <div className={productListStyles.page}>
       <div className={productListStyles.toolbar}>
-        <AccountProjectTabs projects={ORDER_TABS} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+        <AccountProjectTabs projects={ORDER_TABS} selectedIndex={selectedIndex} onSelect={onSelectOrderTab} />
       </div>
 
       {isPreparationTab && hasOrderLines ? (

@@ -4,7 +4,7 @@ import type { UserOrderListItemApi } from './types';
 
 const PLACEHOLDER = '/images/placeholder.svg';
 
-const IN_WORK_STATUSES = new Set(['PENDING_APPROVAL', 'ORDERED', 'PAID']);
+const IN_WORK_STATUSES = new Set(['PENDING_APPROVAL', 'ORDERED', 'PAID', 'REJECTED']);
 
 function orderItemThumb(item: UserOrderListItemApi['items'][number]): string {
   const s = item.snapshot && typeof item.snapshot === 'object' ? (item.snapshot as Record<string, unknown>) : null;
@@ -24,6 +24,8 @@ function statusLabelRu(status: string): string {
       return 'Оплачено';
     case 'RECEIVED':
       return 'Получено';
+    case 'REJECTED':
+      return 'Заказ отклонён';
     default:
       return 'В работе';
   }
@@ -73,17 +75,32 @@ export function mapUserOrderToWorkCard(
   const skuCount = order.items.length;
   const shortNo = formatOrderDisplayId(order.id);
 
-  const sumLabel = order.status === 'PENDING_APPROVAL' ? 'Ожидаемая сумма заказа' : 'Сумма';
+  const sumLabel =
+    order.status === 'PENDING_APPROVAL'
+      ? 'Ожидаемая сумма заказа'
+      : order.status === 'REJECTED'
+        ? 'Сумма (не принята)'
+        : 'Сумма';
+
+  const statusNotice =
+    order.status === 'REJECTED'
+      ? 'Причина отклонения — в чате по заказу. Если остались вопросы, напишите нам в ответ.'
+      : undefined;
 
   return {
+    orderId: order.id,
     statusLabel: statusLabelRu(order.status),
+    statusNotice,
     dateLine: formatOrderDate(order.createdAt),
+    chatTitle: `Чат · ${shortNo}`,
     metaRows: [
       { label: 'Номер', value: shortNo, valueTitle: order.id },
       { label: 'Позиций', value: String(skuCount) },
       { label: sumLabel, value: formatTotalRub(order.totalAmount, order.currency) },
     ],
     productThumbSrcs: thumbs.length ? thumbs : [PLACEHOLDER],
+    hideMoreMenu: order.status === 'REJECTED',
+    statusRejected: order.status === 'REJECTED',
     onOpenDetails: opts?.onOpenDetails,
     detailHref: opts?.onOpenDetails ? undefined : `/account/orders/${order.id}`,
     ctaCount: 1,

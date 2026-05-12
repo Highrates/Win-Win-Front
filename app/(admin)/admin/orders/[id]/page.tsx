@@ -18,9 +18,6 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
       <h1 className={styles.title}>
         {t.title} {formatOrderDisplayId(params.id)}
       </h1>
-      <p className={styles.lead} style={{ marginTop: 4 }}>
-        <code style={{ fontSize: '0.8125rem' }}>{params.id}</code>
-      </p>
       <OrderAdminDetailClient orderId={params.id} />
     </main>
   );

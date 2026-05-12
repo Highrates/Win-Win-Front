@@ -48,11 +48,24 @@
   font-family: var(--font-commissioner);
 }
 
+.orderStatusRejected {
+  color: var(--color-red);
+}
+
 .orderDate {
   color: var(--color-gray);
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   font-family: var(--font-commissioner);
+}
+
+.orderStatusNotice {
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  font-family: var(--font-commissioner);
+  line-height: 1.35;
+  max-width: 100%;
 }
 
 .metaOfferRow {

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
@@ -10,10 +11,15 @@ import {
   adminOrdersStrings,
 } from '@/lib/admin-i18n/adminOrdersI18n';
 import styles from '../../catalog/catalogAdmin.module.css';
+import pn from '../../catalog/products/new/productNew.module.css';
+import od from './orderAdminDetail.module.css';
+import { AdminOrderSideChat } from './AdminOrderSideChat';
+import { AdminOrdersConfirmModal } from '../AdminOrdersConfirmModal';
+import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
 
-/** Все статусы Prisma — чтобы корректно отображать черновик и т.д. */
-const DETAIL_STATUSES = ['DRAFT', 'PENDING_APPROVAL', 'ORDERED', 'PAID', 'RECEIVED'] as const;
-type DetailOrderStatus = (typeof DETAIL_STATUSES)[number];
+const ACCEPT_STATUSES = ['ORDERED', 'PAID', 'RECEIVED'] as const;
+
+const DETAIL_STATUSES = ['DRAFT', 'PENDING_APPROVAL', 'ORDERED', 'PAID', 'RECEIVED', 'REJECTED'] as const;
 
 type AdminOrderDetail = {
   id: string;
@@ -26,7 +32,12 @@ type AdminOrderDetail = {
   documentUrls: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
-  user: { id: string; email: string | null; phone: string | null };
+  user: {
+    id: string;
+    email: string | null;
+    phone: string | null;
+    profile: null | { firstName: string | null; lastName: string | null };
+  };
   items: {
     id: string;
     quantity: number;
@@ -64,13 +75,14 @@ function itemImageUrl(row: AdminOrderDetail['items'][0]): string | null {
   return first?.trim() || null;
 }
 
-function formatMoney(amount: string | number, currency: string, numberLocale: string): string {
+/** Суммы без копеек */
+function formatMoneyInt(amount: string | number, currency: string, numberLocale: string): string {
   const n = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (!Number.isFinite(n)) return String(amount);
   return new Intl.NumberFormat(numberLocale, {
     style: 'currency',
     currency: currency || 'RUB',
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(n);
 }
 
@@ -85,32 +97,39 @@ function formatDate(iso: string, dateLocale: string): string {
   }
 }
 
-function metaRowsFromSnapshot(
-  snapshot: Record<string, unknown> | null,
-  labels: { modification: string; elementFallback: string },
-): { label: string; value: string }[] {
-  const rows: { label: string; value: string }[] = [];
-  if (!snapshot) return rows;
-  const mod = snapshot.modificationLabel;
-  if (typeof mod === 'string' && mod.trim()) {
-    rows.push({ label: labels.modification, value: mod.trim() });
+function formatQtyUnit(qty: number, unit: string): string {
+  const u = (unit || 'шт.').trim();
+  return `${qty}\u00A0${u}`;
+}
+
+function accountDisplayName(user: AdminOrderDetail['user']): string {
+  const p = user.profile;
+  const n = [p?.firstName, p?.lastName]
+    .filter((x): x is string => typeof x === 'string' && Boolean(x.trim()))
+    .join(' ')
+    .trim();
+  if (n) return n;
+  return user.email?.trim() || user.phone?.trim() || '—';
+}
+
+function orderLinesTotalRub(items: AdminOrderDetail['items']): number {
+  let s = 0;
+  for (const row of items) {
+    const unit = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
+    if (Number.isFinite(unit)) s += unit * row.quantity;
   }
-  const em = snapshot.elementMaterialRows;
-  if (Array.isArray(em)) {
-    for (const row of em) {
-      if (row && typeof row === 'object' && 'elementLabel' in row && 'materialColorLabel' in row) {
-        const el = (row as { elementLabel?: unknown }).elementLabel;
-        const mat = (row as { materialColorLabel?: unknown }).materialColorLabel;
-        if (typeof el === 'string' && typeof mat === 'string') {
-          rows.push({ label: el.trim() || labels.elementFallback, value: mat.trim() || '—' });
-        }
-      }
-    }
-  }
-  return rows;
+  return Math.round(s * 100) / 100;
+}
+
+function statusSelectOptions(orderStatus: string): readonly string[] {
+  if (orderStatus === 'REJECTED') return [];
+  if (orderStatus === 'PENDING_APPROVAL') return ACCEPT_STATUSES;
+  if (orderStatus === 'DRAFT') return DETAIL_STATUSES;
+  return ACCEPT_STATUSES;
 }
 
 export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
+  const router = useRouter();
   const { locale } = useAdminLocale();
   const d = useMemo(() => adminOrderDetailStrings(locale), [locale]);
   const listS = useMemo(() => adminOrdersStrings(locale), [locale]);
@@ -123,6 +142,10 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectLoading, setRejectLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -130,7 +153,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
     try {
       const res = await adminBackendJson<AdminOrderDetail>(`orders/admin/${orderId}`);
       setOrder(res);
-      setSelectedStatus(res.status);
+      setSelectedStatus(res.status === 'PENDING_APPROVAL' ? 'ORDERED' : res.status);
     } catch (e) {
       const msg = e instanceof Error ? e.message : d.errLoad;
       setError(msg);
@@ -144,17 +167,29 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
     void load();
   }, [load]);
 
-  const selectValue =
-    order && DETAIL_STATUSES.includes(selectedStatus as DetailOrderStatus)
-      ? selectedStatus
-      : order?.status && DETAIL_STATUSES.includes(order.status as DetailOrderStatus)
-        ? order.status
-        : 'ORDERED';
+  useEffect(() => {
+    if (typeof window === 'undefined' || !order) return;
+    if (window.location.hash !== '#order-chat') return;
+    requestAnimationFrame(() => {
+      document.getElementById('order-chat')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }, [order]);
 
-  const statusDirty = !!order && selectValue !== order.status;
+  const statusOpts = order ? [...statusSelectOptions(order.status)] : [];
+  const selectValue = !order
+    ? ''
+    : statusOpts.length === 0
+      ? order.status
+      : statusOpts.includes(selectedStatus)
+        ? selectedStatus
+        : (statusOpts[0] ?? selectedStatus);
+
+  const statusDirty = !!order && statusOpts.length > 0 && selectValue !== order.status;
+
+  const linesTotal = useMemo(() => (order ? orderLinesTotalRub(order.items) : 0), [order]);
 
   async function saveStatus() {
-    if (!order) return;
+    if (!order || statusOpts.length === 0) return;
     setSaving(true);
     setError(null);
     try {
@@ -163,10 +198,48 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
         body: JSON.stringify({ status: selectValue }),
       });
       await load();
+      if (typeof document !== 'undefined') {
+        document.dispatchEvent(new Event('admin-orders-pending-refresh'));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : d.errSaveStatus);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function confirmRejectFromDetail() {
+    if (!order) return;
+    setRejectLoading(true);
+    setError(null);
+    try {
+      await adminBackendJson(`orders/admin/${order.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'REJECTED' }),
+      });
+      setRejectOpen(false);
+      await load();
+      document.dispatchEvent(new Event('admin-orders-pending-refresh'));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : d.errSaveStatus);
+    } finally {
+      setRejectLoading(false);
+    }
+  }
+
+  async function confirmDeleteFromDetail() {
+    if (!order) return;
+    setDeleteLoading(true);
+    setError(null);
+    try {
+      await adminBackendJson(`orders/admin/${order.id}`, { method: 'DELETE' });
+      setDeleteOpen(false);
+      document.dispatchEvent(new Event('admin-orders-pending-refresh'));
+      router.push('/admin/orders?bucket=rejected');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : d.errDeleteOrder);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -182,226 +255,261 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
     return <p className={styles.muted}>{d.notFound}</p>;
   }
 
-  const statusLabel =
-    statusLabels[order.status] ?? order.status;
-
   return (
     <>
       {error ? <p className={styles.error}>{error}</p> : null}
 
-      <div className={styles.detailHero}>
-        <p className={styles.cardNote}>
-          <span className={styles.badge}>{statusLabel}</span>
-        </p>
-        <div className={styles.detailTitleRow} style={{ marginTop: 12 }}>
-          <div className={styles.formWide}>
-            <label className={styles.label}>
-              <span>{d.labelStatus}</span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                <select
-                  className={styles.input}
-                  style={{ maxWidth: 280 }}
-                  value={selectValue}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                >
-                  {DETAIL_STATUSES.map((st) => (
-                    <option key={st} value={st}>
-                      {statusLabels[st] ?? st}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className={styles.btn}
-                  disabled={!statusDirty || saving}
-                  onClick={() => void saveStatus()}
-                >
-                  {saving ? d.saving : d.save}
-                </button>
+      <div className={`${pn.productFormGrid} ${od.orderDetailGrid}`}>
+        <div className={pn.productFormMain}>
+          <div className={styles.detailHero}>
+            <div className={styles.detailTitleRow} style={{ marginTop: 0 }}>
+              <div className={styles.formWide}>
+                <label className={styles.label}>
+                  <span>{d.labelStatus}</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                    {order.status === 'REJECTED' ? (
+                      <>
+                        <span className={styles.cardTitle}>{statusLabels.REJECTED}</span>
+                        <p className={styles.muted} style={{ margin: 0, flex: '1 1 100%' }}>
+                          {d.statusRejectedHint}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <select
+                          className={styles.input}
+                          style={{ maxWidth: 280 }}
+                          value={selectValue}
+                          onChange={(e) => setSelectedStatus(e.target.value)}
+                        >
+                          {statusOpts.map((st) => (
+                            <option key={st} value={st}>
+                              {statusLabels[st] ?? st}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className={styles.btn}
+                          disabled={!statusDirty || saving}
+                          onClick={() => void saveStatus()}
+                        >
+                          {saving ? d.saving : d.save}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </label>
               </div>
-            </label>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>{d.sectionMeta}</h2>
-        <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-          <div>
-            <div className={styles.cardNote}>{d.labelCreated}</div>
-            <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-              {formatDate(order.createdAt, dateLocale)}
+          <div className={styles.section}>
+            <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+              <div>
+                <div className={styles.cardNote}>{d.labelCreated}</div>
+                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
+                  {formatDate(order.createdAt, dateLocale)}
+                </div>
+              </div>
+              <div>
+                <div className={styles.cardNote}>{d.labelUpdated}</div>
+                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
+                  {formatDate(order.updatedAt, dateLocale)}
+                </div>
+              </div>
+              <div>
+                <div className={styles.cardNote}>{d.labelAccount}</div>
+                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
+                  <Link href={`/admin/clients/${encodeURIComponent(order.user.id)}`} className={styles.backLink}>
+                    {accountDisplayName(order.user)}
+                  </Link>
+                </div>
+              </div>
+              <div>
+                <div className={styles.cardNote}>{d.labelEmail}</div>
+                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
+                  {order.user.email || '—'}
+                </div>
+              </div>
+              <div>
+                <div className={styles.cardNote}>{d.labelPhone}</div>
+                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
+                  {order.user.phone || '—'}
+                </div>
+              </div>
             </div>
           </div>
-          <div>
-            <div className={styles.cardNote}>{d.labelUpdated}</div>
-            <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-              {formatDate(order.updatedAt, dateLocale)}
-            </div>
-          </div>
-          <div>
-            <div className={styles.cardNote}>{d.labelTotal}</div>
-            <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-              {formatMoney(order.totalAmount, order.currency, numberLocale)}
-            </div>
-          </div>
-          <div>
-            <div className={styles.cardNote}>{d.labelCurrency}</div>
-            <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-              {order.currency}
-            </div>
-          </div>
-          <div>
-            <div className={styles.cardNote}>{d.labelUserId}</div>
-            <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-              <code style={{ fontSize: '0.8125rem' }}>{order.user.id}</code>
-            </div>
-          </div>
-          <div>
-            <div className={styles.cardNote}>{d.labelEmail}</div>
-            <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-              {order.user.email || '—'}
-            </div>
-          </div>
-          <div>
-            <div className={styles.cardNote}>{d.labelPhone}</div>
-            <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-              {order.user.phone || '—'}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>{d.sectionClient}</h2>
-        <div className={styles.formWide} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p>
-            <span className={styles.cardNote}>{d.labelFio}</span>
-            <br />
-            <span className={styles.cardTitle}>{order.customerName?.trim() || '—'}</span>
-          </p>
-          <p>
-            <span className={styles.cardNote}>{d.labelAddress}</span>
-            <br />
-            <span style={{ whiteSpace: 'pre-wrap' }}>{order.deliveryAddress?.trim() || '—'}</span>
-          </p>
-        </div>
-      </div>
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>{d.sectionClient}</h2>
+            <div className={styles.formWide} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p>
+                <span className={styles.cardNote}>{d.labelFio}</span>
+                <br />
+                <span className={styles.cardTitle}>{order.customerName?.trim() || '—'}</span>
+              </p>
+              <p>
+                <span className={styles.cardNote}>{d.labelAddress}</span>
+                <br />
+                <span style={{ whiteSpace: 'pre-wrap' }}>{order.deliveryAddress?.trim() || '—'}</span>
+              </p>
+            </div>
+          </div>
 
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>{d.sectionComment}</h2>
-        <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
-          {order.comment?.trim() ? order.comment.trim() : d.emptyComment}
-        </p>
-      </div>
-
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>{d.sectionItems}</h2>
-        {order.items.length === 0 ? (
-          <p className={styles.muted}>{d.noItems}</p>
-        ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: 54 }} aria-hidden />
-                  <th>{d.thProduct}</th>
-                  <th>{d.thQty}</th>
-                  <th>{d.thUnit}</th>
-                  <th>{d.thPrice}</th>
-                  <th>{d.thLineTotal}</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {order.items.map((row) => {
-                  const snap = parseSnapshot(row);
-                  const meta = metaRowsFromSnapshot(snap, {
-                    modification: d.snapshotModification,
-                    elementFallback: d.snapshotElementFallback,
-                  });
-                  const unit = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
-                  const lineTotal = Number.isFinite(unit) ? unit * row.quantity : NaN;
-                  const img = itemImageUrl(row);
-                  return (
-                    <tr key={row.id}>
-                      <td>
-                        {img ? (
-                          <img
-                            className={styles.productListThumb}
-                            src={img}
-                            alt=""
-                            width={46}
-                            height={46}
-                          />
-                        ) : (
-                          <div className={styles.productListThumbPh} aria-hidden />
-                        )}
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>{d.sectionItems}</h2>
+            {order.items.length === 0 ? (
+              <p className={styles.muted}>{d.noItems}</p>
+            ) : (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 54 }} aria-hidden />
+                      <th>{d.thProduct}</th>
+                      <th>{d.thQtyUnit}</th>
+                      <th>{d.thPrice}</th>
+                      <th>{d.thLineTotal}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.items.map((row) => {
+                      const snap = parseSnapshot(row);
+                      const meta = orderItemSnapshotMetaRows(snap, {
+                        modification: d.snapshotModification,
+                        elementFallback: d.snapshotElementFallback,
+                      });
+                      const unit = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
+                      const lineTotal = Number.isFinite(unit) ? unit * row.quantity : NaN;
+                      const img = itemImageUrl(row);
+                      return (
+                        <tr key={row.id}>
+                          <td>
+                            {img ? (
+                              <img
+                                className={styles.productListThumb}
+                                src={img}
+                                alt=""
+                                width={46}
+                                height={46}
+                              />
+                            ) : (
+                              <div className={styles.productListThumbPh} aria-hidden />
+                            )}
+                          </td>
+                          <td>
+                            <Link
+                              href={`/admin/catalog/products/${encodeURIComponent(row.product.id)}`}
+                              className={styles.backLink}
+                            >
+                              <div className={styles.cardTitle}>{itemTitle(row)}</div>
+                            </Link>
+                            {row.product?.brand?.name ? (
+                              <div className={styles.cardNote}>{row.product.brand.name}</div>
+                            ) : null}
+                            {meta.length > 0 ? (
+                              <ul className={styles.cardNote} style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                                {meta.map((m, i) => (
+                                  <li key={i}>
+                                    {m.label}: {m.value}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </td>
+                          <td>{formatQtyUnit(row.quantity, row.unit)}</td>
+                          <td>{formatMoneyInt(row.price, order.currency, numberLocale)}</td>
+                          <td>
+                            {Number.isFinite(lineTotal)
+                              ? formatMoneyInt(lineTotal, order.currency, numberLocale)
+                              : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr>
+                      <td aria-hidden />
+                      <td colSpan={3} style={{ textAlign: 'right', fontWeight: 600 }}>
+                        {d.footerSumLabel}
                       </td>
-                      <td>
-                        <div className={styles.cardTitle}>{itemTitle(row)}</div>
-                        {row.product?.brand?.name ? (
-                          <div className={styles.cardNote}>{row.product.brand.name}</div>
-                        ) : null}
-                        {meta.length > 0 ? (
-                          <ul className={styles.cardNote} style={{ margin: '8px 0 0', paddingLeft: 18 }}>
-                            {meta.map((m, i) => (
-                              <li key={i}>
-                                {m.label}: {m.value}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </td>
-                      <td>{row.quantity}</td>
-                      <td>{row.unit}</td>
-                      <td>{formatMoney(row.price, order.currency, numberLocale)}</td>
-                      <td>
-                        {Number.isFinite(lineTotal)
-                          ? formatMoney(lineTotal, order.currency, numberLocale)
-                          : '—'}
-                      </td>
-                      <td>
-                        <Link href={`/admin/catalog/products/${row.product.id}`} className={styles.backLink}>
-                          {d.openProduct}
-                        </Link>
+                      <td style={{ fontWeight: 600 }}>
+                        {formatMoneyInt(linesTotal, order.currency, numberLocale)}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+
+          <div className={styles.section}>
+            <p className={styles.cardNote} style={{ marginBottom: 12 }}>
+              {d.actionsHintPrepareCp}
+            </p>
+            <div className={styles.toolbar} style={{ marginBottom: 0 }}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                disabled
+                title={d.actionsHintPrepareCp}
+              >
+                {d.actionPrepareCp}
+              </button>
+              {order.status === 'PENDING_APPROVAL' ? (
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnDanger}`}
+                  onClick={() => setRejectOpen(true)}
+                >
+                  {d.actionReject}
+                </button>
+              ) : null}
+              {order.status === 'REJECTED' ? (
+                <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={() => setDeleteOpen(true)}>
+                  {d.actionDeleteRejected}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <aside
+          id="order-chat"
+          className={`${pn.productFormPlacement} ${od.orderDetailPlacement}`}
+          aria-label={d.chatAsideAria}
+        >
+          <AdminOrderSideChat orderId={orderId} />
+        </aside>
       </div>
 
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>{d.sectionDocs}</h2>
-        {order.documentUrls && typeof order.documentUrls === 'object' && !Array.isArray(order.documentUrls) ? (
-          (() => {
-            const entries = Object.entries(order.documentUrls).filter(
-              ([, v]) => typeof v === 'string' && (v as string).trim(),
-            ) as [string, string][];
-            if (entries.length === 0) {
-              return <p className={styles.muted}>{d.noDocs}</p>;
-            }
-            return (
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {entries.map(([key, url]) => (
-                  <li key={key} style={{ marginBottom: 6 }}>
-                    <span className={styles.cardNote}>{key}: </span>
-                    <a href={url} target="_blank" rel="noopener noreferrer" className={styles.backLink}>
-                      {url}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            );
-          })()
-        ) : (
-          <p className={styles.muted}>{d.noDocs}</p>
-        )}
-      </div>
+      <AdminOrdersConfirmModal
+        open={rejectOpen}
+        title={d.rejectModalTitle}
+        confirmLabel={d.rejectModalConfirm}
+        cancelLabel={d.rejectModalCancel}
+        loading={rejectLoading}
+        onClose={() => !rejectLoading && setRejectOpen(false)}
+        onConfirm={confirmRejectFromDetail}
+      >
+        <p className={styles.muted} style={{ margin: 0 }}>
+          {d.rejectModalReminder}
+        </p>
+      </AdminOrdersConfirmModal>
+
+      <AdminOrdersConfirmModal
+        open={deleteOpen}
+        title={d.deleteModalTitle}
+        confirmLabel={d.deleteModalConfirm}
+        cancelLabel={d.deleteModalCancel}
+        loading={deleteLoading}
+        onClose={() => !deleteLoading && setDeleteOpen(false)}
+        onConfirm={confirmDeleteFromDetail}
+      >
+        <p className={styles.muted} style={{ margin: 0 }}>
+          {d.deleteModalBody}
+        </p>
+      </AdminOrdersConfirmModal>
     </>
   );
 }

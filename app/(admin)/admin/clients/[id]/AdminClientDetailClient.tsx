@@ -9,6 +9,7 @@ import catalogStyles from '../../catalog/catalogAdmin.module.css';
 import objTabStyles from '../../objects/objectsLibrary.module.css';
 import styles from '../clients.module.css';
 import { DesignerProjectsAdminClient } from '../../designer-projects/DesignerProjectsAdminClient';
+import { OrdersAdminClient } from '../../orders/OrdersAdminClient';
 import { parseApiCaseList, roomTypesCommaSeparated, type ApiCase } from '@/lib/account/caseApiSchema';
 
 const TAB_ORDERS = 0;
@@ -343,7 +344,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
           </div>
           {tab === TAB_ORDERS ? (
             <section className={styles.tabPanel} aria-label={s.tabOrders}>
-              <p className={catalogStyles.muted}>{s.ordersEmpty}</p>
+              <OrdersAdminClient key={id} embedded filterUserId={id} />
             </section>
           ) : null}
           {tab === TAB_INFO ? (

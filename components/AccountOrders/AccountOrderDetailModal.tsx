@@ -7,6 +7,7 @@ import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { fetchUserOrder } from '@/lib/userOrders/clientApi';
 import type { UserOrderDetailApi } from '@/lib/userOrders/types';
+import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
 import styles from './AccountOrderDetailModal.module.css';
 
 function CloseIcon() {
@@ -32,6 +33,8 @@ function statusLabelRu(status: string): string {
       return 'Оплачено';
     case 'RECEIVED':
       return 'Получено';
+    case 'REJECTED':
+      return 'Заказ отклонён';
     case 'DRAFT':
       return 'Черновик';
     default:
@@ -86,28 +89,6 @@ function formatDateTime(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-function metaRowsFromSnapshot(snapshot: Record<string, unknown> | null): { label: string; value: string }[] {
-  const rows: { label: string; value: string }[] = [];
-  if (!snapshot) return rows;
-  const mod = snapshot.modificationLabel;
-  if (typeof mod === 'string' && mod.trim()) {
-    rows.push({ label: 'Модификация', value: mod.trim() });
-  }
-  const em = snapshot.elementMaterialRows;
-  if (Array.isArray(em)) {
-    for (const row of em) {
-      if (row && typeof row === 'object' && 'elementLabel' in row && 'materialColorLabel' in row) {
-        const el = (row as { elementLabel?: unknown }).elementLabel;
-        const mat = (row as { materialColorLabel?: unknown }).materialColorLabel;
-        if (typeof el === 'string' && typeof mat === 'string') {
-          rows.push({ label: el.trim() || 'Элемент', value: mat.trim() || '—' });
-        }
-      }
-    }
-  }
-  return rows;
 }
 
 type Props = {
@@ -232,7 +213,7 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
                       <tbody>
                         {order.items.map((row) => {
                           const snap = parseSnapshot(row);
-                          const meta = metaRowsFromSnapshot(snap);
+                          const meta = orderItemSnapshotMetaRows(snap);
                           const unit = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
                           const lineTotal = Number.isFinite(unit) ? unit * row.quantity : NaN;
                           const img = itemImageUrl(row);

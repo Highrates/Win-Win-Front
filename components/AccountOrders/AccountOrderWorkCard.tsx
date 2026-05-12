@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
+import { useOrderChat } from '@/hooks/useOrderChat';
 import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
 import styles from './AccountOrderWorkCard.module.css';
 
@@ -15,7 +17,11 @@ export type AccountOrderWorkOffer = {
 };
 
 export type AccountOrderWorkCardProps = {
+  /** ID заказа для API чата */
+  orderId: string;
   statusLabel: string;
+  /** Доп. текст под статусом (например, подсказка по отклонённому заказу) */
+  statusNotice?: string;
   dateLine: string;
   metaRows: AccountOrderWorkMetaRow[];
   productThumbSrcs: string[];
@@ -27,6 +33,12 @@ export type AccountOrderWorkCardProps = {
   ctaCount?: 1 | 2;
   /** Блок цен и бонуса справа от меты + кнопка «Оформить» в orderCTA */
   offer?: AccountOrderWorkOffer;
+  /** Заголовок окна чата (кнопка сообщения) */
+  chatTitle?: string;
+  /** Скрыть меню «⋯» (для статусов без доп. действий) */
+  hideMoreMenu?: boolean;
+  /** Красная подсветка статуса (отклонённый заказ) */
+  statusRejected?: boolean;
 };
 
 const PLACEHOLDER = '/images/placeholder.svg';
@@ -66,7 +78,9 @@ function renderMeta(metaRows: AccountOrderWorkMetaRow[]) {
 }
 
 export function AccountOrderWorkCard({
+  orderId,
   statusLabel,
+  statusNotice,
   dateLine,
   metaRows,
   productThumbSrcs,
@@ -74,10 +88,34 @@ export function AccountOrderWorkCard({
   onOpenDetails,
   ctaCount = 1,
   offer,
+  chatTitle = 'Сообщения',
+  hideMoreMenu = false,
+  statusRejected = false,
 }: AccountOrderWorkCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const menuWrapRef = useRef<HTMLDivElement>(null);
   const hasCheckout = Boolean(offer);
+
+  const {
+    chatMessages,
+    chatLoading,
+    chatError,
+    chatComposerDisabled,
+    chatAttachPickerDisabled,
+    pendingAttachmentsHint,
+    pendingOutgoingAttachments,
+    canSendAttachmentMessage,
+    sendChatText,
+    attachChatFiles,
+    removePendingChatAttachment,
+    deleteChatMessage,
+  } = useOrderChat({
+    orderId,
+    enabled: chatOpen,
+    variant: 'account',
+    timeLocale: 'ru-RU',
+  });
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -127,33 +165,58 @@ export function AccountOrderWorkCard({
     renderMeta(metaRows)
   );
 
+  const openChat = () => setChatOpen(true);
+
   return (
     <div className={styles.orderWrapper}>
+      <ChatWindow
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        title={chatTitle}
+        messages={chatMessages}
+        messageEmptyHint={chatLoading ? 'Загрузка…' : 'Пока нет сообщений'}
+        errorText={chatError}
+        composerDisabled={chatComposerDisabled}
+        attachPickerDisabled={chatAttachPickerDisabled}
+        attachmentsEnabled
+        pendingAttachmentsHint={pendingAttachmentsHint}
+        pendingOutgoing={pendingOutgoingAttachments}
+        allowEmptySend={canSendAttachmentMessage}
+        onSend={sendChatText}
+        onAttachFiles={attachChatFiles}
+        onRemovePendingAttachment={removePendingChatAttachment}
+        onDeleteMessage={deleteChatMessage}
+      />
       <div className={styles.orderCard}>
         <div className={styles.orderCardTop}>
           <div className={styles.orderCardTopLeft}>
-            <span className={styles.orderStatus}>{statusLabel}</span>
+            <span className={statusRejected ? `${styles.orderStatus} ${styles.orderStatusRejected}` : styles.orderStatus}>
+              {statusLabel}
+            </span>
             <span className={styles.orderDate}>{dateLine}</span>
+            {statusNotice ? <p className={styles.orderStatusNotice}>{statusNotice}</p> : null}
           </div>
-          <div className={productListStyles.productCardDetailedMoreWrap} ref={menuWrapRef}>
-            <button
-              type="button"
-              className={`${productListStyles.iconButton} ${productListStyles.productCardDetailedMoreTrigger}`}
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-              aria-label="Действия по заказу"
-              onClick={() => setMenuOpen((o) => !o)}
-            >
-              <img src="/icons/more.svg" alt="" width={20} height={20} className={productListStyles.iconBlack} />
-            </button>
-            {menuOpen ? (
-              <div className={productListStyles.productCardDetailedMoreMenu} role="menu">
-                <button type="button" className={productListStyles.productCardDetailedMoreItem} role="menuitem">
-                  Архивировать
-                </button>
-              </div>
-            ) : null}
-          </div>
+          {!hideMoreMenu ? (
+            <div className={productListStyles.productCardDetailedMoreWrap} ref={menuWrapRef}>
+              <button
+                type="button"
+                className={`${productListStyles.iconButton} ${productListStyles.productCardDetailedMoreTrigger}`}
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                aria-label="Действия по заказу"
+                onClick={() => setMenuOpen((o) => !o)}
+              >
+                <img src="/icons/more.svg" alt="" width={20} height={20} className={productListStyles.iconBlack} />
+              </button>
+              {menuOpen ? (
+                <div className={productListStyles.productCardDetailedMoreMenu} role="menu">
+                  <button type="button" className={productListStyles.productCardDetailedMoreItem} role="menuitem">
+                    Архивировать
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {metaBlock}
@@ -181,11 +244,11 @@ export function AccountOrderWorkCard({
       </div>
 
       <div className={styles.orderCTA}>
-        <button type="button" className={styles.ctaButton} aria-label="Написать по заказу">
+        <button type="button" className={styles.ctaButton} aria-label="Написать по заказу" onClick={openChat}>
           <OrderCtaMessageIcon className={styles.ctaIcon} />
         </button>
         {ctaCount === 2 && !hasCheckout ? (
-          <button type="button" className={styles.ctaButton} aria-label="Сообщения по заказу">
+          <button type="button" className={styles.ctaButton} aria-label="Сообщения по заказу" onClick={openChat}>
             <OrderCtaMessageIcon className={styles.ctaIcon} />
           </button>
         ) : null}

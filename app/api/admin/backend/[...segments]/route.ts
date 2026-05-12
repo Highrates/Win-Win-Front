@@ -107,7 +107,17 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
     }
   }
 
-  const res = await fetchUpstream(target, method, init, bodyBackup);
+  let res: Response;
+  try {
+    res = await fetchUpstream(target, method, init, bodyBackup);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[admin/backend proxy] upstream fetch failed', target, msg);
+    return NextResponse.json(
+      { message: `Не удалось связаться с API: ${msg}` },
+      { status: 502 },
+    );
+  }
   const out = new NextResponse(res.body, { status: res.status });
   const ct = res.headers.get('content-type');
   if (ct) out.headers.set('content-type', ct);

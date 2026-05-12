@@ -1,0 +1,91 @@
+/** Только карточка заказа в админке: шире боковая колонка под чат/записки */
+.orderDetailGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 520px) !important;
+}
+
+.orderDetailPlacement {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  align-self: stretch;
+  min-height: 480px;
+  min-width: 0;
+}
+
+.sideRoot {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tab {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  background: var(--color-white, #fff);
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-black, #1a1a1a);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.tab:hover {
+  background: var(--color-bright-snow, #f5f7f8);
+}
+
+.tabActive {
+  border-color: var(--color-ink-black, #051826);
+  background: var(--color-ink-black, #051826);
+  color: var(--color-white, #fff);
+}
+
+.tabActive:hover {
+  opacity: 0.95;
+  background: var(--color-ink-black, #051826);
+}
+
+.tabPanels {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatWrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.notesArea {
+  flex: 1;
+  min-height: 220px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.notesHint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-gray, #9d9d9d);
+}

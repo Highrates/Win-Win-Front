@@ -30,9 +30,9 @@ type MediaLibraryPickerModalProps = {
   /** Ограничение списка: только изображения, только видео или вся медиатека с вкладками */
   mediaFilter: 'image' | 'video' | 'all';
   onClose: () => void;
-  /** Один объект (кнопка «Выбрать» или двойной клик по карточке) */
+  /** Один медиафайл (кнопка «Выбрать» или двойной клик по карточке) */
   onPick?: (sel: MediaLibraryPickResult) => void;
-  /** Несколько объектов: выбор кадров в сетке и «Добавить выбранные» */
+  /** Несколько медиафайлов: выбор кадров в сетке и «Добавить выбранные» */
   onPickBatch?: (items: MediaLibraryPickResult[]) => void;
 };
 
@@ -90,7 +90,7 @@ function selectionAllowed(
 
 export function MediaLibraryPickerModal({
   open,
-  title = 'Выберите объект',
+  title = 'Выберите медиафайл',
   mediaFilter,
   onClose,
   onPick,
@@ -328,7 +328,7 @@ export function MediaLibraryPickerModal({
           ? 'Выберите изображение'
           : mediaFilter === 'video'
             ? 'Выберите видео'
-            : 'Нельзя выбрать этот объект',
+            : 'Нельзя выбрать этот медиафайл',
       );
       return;
     }
@@ -368,7 +368,7 @@ export function MediaLibraryPickerModal({
     multiMode && batchCount > 0 && !loading && !uploading;
 
   const tabs: { key: MediaLibraryTab; label: string }[] = [
-    { key: 'all', label: 'Все объекты' },
+    { key: 'all', label: 'Все медиафайлы' },
     { key: 'images', label: 'Изображения' },
     { key: 'documents', label: 'Документы' },
     { key: 'models', label: '3D модели' },
@@ -448,7 +448,7 @@ export function MediaLibraryPickerModal({
                   placeholder="Поиск по имени или alt…"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  aria-label="Поиск объектов"
+                  aria-label="Поиск медиафайлов"
                 />
                 <input
                   ref={fileInputRef}
@@ -481,7 +481,7 @@ export function MediaLibraryPickerModal({
               {filterHint ? (
                 <p className={pickStyles.filterHint}>{filterHint}</p>
               ) : (
-                <div className={libStyles.tabs} role="tablist" aria-label="Тип объекта">
+                <div className={libStyles.tabs} role="tablist" aria-label="Тип медиафайла">
                   {tabs.map(({ key, label }) => (
                     <button
                       key={key}
@@ -503,7 +503,7 @@ export function MediaLibraryPickerModal({
                 {loading ? (
                   <p className={catalogStyles.muted}>Загрузка…</p>
                 ) : objects.length === 0 ? (
-                  <p className={catalogStyles.muted}>Нет объектов по текущим фильтрам.</p>
+                  <p className={catalogStyles.muted}>Нет медиафайлов по текущим фильтрам.</p>
                 ) : (
                   <ul className={libStyles.grid}>
                     {objects.map((row) => {

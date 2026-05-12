@@ -122,17 +122,40 @@ export function AdminChrome({
     }
   }, []);
 
-  useEffect(() => {
-    void loadPendingPartnerApps();
-  }, [loadPendingPartnerApps, pathname]);
+  const [pendingOrdersApproval, setPendingOrdersApproval] = useState<number | null>(null);
+  const loadPendingOrdersApproval = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/backend/orders/admin/pending-approval-count', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as { total?: number };
+      setPendingOrdersApproval(typeof j.total === 'number' ? j.total : 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
-    const onRefresh = () => {
+    void loadPendingPartnerApps();
+    void loadPendingOrdersApproval();
+  }, [loadPendingPartnerApps, loadPendingOrdersApproval, pathname]);
+
+  useEffect(() => {
+    const onRefreshPartner = () => {
       void loadPendingPartnerApps();
     };
-    document.addEventListener('admin-partner-pending-refresh', onRefresh);
-    return () => document.removeEventListener('admin-partner-pending-refresh', onRefresh);
-  }, [loadPendingPartnerApps]);
+    const onRefreshOrders = () => {
+      void loadPendingOrdersApproval();
+    };
+    document.addEventListener('admin-partner-pending-refresh', onRefreshPartner);
+    document.addEventListener('admin-orders-pending-refresh', onRefreshOrders);
+    return () => {
+      document.removeEventListener('admin-partner-pending-refresh', onRefreshPartner);
+      document.removeEventListener('admin-orders-pending-refresh', onRefreshOrders);
+    };
+  }, [loadPendingPartnerApps, loadPendingOrdersApproval]);
 
   function setAdminLocale(next: AdminLocale) {
     setLocale(next);
@@ -279,6 +302,10 @@ export function AdminChrome({
                 const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
                 const showPendingBadge =
                   href === '/admin/applications' && pendingPartnerApps != null && pendingPartnerApps > 0;
+                const showOrdersPendingBadge =
+                  href === '/admin/orders' &&
+                  pendingOrdersApproval != null &&
+                  pendingOrdersApproval > 0;
                 return (
                   <Link
                     key={href}
@@ -288,6 +315,9 @@ export function AdminChrome({
                     {getNavLabel(locale, href)}
                     {showPendingBadge ? (
                       <span className={styles.navLinkCount}> ({pendingPartnerApps})</span>
+                    ) : null}
+                    {showOrdersPendingBadge ? (
+                      <span className={styles.navLinkCount}> ({pendingOrdersApproval})</span>
                     ) : null}
                   </Link>
                 );

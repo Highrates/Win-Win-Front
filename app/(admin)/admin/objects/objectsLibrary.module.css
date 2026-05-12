@@ -45,14 +45,58 @@
   background: var(--color-white, #fff);
 }
 
-.folderSidebarTitle {
+.folderSidebarTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 10px;
+}
+
+.folderSidebarTitle {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-commissioner, system-ui);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--color-gray, #9d9d9d);
+}
+
+.folderCollapseAllBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-gray, #9d9d9d);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.folderCollapseAllBtn:hover {
+  background: var(--color-bright-snow, #f5f7f8);
+  color: var(--color-ink-black, #051826);
+}
+
+.folderCollapseAllChevron {
+  display: block;
+  font-size: 10px;
+  line-height: 1;
+  transition: transform 0.18s ease;
+}
+
+.folderCollapseAllChevronCollapsed {
+  transform: rotate(-90deg);
 }
 
 .folderRow {

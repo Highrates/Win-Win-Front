@@ -140,6 +140,25 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
     return m;
   }, [folders]);
 
+  const folderIdsWithChildren = useMemo(
+    () => new Set(folders.filter((f) => f._count.children > 0).map((f) => f.id)),
+    [folders],
+  );
+
+  const allFoldersCollapsed = useMemo(() => {
+    if (folderIdsWithChildren.size === 0) return false;
+    return Array.from(folderIdsWithChildren).every((id) => collapsedFolderIds.has(id));
+  }, [collapsedFolderIds, folderIdsWithChildren]);
+
+  function toggleCollapseAllFolders() {
+    if (folderIdsWithChildren.size === 0) return;
+    if (allFoldersCollapsed) {
+      setCollapsedFolderIds(new Set());
+    } else {
+      setCollapsedFolderIds(new Set(folderIdsWithChildren));
+    }
+  }
+
   function toggleFolderCollapse(id: string) {
     setCollapsedFolderIds((prev) => {
       const next = new Set(prev);
@@ -512,7 +531,25 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
       <div className={styles.layout}>
         <aside className={styles.folderSidebar} aria-label={s.foldersAsideLabel}>
-          <p className={styles.folderSidebarTitle}>{s.foldersTitle}</p>
+          <div className={styles.folderSidebarTitleRow}>
+            <p className={styles.folderSidebarTitle}>{s.foldersTitle}</p>
+            {folderIdsWithChildren.size > 0 ? (
+              <button
+                type="button"
+                className={styles.folderCollapseAllBtn}
+                onClick={toggleCollapseAllFolders}
+                aria-label={allFoldersCollapsed ? s.expandAllFoldersAria : s.collapseAllFoldersAria}
+                title={allFoldersCollapsed ? s.expandAllFoldersAria : s.collapseAllFoldersAria}
+              >
+                <span
+                  className={`${styles.folderCollapseAllChevron} ${allFoldersCollapsed ? styles.folderCollapseAllChevronCollapsed : ''}`}
+                  aria-hidden
+                >
+                  ▼
+                </span>
+              </button>
+            ) : null}
+          </div>
           <button
             type="button"
             className={`${styles.folderBtn} ${folderFilter === null ? styles.folderBtnActive : ''}`}
