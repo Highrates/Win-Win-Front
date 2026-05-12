@@ -279,12 +279,22 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
       setDraftError('Выберите хотя бы одну позицию');
       return;
     }
+    const name = customerName.trim();
+    const addr = deliveryAddress.trim();
+    if (!name) {
+      setDraftError('Укажите ФИО заказчика');
+      return;
+    }
+    if (!addr) {
+      setDraftError('Укажите адрес доставки');
+      return;
+    }
     setSubmitLoading(true);
     setDraftError(null);
     try {
       await patchOrderPreparationDraft({
-        customerName: customerName.trim() || null,
-        deliveryAddress: deliveryAddress.trim() || null,
+        customerName: name || null,
+        deliveryAddress: addr || null,
         comment: orderComment.trim() || null,
       });
       await submitOrderPreparationDraft({ lineIds });

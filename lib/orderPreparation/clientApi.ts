@@ -1,3 +1,4 @@
+import { readUpstreamJsonErrorMessage } from '@/lib/readUpstreamJsonError';
 import type { AddOrderPreparationLineBody, OrderPreparationDraftApi } from './types';
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -26,7 +27,7 @@ export async function patchOrderPreparationDraft(body: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
   return parseJson<OrderPreparationDraftApi>(res);
 }
 
@@ -60,7 +61,7 @@ export async function deleteOrderPreparationLine(lineId: string): Promise<OrderP
     method: 'DELETE',
     credentials: 'same-origin',
   });
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
   return parseJson<OrderPreparationDraftApi>(res);
 }
 
@@ -73,6 +74,6 @@ export async function submitOrderPreparationDraft(opts?: { lineIds?: string[] })
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
   return parseJson<OrderPreparationDraftApi>(res);
 }

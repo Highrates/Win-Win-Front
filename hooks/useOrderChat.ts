@@ -7,6 +7,7 @@ import type { ChatWindowMessage } from '@/components/ChatWindow/ChatWindow';
 import { ORDER_CHAT_SOCKET_NAMESPACE } from '@/lib/orderChat/constants';
 import { decodeJwtPayloadUnsafe } from '@/lib/orderChat/decodeJwtPayloadUnsafe';
 import { getWsOrigin } from '@/lib/orderChat/wsOrigin';
+import { readUpstreamJsonErrorMessage } from '@/lib/readUpstreamJsonError';
 import type {
   OrderChatApiMessage,
   OrderChatMessagesResponse,
@@ -53,17 +54,6 @@ function inferMimeFromFilename(name: string): string | null {
   return null;
 }
 
-async function readUpstreamError(res: Response): Promise<string> {
-  try {
-    const j = (await res.json()) as { message?: unknown };
-    if (typeof j?.message === 'string') return j.message;
-    if (Array.isArray(j?.message)) return j.message.map(String).join(', ');
-  } catch {
-    /* ignore */
-  }
-  return res.statusText || `Ошибка ${res.status}`;
-}
-
 async function parseOrderChatUploadResponse(res: Response): Promise<{
   url: string;
   filename: string;
@@ -92,7 +82,7 @@ async function parseOrderChatUploadResponse(res: Response): Promise<{
 async function fetchWsToken(variant: OrderChatVariant): Promise<string> {
   const path = variant === 'account' ? '/api/user/ws-token' : '/api/admin/ws-token';
   const res = await fetch(path, { credentials: 'same-origin', cache: 'no-store' });
-  if (!res.ok) throw new Error(await readUpstreamError(res));
+  if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
   const j = (await res.json()) as { token?: string };
   if (!j.token?.trim()) throw new Error('Нет токена для чата');
   return j.token.trim();
@@ -240,7 +230,7 @@ export function useOrderChat(opts: {
       credentials: 'same-origin',
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error(await readUpstreamError(res));
+    if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
     const data = (await res.json()) as OrderChatMessagesResponse;
     const viewer = viewerRef.current;
     setMessages((data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale)));
@@ -302,7 +292,7 @@ export function useOrderChat(opts: {
           credentials: 'same-origin',
           cache: 'no-store',
         });
-        if (!res.ok) throw new Error(await readUpstreamError(res));
+        if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
         const data = (await res.json()) as OrderChatMessagesResponse;
         if (disposed) return;
         const viewer = viewerRef.current;
@@ -368,7 +358,7 @@ export function useOrderChat(opts: {
                 : undefined,
           }),
         });
-        if (!res.ok) throw new Error(await readUpstreamError(res));
+        if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
         const created = (await res.json()) as OrderChatApiMessage;
         const viewer = viewerRef.current;
         setMessages((prev) => {
@@ -428,7 +418,7 @@ export function useOrderChat(opts: {
             credentials: 'same-origin',
             body: fd,
           });
-          if (!res.ok) throw new Error(await readUpstreamError(res));
+          if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
           const row = await parseOrderChatUploadResponse(res);
           setPendingRefs((p) =>
             p.map((x) =>
@@ -473,7 +463,7 @@ export function useOrderChat(opts: {
           method: 'DELETE',
           credentials: 'same-origin',
         });
-        if (!res.ok) throw new Error(await readUpstreamError(res));
+        if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
         setMessages((prev) =>
           prev.map((m) =>
             m.id === messageId
