@@ -7,9 +7,11 @@ import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import {
   adminOrderDetailStrings,
-  adminOrderStatusLabels,
   adminOrdersStrings,
 } from '@/lib/admin-i18n/adminOrdersI18n';
+import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
+import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
+import type { CommercialProposalSummaryApi } from '@/lib/commercialProposal/types';
 import styles from '../../catalog/catalogAdmin.module.css';
 import pn from '../../catalog/products/new/productNew.module.css';
 import od from './orderAdminDetail.module.css';
@@ -86,17 +88,6 @@ function formatMoneyInt(amount: string | number, currency: string, numberLocale:
   }).format(n);
 }
 
-function formatDate(iso: string, dateLocale: string): string {
-  try {
-    return new Intl.DateTimeFormat(dateLocale, {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
-
 function formatQtyUnit(qty: number, unit: string): string {
   const u = (unit || 'шт.').trim();
   return `${qty}\u00A0${u}`;
@@ -133,8 +124,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   const { locale } = useAdminLocale();
   const d = useMemo(() => adminOrderDetailStrings(locale), [locale]);
   const listS = useMemo(() => adminOrdersStrings(locale), [locale]);
-  const statusLabels = useMemo(() => adminOrderStatusLabels(locale), [locale]);
-  const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
+  const statusLabels = useMergedAdminOrderStatusLabels();
   const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
 
   const [order, setOrder] = useState<AdminOrderDetail | null>(null);
@@ -146,6 +136,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   const [rejectLoading, setRejectLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [kpSummary, setKpSummary] = useState<CommercialProposalSummaryApi | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -166,6 +157,27 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!order || order.status === 'DRAFT' || order.status === 'REJECTED') {
+      setKpSummary(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const s = await adminBackendJson<CommercialProposalSummaryApi>(
+          `orders/admin/${encodeURIComponent(order.id)}/commercial-proposals`,
+        );
+        if (!cancelled) setKpSummary(s);
+      } catch {
+        if (!cancelled) setKpSummary(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [order?.id, order?.status]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !order) return;
@@ -200,6 +212,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
       await load();
       if (typeof document !== 'undefined') {
         document.dispatchEvent(new Event('admin-orders-pending-refresh'));
+        document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : d.errSaveStatus);
@@ -220,6 +233,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
       setRejectOpen(false);
       await load();
       document.dispatchEvent(new Event('admin-orders-pending-refresh'));
+      document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
     } catch (e) {
       setError(e instanceof Error ? e.message : d.errSaveStatus);
     } finally {
@@ -235,6 +249,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
       await adminBackendJson(`orders/admin/${order.id}`, { method: 'DELETE' });
       setDeleteOpen(false);
       document.dispatchEvent(new Event('admin-orders-pending-refresh'));
+      document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
       router.push('/admin/orders?bucket=rejected');
     } catch (e) {
       setError(e instanceof Error ? e.message : d.errDeleteOrder);
@@ -309,13 +324,13 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
               <div>
                 <div className={styles.cardNote}>{d.labelCreated}</div>
                 <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-                  {formatDate(order.createdAt, dateLocale)}
+                  {formatAdminOrderDateTime(order.createdAt, locale)}
                 </div>
               </div>
               <div>
                 <div className={styles.cardNote}>{d.labelUpdated}</div>
                 <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-                  {formatDate(order.updatedAt, dateLocale)}
+                  {formatAdminOrderDateTime(order.updatedAt, locale)}
                 </div>
               </div>
               <div>
@@ -444,18 +459,47 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
           </div>
 
           <div className={styles.section}>
-            <p className={styles.cardNote} style={{ marginBottom: 12 }}>
-              {d.actionsHintPrepareCp}
-            </p>
+            {d.actionsHintPrepareCp.trim() ? (
+              <p className={styles.cardNote} style={{ marginBottom: 12 }}>
+                {d.actionsHintPrepareCp}
+              </p>
+            ) : null}
+            {kpSummary?.published?.[0] ? (
+              <p className={styles.cardNote} style={{ marginBottom: 8 }}>
+                {locale === 'zh'
+                  ? `已发布报价单：v${kpSummary.published[0].versionNumber}（${kpSummary.published[0].lineCount} 项）`
+                  : `Опубликовано КП: v${kpSummary.published[0].versionNumber} (${kpSummary.published[0].lineCount} поз.)`}
+              </p>
+            ) : null}
+            {kpSummary?.draft ? (
+              <p className={styles.cardNote} style={{ marginBottom: 8 }}>
+                {locale === 'zh'
+                  ? `草稿：${kpSummary.draft.lineCount} 项`
+                  : `Черновик КП: ${kpSummary.draft.lineCount} поз.`}
+              </p>
+            ) : null}
             <div className={styles.toolbar} style={{ marginBottom: 0 }}>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.btnPrimary}`}
-                disabled
-                title={d.actionsHintPrepareCp}
-              >
-                {d.actionPrepareCp}
-              </button>
+              {order.status !== 'DRAFT' && order.status !== 'REJECTED' ? (
+                <Link
+                  href={`/admin/orders/${encodeURIComponent(order.id)}/kp`}
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                >
+                  {d.actionPrepareCp}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  disabled
+                  title={
+                    order.status === 'REJECTED'
+                      ? d.statusRejectedHint
+                      : 'КП доступно после отправки заказа на согласование'
+                  }
+                >
+                  {d.actionPrepareCp}
+                </button>
+              )}
               {order.status === 'PENDING_APPROVAL' ? (
                 <button
                   type="button"

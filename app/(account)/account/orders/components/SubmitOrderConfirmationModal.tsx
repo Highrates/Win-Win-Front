@@ -32,6 +32,8 @@ type Props = {
   selectedUnitsTotal: number;
   totalLabel: string;
   previewLines: OrderPreparationLineApi[];
+  /** Текст из поля «Комментарий к заказу» (показываем в модалке и уходит в чат при отправке). */
+  orderComment: string;
 };
 
 const noopSelected = () => {};
@@ -44,6 +46,7 @@ export function SubmitOrderConfirmationModal({
   selectedUnitsTotal,
   totalLabel,
   previewLines,
+  orderComment,
 }: Props) {
   const previewProducts = useMemo(
     () => previewLines.map((line) => ({ line, product: mapOrderLineToAccountProduct(line) })),
@@ -72,6 +75,7 @@ export function SubmitOrderConfirmationModal({
   if (!open) return null;
 
   const lineCount = previewLines.length;
+  const commentTrim = orderComment.trim();
 
   return (
     <div
@@ -89,15 +93,19 @@ export function SubmitOrderConfirmationModal({
           </button>
         </div>
         <div className={modalStyles.body}>
-          <p className={ownStyles.intro}>
-            Заказ будет передан менеджеру. Проверьте состав и детали доставки.
-          </p>
-          <p className={ownStyles.summaryRow}>
-            Вы выбрали: <strong>{selectedUnitsTotal}</strong>
+          <p className={ownStyles.introBody}>
+            Заказ будет передан менеджеру. Проверьте состав и детали доставки. Вы выбрали:{' '}
+            <strong>{selectedUnitsTotal}</strong>
             {'\u00A0'}
             шт.
           </p>
           <p className={ownStyles.priceRow}>{totalLabel}</p>
+          {commentTrim ? (
+            <div className={ownStyles.commentBlock}>
+              <div className={ownStyles.commentLabel}>Комментарий к заказу</div>
+              <p className={ownStyles.commentText}>{commentTrim}</p>
+            </div>
+          ) : null}
 
           <div className={`${productListStyles.productCardDetailedWrapper} ${ownStyles.linesWrap}`}>
             {previewProducts.map(({ line, product }) => (

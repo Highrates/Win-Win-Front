@@ -32,6 +32,7 @@ import ProductElementTabs from './ProductElementTabs';
 import ProductModifications from './ProductModifications';
 import { ProductOrderSplit, type ProductOrderProjectOption } from './ProductOrderSplit';
 import styles from './ProductPage.module.css';
+import btnStyles from '@/components/Button/Button.module.css';
 
 type BrandInfo = {
   name: string;
@@ -314,29 +315,45 @@ export default function ProductInteractive(props: Props) {
         {leftColumn}
         <div className={styles.productDetailsRight}>
           {projectAddedMessage ? (
-            <div className={styles.pdpProjectAddedBanner} role="status">
-              <span>{projectAddedMessage}</span>
-              <button
-                type="button"
-                className={styles.pdpProjectAddedBannerDismiss}
-                onClick={() => setProjectAddedMessage(null)}
-                aria-label="Закрыть уведомление"
+            <div className={styles.pdpBannerRow}>
+              <div className={styles.pdpProjectAddedBanner} role="status">
+                <span className={styles.pdpProjectAddedBannerText}>{projectAddedMessage}</span>
+                <button
+                  type="button"
+                  className={styles.pdpProjectAddedBannerDismiss}
+                  onClick={() => setProjectAddedMessage(null)}
+                  aria-label="Закрыть уведомление"
+                >
+                  ×
+                </button>
+              </div>
+              <Link
+                href="/account/projects"
+                className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${styles.pdpBannerLink}`}
               >
-                ×
-              </button>
+                К проектам
+              </Link>
             </div>
           ) : null}
           {orderAddedMessage ? (
-            <div className={styles.pdpProjectAddedBanner} role="status">
-              <span>{orderAddedMessage}</span>
-              <button
-                type="button"
-                className={styles.pdpProjectAddedBannerDismiss}
-                onClick={() => setOrderAddedMessage(null)}
-                aria-label="Закрыть уведомление"
+            <div className={styles.pdpBannerRow}>
+              <div className={styles.pdpProjectAddedBanner} role="status">
+                <span className={styles.pdpProjectAddedBannerText}>{orderAddedMessage}</span>
+                <button
+                  type="button"
+                  className={styles.pdpProjectAddedBannerDismiss}
+                  onClick={() => setOrderAddedMessage(null)}
+                  aria-label="Закрыть уведомление"
+                >
+                  ×
+                </button>
+              </div>
+              <Link
+                href="/account/orders"
+                className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${styles.pdpBannerLink}`}
               >
-                ×
-              </button>
+                К заказам
+              </Link>
             </div>
           ) : null}
           <div className={styles.productDetailsRightRow}>

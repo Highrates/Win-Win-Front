@@ -184,12 +184,23 @@ a.productDetailsInteractItem {
   gap: 32px;
 }
 
-.pdpProjectAddedBanner {
+.pdpBannerRow {
   align-self: stretch;
-  box-sizing: border-box;
   width: 100%;
   display: flex;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.pdpProjectAddedBanner {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
@@ -199,6 +210,22 @@ a.productDetailsInteractItem {
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
   color: var(--color-ink-black);
+}
+
+.pdpProjectAddedBannerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.pdpBannerLink {
+  flex-shrink: 0;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .pdpProjectAddedBannerDismiss {

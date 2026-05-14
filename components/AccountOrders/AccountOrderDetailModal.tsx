@@ -1,13 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccordionBig } from '@/app/(account)/account/orders/AccordionBig';
+import { ACCOUNT_WORK_NOTIFICATIONS_EVENT } from '@/lib/account/orders';
 import teamPageStyles from '@/app/(account)/account/team/page.module.css';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
+import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
+import { useOrderChat } from '@/hooks/useOrderChat';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
-import { fetchUserOrder } from '@/lib/userOrders/clientApi';
+import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
+import { fetchUserOrder, ackUserOrderCommercialProposalSeen } from '@/lib/userOrders/clientApi';
 import type { UserOrderDetailApi } from '@/lib/userOrders/types';
 import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
+import workCardStyles from '@/components/AccountOrders/AccountOrderWorkCard.module.css';
 import styles from './AccountOrderDetailModal.module.css';
 
 function CloseIcon() {
@@ -18,6 +23,27 @@ function CloseIcon() {
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function OrderCtaMessageIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        d="M5.83335 15.3582H9.16669L12.875 17.8249C13.425 18.1916 14.1667 17.7999 14.1667 17.1332V15.3582C16.6667 15.3582 18.3334 13.6916 18.3334 11.1916V6.19157C18.3334 3.69157 16.6667 2.0249 14.1667 2.0249H5.83335C3.33335 2.0249 1.66669 3.69157 1.66669 6.19157V11.1916C1.66669 13.6916 3.33335 15.3582 5.83335 15.3582Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeMiterlimit={10}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -73,6 +99,27 @@ function formatRub(amount: string | number, currency = 'RUB'): string {
   }).format(n);
 }
 
+function kpLineTotalRub(line: CommercialProposalLineApi): number {
+  const unit = line.offerUnitPrice;
+  const disc = line.discountPercent != null && Number.isFinite(line.discountPercent) ? line.discountPercent : 0;
+  const factor = 1 - Math.min(100, Math.max(0, disc)) / 100;
+  return Math.round(unit * factor * line.quantity * 100) / 100;
+}
+
+function kpLineUnitAfterDiscount(line: CommercialProposalLineApi): number {
+  const unit = line.offerUnitPrice;
+  const disc = line.discountPercent != null && Number.isFinite(line.discountPercent) ? line.discountPercent : 0;
+  const factor = 1 - Math.min(100, Math.max(0, disc)) / 100;
+  return Math.round(unit * factor * 100) / 100;
+}
+
+function kpLineImageUrl(line: CommercialProposalLineApi): string | null {
+  const s = line.snapshot && typeof line.snapshot === 'object' ? (line.snapshot as Record<string, unknown>) : null;
+  const u = s?.imageUrl;
+  if (typeof u === 'string' && u.trim()) return u.trim();
+  return null;
+}
+
 function formatOrderCreatedTitle(iso: string): string {
   try {
     const d = new Date(iso);
@@ -91,15 +138,208 @@ function formatDateTime(iso: string): string {
   }
 }
 
+function TableFlowArrow() {
+  return (
+    <div className={styles.tableFlowArrow} aria-hidden>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 5v14M12 19l-4-4M12 19l4-4"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function AccountOrderItemsTable({
+  order,
+  positionHeader,
+}: {
+  order: UserOrderDetailApi;
+  positionHeader: string;
+}) {
+  if (order.items.length === 0) {
+    return <p className={styles.muted}>Нет позиций</p>;
+  }
+  return (
+    <div className={`${teamPageStyles.tableFrame} ${styles.orderTableFrame}`}>
+      <table className={teamPageStyles.table}>
+        <thead>
+          <tr>
+            <th scope="col" className={teamPageStyles.thLeftTight} style={{ width: 116 }} aria-hidden />
+            <th scope="col" className={teamPageStyles.thDesigner}>
+              {positionHeader}
+            </th>
+            <th scope="col" className={teamPageStyles.thCenterLevel}>
+              Кол-во
+            </th>
+            <th scope="col" className={teamPageStyles.thRightTightFirst}>
+              Цена
+            </th>
+            <th scope="col" className={teamPageStyles.thRightTight}>
+              Сумма
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {order.items.map((row) => {
+            const snap = parseSnapshot(row);
+            const meta = orderItemSnapshotMetaRows(snap);
+            const unit = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
+            const lineTotal = Number.isFinite(unit) ? unit * row.quantity : NaN;
+            const img = itemImageUrl(row);
+            return (
+              <tr key={row.id}>
+                <td className={`${teamPageStyles.tdLeftTight} ${styles.tdTopAlign}`}>
+                  <div className={styles.thumbWrap}>
+                    {img ? (
+                      <img className={styles.thumb} src={img} alt="" width={100} height={100} />
+                    ) : (
+                      <div className={styles.thumbPh} aria-hidden />
+                    )}
+                  </div>
+                </td>
+                <td className={`${teamPageStyles.tdDesigner} ${styles.tdTopAlign}`}>
+                  <div className={styles.lineName}>{itemTitle(row)}</div>
+                  {row.product?.brand?.name ? <div className={styles.brandNote}>{row.product.brand.name}</div> : null}
+                  {meta.length > 0 ? (
+                    <ul className={styles.metaList}>
+                      {meta.map((m, i) => (
+                        <li key={i}>
+                          {m.label}: {m.value}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </td>
+                <td className={teamPageStyles.tdCenterLevel}>
+                  {row.quantity} шт.
+                </td>
+                <td className={teamPageStyles.tdRightTightFirst}>{formatRub(row.price, order.currency)}</td>
+                <td className={teamPageStyles.tdRightTight}>
+                  {Number.isFinite(lineTotal) ? formatRub(lineTotal, order.currency) : '—'}
+                </td>
+              </tr>
+            );
+          })}
+          <tr className={styles.tableFooterRow}>
+            <td colSpan={4} className={teamPageStyles.tdRightTightFirst}>
+              Ожидаемая сумма заказа
+            </td>
+            <td className={`${teamPageStyles.tdRightTight} ${styles.tableFooterValue}`}>
+              {formatRub(order.totalAmount, order.currency)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; lines: CommercialProposalLineApi[] }) {
+  return (
+    <div className={`${teamPageStyles.tableFrame} ${styles.orderTableFrame}`}>
+      <table className={teamPageStyles.table}>
+        <thead>
+          <tr>
+            <th scope="col" className={teamPageStyles.thLeftTight} style={{ width: 116 }} aria-hidden />
+            <th scope="col" className={teamPageStyles.thDesigner}>
+              Позиция
+            </th>
+            <th scope="col" className={teamPageStyles.thCenterLevel}>
+              Кол-во
+            </th>
+            <th scope="col" className={teamPageStyles.thRightTightFirst}>
+              Цена
+            </th>
+            <th scope="col" className={teamPageStyles.thRightTight}>
+              Сумма
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => {
+            const snap =
+              line.snapshot && typeof line.snapshot === 'object' ? (line.snapshot as Record<string, unknown>) : null;
+            const name =
+              snap && typeof snap.productName === 'string' && snap.productName.trim() ? snap.productName.trim() : '—';
+            const meta = orderItemSnapshotMetaRows(snap);
+            const lineTotal = kpLineTotalRub(line);
+            const img = kpLineImageUrl(line);
+            const disc = line.discountPercent != null && Number.isFinite(line.discountPercent) ? line.discountPercent : 0;
+            const hasDisc = disc > 0;
+            const newUnit = kpLineUnitAfterDiscount(line);
+            return (
+              <tr key={line.id}>
+                <td className={`${teamPageStyles.tdLeftTight} ${styles.tdTopAlign}`}>
+                  <div className={styles.thumbWrap}>
+                    {img ? (
+                      <img className={styles.thumb} src={img} alt="" width={100} height={100} />
+                    ) : (
+                      <div className={styles.thumbPh} aria-hidden />
+                    )}
+                  </div>
+                </td>
+                <td className={teamPageStyles.tdDesigner}>
+                  <div className={styles.lineName}>{name}</div>
+                  {meta.length ? (
+                    <ul className={styles.muted} style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                      {meta.map((m, i) => (
+                        <li key={i}>
+                          {m.label}: {m.value}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {line.deliveryEta ? (
+                    <div className={styles.muted} style={{ marginTop: 6 }}>
+                      Срок: {line.deliveryEta}
+                    </div>
+                  ) : null}
+                </td>
+                <td className={teamPageStyles.tdCenterLevel}>
+                  {line.quantity} {line.unit}
+                </td>
+                <td className={teamPageStyles.tdRightTightFirst}>
+                  <div className={styles.kpPriceStack}>
+                    {hasDisc ? (
+                      <>
+                        <span className={styles.kpPriceDiscount}>−{disc}%</span>
+                        <span className={styles.kpPriceOld}>{formatRub(line.offerUnitPrice, order.currency)}</span>
+                        <span className={styles.kpPriceNew}>{formatRub(newUnit, order.currency)}</span>
+                      </>
+                    ) : (
+                      <span>{formatRub(line.offerUnitPrice, order.currency)}</span>
+                    )}
+                  </div>
+                </td>
+                <td className={teamPageStyles.tdRightTight}>{formatRub(lineTotal, order.currency)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 type Props = {
   orderId: string | null;
   onClose: () => void;
 };
 
+/** Сколько строк КП считать «много»: при открытии прокручиваем к актуальному блоку */
+const KP_LINES_SCROLL_THRESHOLD = 5;
+
 export function AccountOrderDetailModal({ orderId, onClose }: Props) {
   const [order, setOrder] = useState<UserOrderDetailApi | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const latestOfferRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async (id: string) => {
     setLoading(true);
@@ -119,10 +359,23 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
     if (!orderId) {
       setOrder(null);
       setError(null);
+      setChatOpen(false);
       return;
     }
     void load(orderId);
   }, [orderId, load]);
+
+  useEffect(() => {
+    if (!order?.id || loading) return;
+    void (async () => {
+      try {
+        await ackUserOrderCommercialProposalSeen(order.id);
+        window.dispatchEvent(new CustomEvent(ACCOUNT_WORK_NOTIFICATIONS_EVENT));
+      } catch {
+        /* просмотр заказа не зависит от ack */
+      }
+    })();
+  }, [order?.id, order?.latestCommercialProposal?.versionNumber, loading]);
 
   useEffect(() => {
     if (!orderId) return;
@@ -142,17 +395,75 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
     };
   }, [orderId]);
 
+  const {
+    chatMessages,
+    chatLoading,
+    chatError,
+    chatComposerDisabled,
+    chatAttachPickerDisabled,
+    pendingAttachmentsHint,
+    pendingOutgoingAttachments,
+    canSendAttachmentMessage,
+    sendChatText,
+    attachChatFiles,
+    removePendingChatAttachment,
+    deleteChatMessage,
+  } = useOrderChat({
+    orderId: order?.id ?? null,
+    enabled: chatOpen,
+    variant: 'account',
+    timeLocale: 'ru-RU',
+  });
+
+  const staffUnread = order?.unreadStaffChatCount ?? 0;
+  const cp = order?.latestCommercialProposal;
+  const kpLines = cp?.lines ?? [];
+  const hasKp = Boolean(cp && kpLines.length > 0);
+
+  const chatTitle = useMemo(() => {
+    if (!order) return 'Сообщения';
+    return `Чат · ${formatOrderDisplayId(order.id)}`;
+  }, [order]);
+
+  const hasCheckout = Boolean(hasKp);
+
+  useEffect(() => {
+    if (!order || !hasKp || kpLines.length < KP_LINES_SCROLL_THRESHOLD) return;
+    const id = window.requestAnimationFrame(() => {
+      latestOfferRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [order?.id, hasKp, kpLines.length]);
+
   if (!orderId) return null;
 
   return (
     <>
       <button type="button" className={panelModal.backdrop} aria-label="Закрыть" onClick={onClose} />
       <section
-        className={`${panelModal.panel} ${panelModal.panelOrderWide}`}
+        className={`${panelModal.panel} ${panelModal.panelOrderWide} ${styles.orderDetailModalShell}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="account-order-detail-title"
       >
+        <ChatWindow
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          title={chatTitle}
+          messages={chatMessages}
+          messageEmptyHint={chatLoading ? 'Загрузка…' : 'Пока нет сообщений'}
+          errorText={chatError}
+          composerDisabled={chatComposerDisabled}
+          attachPickerDisabled={chatAttachPickerDisabled}
+          attachmentsEnabled
+          pendingAttachmentsHint={pendingAttachmentsHint}
+          pendingOutgoing={pendingOutgoingAttachments}
+          allowEmptySend={canSendAttachmentMessage}
+          onSend={sendChatText}
+          onAttachFiles={attachChatFiles}
+          onRemovePendingAttachment={removePendingChatAttachment}
+          onDeleteMessage={deleteChatMessage}
+        />
         <header className={panelModal.header}>
           <button type="button" className={panelModal.iconBtn} onClick={onClose} aria-label="Закрыть">
             <CloseIcon />
@@ -172,120 +483,85 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
                 </p>
               </div>
 
-              <dl className={styles.metaGrid}>
-                <div className={styles.metaItem}>
-                  <dt>Статус</dt>
-                  <dd>{statusLabelRu(order.status)}</dd>
-                </div>
-                <div className={styles.metaItem}>
-                  <dt>Создан</dt>
-                  <dd>{formatDateTime(order.createdAt)}</dd>
-                </div>
-                <div className={styles.metaItem}>
-                  <dt>Обновлён</dt>
-                  <dd>{formatDateTime(order.updatedAt)}</dd>
-                </div>
-              </dl>
-
-              <div>
-                {order.items.length === 0 ? (
-                  <p className={styles.muted}>Нет позиций</p>
-                ) : (
-                  <div className={`${teamPageStyles.tableFrame} ${styles.orderTableFrame}`}>
-                    <table className={teamPageStyles.table}>
-                      <thead>
-                        <tr>
-                          <th scope="col" className={teamPageStyles.thLeftTight} style={{ width: 116 }} aria-hidden />
-                          <th scope="col" className={teamPageStyles.thDesigner}>
-                            Товар
-                          </th>
-                          <th scope="col" className={teamPageStyles.thCenterLevel}>
-                            Кол-во
-                          </th>
-                          <th scope="col" className={teamPageStyles.thRightTightFirst}>
-                            Цена
-                          </th>
-                          <th scope="col" className={teamPageStyles.thRightTight}>
-                            Сумма
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {order.items.map((row) => {
-                          const snap = parseSnapshot(row);
-                          const meta = orderItemSnapshotMetaRows(snap);
-                          const unit = typeof row.price === 'string' ? parseFloat(row.price) : row.price;
-                          const lineTotal = Number.isFinite(unit) ? unit * row.quantity : NaN;
-                          const img = itemImageUrl(row);
-                          return (
-                            <tr key={row.id}>
-                              <td className={`${teamPageStyles.tdLeftTight} ${styles.tdTopAlign}`}>
-                                <div className={styles.thumbWrap}>
-                                  {img ? (
-                                    <img className={styles.thumb} src={img} alt="" width={100} height={100} />
-                                  ) : (
-                                    <div className={styles.thumbPh} aria-hidden />
-                                  )}
-                                </div>
-                              </td>
-                              <td className={`${teamPageStyles.tdDesigner} ${styles.tdTopAlign}`}>
-                                <div className={styles.lineName}>{itemTitle(row)}</div>
-                                {row.product?.brand?.name ? (
-                                  <div className={styles.brandNote}>{row.product.brand.name}</div>
-                                ) : null}
-                                {meta.length > 0 ? (
-                                  <ul className={styles.metaList}>
-                                    {meta.map((m, i) => (
-                                      <li key={i}>
-                                        {m.label}: {m.value}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : null}
-                              </td>
-                              <td className={teamPageStyles.tdCenterLevel}>
-                                {row.quantity} шт.
-                              </td>
-                              <td className={teamPageStyles.tdRightTightFirst}>
-                                {formatRub(row.price, order.currency)}
-                              </td>
-                              <td className={teamPageStyles.tdRightTight}>
-                                {Number.isFinite(lineTotal) ? formatRub(lineTotal, order.currency) : '—'}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        <tr className={styles.tableFooterRow}>
-                          <td colSpan={4} className={teamPageStyles.tdRightTightFirst}>
-                            Ожидаемая сумма заказа
-                          </td>
-                          <td className={`${teamPageStyles.tdRightTight} ${styles.tableFooterValue}`}>
-                            {formatRub(order.totalAmount, order.currency)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+              <div className={`${styles.metaGrid} ${styles.metaGridStacked}`}>
+                <div className={styles.metaGridMain}>
+                  <div className={styles.metaItem}>
+                    <div className={styles.metaItemLabel}>Статус</div>
+                    <div className={styles.metaItemValue}>{statusLabelRu(order.status)}</div>
                   </div>
-                )}
+                  <div className={styles.metaItem}>
+                    <div className={styles.metaItemLabel}>Создан</div>
+                    <div className={styles.metaItemValue}>{formatDateTime(order.createdAt)}</div>
+                  </div>
+                  <div className={styles.metaItem}>
+                    <div className={styles.metaItemLabel}>Обновлён</div>
+                    <div className={styles.metaItemValue}>{formatDateTime(order.updatedAt)}</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`${workCardStyles.ctaButton} ${styles.modalCtaMessage}${staffUnread > 0 ? ` ${workCardStyles.ctaButtonUnread}` : ''}${!hasCheckout ? ` ${styles.modalCtaMessageSolo}` : ''}`}
+                  aria-label={
+                    staffUnread > 0 ? `Написать по заказу, непрочитанных: ${staffUnread}` : 'Написать по заказу'
+                  }
+                  onClick={() => setChatOpen(true)}
+                >
+                  <OrderCtaMessageIcon
+                    className={`${workCardStyles.ctaIcon}${staffUnread > 0 ? ` ${workCardStyles.ctaIconUnread}` : ''}`}
+                  />
+                  {staffUnread > 0 ? (
+                    <span className={workCardStyles.ctaUnreadCount}>({staffUnread})</span>
+                  ) : null}
+                </button>
+                {hasCheckout ? (
+                  <button type="button" className={`${workCardStyles.orderCheckoutBtn} ${styles.modalCtaCheckout}`}>
+                    <span>Оформить</span>
+                    <span aria-hidden>→</span>
+                  </button>
+                ) : null}
               </div>
 
               <AccordionBig title="Детали" className={styles.accordionFullWidth} panelClassName={styles.accordionPanelMeta}>
-                <dl className={styles.metaGrid}>
+                <div className={styles.metaGridPlain}>
                   <div className={styles.metaItem}>
-                    <dt>ФИО</dt>
-                    <dd>{order.customerName?.trim() || '—'}</dd>
+                    <div className={styles.metaItemLabel}>ФИО</div>
+                    <div className={styles.metaItemValue}>{order.customerName?.trim() || '—'}</div>
                   </div>
                   <div className={styles.metaItem} style={{ gridColumn: '1 / -1' }}>
-                    <dt>Адрес</dt>
-                    <dd className={styles.blockText}>{order.deliveryAddress?.trim() || '—'}</dd>
+                    <div className={styles.metaItemLabel}>Адрес</div>
+                    <div className={`${styles.metaItemValue} ${styles.blockText}`}>
+                      {order.deliveryAddress?.trim() || '—'}
+                    </div>
                   </div>
-                </dl>
+                </div>
               </AccordionBig>
 
-              <div>
-                <h3 className={styles.sectionTitle}>Комментарий</h3>
-                <p className={styles.blockText}>{order.comment?.trim() || '—'}</p>
-              </div>
+              {hasKp && cp ? (
+                <div className={styles.orderCompareStack}>
+                  <div className={styles.orderTableFrameWrapPrev}>
+                    <p className={styles.orderSnapshotLabel}>Исходный заказ</p>
+                    <div className={styles.orderTableFrameDimTarget}>
+                      <AccountOrderItemsTable order={order} positionHeader="Товар" />
+                    </div>
+                  </div>
+                  <TableFlowArrow />
+                  <div ref={latestOfferRef} className={styles.orderTableFrameWrap}>
+                    <h3 className={panelModal.title} style={{ fontSize: '1.05rem', marginBottom: 8 }}>
+                      Коммерческое предложение
+                    </h3>
+                    {cp.publishedAt ? (
+                      <p className={styles.muted} style={{ marginBottom: 12 }}>
+                        от {formatDateTime(cp.publishedAt)}
+                      </p>
+                    ) : null}
+                    <AccountKpLinesTable order={order} lines={kpLines} />
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.orderTableFrameWrap}>
+                  <AccountOrderItemsTable order={order} positionHeader="Товар" />
+                </div>
+              )}
             </>
           ) : null}
         </div>

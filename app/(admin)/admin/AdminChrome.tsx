@@ -137,10 +137,26 @@ export function AdminChrome({
     }
   }, []);
 
+  const [ordersChatUnread, setOrdersChatUnread] = useState<number | null>(null);
+  const loadOrdersChatUnread = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/backend/orders/admin/chat-unread-summary', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as { total?: number };
+      setOrdersChatUnread(typeof j.total === 'number' ? j.total : 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     void loadPendingPartnerApps();
     void loadPendingOrdersApproval();
-  }, [loadPendingPartnerApps, loadPendingOrdersApproval, pathname]);
+    void loadOrdersChatUnread();
+  }, [loadPendingPartnerApps, loadPendingOrdersApproval, loadOrdersChatUnread, pathname]);
 
   useEffect(() => {
     const onRefreshPartner = () => {
@@ -149,13 +165,18 @@ export function AdminChrome({
     const onRefreshOrders = () => {
       void loadPendingOrdersApproval();
     };
+    const onRefreshOrdersChatUnread = () => {
+      void loadOrdersChatUnread();
+    };
     document.addEventListener('admin-partner-pending-refresh', onRefreshPartner);
     document.addEventListener('admin-orders-pending-refresh', onRefreshOrders);
+    document.addEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
     return () => {
       document.removeEventListener('admin-partner-pending-refresh', onRefreshPartner);
       document.removeEventListener('admin-orders-pending-refresh', onRefreshOrders);
+      document.removeEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
     };
-  }, [loadPendingPartnerApps, loadPendingOrdersApproval]);
+  }, [loadPendingPartnerApps, loadPendingOrdersApproval, loadOrdersChatUnread]);
 
   function setAdminLocale(next: AdminLocale) {
     setLocale(next);
@@ -306,6 +327,8 @@ export function AdminChrome({
                   href === '/admin/orders' &&
                   pendingOrdersApproval != null &&
                   pendingOrdersApproval > 0;
+                const showOrdersChatUnreadBadge =
+                  href === '/admin/orders' && ordersChatUnread != null && ordersChatUnread > 0;
                 return (
                   <Link
                     key={href}
@@ -318,6 +341,12 @@ export function AdminChrome({
                     ) : null}
                     {showOrdersPendingBadge ? (
                       <span className={styles.navLinkCount}> ({pendingOrdersApproval})</span>
+                    ) : null}
+                    {showOrdersChatUnreadBadge ? (
+                      <span className={styles.navLinkCount} title="Непрочитанные сообщения от клиента">
+                        {' '}
+                        ({ordersChatUnread})
+                      </span>
                     ) : null}
                   </Link>
                 );

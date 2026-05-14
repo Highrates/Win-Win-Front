@@ -14,6 +14,8 @@ export type AccountOrderWorkOffer = {
   finalPrice: string;
   oldPrice: string;
   expectedBonus: string;
+  /** Показывать блок скидки и «старую» цену (если false — только итог). */
+  showDiscountStrip?: boolean;
 };
 
 export type AccountOrderWorkCardProps = {
@@ -39,9 +41,36 @@ export type AccountOrderWorkCardProps = {
   hideMoreMenu?: boolean;
   /** Красная подсветка статуса (отклонённый заказ) */
   statusRejected?: boolean;
+  /** Непрочитанные входящие сообщения от сотрудника (по данным списка заказов). */
+  staffUnreadCount?: number;
 };
 
 const PLACEHOLDER = '/images/placeholder.svg';
+
+function MessageCtaButton({
+  staffUnreadCount,
+  onClick,
+  ariaLabel,
+}: {
+  staffUnreadCount: number;
+  onClick: () => void;
+  ariaLabel: string;
+}) {
+  const unread = staffUnreadCount > 0;
+  return (
+    <button
+      type="button"
+      className={`${styles.ctaButton}${unread ? ` ${styles.ctaButtonUnread}` : ''}`}
+      aria-label={
+        unread ? `${ariaLabel}, непрочитанных сообщений: ${staffUnreadCount}` : ariaLabel
+      }
+      onClick={onClick}
+    >
+      <OrderCtaMessageIcon className={`${styles.ctaIcon}${unread ? ` ${styles.ctaIconUnread}` : ''}`} />
+      {unread ? <span className={styles.ctaUnreadCount}>({staffUnreadCount})</span> : null}
+    </button>
+  );
+}
 
 function OrderCtaMessageIcon({ className }: { className?: string }) {
   return (
@@ -91,6 +120,7 @@ export function AccountOrderWorkCard({
   chatTitle = 'Сообщения',
   hideMoreMenu = false,
   statusRejected = false,
+  staffUnreadCount = 0,
 }: AccountOrderWorkCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -141,9 +171,15 @@ export function AccountOrderWorkCard({
       <div className={styles.metaOfferRowMeta}>{renderMeta(metaRows)}</div>
       <div className={styles.orderOffer}>
         <div className={styles.priceDetails}>
-          <span className={styles.priceDiscount}>{offer.discountLabel}</span>
-          <span className={styles.priceFinal}>{offer.finalPrice}</span>
-          <span className={styles.priceOld}>{offer.oldPrice}</span>
+          {offer.showDiscountStrip !== false ? (
+            <>
+              <span className={styles.priceDiscount}>{offer.discountLabel}</span>
+              <span className={styles.priceFinal}>{offer.finalPrice}</span>
+              <span className={styles.priceOld}>{offer.oldPrice}</span>
+            </>
+          ) : (
+            <span className={styles.priceFinal}>{offer.finalPrice}</span>
+          )}
         </div>
         <div className={styles.orderOfferExpectedBonus}>
           <img
@@ -244,13 +280,17 @@ export function AccountOrderWorkCard({
       </div>
 
       <div className={styles.orderCTA}>
-        <button type="button" className={styles.ctaButton} aria-label="Написать по заказу" onClick={openChat}>
-          <OrderCtaMessageIcon className={styles.ctaIcon} />
-        </button>
+        <MessageCtaButton
+          staffUnreadCount={staffUnreadCount}
+          onClick={openChat}
+          ariaLabel="Написать по заказу"
+        />
         {ctaCount === 2 && !hasCheckout ? (
-          <button type="button" className={styles.ctaButton} aria-label="Сообщения по заказу" onClick={openChat}>
-            <OrderCtaMessageIcon className={styles.ctaIcon} />
-          </button>
+          <MessageCtaButton
+            staffUnreadCount={staffUnreadCount}
+            onClick={openChat}
+            ariaLabel="Сообщения по заказу"
+          />
         ) : null}
         {hasCheckout ? (
           <button type="button" className={styles.orderCheckoutBtn}>

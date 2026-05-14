@@ -33,3 +33,22 @@ export async function fetchUserOrder(orderId: string): Promise<UserOrderDetailAp
   }
   return res.json() as Promise<UserOrderDetailApi>;
 }
+
+/** Отметить опубликованное КП просмотренным (сброс «новой версии» в счётчиках ЛК). */
+export async function ackUserOrderCommercialProposalSeen(orderId: string): Promise<void> {
+  const res = await fetch(`/api/user/orders/${encodeURIComponent(orderId)}/commercial-proposal-seen`, {
+    method: 'PATCH',
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    let msg = res.statusText;
+    try {
+      const j = (await res.json()) as { message?: unknown };
+      if (typeof j?.message === 'string') msg = j.message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+}

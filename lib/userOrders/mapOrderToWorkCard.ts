@@ -56,14 +56,16 @@ export function filterInWorkOrders(orders: UserOrderListItemApi[]): UserOrderLis
   return orders.filter((o) => IN_WORK_STATUSES.has(o.status));
 }
 
-/** Самые свежие по `createdAt` — первыми в списке. */
-export function sortUserOrdersByCreatedDesc(orders: UserOrderListItemApi[]): UserOrderListItemApi[] {
+/** Самые свежие по `updatedAt` — первыми в списке (fallback на `createdAt`). */
+export function sortUserOrdersByUpdatedDesc(orders: UserOrderListItemApi[]): UserOrderListItemApi[] {
   return [...orders].sort((a, b) => {
-    const ta = Date.parse(a.createdAt);
-    const tb = Date.parse(b.createdAt);
-    const na = Number.isFinite(ta) ? ta : 0;
-    const nb = Number.isFinite(tb) ? tb : 0;
-    return nb - na;
+    const ua = a.updatedAt ? Date.parse(a.updatedAt) : NaN;
+    const ub = b.updatedAt ? Date.parse(b.updatedAt) : NaN;
+    const na = Number.isFinite(ua) ? ua : Date.parse(a.createdAt);
+    const nb = Number.isFinite(ub) ? ub : Date.parse(b.createdAt);
+    const fa = Number.isFinite(na) ? na : 0;
+    const fb = Number.isFinite(nb) ? nb : 0;
+    return fb - fa;
   });
 }
 
@@ -87,22 +89,53 @@ export function mapUserOrderToWorkCard(
       ? 'Причина отклонения — в чате по заказу. Если остались вопросы, напишите нам в ответ.'
       : undefined;
 
+  const etaRaw = order.commercialProposalDeliveryEta?.trim();
+  const etaDisplay = etaRaw && etaRaw.length ? etaRaw : 'по согласованию';
+
+  const kp = order.commercialProposalOffer;
+  const offer =
+    kp && (kp.newTotalRub > 0 || kp.oldTotalRub > 0)
+      ? (() => {
+          const pct = Math.round(kp.avgDiscountPercent * 10) / 10;
+          const newR = Math.round(kp.newTotalRub * 100) / 100;
+          const oldR = Math.round(kp.oldTotalRub * 100) / 100;
+          const hasDiscount = pct > 0 || newR !== oldR;
+          return {
+            discountLabel: pct > 0 ? `−${pct}%` : '—',
+            finalPrice: formatTotalRub(kp.newTotalRub, order.currency),
+            oldPrice: formatTotalRub(kp.oldTotalRub, order.currency),
+            expectedBonus: 'уточняется',
+            showDiscountStrip: hasDiscount,
+          };
+        })()
+      : undefined;
+
+  const metaRows: AccountOrderWorkCardProps['metaRows'] = offer
+    ? [
+        { label: 'Номер', value: shortNo, valueTitle: order.id },
+        { label: 'Позиций', value: String(skuCount) },
+        { label: 'Срок доставки', value: etaDisplay },
+      ]
+    : [
+        { label: 'Номер', value: shortNo, valueTitle: order.id },
+        { label: 'Позиций', value: String(skuCount) },
+        { label: sumLabel, value: formatTotalRub(order.totalAmount, order.currency) },
+      ];
+
   return {
     orderId: order.id,
     statusLabel: statusLabelRu(order.status),
     statusNotice,
     dateLine: formatOrderDate(order.createdAt),
     chatTitle: `Чат · ${shortNo}`,
-    metaRows: [
-      { label: 'Номер', value: shortNo, valueTitle: order.id },
-      { label: 'Позиций', value: String(skuCount) },
-      { label: sumLabel, value: formatTotalRub(order.totalAmount, order.currency) },
-    ],
+    metaRows,
     productThumbSrcs: thumbs.length ? thumbs : [PLACEHOLDER],
-    hideMoreMenu: order.status === 'REJECTED',
+    hideMoreMenu: order.status === 'REJECTED' || order.status === 'PENDING_APPROVAL',
     statusRejected: order.status === 'REJECTED',
     onOpenDetails: opts?.onOpenDetails,
     detailHref: opts?.onOpenDetails ? undefined : `/account/orders/${order.id}`,
     ctaCount: 1,
+    offer,
+    staffUnreadCount: order.unreadStaffChatCount ?? 0,
   };
 }

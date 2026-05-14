@@ -129,8 +129,13 @@
   outline-offset: 2px;
 }
 
-.ctaCheckoutBtn:hover {
+.ctaCheckoutBtn:hover:not(:disabled) {
   opacity: 0.92;
+}
+
+.ctaCheckoutBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Мобильный CTA: как аккордеон на ProductPage */

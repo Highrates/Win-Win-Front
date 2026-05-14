@@ -1,3 +1,6 @@
+/** После ack КП или чтения чата — обновить красные индикаторы в сайдбаре и на вкладке «В работе». */
+export const ACCOUNT_WORK_NOTIFICATIONS_EVENT = 'winwin:account-work-notifications';
+
 export const ORDER_TABS = ['Подготовка заказа', 'В работе', 'Завершенные'] as const;
 
 /** Значения query `?tab=` на `/account/orders` — чтобы вкладка сохранялась при обновлении */

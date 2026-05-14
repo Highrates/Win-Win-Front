@@ -56,6 +56,9 @@ export type AccountProjectsCtaProps = {
   onToggleAccordion: () => void;
   itemCount: number;
   displayTotal: string;
+  /** Перенос всех позиций проекта в черновик заказа и переход в «Подготовка заказа». */
+  onCheckout?: () => void | Promise<void>;
+  checkoutBusy?: boolean;
 };
 
 export function AccountProjectsCta({
@@ -64,6 +67,8 @@ export function AccountProjectsCta({
   onToggleAccordion,
   itemCount,
   displayTotal,
+  onCheckout,
+  checkoutBusy = false,
 }: AccountProjectsCtaProps) {
   if (isAccordionLayout) {
     return (
@@ -100,8 +105,13 @@ export function AccountProjectsCta({
               <div className={styles.ctaAccordionSnowStack}>
                 <CtaBlock count={itemCount} total={displayTotal} />
               </div>
-              <button type="button" className={styles.ctaCheckoutBtn}>
-                <span>Оформить</span>
+              <button
+                type="button"
+                className={styles.ctaCheckoutBtn}
+                disabled={checkoutBusy || itemCount < 1 || !onCheckout}
+                onClick={() => void onCheckout?.()}
+              >
+                <span>{checkoutBusy ? 'Добавляем…' : 'Оформить'}</span>
                 <span aria-hidden>→</span>
               </button>
             </div>
@@ -116,8 +126,13 @@ export function AccountProjectsCta({
       <div className={styles.ctaSnowPanel}>
         <CtaBlock count={itemCount} total={displayTotal} expectedBonus={PLACEHOLDER_EXPECTED_BONUS} />
       </div>
-      <button type="button" className={styles.ctaCheckoutBtn}>
-        <span>Оформить</span>
+      <button
+        type="button"
+        className={styles.ctaCheckoutBtn}
+        disabled={checkoutBusy || itemCount < 1 || !onCheckout}
+        onClick={() => void onCheckout?.()}
+      >
+        <span>{checkoutBusy ? 'Добавляем…' : 'Оформить'}</span>
         <span aria-hidden>→</span>
       </button>
     </div>

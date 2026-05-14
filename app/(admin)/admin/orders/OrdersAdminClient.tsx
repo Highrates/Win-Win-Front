@@ -7,13 +7,15 @@ import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
-import { adminOrderStatusLabels, adminOrdersStrings } from '@/lib/admin-i18n/adminOrdersI18n';
+import { adminOrdersStrings } from '@/lib/admin-i18n/adminOrdersI18n';
+import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
+import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
 import styles from '../catalog/catalogAdmin.module.css';
 import tabStyles from '../adminTabs.module.css';
 
-export type AdminOrdersBucket = 'new' | 'active' | 'rejected';
+export type AdminOrdersBucket = 'new' | 'active' | 'completed' | 'rejected';
 
-const BUCKETS: AdminOrdersBucket[] = ['new', 'active', 'rejected'];
+const BUCKETS: AdminOrdersBucket[] = ['new', 'active', 'completed', 'rejected'];
 
 const ACTIVE_STATUSES = ['ORDERED', 'PAID', 'RECEIVED'] as const;
 type ActiveOrderStatus = (typeof ACTIVE_STATUSES)[number];
@@ -25,6 +27,7 @@ type AdminOrderRow = {
   currency: string;
   createdAt: string;
   hasChatMessages?: boolean;
+  unreadCustomerChatCount?: number;
   user: {
     id: string;
     email: string | null;
@@ -40,6 +43,16 @@ type ListResponse = {
   page: number;
   limit: number;
 };
+
+type ChatUnreadBuckets = { total: number; new: number; active: number; completed: number; rejected: number };
+
+function bucketUnreadFor(summary: ChatUnreadBuckets | null, b: AdminOrdersBucket): number {
+  if (!summary) return 0;
+  if (b === 'new') return summary.new;
+  if (b === 'active') return summary.active;
+  if (b === 'completed') return summary.completed;
+  return summary.rejected;
+}
 
 function formatMoney(amount: string | number, currency: string, numberLocale: string): string {
   const n = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -61,31 +74,32 @@ function clientListLabel(row: AdminOrderRow): string {
   return row.user.email?.trim() || row.user.phone?.trim() || '—';
 }
 
-function OrderChatGlyph({ active }: { active: boolean }) {
+function OrderChatGlyph({ muted, unreadCount }: { muted: boolean; unreadCount: number }) {
+  const color = muted ? 'var(--color-gray, #9d9d9d)' : 'var(--color-ink-black, #051826)';
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <path
-        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill={active ? 'color-mix(in srgb, currentColor 12%, transparent)' : 'none'}
-      />
-      {active ? <circle cx="18" cy="6" r="3.5" fill="var(--color-red, #c53029)" /> : null}
-    </svg>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ position: 'relative', display: 'inline-block', color }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <path
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill={muted ? 'none' : 'color-mix(in srgb, currentColor 12%, transparent)'}
+          />
+          {unreadCount > 0 ? (
+            <circle cx="18" cy="6" r="3.5" fill="var(--color-red, #c53029)" style={{ pointerEvents: 'none' }} />
+          ) : null}
+        </svg>
+      </span>
+      {unreadCount > 0 ? (
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-red, #c53029)', lineHeight: 1 }}>
+          {unreadCount}
+        </span>
+      ) : null}
+    </span>
   );
-}
-
-function formatDate(iso: string, dateLocale: string): string {
-  try {
-    return new Intl.DateTimeFormat(dateLocale, {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
 }
 
 function bucketIndexFromQuery(raw: string | null): number {
@@ -100,11 +114,13 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   const searchParams = useSearchParams();
   const s = useMemo(() => adminOrdersStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
-  const statusLabels = useMemo(() => adminOrderStatusLabels(locale), [locale]);
-  const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
+  const statusLabels = useMergedAdminOrderStatusLabels();
   const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
 
-  const tabLabels = useMemo(() => [s.tabNew, s.tabActive, s.tabRejected], [s.tabActive, s.tabNew, s.tabRejected]);
+  const tabLabels = useMemo(
+    () => [s.tabNew, s.tabActive, s.tabCompleted, s.tabRejected],
+    [s.tabActive, s.tabCompleted, s.tabNew, s.tabRejected],
+  );
 
   const [bucketIndex, setBucketIndex] = useState(0);
   const [page, setPage] = useState(1);
@@ -115,6 +131,36 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<Record<string, ActiveOrderStatus>>({});
+  const [unreadSummary, setUnreadSummary] = useState<ChatUnreadBuckets | null>(null);
+
+  const loadUnreadSummary = useCallback(async () => {
+    try {
+      const j = await adminBackendJson<ChatUnreadBuckets>('orders/admin/chat-unread-summary');
+      if (
+        j &&
+        typeof j.new === 'number' &&
+        typeof j.active === 'number' &&
+        typeof j.completed === 'number' &&
+        typeof j.rejected === 'number'
+      ) {
+        setUnreadSummary(j);
+      } else {
+        setUnreadSummary(null);
+      }
+    } catch {
+      setUnreadSummary(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadUnreadSummary();
+  }, [loadUnreadSummary]);
+
+  useEffect(() => {
+    const fn = () => void loadUnreadSummary();
+    document.addEventListener('admin-orders-chat-unread-refresh', fn);
+    return () => document.removeEventListener('admin-orders-chat-unread-refresh', fn);
+  }, [loadUnreadSummary]);
 
   const bucket = BUCKETS[bucketIndex] ?? 'new';
 
@@ -139,6 +185,7 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
         const res = await adminBackendJson<ListResponse>(`orders/admin?${qs}`);
         setData(res);
         setDraftStatus({});
+        void loadUnreadSummary();
       } catch (e) {
         setError(e instanceof Error ? e.message : s.errLoad);
         setData(null);
@@ -146,7 +193,7 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
         setLoading(false);
       }
     },
-    [s.errLoad, filterUserId],
+    [s.errLoad, filterUserId, loadUnreadSummary],
   );
 
   useEffect(() => {
@@ -175,6 +222,7 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
       await load(page, qActive, bucket);
       if (typeof document !== 'undefined') {
         document.dispatchEvent(new Event('admin-orders-pending-refresh'));
+        document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : s.errSaveStatus);
@@ -200,18 +248,23 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   return (
     <>
       <div className={tabStyles.tabs} role="tablist" aria-label={s.tabsAria}>
-        {tabLabels.map((label, index) => (
-          <button
-            key={BUCKETS[index]}
-            type="button"
-            role="tab"
-            aria-selected={bucketIndex === index}
-            className={`${tabStyles.tabBtn} ${bucketIndex === index ? tabStyles.tabBtnActive : ''}`}
-            onClick={() => onSelectTab(index)}
-          >
-            {label}
-          </button>
-        ))}
+        {tabLabels.map((label, index) => {
+          const b = BUCKETS[index] ?? 'new';
+          const uc = bucketUnreadFor(unreadSummary, b);
+          return (
+            <button
+              key={BUCKETS[index]}
+              type="button"
+              role="tab"
+              aria-selected={bucketIndex === index}
+              className={`${tabStyles.tabBtn} ${bucketIndex === index ? tabStyles.tabBtnActive : ''}`}
+              onClick={() => onSelectTab(index)}
+            >
+              {label}
+              {uc > 0 ? ` (${uc})` : ''}
+            </button>
+          );
+        })}
       </div>
 
       {!filterUserId?.trim() ? (
@@ -256,13 +309,15 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
             <tbody>
               {data.items.map((row) => {
                 const hasChat = Boolean(row.hasChatMessages);
+                const unread = row.unreadCustomerChatCount ?? 0;
                 const isNew = bucket === 'new';
                 const isActive = bucket === 'active';
+                const isCompleted = bucket === 'completed';
                 const currentActive = statusForActiveRow(row);
                 const dirtyActive = isActive && currentActive !== row.status;
                 return (
                   <tr key={row.id}>
-                    <td>{formatDate(row.createdAt, dateLocale)}</td>
+                    <td>{formatAdminOrderDateTime(row.createdAt, locale)}</td>
                     <td>
                       <Link href={`/admin/orders/${row.id}`} className={styles.backLink} title={row.id}>
                         <code style={{ fontSize: '0.8125rem' }}>{formatOrderDisplayId(row.id)}</code>
@@ -291,6 +346,8 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
                         <span className={styles.cardNote}>{statusLabels.PENDING_APPROVAL}</span>
                       ) : bucket === 'rejected' ? (
                         <span className={styles.cardNote}>{statusLabels.REJECTED}</span>
+                      ) : isCompleted ? (
+                        <span className={styles.cardNote}>{statusLabels.RECEIVED}</span>
                       ) : (
                         <select
                           className={styles.input}
@@ -329,11 +386,13 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
                         className={styles.backLink}
                         style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                         title={s.thChat}
-                        aria-label={`${s.thChat}: ${formatOrderDisplayId(row.id)}`}
+                        aria-label={
+                          unread > 0
+                            ? `${s.thChat}: ${formatOrderDisplayId(row.id)}, ${unread} непрочитано`
+                            : `${s.thChat}: ${formatOrderDisplayId(row.id)}`
+                        }
                       >
-                        <span style={{ color: hasChat ? 'var(--color-ink-black, #051826)' : 'var(--color-gray, #9d9d9d)' }}>
-                          <OrderChatGlyph active={hasChat} />
-                        </span>
+                        <OrderChatGlyph muted={!hasChat && unread === 0} unreadCount={unread} />
                       </Link>
                     </td>
                   </tr>

@@ -8,6 +8,8 @@ type AccountProjectTabsProps = {
   selectedIndex: number;
   onSelect: (index: number) => void;
   ariaLabel?: string;
+  /** Красная точка у вкладки (как в боковом меню ЛК), по индексу */
+  tabHasNotification?: readonly boolean[];
 };
 
 export function AccountProjectTabs({
@@ -15,6 +17,7 @@ export function AccountProjectTabs({
   selectedIndex,
   onSelect,
   ariaLabel = 'Проекты',
+  tabHasNotification,
 }: AccountProjectTabsProps) {
   const list = projects.length ? projects : ACCOUNT_PROJECT_NAMES;
   const onTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -38,7 +41,12 @@ export function AccountProjectTabs({
             className={`${styles.tab} ${index === selectedIndex ? styles.tabActive : ''}`}
             onClick={() => onSelect(index)}
           >
-            {label}
+            <span className={styles.tabInner}>
+              <span className={styles.tabLabel}>{label}</span>
+              {tabHasNotification?.[index] ? (
+                <span className={styles.tabNotificationDot} aria-label="Есть уведомления" />
+              ) : null}
+            </span>
           </button>
         ))}
       </div>

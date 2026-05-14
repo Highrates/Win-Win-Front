@@ -16,6 +16,8 @@ import type {
 } from '@/lib/orderChat/types';
 
 const PROFILE_AVATAR_PLACEHOLDER = '/images/placeholder.svg';
+/** В ЛК сообщения сотрудника показываем с фирменным аватаром менеджера. */
+const STAFF_AVATAR_ACCOUNT = '/images/Admin-avatar.jpeg';
 
 export type OrderChatVariant = 'account' | 'admin';
 
@@ -143,6 +145,7 @@ function mapApiToUi(
   let senderName = m.authorLabel;
   if (variant === 'account') {
     if (isMineCustomer) senderName = 'Вы';
+    else if (isStaff) senderName = 'Менеджер Win-Win';
   } else {
     if (isMineStaff) senderName = 'Вы';
     else if (!isStaff) senderName = m.authorLabel || 'Клиент';
@@ -168,7 +171,10 @@ function mapApiToUi(
     !deleted && (variant === 'admin' || (variant === 'account' && isMineCustomer));
 
   const avatarRaw = m.authorAvatarUrl?.trim();
-  const senderAvatarUrl = avatarRaw && avatarRaw.length > 0 ? avatarRaw : PROFILE_AVATAR_PLACEHOLDER;
+  let senderAvatarUrl = avatarRaw && avatarRaw.length > 0 ? avatarRaw : PROFILE_AVATAR_PLACEHOLDER;
+  if (variant === 'account' && isStaff) {
+    senderAvatarUrl = STAFF_AVATAR_ACCOUNT;
+  }
 
   return {
     id: m.id,
@@ -260,6 +266,9 @@ export function useOrderChat(opts: {
         if (prev.some((x) => x.id === payload.id)) return prev;
         return [...prev, mapApiToUi(payload, viewer, variant, timeLocale)];
       });
+      if (variant === 'admin' && payload.authorRole === 'CUSTOMER' && typeof document !== 'undefined') {
+        document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
+      }
     };
 
     const onDeleted = (payload: { id?: string }) => {
@@ -304,6 +313,9 @@ export function useOrderChat(opts: {
           headers: { 'Content-Type': 'application/json' },
           body: '{}',
         }).catch(() => undefined);
+        if (variant === 'admin' && typeof document !== 'undefined') {
+          document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
+        }
 
         socketRef = getSharedSocket(token);
         await waitSocketConnect(socketRef);
@@ -371,7 +383,13 @@ export function useOrderChat(opts: {
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: '{}',
-        }).catch(() => undefined);
+        })
+          .then(() => {
+            if (variant === 'admin' && typeof document !== 'undefined') {
+              document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
+            }
+          })
+          .catch(() => undefined);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Не удалось отправить');
       } finally {

@@ -251,7 +251,7 @@
   padding: 16px 18px;
   background: var(--color-bright-snow);
   border-radius: 8px;
-  border: none;
+  border: var(--account-hairline-width) solid transparent;
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -275,6 +275,29 @@
 
 .ctaIcon path {
   stroke-width: 1.2;
+}
+
+.ctaButton:hover:not(:disabled) .ctaIcon {
+  color: color-mix(in srgb, var(--color-black) 58%, var(--color-bright-snow));
+}
+
+.ctaButtonUnread:hover:not(:disabled) .ctaIconUnread {
+  color: color-mix(in srgb, var(--color-red) 72%, var(--color-white));
+}
+
+.ctaButtonUnread {
+  border-color: var(--color-red);
+}
+
+.ctaIconUnread {
+  color: var(--color-red);
+}
+
+.ctaUnreadCount {
+  color: var(--color-red);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  font-family: var(--font-commissioner);
 }
 
 .orderCheckoutBtn {

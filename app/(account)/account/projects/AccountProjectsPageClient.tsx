@@ -9,6 +9,9 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useFlashBanner } from '@/hooks/useFlashBanner';
 import { fetchDesignerProjectDetail } from '@/lib/designerProjects/clientApi';
 import { readPdpProjectDraft, type PdpProjectDraftPayload } from '@/lib/designerProjects/pdpDraft';
+import { addOrderPreparationLine, fetchOrderPreparationDraft } from '@/lib/orderPreparation/clientApi';
+import { designerProjectLineToAddOrderBody } from '@/lib/orderPreparation/designerProjectLineToAddOrderBody';
+import { storeSelectOnlyPreparationLineIds } from '@/lib/orderPreparation/selectOnlyFromProjectSession';
 import { AccountProjectsPageSkeleton } from './AccountProjectsPageSkeleton';
 import { AccountProjectsCta } from './components/AccountProjectsCta';
 import { AccountProjectsLinesList } from './components/AccountProjectsLinesList';
@@ -45,6 +48,8 @@ export function AccountProjectsPageClient() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingLineDraft, setPendingLineDraft] = useState<PdpProjectDraftPayload | null>(null);
+
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
 
   const { sectionTabs, visibleLines, displayTotal, itemCount } = useProjectLinesDerived(detail, sectionTab);
 
@@ -190,6 +195,26 @@ export function AccountProjectsPageClient() {
     });
   }, []);
 
+  const handleCheckoutToOrders = useCallback(async () => {
+    if (!detail?.lines.length || checkoutBusy) return;
+    setCheckoutBusy(true);
+    try {
+      const before = await fetchOrderPreparationDraft();
+      const beforeIds = new Set(before.lines.map((l) => l.id));
+      let lastDraft = before;
+      for (const line of detail.lines) {
+        lastDraft = await addOrderPreparationLine(designerProjectLineToAddOrderBody(line));
+      }
+      const newIds = lastDraft.lines.filter((l) => !beforeIds.has(l.id)).map((l) => l.id);
+      storeSelectOnlyPreparationLineIds(newIds);
+      router.push('/account/orders');
+    } catch (e) {
+      onMutationError(e instanceof Error ? e.message : 'Не удалось перенести товары в заказ');
+    } finally {
+      setCheckoutBusy(false);
+    }
+  }, [detail, checkoutBusy, router, onMutationError]);
+
   return (
     <>
       <FlashBanner flash={flash} onDismiss={dismiss} />
@@ -249,6 +274,8 @@ export function AccountProjectsPageClient() {
             onToggleAccordion={() => setCtaAccordionOpen((o) => !o)}
             itemCount={itemCount}
             displayTotal={displayTotal}
+            onCheckout={handleCheckoutToOrders}
+            checkoutBusy={checkoutBusy}
           />
 
           {detail && detail.lines.length === 0 ? (

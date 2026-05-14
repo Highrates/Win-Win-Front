@@ -1,0 +1,112 @@
+.panelWide {
+  width: min(1180px, 100%);
+  max-height: min(96vh, 980px);
+}
+
+.bodySplit {
+  display: flex;
+  flex-direction: row;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(88vh, 860px);
+  overflow: hidden;
+}
+
+.summaryCol {
+  flex: 0 0 min(380px, 38%);
+  max-width: 420px;
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  border-right: var(--account-hairline-width, 1px) solid var(--account-hairline-color, #e2e6e8);
+  box-sizing: border-box;
+}
+
+.chatCol {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px 12px;
+  box-sizing: border-box;
+}
+
+.chatHost {
+  flex: 1 1 auto;
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryTitle {
+  margin: 0 0 8px;
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--color-ink-black);
+  font-family: var(--font-commissioner, system-ui);
+}
+
+.summaryMeta {
+  margin: 0 0 12px;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--color-black);
+  font-family: var(--font-commissioner, system-ui);
+}
+
+.digitsRow {
+  margin: 0 0 20px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  font-family: var(--font-commissioner, system-ui);
+  color: var(--color-black);
+}
+
+.sep {
+  margin: 0 6px;
+  color: var(--color-gray);
+}
+
+.statusBlock {
+  margin-bottom: 20px;
+}
+
+.statusLabel {
+  display: block;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-ink-black);
+  font-family: var(--font-commissioner, system-ui);
+}
+
+.grandNew {
+  color: var(--color-black);
+  font-weight: 600;
+}
+
+.footerRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .bodySplit {
+    flex-direction: column;
+    max-height: none;
+  }
+
+  .summaryCol {
+    flex: 0 0 auto;
+    max-width: none;
+    border-right: none;
+    border-bottom: var(--account-hairline-width, 1px) solid var(--account-hairline-color, #e2e6e8);
+  }
+
+  .chatHost {
+    min-height: 280px;
+  }
+}

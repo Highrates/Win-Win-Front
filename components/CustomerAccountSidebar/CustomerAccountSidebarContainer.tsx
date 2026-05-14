@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CustomerAccountSidebar } from './CustomerAccountSidebar';
+import { ACCOUNT_WORK_NOTIFICATIONS_EVENT } from '@/lib/account/orders';
 
 type ProfileMe = {
   firstName?: string | null;
@@ -60,9 +61,12 @@ export function CustomerAccountSidebarContainer() {
     };
     void poll();
     const id = window.setInterval(poll, 45_000);
+    const onWorkNotifications = () => void poll();
+    window.addEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
     return () => {
       cancelled = true;
       window.clearInterval(id);
+      window.removeEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
     };
   }, []);
 

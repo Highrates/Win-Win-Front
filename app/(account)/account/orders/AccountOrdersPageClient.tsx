@@ -18,18 +18,33 @@ import {
   submitOrderPreparationDraft,
 } from '@/lib/orderPreparation/clientApi';
 import { mapOrderLineToAccountProduct } from '@/lib/orderPreparation/mapLineToAccountProduct';
+import { takeSelectOnlyPreparationLineIds } from '@/lib/orderPreparation/selectOnlyFromProjectSession';
 import type { OrderPreparationDraftApi, OrderPreparationLineApi } from '@/lib/orderPreparation/types';
-import { ORDER_TABS, orderTabQueryParamForUrl } from '@/lib/account/orders';
+import { ORDER_TABS, orderTabQueryParamForUrl, ACCOUNT_WORK_NOTIFICATIONS_EVENT } from '@/lib/account/orders';
 import { fetchUserOrdersList } from '@/lib/userOrders/clientApi';
 import {
   filterInWorkOrders,
   mapUserOrderToWorkCard,
-  sortUserOrdersByCreatedDesc,
+  sortUserOrdersByUpdatedDesc,
 } from '@/lib/userOrders/mapOrderToWorkCard';
 import type { UserOrderListItemApi } from '@/lib/userOrders/types';
 import { AccordionBig } from './AccordionBig';
 import { SubmitOrderConfirmationModal } from './components/SubmitOrderConfirmationModal';
 import styles from './page.module.css';
+
+async function fetchOrderChatUnreadWorkScope(): Promise<number> {
+  const res = await fetch('/api/user/order-chat/me/unread-count?scope=work', {
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!res.ok) return 0;
+  try {
+    const j = (await res.json()) as { count?: unknown };
+    return typeof j.count === 'number' && Number.isFinite(j.count) ? j.count : 0;
+  } catch {
+    return 0;
+  }
+}
 
 function formatRub(n: number): string {
   if (!Number.isFinite(n)) return '—';
@@ -60,6 +75,16 @@ function sumSelectedUnits(lines: OrderPreparationLineApi[], selected: Set<string
     if (Number.isFinite(q) && q > 0) s += q;
   }
   return Math.round(s * 1000) / 1000;
+}
+
+function selectedIdsForDraftLines(lines: OrderPreparationLineApi[]): Set<string> {
+  const only = takeSelectOnlyPreparationLineIds();
+  if (only?.length) {
+    const allowed = new Set(lines.map((l) => l.id));
+    const filtered = only.filter((id) => allowed.has(id));
+    if (filtered.length > 0) return new Set(filtered);
+  }
+  return new Set(lines.map((l) => l.id));
 }
 
 export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabIndex?: number } = {}) {
@@ -102,6 +127,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   const [inWorkLoading, setInWorkLoading] = useState(false);
   const [inWorkError, setInWorkError] = useState<string | null>(null);
   const [workOrderDetailId, setWorkOrderDetailId] = useState<string | null>(null);
+  const [workTabUnread, setWorkTabUnread] = useState(0);
 
   const isPreparationTab = selectedIndex === 0;
   const isInWorkTab = selectedIndex === 1;
@@ -111,7 +137,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
     setInWorkError(null);
     try {
       const res = await fetchUserOrdersList(1, 50);
-      setInWorkOrders(sortUserOrdersByCreatedDesc(filterInWorkOrders(res.items)));
+      setInWorkOrders(sortUserOrdersByUpdatedDesc(filterInWorkOrders(res.items)));
     } catch (e) {
       setInWorkError(e instanceof Error ? e.message : 'Не удалось загрузить заказы');
       setInWorkOrders([]);
@@ -128,7 +154,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
       setCustomerName(d.customerName ?? '');
       setDeliveryAddress(d.deliveryAddress ?? '');
       setOrderComment(d.comment ?? '');
-      setSelectedIds(new Set(d.lines.map((l) => l.id)));
+      setSelectedIds(selectedIdsForDraftLines(d.lines));
     } catch (e) {
       setDraftError(e instanceof Error ? e.message : 'Не удалось загрузить заказ');
       setDraft(null);
@@ -147,7 +173,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
         setCustomerName(d.customerName ?? '');
         setDeliveryAddress(d.deliveryAddress ?? '');
         setOrderComment(d.comment ?? '');
-        setSelectedIds(new Set(d.lines.map((l) => l.id)));
+        setSelectedIds(selectedIdsForDraftLines(d.lines));
       } catch (e) {
         if (!cancelled) setDraftError(e instanceof Error ? e.message : 'Не удалось загрузить заказ');
       } finally {
@@ -158,6 +184,21 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
       cancelled = true;
     };
   }, [isPreparationTab]);
+
+  useEffect(() => {
+    void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
+  }, []);
+
+  useEffect(() => {
+    const onWorkNotifications = () => void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
+    window.addEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
+    return () => window.removeEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
+  }, []);
+
+  useEffect(() => {
+    if (!isInWorkTab) return;
+    void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
+  }, [isInWorkTab, inWorkOrders]);
 
   useEffect(() => {
     if (!isInWorkTab) return;
@@ -318,6 +359,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
       setSubmitModalOpen(false);
       await refreshDraft();
       void loadInWorkOrders();
+      onSelectOrderTab(1);
     } catch (e) {
       setDraftError(e instanceof Error ? e.message : 'Не удалось отправить заказ');
     } finally {
@@ -330,7 +372,12 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   return (
     <div className={productListStyles.page}>
       <div className={productListStyles.toolbar}>
-        <AccountProjectTabs projects={ORDER_TABS} selectedIndex={selectedIndex} onSelect={onSelectOrderTab} />
+        <AccountProjectTabs
+          projects={ORDER_TABS}
+          selectedIndex={selectedIndex}
+          onSelect={onSelectOrderTab}
+          tabHasNotification={[false, workTabUnread > 0, false]}
+        />
       </div>
 
       {isPreparationTab && hasOrderLines ? (
@@ -587,6 +634,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
         selectedUnitsTotal={selectedUnitsTotal}
         totalLabel={totalLabel}
         previewLines={selectedPreviewLines}
+        orderComment={orderComment}
       />
 
       {isInWorkTab ? (
@@ -594,7 +642,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
           {inWorkError ? <p className={styles.orderPrepError}>{inWorkError}</p> : null}
           {inWorkLoading ? (
             <div className={styles.ordersInWorkSkeleton} aria-busy="true" aria-label="Загрузка">
-              {[0, 1, 2].map((k) => (
+              {[0, 1, 2, 3].map((k) => (
                 <div key={k} className={styles.orderWrapperSkeleton}>
                   <div className={styles.skeletonInWorkCard}>
                     <div className={styles.skeletonInWorkTop}>
