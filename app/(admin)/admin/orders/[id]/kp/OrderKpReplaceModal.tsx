@@ -2,19 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import type { AdminProductRow } from '@/app/(admin)/admin/catalog/products/adminProductTypes';
 import {
   buildSnapshotFromAdminVariant,
   type AdminVariantForKpSnapshot,
 } from '@/lib/commercialProposal/buildSnapshotFromAdminVariant';
 import modalStyles from '@/app/(account)/account/projects/components/CreateEditProjectModal.module.css';
 import styles from '../../../catalog/catalogAdmin.module.css';
-
-type ProductRow = {
-  id: string;
-  name: string;
-  slug: string;
-  thumbUrl: string | null;
-};
+import own from './OrderKpReplaceModal.module.css';
 
 type ProductDetail = {
   id: string;
@@ -24,8 +19,6 @@ type ProductDetail = {
 
 type Props = {
   open: boolean;
-  /** Открыть сразу карточку этого товара (смена SKU / тот же товар). */
-  initialProductId?: string | null;
   onClose: () => void;
   onApply: (payload: {
     productId: string;
@@ -34,25 +27,42 @@ type Props = {
   }) => void;
 };
 
-export function OrderKpReplaceModal({ open, initialProductId, onClose, onApply }: Props) {
+export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
   const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<ProductRow[]>([]);
+  const [results, setResults] = useState<AdminProductRow[]>([]);
   const [productId, setProductId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ProductDetail | null>(null);
-  const [variantId, setVariantId] = useState<string>('');
+  const [variantId, setVariantId] = useState('');
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setQ('');
+    setDebouncedQ('');
     setResults([]);
     setProductId(null);
     setDetail(null);
     setVariantId('');
     setError(null);
+    setSearching(false);
+    setLoadingDetail(false);
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      reset();
+      return;
+    }
+    reset();
+  }, [open, reset]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [q]);
 
   const loadProduct = useCallback(async (id: string) => {
     setProductId(id);
@@ -73,35 +83,28 @@ export function OrderKpReplaceModal({ open, initialProductId, onClose, onApply }
   }, []);
 
   useEffect(() => {
-    if (!open) {
-      reset();
-      return;
-    }
-    reset();
-    if (initialProductId) void loadProduct(initialProductId);
-  }, [open, initialProductId, reset, loadProduct]);
-
-  useEffect(() => {
-    if (!open) return;
-    const t = window.setTimeout(() => {
-      void (async () => {
-        setSearching(true);
-        setError(null);
-        try {
-          const list = await adminBackendJson<ProductRow[]>(
-            `catalog/admin/products${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`,
-          );
-          setResults(Array.isArray(list) ? list : []);
-        } catch (e) {
+    if (!open || productId) return;
+    let cancelled = false;
+    void (async () => {
+      setSearching(true);
+      setError(null);
+      try {
+        const params = debouncedQ ? `?q=${encodeURIComponent(debouncedQ)}` : '';
+        const list = await adminBackendJson<AdminProductRow[]>(`catalog/admin/products${params}`);
+        if (!cancelled) setResults(Array.isArray(list) ? list : []);
+      } catch (e) {
+        if (!cancelled) {
           setResults([]);
           setError(e instanceof Error ? e.message : 'Ошибка поиска');
-        } finally {
-          setSearching(false);
         }
-      })();
-    }, 300);
-    return () => window.clearTimeout(t);
-  }, [open, q]);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, debouncedQ, productId]);
 
   const variantOptions = useMemo(() => detail?.variants ?? [], [detail]);
 
@@ -124,6 +127,13 @@ export function OrderKpReplaceModal({ open, initialProductId, onClose, onApply }
     } finally {
       setApplying(false);
     }
+  }
+
+  function backToSearch() {
+    setProductId(null);
+    setDetail(null);
+    setVariantId('');
+    setError(null);
   }
 
   useEffect(() => {
@@ -172,68 +182,73 @@ export function OrderKpReplaceModal({ open, initialProductId, onClose, onApply }
             ×
           </button>
         </div>
-        <div className={modalStyles.body}>
-        <label className={styles.cardNote} style={{ display: 'block', marginBottom: 6 }}>
-          Поиск по названию или slug
-        </label>
-        <input
-          className={styles.input}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Например, диван"
-          style={{ width: '100%', marginBottom: 12 }}
-        />
-        {searching ? <p className={styles.cardNote}>Поиск…</p> : null}
-        {!productId ? (
-          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px', maxHeight: 200, overflow: 'auto' }}>
-            {results.map((r) => (
-              <li key={r.id} style={{ marginBottom: 8 }}>
-                <button
-                  type="button"
-                  className={styles.backLink}
-                  style={{ textAlign: 'left', width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
-                  onClick={() => void loadProduct(r.id)}
-                >
-                  {r.name}
-                  <span className={styles.cardNote} style={{ marginLeft: 8 }}>
-                    {r.slug}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {productId && loadingDetail ? <p className={styles.cardNote}>Загрузка карточки…</p> : null}
-        {detail ? (
-          <div style={{ marginBottom: 12 }}>
-            <p className={styles.cardTitle} style={{ margin: '0 0 8px' }}>
-              {detail.name}
-            </p>
-            <label className={styles.cardNote} htmlFor="kp-variant-select">
-              Вариант (SKU)
-            </label>
-            <select
-              id="kp-variant-select"
-              className={styles.input}
-              value={variantId}
-              onChange={(e) => setVariantId(e.target.value)}
-              style={{ width: '100%' }}
-            >
-              {variantOptions.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {(v.variantLabel || v.id).slice(0, 80)} — {v.price} ₽
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-
-        {error ? <p style={{ color: 'var(--color-red, #c53029)', margin: '8px 0' }}>{error}</p> : null}
+        <div className={`${modalStyles.body} ${own.body}`}>
+          {!productId ? (
+            <div className={own.searchBlock}>
+              <label className={styles.cardNote} style={{ display: 'block', marginBottom: 6 }}>
+                Поиск по названию или slug
+              </label>
+              <input
+                className={styles.input}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Например, диван"
+                style={{ width: '100%', marginBottom: 12, boxSizing: 'border-box' }}
+                autoFocus
+              />
+              {searching ? <p className={styles.cardNote}>Поиск…</p> : null}
+              {!searching && results.length === 0 ? (
+                <p className={styles.cardNote}>{debouncedQ ? 'Ничего не найдено' : 'Введите запрос или выберите из списка'}</p>
+              ) : null}
+              <ul className={own.resultsList}>
+                {results.map((r) => (
+                  <li key={r.id} style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      className={styles.backLink}
+                      style={{ textAlign: 'left', width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
+                      onClick={() => void loadProduct(r.id)}
+                    >
+                      {r.name}
+                      <span className={styles.cardNote} style={{ marginLeft: 8 }}>
+                        {r.slug}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className={own.productBlock}>
+              {loadingDetail ? <p className={styles.cardNote}>Загрузка карточки…</p> : null}
+              {detail && !loadingDetail ? (
+                <>
+                  <p className={own.productName}>{detail.name}</p>
+                  <label className={styles.cardNote} htmlFor="kp-variant-select">
+                    Вариант (SKU)
+                  </label>
+                  <select
+                    id="kp-variant-select"
+                    className={styles.input}
+                    value={variantId}
+                    onChange={(e) => setVariantId(e.target.value)}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  >
+                    {variantOptions.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {(v.variantLabel || v.id).slice(0, 80)} — {v.price} ₽
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : null}
+            </div>
+          )}
+          {error ? <p style={{ color: 'var(--color-red, #c53029)', margin: '8px 0' }}>{error}</p> : null}
         </div>
         <div className={modalStyles.panelFooter}>
           {productId ? (
-            <button type="button" className={styles.btn} onClick={() => setProductId(null)}>
+            <button type="button" className={styles.btn} onClick={backToSearch}>
               Назад к поиску
             </button>
           ) : null}

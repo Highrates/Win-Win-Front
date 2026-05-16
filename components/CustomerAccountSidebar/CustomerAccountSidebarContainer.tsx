@@ -22,6 +22,7 @@ export function CustomerAccountSidebarContainer() {
   const [isWinWinPartner, setIsWinWinPartner] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [orderChatNotify, setOrderChatNotify] = useState(false);
+  const [workTabNotify, setWorkTabNotify] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,15 +49,30 @@ export function CustomerAccountSidebarContainer() {
     let cancelled = false;
     const poll = async () => {
       try {
-        const res = await fetch('/api/user/order-chat/me/unread-count', {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!res.ok || cancelled) return;
-        const j = (await res.json()) as { count?: number };
-        if (!cancelled) setOrderChatNotify((j.count ?? 0) > 0);
+        const [allRes, workRes] = await Promise.all([
+          fetch('/api/user/order-chat/me/unread-count', {
+            credentials: 'same-origin',
+            cache: 'no-store',
+          }),
+          fetch('/api/user/order-chat/me/unread-count?scope=work', {
+            credentials: 'same-origin',
+            cache: 'no-store',
+          }),
+        ]);
+        if (cancelled) return;
+        if (allRes.ok) {
+          const j = (await allRes.json()) as { count?: number };
+          if (!cancelled) setOrderChatNotify((j.count ?? 0) > 0);
+        } else if (!cancelled) setOrderChatNotify(false);
+        if (workRes.ok) {
+          const j = (await workRes.json()) as { count?: number };
+          if (!cancelled) setWorkTabNotify((j.count ?? 0) > 0);
+        } else if (!cancelled) setWorkTabNotify(false);
       } catch {
-        if (!cancelled) setOrderChatNotify(false);
+        if (!cancelled) {
+          setOrderChatNotify(false);
+          setWorkTabNotify(false);
+        }
       }
     };
     void poll();
@@ -70,12 +86,15 @@ export function CustomerAccountSidebarContainer() {
     };
   }, []);
 
+  const menuHrefOverrides = workTabNotify ? { '/account/orders': '/account/orders?tab=work' } : {};
+
   return (
     <CustomerAccountSidebar
       userName={userName}
       isWinWinPartner={isWinWinPartner}
       profileLoaded={profileLoaded}
       menuItemsWithNotification={orderChatNotify ? ['/account/orders'] : []}
+      menuHrefOverrides={menuHrefOverrides}
     />
   );
 }

@@ -9,16 +9,16 @@ import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrdersStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
+import { ADMIN_ACTIVE_STATUSES, ADMIN_COMPLETED_STATUSES, ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
 import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
 import styles from '../catalog/catalogAdmin.module.css';
 import tabStyles from '../adminTabs.module.css';
 
-export type AdminOrdersBucket = 'new' | 'active' | 'completed' | 'rejected';
+export type AdminOrdersBucket = 'new' | 'active' | 'completed';
 
-const BUCKETS: AdminOrdersBucket[] = ['new', 'active', 'completed', 'rejected'];
+const BUCKETS: AdminOrdersBucket[] = ['new', 'active', 'completed'];
 
-const ACTIVE_STATUSES = ['ORDERED', 'PAID', 'RECEIVED'] as const;
-type ActiveOrderStatus = (typeof ACTIVE_STATUSES)[number];
+type ActiveOrderStatus = (typeof ORDER_STATUS_FLOW)[number];
 
 type AdminOrderRow = {
   id: string;
@@ -44,14 +44,13 @@ type ListResponse = {
   limit: number;
 };
 
-type ChatUnreadBuckets = { total: number; new: number; active: number; completed: number; rejected: number };
+type ChatUnreadBuckets = { total: number; new: number; active: number; completed: number };
 
 function bucketUnreadFor(summary: ChatUnreadBuckets | null, b: AdminOrdersBucket): number {
   if (!summary) return 0;
   if (b === 'new') return summary.new;
   if (b === 'active') return summary.active;
-  if (b === 'completed') return summary.completed;
-  return summary.rejected;
+  return summary.completed;
 }
 
 function formatMoney(amount: string | number, currency: string, numberLocale: string): string {
@@ -118,8 +117,8 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
 
   const tabLabels = useMemo(
-    () => [s.tabNew, s.tabActive, s.tabCompleted, s.tabRejected],
-    [s.tabActive, s.tabCompleted, s.tabNew, s.tabRejected],
+    () => [s.tabNew, s.tabActive, s.tabCompleted],
+    [s.tabActive, s.tabCompleted, s.tabNew],
   );
 
   const [bucketIndex, setBucketIndex] = useState(0);
@@ -136,13 +135,7 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   const loadUnreadSummary = useCallback(async () => {
     try {
       const j = await adminBackendJson<ChatUnreadBuckets>('orders/admin/chat-unread-summary');
-      if (
-        j &&
-        typeof j.new === 'number' &&
-        typeof j.active === 'number' &&
-        typeof j.completed === 'number' &&
-        typeof j.rejected === 'number'
-      ) {
+      if (j && typeof j.new === 'number' && typeof j.active === 'number' && typeof j.completed === 'number') {
         setUnreadSummary(j);
       } else {
         setUnreadSummary(null);
@@ -205,7 +198,10 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   function statusForActiveRow(row: AdminOrderRow): ActiveOrderStatus {
     const d = draftStatus[row.id];
     if (d) return d;
-    return ACTIVE_STATUSES.includes(row.status as ActiveOrderStatus) ? (row.status as ActiveOrderStatus) : 'ORDERED';
+    const fallback = ADMIN_ACTIVE_STATUSES[0] ?? 'APPROVED';
+    return ORDER_STATUS_FLOW.includes(row.status as ActiveOrderStatus)
+      ? (row.status as ActiveOrderStatus)
+      : fallback;
   }
 
   async function saveActiveStatus(orderId: string, status: ActiveOrderStatus) {
@@ -344,10 +340,8 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
                     <td>
                       {isNew ? (
                         <span className={styles.cardNote}>{statusLabels.PENDING_APPROVAL}</span>
-                      ) : bucket === 'rejected' ? (
-                        <span className={styles.cardNote}>{statusLabels.REJECTED}</span>
                       ) : isCompleted ? (
-                        <span className={styles.cardNote}>{statusLabels.RECEIVED}</span>
+                        <span className={styles.cardNote}>{statusLabels[row.status] ?? row.status}</span>
                       ) : (
                         <select
                           className={styles.input}
@@ -360,7 +354,7 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
                           }
                           aria-label={s.thStatus}
                         >
-                          {ACTIVE_STATUSES.map((st) => (
+                          {ADMIN_ACTIVE_STATUSES.map((st) => (
                             <option key={st} value={st}>
                               {statusLabels[st]}
                             </option>

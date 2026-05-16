@@ -15,6 +15,8 @@ export type CustomerAccountSidebarProps = {
   profileLoaded?: boolean;
   /** Пункты меню (href), для которых показывается точка уведомления */
   menuItemsWithNotification?: string[];
+  /** Переопределение href (например, `/account/orders?tab=work` при уведомлении на вкладке «В работе») */
+  menuHrefOverrides?: Partial<Record<string, string>>;
 };
 
 /** ЛК: чёрный stroke; избранное/проекты — account-sidebar (в /icons/heart и collections — серый для карточек) */
@@ -101,9 +103,11 @@ export function CustomerAccountSidebar({
   isWinWinPartner = false,
   profileLoaded = false,
   menuItemsWithNotification = [],
+  menuHrefOverrides = {},
 }: CustomerAccountSidebarProps) {
   const pathname = usePathname() ?? '';
   const notifySet = new Set(menuItemsWithNotification);
+  const hrefFor = (baseHref: string) => menuHrefOverrides[baseHref] ?? baseHref;
   const [moreOpen, setMoreOpen] = useState(false);
   const sheetId = useId();
 
@@ -206,7 +210,7 @@ export function CustomerAccountSidebar({
               {primaryItems.map((item) => (
                 <MenuItem
                   key={item.href}
-                  href={item.href}
+                  href={hrefFor(item.href)}
                   iconSrc={item.iconSrc}
                   label={item.label}
                   active={isMenuItemActive(pathname, item.href)}
@@ -287,7 +291,7 @@ export function CustomerAccountSidebar({
             {primaryItems.map((item) => (
               <MobileDockItem
                 key={item.href}
-                href={item.href}
+                href={hrefFor(item.href)}
                 iconSrc={item.iconSrc}
                 label={item.label}
                 active={isMenuItemActive(pathname, item.href)}
@@ -376,7 +380,7 @@ export function CustomerAccountSidebar({
               {primaryItems.map((item) => (
                 <MenuItem
                   key={item.href}
-                  href={item.href}
+                  href={hrefFor(item.href)}
                   iconSrc={item.iconSrc}
                   label={item.label}
                   active={isMenuItemActive(pathname, item.href)}

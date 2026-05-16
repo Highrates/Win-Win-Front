@@ -67,8 +67,32 @@
   color: var(--color-gray);
 }
 
-.statusBlock {
-  margin-bottom: 20px;
+.linesList {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lineRow {
+  padding-bottom: 14px;
+  border-bottom: var(--account-hairline-width, 1px) solid var(--account-hairline-color, #e2e6e8);
+}
+
+.lineRow:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.lineName {
+  margin: 0 0 6px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  line-height: 1.35;
+  color: var(--color-black);
+  font-family: var(--font-commissioner, system-ui);
 }
 
 .statusLabel {

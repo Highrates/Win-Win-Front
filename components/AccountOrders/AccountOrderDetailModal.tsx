@@ -8,6 +8,10 @@ import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
 import { useOrderChat } from '@/hooks/useOrderChat';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
+import { orderStatusLabel } from '@/lib/orders/orderStatus';
+import { formatKpGrossTotalsLabel, kpGrossTotals } from '@/lib/commercialProposal/kpGrossDimensions';
+import { KpGrossDisplay } from '@/components/commercialProposal/KpGrossDisplay';
+import { kpLineTotalRub, kpLineUnitAfterDiscount, kpOfferAggregates } from '@/lib/commercialProposal/kpOfferTotals';
 import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
 import { fetchUserOrder, ackUserOrderCommercialProposalSeen } from '@/lib/userOrders/clientApi';
 import type { UserOrderDetailApi } from '@/lib/userOrders/types';
@@ -49,24 +53,6 @@ function OrderCtaMessageIcon({ className }: { className?: string }) {
   );
 }
 
-function statusLabelRu(status: string): string {
-  switch (status) {
-    case 'PENDING_APPROVAL':
-      return 'На согласовании';
-    case 'ORDERED':
-      return 'Заказано';
-    case 'PAID':
-      return 'Оплачено';
-    case 'RECEIVED':
-      return 'Получено';
-    case 'REJECTED':
-      return 'Заказ отклонён';
-    case 'DRAFT':
-      return 'Черновик';
-    default:
-      return 'В работе';
-  }
-}
 
 function parseSnapshot(row: { snapshot?: unknown }): Record<string, unknown> | null {
   const s = row.snapshot;
@@ -97,20 +83,6 @@ function formatRub(amount: string | number, currency = 'RUB'): string {
     style: 'currency',
     currency: currency || 'RUB',
   }).format(n);
-}
-
-function kpLineTotalRub(line: CommercialProposalLineApi): number {
-  const unit = line.offerUnitPrice;
-  const disc = line.discountPercent != null && Number.isFinite(line.discountPercent) ? line.discountPercent : 0;
-  const factor = 1 - Math.min(100, Math.max(0, disc)) / 100;
-  return Math.round(unit * factor * line.quantity * 100) / 100;
-}
-
-function kpLineUnitAfterDiscount(line: CommercialProposalLineApi): number {
-  const unit = line.offerUnitPrice;
-  const disc = line.discountPercent != null && Number.isFinite(line.discountPercent) ? line.discountPercent : 0;
-  const factor = 1 - Math.min(100, Math.max(0, disc)) / 100;
-  return Math.round(unit * factor * 100) / 100;
 }
 
 function kpLineImageUrl(line: CommercialProposalLineApi): string | null {
@@ -240,6 +212,11 @@ function AccountOrderItemsTable({
 }
 
 function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; lines: CommercialProposalLineApi[] }) {
+  const totals = useMemo(() => kpOfferAggregates(lines), [lines]);
+  const grossTotals = useMemo(() => kpGrossTotals(lines), [lines]);
+  const avgDiscountPctLabel = `${Math.round(totals.avgDiscountPercent * 10) / 10}%`;
+  const hasDiscount = totals.oldTotalRub !== totals.newTotalRub || totals.avgDiscountPercent > 0;
+
   return (
     <div className={`${teamPageStyles.tableFrame} ${styles.orderTableFrame}`}>
       <table className={teamPageStyles.table}>
@@ -257,6 +234,9 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
             </th>
             <th scope="col" className={teamPageStyles.thRightTight}>
               Сумма
+            </th>
+            <th scope="col" className={styles.kpGrossColHead}>
+              Брутто
             </th>
           </tr>
         </thead>
@@ -296,7 +276,7 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
                   ) : null}
                   {line.deliveryEta ? (
                     <div className={styles.muted} style={{ marginTop: 6 }}>
-                      Срок: {line.deliveryEta}
+                      Срок доставки: {line.deliveryEta}
                     </div>
                   ) : null}
                 </td>
@@ -317,9 +297,38 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
                   </div>
                 </td>
                 <td className={teamPageStyles.tdRightTight}>{formatRub(lineTotal, order.currency)}</td>
+                <td className={styles.kpGrossCol}>
+                  <KpGrossDisplay snapshot={snap} />
+                </td>
               </tr>
             );
           })}
+          <tr className={styles.tableFooterRow}>
+            <td colSpan={6} className={styles.kpFooterTotals}>
+              <div className={styles.kpFooterTotalsInner}>
+                {grossTotals.hasAny ? (
+                  <div className={styles.kpFooterLine}>
+                    <strong>Итого (брутто):</strong>
+                    <span>{formatKpGrossTotalsLabel(grossTotals)}</span>
+                  </div>
+                ) : null}
+                <div className={styles.kpFooterLine}>
+                  <strong>Итого:</strong>
+                  <span className={styles.kpFooterPriceInline}>
+                    {hasDiscount ? (
+                      <>
+                        <span className={styles.kpPriceDiscount}>−{avgDiscountPctLabel}</span>
+                        <span className={styles.kpPriceOld}>{formatRub(totals.oldTotalRub, order.currency)}</span>
+                        <span className={styles.kpPriceNew}>{formatRub(totals.newTotalRub, order.currency)}</span>
+                      </>
+                    ) : (
+                      <span className={styles.kpPriceNew}>{formatRub(totals.newTotalRub, order.currency)}</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -487,7 +496,7 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
                 <div className={styles.metaGridMain}>
                   <div className={styles.metaItem}>
                     <div className={styles.metaItemLabel}>Статус</div>
-                    <div className={styles.metaItemValue}>{statusLabelRu(order.status)}</div>
+                    <div className={styles.metaItemValue}>{orderStatusLabel(order.status, 'ru')}</div>
                   </div>
                   <div className={styles.metaItem}>
                     <div className={styles.metaItemLabel}>Создан</div>

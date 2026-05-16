@@ -2,70 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendFetch, adminBackendJson } from '@/lib/adminBackendFetch';
-import { adminOrderStatusLabels } from '@/lib/admin-i18n/adminOrdersI18n';
 import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import styles from './siteSettings.module.css';
-
-function newOrderStatusRowId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-/** Совпадает с Prisma enum `OrderStatus` — при новом статусе в схеме дописать сюда. */
-const ORDER_STATUS_ENUM_ORDER = [
-  'DRAFT',
-  'PENDING_APPROVAL',
-  'ORDERED',
-  'PAID',
-  'RECEIVED',
-  'REJECTED',
-] as const;
-
-type OrderStatusEnumKey = (typeof ORDER_STATUS_ENUM_ORDER)[number];
-
-type OrderStatusLabelRow = { id: string; key: string; label: string };
-
-function orderStatusRowsFromServer(rawOsl: unknown): OrderStatusLabelRow[] {
-  const allowedSet = new Set<string>(ORDER_STATUS_ENUM_ORDER);
-  const fromDb: Record<string, string> = {};
-  if (rawOsl && typeof rawOsl === 'object' && !Array.isArray(rawOsl)) {
-    for (const [k, v] of Object.entries(rawOsl as Record<string, unknown>)) {
-      const key = String(k).trim();
-      if (!allowedSet.has(key)) continue;
-      if (typeof v === 'string' && v.trim()) fromDb[key] = v.trim();
-    }
-  }
-  const keys = Object.keys(fromDb).sort((a, b) => {
-    const ia = ORDER_STATUS_ENUM_ORDER.indexOf(a as OrderStatusEnumKey);
-    const ib = ORDER_STATUS_ENUM_ORDER.indexOf(b as OrderStatusEnumKey);
-    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b);
-  });
-  if (keys.length === 0) {
-    return ORDER_STATUS_ENUM_ORDER.map((key) => ({ id: newOrderStatusRowId(), key, label: '' }));
-  }
-  return keys.map((key) => ({ id: newOrderStatusRowId(), key, label: fromDb[key] ?? '' }));
-}
-
-function keyOptionsForRow(rowId: string, rows: OrderStatusLabelRow[]): readonly OrderStatusEnumKey[] {
-  const row = rows.find((r) => r.id === rowId);
-  const cur = row?.key.trim() ?? '';
-  const others = new Set(
-    rows.filter((r) => r.id !== rowId).map((r) => r.key.trim()).filter(Boolean),
-  );
-  return ORDER_STATUS_ENUM_ORDER.filter((k) => !others.has(k) || k === cur);
-}
-
-const DEFAULT_ORDER_STATUS_LABELS_RU = adminOrderStatusLabels('ru');
 
 type SiteSettingsAdminPayload = {
   heroImageUrls: string[];
   designerServiceOptions: string[];
   caseRoomTypeOptions: string[];
-  orderStatusLabels?: Record<string, string> | null;
 };
 
-type TabKey = 'hero' | 'orders' | 'other';
+type TabKey = 'hero' | 'other';
 
 export function SiteSettingsClient() {
   const [tab, setTab] = useState<TabKey>('hero');
@@ -77,7 +24,6 @@ export function SiteSettingsClient() {
   const [heroImageUrls, setHeroImageUrls] = useState<string[]>([]);
   const [designerServiceOptions, setDesignerServiceOptions] = useState<string[]>([]);
   const [caseRoomTypeOptions, setCaseRoomTypeOptions] = useState<string[]>([]);
-  const [orderStatusRows, setOrderStatusRows] = useState<OrderStatusLabelRow[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -96,7 +42,6 @@ export function SiteSettingsClient() {
           ? data.caseRoomTypeOptions.filter((x) => typeof x === 'string' && x.trim().length > 0)
           : [''],
       );
-      setOrderStatusRows(orderStatusRowsFromServer(data?.orderStatusLabels));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить настройки');
     } finally {
@@ -208,74 +153,6 @@ export function SiteSettingsClient() {
     }
   }
 
-  const canAddOrderStatusRow = useMemo(() => {
-    const used = new Set(orderStatusRows.map((r) => r.key.trim()).filter(Boolean));
-    return ORDER_STATUS_ENUM_ORDER.some((k) => !used.has(k));
-  }, [orderStatusRows]);
-
-  function addOrderStatusRow() {
-    setOrderStatusRows((prev) => {
-      const used = new Set(prev.map((r) => r.key.trim()).filter(Boolean));
-      const nextKey = ORDER_STATUS_ENUM_ORDER.find((k) => !used.has(k));
-      if (!nextKey) return prev;
-      return [...prev, { id: newOrderStatusRowId(), key: nextKey, label: '' }];
-    });
-  }
-
-  function removeOrderStatusRow(id: string) {
-    setOrderStatusRows((prev) => prev.filter((r) => r.id !== id));
-  }
-
-  function setOrderStatusRowKey(id: string, key: string) {
-    setOrderStatusRows((prev) => prev.map((r) => (r.id === id ? { ...r, key } : r)));
-  }
-
-  function setOrderStatusRowLabel(id: string, label: string) {
-    setOrderStatusRows((prev) => prev.map((r) => (r.id === id ? { ...r, label } : r)));
-  }
-
-  async function saveOrders() {
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const body: Record<string, string> = {};
-      const seen = new Set<string>();
-      for (const row of orderStatusRows) {
-        const k = row.key.trim();
-        const lab = row.label.trim();
-        if (!k && !lab) continue;
-        if (!k && lab) {
-          setSaveError('Укажите код статуса в строке с подписью или очистите подпись');
-          return;
-        }
-        if (!ORDER_STATUS_ENUM_ORDER.includes(k as OrderStatusEnumKey)) {
-          setSaveError(`Недопустимый код статуса: ${k}`);
-          return;
-        }
-        if (seen.has(k)) {
-          setSaveError(`Код «${k}» встречается в таблице дважды`);
-          return;
-        }
-        seen.add(k);
-        if (lab) body[k] = lab;
-      }
-      const res = await adminBackendFetch('settings/admin/site', {
-        method: 'PATCH',
-        body: JSON.stringify({ orderStatusLabels: body }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { message?: string };
-      if (!res.ok) {
-        setSaveError(typeof j?.message === 'string' ? j.message : 'Не удалось сохранить');
-        return;
-      }
-      await load();
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Не удалось сохранить');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <div className={styles.panel}>
       <div className={styles.tabs} role="tablist" aria-label="Настройки сайта">
@@ -287,15 +164,6 @@ export function SiteSettingsClient() {
           onClick={() => setTab('hero')}
         >
           Настройка Hero блока
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'orders'}
-          className={`${styles.tabBtn} ${tab === 'orders' ? styles.tabBtnActive : ''}`}
-          onClick={() => setTab('orders')}
-        >
-          Заказы
         </button>
         <button
           type="button"
@@ -374,88 +242,6 @@ export function SiteSettingsClient() {
               });
             }}
           />
-        </section>
-      ) : null}
-
-      {tab === 'orders' ? (
-        <section aria-label="Подписи статусов заказа">
-          <p className={catalogStyles.muted}>
-            Подписи статусов в списке заказов и на странице заказа в админке (поверх встроенных для языка админки).
-          </p>
-          <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-            Добавляйте и удаляйте строки: сохраняются только коды из enum <code>OrderStatus</code> (как в базе). Пустая
-            подпись — в интерфейсе будет встроенный текст. Новый <strong>код</strong> статуса в системе заказов по-прежнему
-            появляется только после миграции Prisma и дописывания в константу <code>ORDER_STATUS_ENUM_ORDER</code> в этом
-            файле.
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            <button
-              type="button"
-              className={catalogStyles.btn}
-              onClick={addOrderStatusRow}
-              disabled={saving || !canAddOrderStatusRow}
-            >
-              Добавить строку
-            </button>
-            <button type="button" className={catalogStyles.btn} disabled={saving} onClick={() => void saveOrders()}>
-              {saving ? 'Сохранение…' : 'Сохранить'}
-            </button>
-          </div>
-          <table className={styles.serviceTable} style={{ marginTop: 12 }}>
-            <thead>
-              <tr>
-                <th scope="col">Код</th>
-                <th scope="col">Подпись</th>
-                <th scope="col" style={{ width: 100 }}>
-                  Действие
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {orderStatusRows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <select
-                      className={styles.serviceInput}
-                      value={row.key}
-                      onChange={(e) => setOrderStatusRowKey(row.id, e.target.value)}
-                      aria-label="Код статуса"
-                    >
-                      <option value="">— выберите —</option>
-                      {keyOptionsForRow(row.id, orderStatusRows).map((k) => (
-                        <option key={k} value={k}>
-                          {k}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className={styles.serviceInput}
-                      value={row.label}
-                      onChange={(e) => setOrderStatusRowLabel(row.id, e.target.value)}
-                      placeholder={
-                        row.key && row.key in DEFAULT_ORDER_STATUS_LABELS_RU
-                          ? DEFAULT_ORDER_STATUS_LABELS_RU[row.key as OrderStatusEnumKey]
-                          : 'Подпись'
-                      }
-                      aria-label={row.key ? `Подпись для ${row.key}` : 'Подпись'}
-                    />
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                      onClick={() => removeOrderStatusRow(row.id)}
-                    >
-                      Удалить
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </section>
       ) : null}
 

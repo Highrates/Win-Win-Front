@@ -3,7 +3,18 @@
  */
 
 export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN';
-export type OrderStatus = 'ORDERED' | 'PAID' | 'RECEIVED';
+export type OrderStatus =
+  | 'PENDING_APPROVAL'
+  | 'PROPOSAL_FORMED'
+  | 'APPROVED'
+  | 'PENDING_SIGNATURE'
+  | 'PENDING_PAYMENT'
+  | 'PAID'
+  | 'PENDING_SHIPMENT'
+  | 'IN_TRANSIT'
+  | 'DELIVERED_TO_RU_WAREHOUSE'
+  | 'RECEIVED'
+  | 'COMPLETED';
 export type RewardStatus = 'PENDING' | 'INVOICED' | 'PAID';
 export type PageType = 'ABOUT' | 'SERVICES' | 'DELIVERY' | 'PAYMENT' | 'CONTACTS' | 'CUSTOM';
 export type KycStatus = 'NOT_STARTED' | 'PENDING' | 'APPROVED' | 'REJECTED';

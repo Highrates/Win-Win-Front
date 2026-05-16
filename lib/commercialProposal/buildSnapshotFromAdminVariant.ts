@@ -1,3 +1,5 @@
+import { mergeVariantGrossIntoSnapshot } from './kpGrossDimensions';
+
 /** Ответ `GET catalog/admin/products/:productId/variants/:variantId` (фрагмент). */
 export type AdminVariantForKpSnapshot = {
   productName: string;
@@ -18,6 +20,11 @@ export type AdminVariantForKpSnapshot = {
   productGalleryImages: { id: string; url: string; sortOrder?: number }[];
   galleryProductImageIds: string[];
   price: string;
+  lengthMm?: number | null;
+  widthMm?: number | null;
+  heightMm?: number | null;
+  volumeLiters?: string | null;
+  weightKg?: string | null;
 };
 
 export function buildSnapshotFromAdminVariant(v: AdminVariantForKpSnapshot): Record<string, unknown> {
@@ -60,5 +67,5 @@ export function buildSnapshotFromAdminVariant(v: AdminVariantForKpSnapshot): Rec
     snap.catalogPriceMinRub = catalogPriceMinRub;
     snap.catalogPriceMaxRub = catalogPriceMinRub;
   }
-  return snap;
+  return mergeVariantGrossIntoSnapshot(snap, v);
 }

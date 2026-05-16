@@ -18,10 +18,7 @@ import od from './orderAdminDetail.module.css';
 import { AdminOrderSideChat } from './AdminOrderSideChat';
 import { AdminOrdersConfirmModal } from '../AdminOrdersConfirmModal';
 import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
-
-const ACCEPT_STATUSES = ['ORDERED', 'PAID', 'RECEIVED'] as const;
-
-const DETAIL_STATUSES = ['DRAFT', 'PENDING_APPROVAL', 'ORDERED', 'PAID', 'RECEIVED', 'REJECTED'] as const;
+import { ORDER_STATUS_DRAFT, ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
 
 type AdminOrderDetail = {
   id: string;
@@ -113,10 +110,9 @@ function orderLinesTotalRub(items: AdminOrderDetail['items']): number {
 }
 
 function statusSelectOptions(orderStatus: string): readonly string[] {
-  if (orderStatus === 'REJECTED') return [];
-  if (orderStatus === 'PENDING_APPROVAL') return ACCEPT_STATUSES;
-  if (orderStatus === 'DRAFT') return DETAIL_STATUSES;
-  return ACCEPT_STATUSES;
+  if (orderStatus === ORDER_STATUS_DRAFT) return [ORDER_STATUS_DRAFT, ...ORDER_STATUS_FLOW];
+  if (orderStatus === 'PENDING_APPROVAL') return ORDER_STATUS_FLOW;
+  return ORDER_STATUS_FLOW;
 }
 
 export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
@@ -132,10 +128,8 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [saving, setSaving] = useState(false);
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectLoading, setRejectLoading] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [kpSummary, setKpSummary] = useState<CommercialProposalSummaryApi | null>(null);
 
   const load = useCallback(async () => {
@@ -144,7 +138,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
     try {
       const res = await adminBackendJson<AdminOrderDetail>(`orders/admin/${orderId}`);
       setOrder(res);
-      setSelectedStatus(res.status === 'PENDING_APPROVAL' ? 'ORDERED' : res.status);
+      setSelectedStatus(res.status === 'PENDING_APPROVAL' ? 'PROPOSAL_FORMED' : res.status);
     } catch (e) {
       const msg = e instanceof Error ? e.message : d.errLoad;
       setError(msg);
@@ -159,7 +153,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   }, [load]);
 
   useEffect(() => {
-    if (!order || order.status === 'DRAFT' || order.status === 'REJECTED') {
+    if (!order || order.status === ORDER_STATUS_DRAFT) {
       setKpSummary(null);
       return;
     }
@@ -221,40 +215,20 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
     }
   }
 
-  async function confirmRejectFromDetail() {
+  async function confirmCancelFromDetail() {
     if (!order) return;
-    setRejectLoading(true);
-    setError(null);
-    try {
-      await adminBackendJson(`orders/admin/${order.id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'REJECTED' }),
-      });
-      setRejectOpen(false);
-      await load();
-      document.dispatchEvent(new Event('admin-orders-pending-refresh'));
-      document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : d.errSaveStatus);
-    } finally {
-      setRejectLoading(false);
-    }
-  }
-
-  async function confirmDeleteFromDetail() {
-    if (!order) return;
-    setDeleteLoading(true);
+    setCancelLoading(true);
     setError(null);
     try {
       await adminBackendJson(`orders/admin/${order.id}`, { method: 'DELETE' });
-      setDeleteOpen(false);
+      setCancelOpen(false);
       document.dispatchEvent(new Event('admin-orders-pending-refresh'));
       document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
-      router.push('/admin/orders?bucket=rejected');
+      router.push('/admin/orders?bucket=new');
     } catch (e) {
       setError(e instanceof Error ? e.message : d.errDeleteOrder);
     } finally {
-      setDeleteLoading(false);
+      setCancelLoading(false);
     }
   }
 
@@ -282,15 +256,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                 <label className={styles.label}>
                   <span>{d.labelStatus}</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                    {order.status === 'REJECTED' ? (
-                      <>
-                        <span className={styles.cardTitle}>{statusLabels.REJECTED}</span>
-                        <p className={styles.muted} style={{ margin: 0, flex: '1 1 100%' }}>
-                          {d.statusRejectedHint}
-                        </p>
-                      </>
-                    ) : (
-                      <>
+                    <>
                         <select
                           className={styles.input}
                           style={{ maxWidth: 280 }}
@@ -311,8 +277,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                         >
                           {saving ? d.saving : d.save}
                         </button>
-                      </>
-                    )}
+                    </>
                   </div>
                 </label>
               </div>
@@ -479,7 +444,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
               </p>
             ) : null}
             <div className={styles.toolbar} style={{ marginBottom: 0 }}>
-              {order.status !== 'DRAFT' && order.status !== 'REJECTED' ? (
+              {order.status !== ORDER_STATUS_DRAFT ? (
                 <Link
                   href={`/admin/orders/${encodeURIComponent(order.id)}/kp`}
                   className={`${styles.btn} ${styles.btnPrimary}`}
@@ -491,11 +456,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                   type="button"
                   className={`${styles.btn} ${styles.btnPrimary}`}
                   disabled
-                  title={
-                    order.status === 'REJECTED'
-                      ? d.statusRejectedHint
-                      : 'КП доступно после отправки заказа на согласование'
-                  }
+                  title="КП доступно после отправки заказа на согласование"
                 >
                   {d.actionPrepareCp}
                 </button>
@@ -504,14 +465,9 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                 <button
                   type="button"
                   className={`${styles.btn} ${styles.btnDanger}`}
-                  onClick={() => setRejectOpen(true)}
+                  onClick={() => setCancelOpen(true)}
                 >
-                  {d.actionReject}
-                </button>
-              ) : null}
-              {order.status === 'REJECTED' ? (
-                <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={() => setDeleteOpen(true)}>
-                  {d.actionDeleteRejected}
+                  {d.actionCancelOrder}
                 </button>
               ) : null}
             </div>
@@ -528,30 +484,16 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
       </div>
 
       <AdminOrdersConfirmModal
-        open={rejectOpen}
-        title={d.rejectModalTitle}
-        confirmLabel={d.rejectModalConfirm}
-        cancelLabel={d.rejectModalCancel}
-        loading={rejectLoading}
-        onClose={() => !rejectLoading && setRejectOpen(false)}
-        onConfirm={confirmRejectFromDetail}
+        open={cancelOpen}
+        title={d.cancelModalTitle}
+        confirmLabel={d.cancelModalConfirm}
+        cancelLabel={d.cancelModalCancel}
+        loading={cancelLoading}
+        onClose={() => !cancelLoading && setCancelOpen(false)}
+        onConfirm={confirmCancelFromDetail}
       >
         <p className={styles.muted} style={{ margin: 0 }}>
-          {d.rejectModalReminder}
-        </p>
-      </AdminOrdersConfirmModal>
-
-      <AdminOrdersConfirmModal
-        open={deleteOpen}
-        title={d.deleteModalTitle}
-        confirmLabel={d.deleteModalConfirm}
-        cancelLabel={d.deleteModalCancel}
-        loading={deleteLoading}
-        onClose={() => !deleteLoading && setDeleteOpen(false)}
-        onConfirm={confirmDeleteFromDetail}
-      >
-        <p className={styles.muted} style={{ margin: 0 }}>
-          {d.deleteModalBody}
+          {d.cancelModalReminder}
         </p>
       </AdminOrdersConfirmModal>
     </>

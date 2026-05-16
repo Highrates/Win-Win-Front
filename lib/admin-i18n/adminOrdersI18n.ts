@@ -1,42 +1,17 @@
 import type { AdminLocale } from '@/lib/admin-i18n/adminChromeI18n';
+import { ORDER_STATUS_DRAFT, ORDER_STATUS_FLOW, orderStatusLabel } from '@/lib/orders/orderStatus';
 
 const pick = <T,>(locale: AdminLocale, ru: T, zh: T): T => (locale === 'zh' ? zh : ru);
 
 export function adminOrderStatusLabels(locale: AdminLocale): Record<string, string> {
-  if (locale === 'zh') {
-    return {
-      DRAFT: '草稿',
-      PENDING_APPROVAL: '待审批',
-      ORDERED: '已下单',
-      PAID: '已付款',
-      RECEIVED: '已收货',
-      REJECTED: '已拒绝',
-    };
-  }
-  return {
-    DRAFT: 'Черновик',
-    PENDING_APPROVAL: 'На согласовании',
-    ORDERED: 'Заказано',
-    PAID: 'Оплачено',
-    RECEIVED: 'Получено',
-    REJECTED: 'Отклонён',
+  const loc = locale === 'zh' ? 'zh' : 'ru';
+  const out: Record<string, string> = {
+    [ORDER_STATUS_DRAFT]: orderStatusLabel(ORDER_STATUS_DRAFT, loc),
   };
-}
-
-/** Подписи статусов из настроек сайта поверх встроенных для текущей локали админки. */
-export function mergeAdminOrderStatusLabels(
-  locale: AdminLocale,
-  overrides?: Record<string, string> | null,
-): Record<string, string> {
-  const base = adminOrderStatusLabels(locale);
-  if (!overrides) return base;
-  const next = { ...base };
-  for (const [k, v] of Object.entries(overrides)) {
-    const key = k.trim();
-    if (!key || typeof v !== 'string' || !v.trim()) continue;
-    next[key] = v.trim();
+  for (const code of ORDER_STATUS_FLOW) {
+    out[code] = orderStatusLabel(code, loc);
   }
-  return next;
+  return out;
 }
 
 export function adminOrdersStrings(locale: AdminLocale) {
@@ -64,7 +39,6 @@ export function adminOrdersStrings(locale: AdminLocale) {
     tabNew: pick(locale, 'Новые заказы', '新订单'),
     tabActive: pick(locale, 'В работе', '进行中'),
     tabCompleted: pick(locale, 'Завершённые', '已完成'),
-    tabRejected: pick(locale, 'Отклонённые', '已拒绝'),
   };
 }
 
@@ -114,30 +88,21 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     chatEmpty: pick(locale, 'Пока нет сообщений', '暂无消息'),
     footerSumLabel: pick(locale, 'Сумма', '合计'),
     actionPrepareCp: pick(locale, 'Сформировать КП', '生成报价单'),
-    actionReject: pick(locale, 'Отклонить заказ', '拒绝订单'),
-    actionDeleteRejected: pick(locale, 'Удалить заказ', '删除订单'),
+    actionCancelOrder: pick(locale, 'Удалить заявку', '删除申请'),
     actionsHintPrepareCp: pick(locale, '', ''),
-    rejectModalReminder: pick(
+    cancelModalReminder: pick(
       locale,
-      'Перед отклонением напишите в чате справа причину — клиент увидит её в личном кабинете.',
-      '拒绝前请在右侧沟通栏写明原因，客户将在个人中心看到。',
+      'Перед удалением напишите в чате справа причину — клиент увидит её в личном кабинете.',
+      '删除前请在右侧沟通栏写明原因，客户将在个人中心看到。',
     ),
-    rejectModalTitle: pick(locale, 'Отклонить заказ?', '要拒绝此订单吗？'),
-    rejectModalConfirm: pick(locale, 'Отклонить', '确认拒绝'),
-    rejectModalCancel: pick(locale, 'Отмена', '取消'),
-    deleteModalTitle: pick(locale, 'Удалить заказ навсегда?', '永久删除订单？'),
-    deleteModalBody: pick(
-      locale,
-      'Запись и переписка будут удалены без восстановления.',
-      '订单与沟通记录将永久删除。',
-    ),
-    deleteModalConfirm: pick(locale, 'Удалить', '删除'),
-    deleteModalCancel: pick(locale, 'Отмена', '取消'),
+    cancelModalTitle: pick(locale, 'Удалить заявку на согласовании?', '要删除此待审批申请吗？'),
+    cancelModalConfirm: pick(locale, 'Удалить', '删除'),
+    cancelModalCancel: pick(locale, 'Отмена', '取消'),
     errDeleteOrder: pick(locale, 'Не удалось удалить заказ', '删除失败'),
-    statusRejectedHint: pick(
+    statusPendingHint: pick(
       locale,
-      'Заказ отклонён. Смена статуса недоступна — при необходимости удалите запись во вкладке «Отклонённые».',
-      '订单已拒绝，不可再改状态；可在「已拒绝」标签中删除记录。',
+      'Заказ на согласовании. После публикации КП можно перевести на следующий этап.',
+      '订单待审批。发布报价后可进入下一阶段。',
     ),
     kpPublish: pick(locale, 'Отправить', '发送'),
     kpPublishing: pick(locale, 'Отправка…', '发送中…'),

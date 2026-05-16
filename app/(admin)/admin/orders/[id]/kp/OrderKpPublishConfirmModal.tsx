@@ -6,16 +6,13 @@ import { AdminOrderSideChat } from '../AdminOrderSideChat';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
+import { ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
+import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
+import type { KpOfferTotals } from '@/lib/commercialProposal/kpOfferTotals';
 import catalogStyles from '../../../catalog/catalogAdmin.module.css';
 import own from './OrderKpPublishConfirmModal.module.css';
 
-export type KpOfferTotals = {
-  oldTotalRub: number;
-  newTotalRub: number;
-  avgDiscountPercent: number;
-};
-
-export type NextOrderStatusChoice = 'ORDERED' | 'PAID' | 'RECEIVED';
+export type NextOrderStatusChoice = Exclude<(typeof ORDER_STATUS_FLOW)[number], 'PENDING_APPROVAL'>;
 
 type Labels = {
   title: string;
@@ -27,12 +24,13 @@ type Labels = {
 type Props = {
   open: boolean;
   orderId: string;
+  lines: CommercialProposalLineApi[];
   lineCount: number;
   totals: KpOfferTotals;
   numberLocale: string;
   labels: Labels;
   publishing: boolean;
-  /** Заказ «На согласовании» — показать выбор следующего статуса */
+  /** Заказ «На согласовании» — выбор следующего статуса по каждой позиции */
   showNextStatus: boolean;
   nextOrderStatus: NextOrderStatusChoice;
   onNextOrderStatus: (s: NextOrderStatusChoice) => void;
@@ -48,11 +46,19 @@ function formatRubInt(n: number, numberLocale: string): string {
   }).format(n);
 }
 
-const NEXT_STATUS_OPTIONS: NextOrderStatusChoice[] = ['ORDERED', 'PAID', 'RECEIVED'];
+function lineTitle(snap: Record<string, unknown> | null): string {
+  if (snap && typeof snap.productName === 'string' && snap.productName.trim()) return snap.productName.trim();
+  return '—';
+}
+
+const NEXT_STATUS_OPTIONS: NextOrderStatusChoice[] = ORDER_STATUS_FLOW.filter(
+  (s) => s !== 'PENDING_APPROVAL',
+) as NextOrderStatusChoice[];
 
 export function OrderKpPublishConfirmModal({
   open,
   orderId,
+  lines,
   lineCount,
   totals,
   numberLocale,
@@ -125,7 +131,7 @@ export function OrderKpPublishConfirmModal({
             <p className={own.summaryTitle}>{d.kpPublishSummaryHeading}</p>
             <p className={own.summaryMeta}>{d.kpPublishPositions(lineCount)}</p>
             <p className={own.digitsRow}>
-              <span>{pctLabel}</span>
+              <span style={{ color: 'var(--color-red)' }}>{pctLabel}</span>
               <span className={own.sep} aria-hidden>
                 ·
               </span>
@@ -136,26 +142,39 @@ export function OrderKpPublishConfirmModal({
               <span className={own.grandNew}>{newF}</span>
             </p>
 
-            {showNextStatus ? (
-              <div className={own.statusBlock}>
-                <label className={own.statusLabel} htmlFor="kp-publish-next-status">
-                  {d.kpPublishNextStatus}
-                </label>
-                <select
-                  id="kp-publish-next-status"
-                  className={catalogStyles.input}
-                  value={nextOrderStatus}
-                  disabled={publishing}
-                  onChange={(e) => onNextOrderStatus(e.target.value as NextOrderStatusChoice)}
-                  style={{ width: '100%', marginTop: 8 }}
-                >
-                  {NEXT_STATUS_OPTIONS.map((v) => (
-                    <option key={v} value={v}>
-                      {statusLabels[v] ?? v}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {showNextStatus && lines.length > 0 ? (
+              <ul className={own.linesList}>
+                {lines.map((line) => {
+                  const snap =
+                    line.snapshot && typeof line.snapshot === 'object'
+                      ? (line.snapshot as Record<string, unknown>)
+                      : null;
+                  const name = lineTitle(snap);
+                  const selectId = `kp-publish-status-${line.id}`;
+                  return (
+                    <li key={line.id} className={own.lineRow}>
+                      <p className={own.lineName}>{name}</p>
+                      <label className={own.statusLabel} htmlFor={selectId}>
+                        {d.kpPublishNextStatus}
+                      </label>
+                      <select
+                        id={selectId}
+                        className={catalogStyles.input}
+                        value={nextOrderStatus}
+                        disabled={publishing}
+                        onChange={(e) => onNextOrderStatus(e.target.value as NextOrderStatusChoice)}
+                        style={{ width: '100%', marginTop: 6 }}
+                      >
+                        {NEXT_STATUS_OPTIONS.map((v) => (
+                          <option key={v} value={v}>
+                            {statusLabels[v] ?? v}
+                          </option>
+                        ))}
+                      </select>
+                    </li>
+                  );
+                })}
+              </ul>
             ) : null}
 
             <div className={own.footerRow}>

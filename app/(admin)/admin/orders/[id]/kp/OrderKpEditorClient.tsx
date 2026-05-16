@@ -2,46 +2,34 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import type { CommercialProposalApi, CommercialProposalLineApi, CommercialProposalSummaryApi } from '@/lib/commercialProposal/types';
 import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
 import styles from '../../../catalog/catalogAdmin.module.css';
-import { OrderKpPublishConfirmModal, type KpOfferTotals, type NextOrderStatusChoice } from './OrderKpPublishConfirmModal';
+import { kpGrossTotals } from '@/lib/commercialProposal/kpGrossDimensions';
+import { KpGrossDisplay, KpGrossTotalsDisplay } from '@/components/commercialProposal/KpGrossDisplay';
+import { kpLineTotalRub, kpOfferAggregates } from '@/lib/commercialProposal/kpOfferTotals';
+import { OrderKpGrossEditModal } from './OrderKpGrossEditModal';
+import { OrderKpPublishConfirmModal, type NextOrderStatusChoice } from './OrderKpPublishConfirmModal';
 import { OrderKpReplaceModal } from './OrderKpReplaceModal';
+
+const iconBtnStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 4,
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  borderRadius: 4,
+};
 
 function lineTitle(snap: Record<string, unknown> | null): string {
   if (snap && typeof snap.productName === 'string' && snap.productName.trim()) return snap.productName.trim();
   return '—';
-}
-
-function lineTotalRub(line: CommercialProposalLineApi): number {
-  const unit = line.offerUnitPrice;
-  const disc = line.discountPercent != null && Number.isFinite(line.discountPercent) ? line.discountPercent : 0;
-  const factor = 1 - Math.min(100, Math.max(0, disc)) / 100;
-  return Math.round(unit * factor * line.quantity * 100) / 100;
-}
-
-function kpOfferAggregates(lines: CommercialProposalLineApi[]): KpOfferTotals {
-  let oldTotal = 0;
-  let newTotal = 0;
-  let weightedDisc = 0;
-  for (const l of lines) {
-    const base = l.offerUnitPrice * l.quantity;
-    oldTotal += base;
-    newTotal += lineTotalRub(l);
-    const d = l.discountPercent != null && Number.isFinite(l.discountPercent) ? l.discountPercent : 0;
-    weightedDisc += base * d;
-  }
-  oldTotal = Math.round(oldTotal * 100) / 100;
-  newTotal = Math.round(newTotal * 100) / 100;
-  return {
-    oldTotalRub: oldTotal,
-    newTotalRub: newTotal,
-    avgDiscountPercent: oldTotal > 0 ? weightedDisc / oldTotal : 0,
-  };
 }
 
 function parseOfferPriceInput(raw: string): number {
@@ -106,9 +94,10 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
   const [publishing, setPublishing] = useState(false);
   const [needsInit, setNeedsInit] = useState(false);
   const [replaceLineIndex, setReplaceLineIndex] = useState<number | null>(null);
+  const [grossEditLineIndex, setGrossEditLineIndex] = useState<number | null>(null);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
-  const [nextOrderStatus, setNextOrderStatus] = useState<NextOrderStatusChoice>('ORDERED');
+  const [nextOrderStatus, setNextOrderStatus] = useState<NextOrderStatusChoice>('PROPOSAL_FORMED');
 
   const basePath = `orders/admin/${encodeURIComponent(orderId)}/commercial-proposals`;
 
@@ -230,15 +219,13 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
   }
 
   const kpTotals = useMemo(() => kpOfferAggregates(lines), [lines]);
+  const grossTotals = useMemo(() => kpGrossTotals(lines), [lines]);
   const avgDiscountPctLabel = `${Math.round(kpTotals.avgDiscountPercent * 10) / 10}%`;
 
   const publishedHint =
     summary && summary.published.length > 0
       ? `Опубликовано: v${summary.published[0]!.versionNumber} (${summary.published[0]!.lineCount} поз.)`
       : d.kpNotSentYet;
-
-  const replaceInitialProductId =
-    replaceLineIndex != null ? lines[replaceLineIndex]?.productId ?? null : null;
 
   const publishConfirmLabels = useMemo(
     () => ({
@@ -252,7 +239,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
 
   useEffect(() => {
     if (publishConfirmOpen && orderStatus === 'PENDING_APPROVAL') {
-      setNextOrderStatus('ORDERED');
+      setNextOrderStatus('PROPOSAL_FORMED');
     }
   }, [publishConfirmOpen, orderStatus]);
 
@@ -328,12 +315,15 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                   <tr>
                     <th>{d.thProduct}</th>
                     <th>Конфигурация</th>
+                    <th>Габариты брутто</th>
                     <th>{d.kpQtyPieces}</th>
                     <th>{d.thPrice}</th>
                     <th>Скидка %</th>
                     <th>Срок поставки</th>
                     <th>{d.thLineTotal}</th>
-                    <th>{d.kpColumnActions}</th>
+                    <th scope="col" style={{ width: 48 }} aria-label={d.kpBtnReplace}>
+                      <img src="/icons/change-product.svg" alt="" width={24} height={24} />
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -362,6 +352,24 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                           ) : (
                             '—'
                           )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                            <KpGrossDisplay
+                              snapshot={snap}
+                              className={styles.cardNote}
+                              style={{ fontSize: '0.8125rem', flex: 1 }}
+                            />
+                            <button
+                              type="button"
+                              style={{ ...iconBtnStyle, flexShrink: 0 }}
+                              aria-label="Редактировать габариты брутто"
+                              title="Редактировать габариты брутто"
+                              onClick={() => setGrossEditLineIndex(i)}
+                            >
+                              <img src="/icons/edit.svg" alt="" width={20} height={20} />
+                            </button>
+                          </div>
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -424,43 +432,76 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                             style: 'currency',
                             currency: 'RUB',
                             maximumFractionDigits: 0,
-                          }).format(lineTotalRub(line))}
+                          }).format(kpLineTotalRub(line))}
                         </td>
                         <td>
                           <button
                             type="button"
-                            className={styles.btn}
-                            style={{ whiteSpace: 'nowrap' }}
+                            style={iconBtnStyle}
+                            aria-label={d.kpBtnReplace}
+                            title={d.kpBtnReplace}
                             onClick={() => setReplaceLineIndex(i)}
                           >
-                            {d.kpBtnReplace}
+                            <img src="/icons/change-product.svg" alt="" width={24} height={24} />
                           </button>
                         </td>
                       </tr>
                     );
                   })}
+                  {lines.length > 0 ? (
+                    <tr>
+                      <td colSpan={8} className={styles.cardNote}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 24,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <div>
+                            {grossTotals.hasAny ? (
+                              <>
+                                <strong>Итого (брутто):</strong>{' '}
+                                <KpGrossTotalsDisplay totals={grossTotals} />
+                              </>
+                            ) : null}
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 12,
+                              flexWrap: 'wrap',
+                              marginLeft: 'auto',
+                            }}
+                          >
+                            <strong>Итого:</strong>
+                            <span className={styles.cardNote} style={{ textDecoration: 'line-through' }}>
+                              {new Intl.NumberFormat(numberLocale, {
+                                style: 'currency',
+                                currency: 'RUB',
+                                maximumFractionDigits: 0,
+                              }).format(kpTotals.oldTotalRub)}
+                            </span>
+                            <span style={{ color: 'var(--color-red)' }}>{avgDiscountPctLabel}</span>
+                            <strong>
+                              {new Intl.NumberFormat(numberLocale, {
+                                style: 'currency',
+                                currency: 'RUB',
+                                maximumFractionDigits: 0,
+                              }).format(kpTotals.newTotalRub)}
+                            </strong>
+                          </div>
+                        </div>
+                      </td>
+                      <td />
+                    </tr>
+                  ) : null}
                 </tbody>
               </table>
             </div>
-            <p className={styles.cardNote} style={{ marginTop: 12 }}>
-              <span>{avgDiscountPctLabel}</span>
-              <span aria-hidden> · </span>
-              <span>
-                {new Intl.NumberFormat(numberLocale, {
-                  style: 'currency',
-                  currency: 'RUB',
-                  maximumFractionDigits: 0,
-                }).format(kpTotals.oldTotalRub)}
-              </span>
-              <span aria-hidden> · </span>
-              <strong style={{ color: 'var(--color-black)' }}>
-                {new Intl.NumberFormat(numberLocale, {
-                  style: 'currency',
-                  currency: 'RUB',
-                  maximumFractionDigits: 0,
-                }).format(kpTotals.newTotalRub)}
-              </strong>
-            </p>
           </div>
         </>
       ) : null}
@@ -468,6 +509,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
       <OrderKpPublishConfirmModal
         open={publishConfirmOpen}
         orderId={orderId}
+        lines={lines}
         lineCount={lines.length}
         totals={kpTotals}
         numberLocale={numberLocale}
@@ -484,7 +526,6 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
 
       <OrderKpReplaceModal
         open={replaceLineIndex != null}
-        initialProductId={replaceInitialProductId}
         onClose={() => setReplaceLineIndex(null)}
         onApply={({ productId, productVariantId, snapshot }) => {
           if (replaceLineIndex == null) return;
@@ -503,6 +544,31 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                 : l,
             ),
           );
+        }}
+      />
+
+      <OrderKpGrossEditModal
+        open={grossEditLineIndex != null}
+        productName={lineTitle(
+          grossEditLineIndex != null &&
+            lines[grossEditLineIndex]?.snapshot &&
+            typeof lines[grossEditLineIndex].snapshot === 'object'
+            ? (lines[grossEditLineIndex].snapshot as Record<string, unknown>)
+            : null,
+        )}
+        snapshot={
+          grossEditLineIndex != null &&
+          lines[grossEditLineIndex]?.snapshot &&
+          typeof lines[grossEditLineIndex].snapshot === 'object'
+            ? (lines[grossEditLineIndex].snapshot as Record<string, unknown>)
+            : null
+        }
+        onClose={() => setGrossEditLineIndex(null)}
+        onSave={(nextSnap) => {
+          if (grossEditLineIndex == null) return;
+          const idx = grossEditLineIndex;
+          setGrossEditLineIndex(null);
+          updateLine(idx, { snapshot: nextSnap });
         }}
       />
     </div>

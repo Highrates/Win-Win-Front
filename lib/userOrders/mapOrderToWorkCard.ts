@@ -1,10 +1,9 @@
 import type { AccountOrderWorkCardProps } from '@/components/AccountOrders/AccountOrderWorkCard';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
+import { CUSTOMER_IN_WORK_STATUSES, orderStatusLabel } from '@/lib/orders/orderStatus';
 import type { UserOrderListItemApi } from './types';
 
 const PLACEHOLDER = '/images/placeholder.svg';
-
-const IN_WORK_STATUSES = new Set(['PENDING_APPROVAL', 'ORDERED', 'PAID', 'REJECTED']);
 
 function orderItemThumb(item: UserOrderListItemApi['items'][number]): string {
   const s = item.snapshot && typeof item.snapshot === 'object' ? (item.snapshot as Record<string, unknown>) : null;
@@ -12,23 +11,6 @@ function orderItemThumb(item: UserOrderListItemApi['items'][number]): string {
   const u = item.product?.images?.[0]?.url;
   if (typeof u === 'string' && u.trim()) return u.trim();
   return PLACEHOLDER;
-}
-
-function statusLabelRu(status: string): string {
-  switch (status) {
-    case 'PENDING_APPROVAL':
-      return 'На согласовании';
-    case 'ORDERED':
-      return 'Заказано';
-    case 'PAID':
-      return 'Оплачено';
-    case 'RECEIVED':
-      return 'Получено';
-    case 'REJECTED':
-      return 'Заказ отклонён';
-    default:
-      return 'В работе';
-  }
 }
 
 function formatOrderDate(iso: string): string {
@@ -53,7 +35,7 @@ function formatTotalRub(amount: string | number, currency: string): string {
 
 /** Заказы для вкладки «В работе» (не черновик, не завершён). */
 export function filterInWorkOrders(orders: UserOrderListItemApi[]): UserOrderListItemApi[] {
-  return orders.filter((o) => IN_WORK_STATUSES.has(o.status));
+  return orders.filter((o) => CUSTOMER_IN_WORK_STATUSES.has(o.status));
 }
 
 /** Самые свежие по `updatedAt` — первыми в списке (fallback на `createdAt`). */
@@ -78,16 +60,7 @@ export function mapUserOrderToWorkCard(
   const shortNo = formatOrderDisplayId(order.id);
 
   const sumLabel =
-    order.status === 'PENDING_APPROVAL'
-      ? 'Ожидаемая сумма заказа'
-      : order.status === 'REJECTED'
-        ? 'Сумма (не принята)'
-        : 'Сумма';
-
-  const statusNotice =
-    order.status === 'REJECTED'
-      ? 'Причина отклонения — в чате по заказу. Если остались вопросы, напишите нам в ответ.'
-      : undefined;
+    order.status === 'PENDING_APPROVAL' ? 'Ожидаемая сумма заказа' : 'Сумма';
 
   const etaRaw = order.commercialProposalDeliveryEta?.trim();
   const etaDisplay = etaRaw && etaRaw.length ? etaRaw : 'по согласованию';
@@ -110,7 +83,7 @@ export function mapUserOrderToWorkCard(
         })()
       : undefined;
 
-  const metaRows: AccountOrderWorkCardProps['metaRows'] = offer
+  const metaRows = offer
     ? [
         { label: 'Номер', value: shortNo, valueTitle: order.id },
         { label: 'Позиций', value: String(skuCount) },
@@ -124,14 +97,13 @@ export function mapUserOrderToWorkCard(
 
   return {
     orderId: order.id,
-    statusLabel: statusLabelRu(order.status),
-    statusNotice,
+    statusLabel: orderStatusLabel(order.status, 'ru'),
     dateLine: formatOrderDate(order.createdAt),
     chatTitle: `Чат · ${shortNo}`,
     metaRows,
     productThumbSrcs: thumbs.length ? thumbs : [PLACEHOLDER],
-    hideMoreMenu: order.status === 'REJECTED' || order.status === 'PENDING_APPROVAL',
-    statusRejected: order.status === 'REJECTED',
+    hideMoreMenu: order.status === 'PENDING_APPROVAL',
+    statusRejected: false,
     onOpenDetails: opts?.onOpenDetails,
     detailHref: opts?.onOpenDetails ? undefined : `/account/orders/${order.id}`,
     ctaCount: 1,
