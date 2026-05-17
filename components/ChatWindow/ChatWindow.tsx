@@ -1,7 +1,16 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { OrderChatPendingUiAttachment } from '@/lib/orderChat/types';
 import { openOrderChatPhotoSwipe } from '@/lib/orderChat/openOrderChatPhotoSwipe';
 import styles from './ChatWindow.module.css';
@@ -32,6 +41,12 @@ type Props = {
   onSend?: (text: string) => void;
   /** Боковая колонка: без портала и без fixed-позиционирования */
   variant?: 'portal' | 'embedded';
+  /**
+   * Только при `variant="embedded"`: как встроить чат в родителя.
+   * `fill` — колонка на высоту контейнера (админка).
+   * `overlay` — у нижнего правого края родителя, как в режиме портала, но остаётся в DOM родителя (ловушка фокуса).
+   */
+  embeddedLayout?: 'fill' | 'overlay';
   hideCloseButton?: boolean;
   messageEmptyHint?: string;
   inputPlaceholder?: string;
@@ -161,6 +176,7 @@ export function ChatWindow({
   messages = [],
   onSend,
   variant = 'portal',
+  embeddedLayout = 'fill',
   hideCloseButton = false,
   messageEmptyHint = 'Пока нет сообщений',
   inputPlaceholder = 'Сообщение',
@@ -178,10 +194,70 @@ export function ChatWindow({
   const titleId = useId();
   const fileInputId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState('');
   /** Два rAF: даём браузеру собрать слой с backdrop-filter до плавного появления */
   const [blendReady, setBlendReady] = useState(false);
   const embedded = variant === 'embedded';
+
+  /** Прокручивает область сообщений так, чтобы внизу был конец истории и поле композера оставалось «у последних». */
+  const scrollMessagesToBottom = useCallback(() => {
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, []);
+
+  const messagesFingerprint = useMemo(() => {
+    if (messages.length === 0) return '0';
+    const tail = messages[messages.length - 1]!;
+    return `${messages.length}:${tail.id}`;
+  }, [messages]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    scrollMessagesToBottom();
+    let raf1 = 0;
+    const raf0 = requestAnimationFrame(() => {
+      raf1 = requestAnimationFrame(scrollMessagesToBottom);
+    });
+    return () => {
+      cancelAnimationFrame(raf0);
+      cancelAnimationFrame(raf1);
+    };
+  }, [open, blendReady, messagesFingerprint, scrollMessagesToBottom]);
+
+  /** Картинки в лентах могут дорисоваться после layout — подтягиваем низ только если уже у «предпоследних» сообщений. */
+  useEffect(() => {
+    if (!open) return;
+    const root = messagesScrollRef.current;
+    if (!root) return;
+
+    const nearBottom = (px = 120) =>
+      root.scrollHeight - root.scrollTop - root.clientHeight <= px;
+
+    const maybeStickToBottom = () => {
+      if (!nearBottom()) return;
+      root.scrollTop = root.scrollHeight;
+    };
+
+    const ro = new ResizeObserver(() => {
+      maybeStickToBottom();
+    });
+    ro.observe(root);
+
+    let mo: MutationObserver | null = null;
+    try {
+      mo = new MutationObserver(() => maybeStickToBottom());
+      mo.observe(root, { childList: true, subtree: true, characterData: true });
+    } catch {
+      mo = null;
+    }
+
+    return () => {
+      ro.disconnect();
+      mo?.disconnect();
+    };
+  }, [open, messagesFingerprint]);
 
   useEffect(() => {
     if (!open) {
@@ -247,9 +323,11 @@ export function ChatWindow({
   const attachBlocked =
     attachPickerDisabled !== undefined ? attachPickerDisabled : composerDisabled;
 
+  const fillEmbedded = embedded && embeddedLayout === 'fill';
+
   const panelSection = (
     <section
-      className={`${styles.panel} ${embedded ? styles.panelEmbedded : ''}`}
+      className={`${styles.panel} ${fillEmbedded ? styles.panelEmbedded : ''}`}
       {...(embedded
         ? ({ role: 'region' as const } as const)
         : ({ role: 'dialog' as const, 'aria-modal': true as const } as const))}
@@ -270,7 +348,7 @@ export function ChatWindow({
           <div className={styles.headerMainRule} aria-hidden />
         </header>
 
-        <div className={styles.messagesScroll}>
+        <div ref={messagesScrollRef} className={styles.messagesScroll}>
           {errorText ? (
             <p className={styles.chatErrorBanner} role="alert">
               {errorText}
@@ -447,6 +525,15 @@ export function ChatWindow({
   );
 
   if (embedded) {
+    if (embeddedLayout === 'overlay') {
+      return (
+        <div
+          className={`${styles.embedOverlayAnchor} ${blendReady ? styles.embedOverlayAnchorVisible : ''}`}
+        >
+          {panelSection}
+        </div>
+      );
+    }
     return (
       <div className={`${styles.embedShell} ${blendReady ? styles.embedShellVisible : ''}`}>{panelSection}</div>
     );

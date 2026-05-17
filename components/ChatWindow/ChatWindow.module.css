@@ -16,6 +16,27 @@
   pointer-events: auto;
 }
 
+/* Встроенный «угол»: абсолютно в родителе (модалка ЛК), визуально как .root без портала */
+.embedOverlayAnchor {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.embedOverlayAnchorVisible {
+  pointer-events: auto;
+}
+
+.root.rootVisible > .panel,
+.embedOverlayAnchor.embedOverlayAnchorVisible > .panel,
+.embedShell.embedShellVisible > .panel {
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* Встроенный режим (колонка админки): без fixed, на всю высоту контейнера */
 .embedShell {
   display: flex;
@@ -64,12 +85,6 @@
     inset 0 -0.5px 0 rgba(0, 0, 0, 0.04);
   outline: 0.5px solid var(--chat-stroke);
   outline-offset: -0.5px;
-}
-
-.root.rootVisible > .panel,
-.embedShell.embedShellVisible > .panel {
-  transform: translate3d(0, 0, 0);
-  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .panelEmbedded {

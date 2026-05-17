@@ -1,18 +1,19 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import modalStyles from '@/app/(account)/account/projects/components/CreateEditProjectModal.module.css';
 import { AdminOrderSideChat } from '../AdminOrderSideChat';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
-import { ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
+import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
+import { KP_PUBLISH_NEXT_STATUSES } from '@/lib/orders/orderStatus';
 import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
 import type { KpOfferTotals } from '@/lib/commercialProposal/kpOfferTotals';
 import catalogStyles from '../../../catalog/catalogAdmin.module.css';
 import own from './OrderKpPublishConfirmModal.module.css';
 
-export type NextOrderStatusChoice = Exclude<(typeof ORDER_STATUS_FLOW)[number], 'PENDING_APPROVAL'>;
+export type NextOrderStatusChoice = (typeof KP_PUBLISH_NEXT_STATUSES)[number];
 
 type Labels = {
   title: string;
@@ -30,7 +31,7 @@ type Props = {
   numberLocale: string;
   labels: Labels;
   publishing: boolean;
-  /** Заказ «На согласовании» — выбор следующего статуса по каждой позиции */
+  /** Заказ «На согласовании» — выбор следующего статуса заказа */
   showNextStatus: boolean;
   nextOrderStatus: NextOrderStatusChoice;
   onNextOrderStatus: (s: NextOrderStatusChoice) => void;
@@ -51,9 +52,7 @@ function lineTitle(snap: Record<string, unknown> | null): string {
   return '—';
 }
 
-const NEXT_STATUS_OPTIONS: NextOrderStatusChoice[] = ORDER_STATUS_FLOW.filter(
-  (s) => s !== 'PENDING_APPROVAL',
-) as NextOrderStatusChoice[];
+const NEXT_STATUS_OPTIONS: NextOrderStatusChoice[] = [...KP_PUBLISH_NEXT_STATUSES];
 
 export function OrderKpPublishConfirmModal({
   open,
@@ -70,9 +69,12 @@ export function OrderKpPublishConfirmModal({
   onClose,
   onConfirm,
 }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const { locale } = useAdminLocale();
   const d = useMemo(() => adminOrderDetailStrings(locale), [locale]);
   const statusLabels = useMergedAdminOrderStatusLabels();
+
+  useModalFocusTrap(open, panelRef);
 
   useEffect(() => {
     if (!open) return;
@@ -97,6 +99,7 @@ export function OrderKpPublishConfirmModal({
 
   const pct = Math.round(totals.avgDiscountPercent * 10) / 10;
   const pctLabel = `${pct}%`;
+  const showDiscountRed = pct > 0;
   const oldF = formatRubInt(totals.oldTotalRub, numberLocale);
   const newF = formatRubInt(totals.newTotalRub, numberLocale);
 
@@ -110,7 +113,11 @@ export function OrderKpPublishConfirmModal({
         if (e.target === e.currentTarget && !publishing) onClose();
       }}
     >
-      <div className={`${modalStyles.panel} ${own.panelWide}`}>
+      <div
+        ref={panelRef}
+        className={`${modalStyles.panel} ${own.panelWide}`}
+        tabIndex={-1}
+      >
         <div className={modalStyles.panelHead}>
           <h2 id="kp-publish-confirm-title" className={modalStyles.panelTitle}>
             {labels.title}
@@ -131,7 +138,7 @@ export function OrderKpPublishConfirmModal({
             <p className={own.summaryTitle}>{d.kpPublishSummaryHeading}</p>
             <p className={own.summaryMeta}>{d.kpPublishPositions(lineCount)}</p>
             <p className={own.digitsRow}>
-              <span style={{ color: 'var(--color-red)' }}>{pctLabel}</span>
+              <span className={showDiscountRed ? own.digitsDiscount : undefined}>{pctLabel}</span>
               <span className={own.sep} aria-hidden>
                 ·
               </span>
@@ -142,35 +149,38 @@ export function OrderKpPublishConfirmModal({
               <span className={own.grandNew}>{newF}</span>
             </p>
 
-            {showNextStatus && lines.length > 0 ? (
-              <ul className={own.linesList}>
+            {showNextStatus ? (
+              <div className={own.statusBlock}>
+                <label className={own.statusLabel} htmlFor="kp-publish-next-status">
+                  {d.kpPublishNextStatus}
+                </label>
+                <select
+                  id="kp-publish-next-status"
+                  className={catalogStyles.input}
+                  value={nextOrderStatus}
+                  disabled={publishing}
+                  onChange={(e) => onNextOrderStatus(e.target.value as NextOrderStatusChoice)}
+                  style={{ width: '100%', marginTop: 8 }}
+                >
+                  {NEXT_STATUS_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {statusLabels[v] ?? v}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
+            {lines.length > 0 ? (
+              <ul className={own.linesList} aria-label="Позиции в предложении">
                 {lines.map((line) => {
                   const snap =
                     line.snapshot && typeof line.snapshot === 'object'
                       ? (line.snapshot as Record<string, unknown>)
                       : null;
-                  const name = lineTitle(snap);
-                  const selectId = `kp-publish-status-${line.id}`;
                   return (
                     <li key={line.id} className={own.lineRow}>
-                      <p className={own.lineName}>{name}</p>
-                      <label className={own.statusLabel} htmlFor={selectId}>
-                        {d.kpPublishNextStatus}
-                      </label>
-                      <select
-                        id={selectId}
-                        className={catalogStyles.input}
-                        value={nextOrderStatus}
-                        disabled={publishing}
-                        onChange={(e) => onNextOrderStatus(e.target.value as NextOrderStatusChoice)}
-                        style={{ width: '100%', marginTop: 6 }}
-                      >
-                        {NEXT_STATUS_OPTIONS.map((v) => (
-                          <option key={v} value={v}>
-                            {statusLabels[v] ?? v}
-                          </option>
-                        ))}
-                      </select>
+                      <p className={own.lineName}>{lineTitle(snap)}</p>
                     </li>
                   );
                 })}

@@ -67,6 +67,14 @@
   color: var(--color-gray);
 }
 
+.digitsDiscount {
+  color: var(--color-red);
+}
+
+.statusBlock {
+  margin-bottom: 20px;
+}
+
 .linesList {
   list-style: none;
   margin: 0 0 20px;

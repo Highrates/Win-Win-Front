@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import { AccordionBig } from '@/app/(account)/account/orders/AccordionBig';
 import { ACCOUNT_WORK_NOTIFICATIONS_EVENT } from '@/lib/account/orders';
 import teamPageStyles from '@/app/(account)/account/team/page.module.css';
@@ -129,9 +130,12 @@ function TableFlowArrow() {
 function AccountOrderItemsTable({
   order,
   positionHeader,
+  footerMuted = false,
 }: {
   order: UserOrderDetailApi;
   positionHeader: string;
+  /** При наличии КП — исходная сумма заявки вторична */
+  footerMuted?: boolean;
 }) {
   if (order.items.length === 0) {
     return <p className={styles.muted}>Нет позиций</p>;
@@ -198,10 +202,15 @@ function AccountOrderItemsTable({
             );
           })}
           <tr className={styles.tableFooterRow}>
-            <td colSpan={4} className={teamPageStyles.tdRightTightFirst}>
+            <td
+              colSpan={4}
+              className={`${teamPageStyles.tdRightTightFirst}${footerMuted ? ` ${styles.tableFooterMuted}` : ''}`}
+            >
               Ожидаемая сумма заказа
             </td>
-            <td className={`${teamPageStyles.tdRightTight} ${styles.tableFooterValue}`}>
+            <td
+              className={`${teamPageStyles.tdRightTight} ${styles.tableFooterValue}${footerMuted ? ` ${styles.tableFooterMuted}` : ''}`}
+            >
               {formatRub(order.totalAmount, order.currency)}
             </td>
           </tr>
@@ -344,6 +353,7 @@ type Props = {
 const KP_LINES_SCROLL_THRESHOLD = 5;
 
 export function AccountOrderDetailModal({ orderId, onClose }: Props) {
+  const panelRef = useRef<HTMLElement>(null);
   const [order, setOrder] = useState<UserOrderDetailApi | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -434,7 +444,6 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
     return `Чат · ${formatOrderDisplayId(order.id)}`;
   }, [order]);
 
-  const hasCheckout = Boolean(hasKp);
 
   useEffect(() => {
     if (!order || !hasKp || kpLines.length < KP_LINES_SCROLL_THRESHOLD) return;
@@ -444,18 +453,24 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
     return () => window.cancelAnimationFrame(id);
   }, [order?.id, hasKp, kpLines.length]);
 
+  useModalFocusTrap(Boolean(orderId), panelRef);
+
   if (!orderId) return null;
 
   return (
     <>
       <button type="button" className={panelModal.backdrop} aria-label="Закрыть" onClick={onClose} />
       <section
+        ref={panelRef}
         className={`${panelModal.panel} ${panelModal.panelOrderWide} ${styles.orderDetailModalShell}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="account-order-detail-title"
+        tabIndex={-1}
       >
         <ChatWindow
+          variant="embedded"
+          embeddedLayout="overlay"
           open={chatOpen}
           onClose={() => setChatOpen(false)}
           title={chatTitle}
@@ -509,7 +524,7 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
                 </div>
                 <button
                   type="button"
-                  className={`${workCardStyles.ctaButton} ${styles.modalCtaMessage}${staffUnread > 0 ? ` ${workCardStyles.ctaButtonUnread}` : ''}${!hasCheckout ? ` ${styles.modalCtaMessageSolo}` : ''}`}
+                  className={`${workCardStyles.ctaButton} ${styles.modalCtaMessage} ${styles.modalCtaMessageSolo}${staffUnread > 0 ? ` ${workCardStyles.ctaButtonUnread}` : ''}`}
                   aria-label={
                     staffUnread > 0 ? `Написать по заказу, непрочитанных: ${staffUnread}` : 'Написать по заказу'
                   }
@@ -522,12 +537,6 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
                     <span className={workCardStyles.ctaUnreadCount}>({staffUnread})</span>
                   ) : null}
                 </button>
-                {hasCheckout ? (
-                  <button type="button" className={`${workCardStyles.orderCheckoutBtn} ${styles.modalCtaCheckout}`}>
-                    <span>Оформить</span>
-                    <span aria-hidden>→</span>
-                  </button>
-                ) : null}
               </div>
 
               <AccordionBig title="Детали" className={styles.accordionFullWidth} panelClassName={styles.accordionPanelMeta}>
@@ -550,7 +559,7 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
                   <div className={styles.orderTableFrameWrapPrev}>
                     <p className={styles.orderSnapshotLabel}>Исходный заказ</p>
                     <div className={styles.orderTableFrameDimTarget}>
-                      <AccountOrderItemsTable order={order} positionHeader="Товар" />
+                      <AccountOrderItemsTable order={order} positionHeader="Товар" footerMuted />
                     </div>
                   </div>
                   <TableFlowArrow />

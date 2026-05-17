@@ -31,9 +31,7 @@ export type AccountOrderWorkCardProps = {
   detailHref?: string;
   /** Открыть детали в модалке (приоритетнее detailHref) */
   onOpenDetails?: () => void;
-  /** 1 или 2 кнопки с иконкой сообщения в колонке orderCTA */
-  ctaCount?: 1 | 2;
-  /** Блок цен и бонуса справа от меты + кнопка «Оформить» в orderCTA */
+  /** Блок цен и бонуса справа от меты */
   offer?: AccountOrderWorkOffer;
   /** Заголовок окна чата (кнопка сообщения) */
   chatTitle?: string;
@@ -115,7 +113,6 @@ export function AccountOrderWorkCard({
   productThumbSrcs,
   detailHref,
   onOpenDetails,
-  ctaCount = 1,
   offer,
   chatTitle = 'Сообщения',
   hideMoreMenu = false,
@@ -125,8 +122,6 @@ export function AccountOrderWorkCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const menuWrapRef = useRef<HTMLDivElement>(null);
-  const hasCheckout = Boolean(offer);
-
   const {
     chatMessages,
     chatLoading,
@@ -285,19 +280,6 @@ export function AccountOrderWorkCard({
           onClick={openChat}
           ariaLabel="Написать по заказу"
         />
-        {ctaCount === 2 && !hasCheckout ? (
-          <MessageCtaButton
-            staffUnreadCount={staffUnreadCount}
-            onClick={openChat}
-            ariaLabel="Сообщения по заказу"
-          />
-        ) : null}
-        {hasCheckout ? (
-          <button type="button" className={styles.orderCheckoutBtn}>
-            <span>Оформить</span>
-            <span aria-hidden>→</span>
-          </button>
-        ) : null}
       </div>
     </div>
   );

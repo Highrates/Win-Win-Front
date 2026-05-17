@@ -106,7 +106,6 @@ export function mapUserOrderToWorkCard(
     statusRejected: false,
     onOpenDetails: opts?.onOpenDetails,
     detailHref: opts?.onOpenDetails ? undefined : `/account/orders/${order.id}`,
-    ctaCount: 1,
     offer,
     staffUnreadCount: order.unreadStaffChatCount ?? 0,
   };

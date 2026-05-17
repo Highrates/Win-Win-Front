@@ -37,27 +37,20 @@
   min-width: 0;
 }
 
-/** Кнопки чата / оформления в модалке заказа — без обёртки `.orderCTA`, сами ячейки сетки */
-.modalCtaMessage,
-.modalCtaCheckout {
+/** Кнопка чата в модалке заказа — без обёртки `.orderCTA`, ячейка сетки */
+.modalCtaMessage {
   box-sizing: border-box;
   min-width: 0;
 }
 
-.orderDetailModalShell .modalCtaCheckout {
-  justify-content: center;
-  text-align: center;
-}
-
-/** В широкой модалке: на мобиле — столбик; на десктопе — сетка 5 колонок (мета 1–3, чат 4, оформить 5). */
+/** В широкой модалке: на мобиле — столбик; на десктопе — сетка 5 колонок (мета 1–3, чат 5). */
 @media (max-width: 767.98px) {
   .orderDetailModalShell .metaGridStacked {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .orderDetailModalShell .metaGridStacked .modalCtaMessage,
-  .orderDetailModalShell .metaGridStacked .modalCtaCheckout {
+  .orderDetailModalShell .metaGridStacked .modalCtaMessage {
     width: 100%;
     max-width: none;
   }
@@ -84,20 +77,11 @@
     min-width: 0;
   }
 
-  .orderDetailModalShell .metaGridStacked .modalCtaMessage {
-    grid-column: 4 / 5;
-    align-self: stretch;
-    width: 100%;
-  }
-
-  .orderDetailModalShell .metaGridStacked .modalCtaCheckout {
+  .orderDetailModalShell .metaGridStacked .modalCtaMessage,
+  .orderDetailModalShell .metaGridStacked .modalCtaMessageSolo {
     grid-column: 5 / 6;
     align-self: stretch;
     width: 100%;
-  }
-
-  .orderDetailModalShell .metaGridStacked .modalCtaMessageSolo {
-    grid-column: 4 / 6;
   }
 }
 
@@ -206,6 +190,11 @@
 td.tableFooterValue {
   font-weight: 450;
   color: var(--color-black);
+}
+
+.tableFooterMuted {
+  color: var(--color-gray);
+  font-weight: var(--text-body-weight);
 }
 
 /** Перекрывает фиксированные 372px у `.accordionBig` на странице заказов */

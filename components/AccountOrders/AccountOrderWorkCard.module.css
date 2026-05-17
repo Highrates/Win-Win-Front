@@ -300,35 +300,6 @@
   font-family: var(--font-commissioner);
 }
 
-.orderCheckoutBtn {
-  flex: 1 1 0;
-  min-height: 0;
-  align-self: stretch;
-  padding: 16px 18px;
-  background: var(--color-ink-black);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-commissioner);
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-  color: var(--color-white);
-  box-sizing: border-box;
-}
-
-.orderCheckoutBtn:focus-visible {
-  outline: 2px solid var(--color-blue);
-  outline-offset: 2px;
-}
-
-.orderCheckoutBtn:hover {
-  opacity: 0.92;
-}
-
 @media (max-width: 768px) {
   .orderWrapper {
     flex-direction: column;
@@ -353,15 +324,6 @@
     min-width: 0;
     min-height: 72px;
     width: auto;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-  }
-
-  .orderCheckoutBtn {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 72px;
     justify-content: center;
     align-items: center;
     text-align: center;
