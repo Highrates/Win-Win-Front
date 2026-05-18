@@ -42,10 +42,10 @@ export function useAdminOrderChatStaffUnreadEvents(isLoginRoute: boolean) {
 
     void (async () => {
       try {
-        const token = await fetchOrderChatWsToken('admin');
+        const wsAuth = await fetchOrderChatWsToken('admin');
         if (cancelled) return;
-        unregisterSession = registerOrderChatWsSession('admin', token);
-        const socket = getOrCreateSharedOrderChatSocket('admin', token);
+        unregisterSession = registerOrderChatWsSession('admin', wsAuth);
+        const socket = getOrCreateSharedOrderChatSocket('admin', wsAuth);
         await waitOrderChatSocketConnect(socket).catch(() => undefined);
         if (cancelled) return;
 

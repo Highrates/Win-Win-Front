@@ -1,21 +1,84 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { TBtn } from '@/components/TBtn/TBtn';
-import { PROFILE_PERSONAL_INCOME_ROWS } from '@/lib/account/profilePersonalIncomeMock';
+import {
+  fetchPartnerProgramSummary,
+  filterCompletedPartnerLines,
+  formatPartnerRubWhole,
+  formatPartnerTableDate,
+  partnerLineOrderLabel,
+  type PartnerProgramBonusLineApi,
+  type PartnerProgramSummaryApi,
+} from '@/lib/referrals/partnerProgramSummary';
 import teamStyles from '../team/page.module.css';
 import styles from './page.module.css';
 
 const INCOME_RANGE_TABS = ['1 мес', '3 мес', '6 мес', 'За все время'] as const;
 
+const DASH = '—';
+
+function partnerLineKey(line: PartnerProgramBonusLineApi): string {
+  return `${line.orderId}-${line.orderUpdatedAt}-${line.tier}-${line.bonusRub}`;
+}
+
 export function ProfileIncomeTab() {
   const [rangeIndex, setRangeIndex] = useState(0);
+  const [summary, setSummary] = useState<PartnerProgramSummaryApi | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void fetchPartnerProgramSummary()
+      .then((s) => {
+        if (cancelled) return;
+        setSummary(s);
+        setLoadErr(null);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setSummary(null);
+          setLoadErr(e instanceof Error ? e.message : 'Не удалось загрузить доход');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const personalRows = useMemo(
+    () => filterCompletedPartnerLines(summary?.personalLines ?? []),
+    [summary?.personalLines],
+  );
+
+  const personalTotalLabel = loading
+    ? '…'
+    : summary
+      ? formatPartnerRubWhole(summary.totals.personalCompletedRub)
+      : DASH;
+
+  const teamIncomeLabel = loading
+    ? '…'
+    : summary
+      ? formatPartnerRubWhole(summary.totals.teamCompletedRub)
+      : DASH;
 
   return (
     <div className={styles.incomeTab}>
       <p className={teamStyles.partnerStatus}>Партнер Win-win</p>
+
+      {loadErr ? (
+        <p className={teamStyles.partnerStatus} role="alert" style={{ color: 'var(--color-red, #c53029)' }}>
+          {loadErr}
+        </p>
+      ) : null}
 
       <div className={`${teamStyles.sheetWrapper} ${styles.incomeSheetWrapper}`}>
         <div className={teamStyles.sheetToolbar}>
@@ -39,7 +102,7 @@ export function ProfileIncomeTab() {
           <div className={teamStyles.tableSummary}>
             <div className={teamStyles.tableSummaryLeft}>
               <span className={teamStyles.tableSummaryLabel}>Личный доход:</span>
-              <span className={teamStyles.tableSummaryAmount}>200 100 ₽</span>
+              <span className={teamStyles.tableSummaryAmount}>{personalTotalLabel}</span>
             </div>
             <div className={teamStyles.tableSummaryRight}>
               <TBtn type="button" variant="ghost">
@@ -69,15 +132,23 @@ export function ProfileIncomeTab() {
               </tr>
             </thead>
             <tbody>
-              {PROFILE_PERSONAL_INCOME_ROWS.map((row) => (
-                <tr key={row.id}>
-                  <td className={teamStyles.tdLeftTight}>{row.date}</td>
-                  <td className={teamStyles.tdDesigner}>{row.orderNo}</td>
-                  <td className={teamStyles.tdRightTightFirst}>{row.amount}</td>
-                  <td className={teamStyles.tdCenterPercent}>{row.percent}</td>
-                  <td className={teamStyles.tdRightTight}>{row.reward}</td>
+              {personalRows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className={teamStyles.tdLeftTight}>
+                    {loading ? 'Загрузка…' : 'Нет начислений по завершённым заказам прямых рефералов'}
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                personalRows.map((row) => (
+                  <tr key={partnerLineKey(row)}>
+                    <td className={teamStyles.tdLeftTight}>{formatPartnerTableDate(row.orderUpdatedAt)}</td>
+                    <td className={teamStyles.tdDesigner}>{partnerLineOrderLabel(row)}</td>
+                    <td className={teamStyles.tdRightTightFirst}>{formatPartnerRubWhole(row.catalogTotalRub)}</td>
+                    <td className={teamStyles.tdCenterPercent}>{row.percentApplied}%</td>
+                    <td className={teamStyles.tdRightTight}>{formatPartnerRubWhole(row.bonusRub)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -86,7 +157,7 @@ export function ProfileIncomeTab() {
           <div className={`${teamStyles.tableSummary} ${styles.incomeTeamSummary}`}>
             <div className={teamStyles.tableSummaryLeft}>
               <span className={teamStyles.tableSummaryLabel}>Доход от команды:</span>
-              <span className={teamStyles.tableSummaryAmount}>320 000 ₽</span>
+              <span className={teamStyles.tableSummaryAmount}>{teamIncomeLabel}</span>
               <Link href="/account/team" className={styles.incomeTeamDetailsLink}>
                 Детали
                 <img src="/icons/arrow-right.svg" alt="" width={12} height={7} aria-hidden />

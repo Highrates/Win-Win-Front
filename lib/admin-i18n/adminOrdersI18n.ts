@@ -118,5 +118,28 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     kpPublishSummaryHeading: pick(locale, 'Итог', '摘要'),
     kpPublishPositions: (n: number) => pick(locale, `Позиций: ${n}`, `${n} 项`),
     kpPublishNextStatus: pick(locale, 'Статус заказа после отправки', '发送后的订单状态'),
+    kpSectionPublished: pick(locale, 'Отправленные КП', '已发送报价单'),
+    kpPublishedLoading: pick(locale, 'Загрузка КП…', '加载报价中…'),
+    kpPublishedNone: pick(
+      locale,
+      'Отправленных коммерческих предложений пока нет.',
+      '暂无已发送的报价单。',
+    ),
+    kpPublishedVersionCaption: (
+      versionNumber: number,
+      publishedAtFormatted: string,
+      positionsLabel: string,
+    ) =>
+      pick(
+        locale,
+        `Версия ${versionNumber} · отправлено ${publishedAtFormatted} · ${positionsLabel}`,
+        `第 ${versionNumber} 版 · ${publishedAtFormatted} · ${positionsLabel}`,
+      ),
+    kpDiscountLabel: pick(locale, 'Скидка', '折扣'),
+    kpPublishedDetailError: pick(
+      locale,
+      'Не удалось загрузить строки опубликованного КП. Обновите страницу.',
+      '报价明细加载失败，请刷新页面。',
+    ),
   };
 }

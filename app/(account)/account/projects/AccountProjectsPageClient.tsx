@@ -12,6 +12,11 @@ import { readPdpProjectDraft, type PdpProjectDraftPayload } from '@/lib/designer
 import { addOrderPreparationLine, fetchOrderPreparationDraft } from '@/lib/orderPreparation/clientApi';
 import { designerProjectLineToAddOrderBody } from '@/lib/orderPreparation/designerProjectLineToAddOrderBody';
 import { storeSelectOnlyPreparationLineIds } from '@/lib/orderPreparation/selectOnlyFromProjectSession';
+import {
+  fetchPublicOrderProgram,
+  formatDesignerOwnExpectedBonusLabel,
+  type OrderProgramPublic,
+} from '@/lib/orderProgram/publicOrderProgram';
 import { AccountProjectsPageSkeleton } from './AccountProjectsPageSkeleton';
 import { AccountProjectsCta } from './components/AccountProjectsCta';
 import { AccountProjectsLinesList } from './components/AccountProjectsLinesList';
@@ -50,8 +55,27 @@ export function AccountProjectsPageClient() {
   const [pendingLineDraft, setPendingLineDraft] = useState<PdpProjectDraftPayload | null>(null);
 
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [orderProgram, setOrderProgram] = useState<OrderProgramPublic | null>(null);
 
-  const { sectionTabs, visibleLines, displayTotal, itemCount } = useProjectLinesDerived(detail, sectionTab);
+  const { sectionTabs, visibleLines, displayTotal, itemCount, projectTotalRub } = useProjectLinesDerived(
+    detail,
+    sectionTab,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPublicOrderProgram().then((cfg) => {
+      if (!cancelled) setOrderProgram(cfg);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const projectExpectedBonusLabel = useMemo(
+    () => formatDesignerOwnExpectedBonusLabel(projectTotalRub ?? 0, orderProgram),
+    [projectTotalRub, orderProgram],
+  );
 
   const onRemovedLines = useCallback((removedIds: string[]) => {
     setSelectedIds((prev) => {
@@ -274,6 +298,7 @@ export function AccountProjectsPageClient() {
             onToggleAccordion={() => setCtaAccordionOpen((o) => !o)}
             itemCount={itemCount}
             displayTotal={displayTotal}
+            expectedBonusDisplay={projectExpectedBonusLabel}
             onCheckout={handleCheckoutToOrders}
             checkoutBusy={checkoutBusy}
           />

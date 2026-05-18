@@ -8,6 +8,7 @@ import { TextField } from '@/components/TextField';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 import { resetUserSessionClientCache } from '@/lib/userSessionClient';
+import { teardownOrderChatWsForLogout } from '@/lib/orderChat/orderChatWsShared';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import styles from './page.module.css';
 
@@ -143,11 +144,13 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
     setLoggingOut(true);
     try {
       await fetch('/api/user/logout', { method: 'POST', credentials: 'same-origin' });
+      teardownOrderChatWsForLogout('account');
       resetUserSessionClientCache();
       router.push('/');
       router.refresh();
     } catch {
       /* cookie всё равно мог очиститься; ведём на главную */
+      teardownOrderChatWsForLogout('account');
       resetUserSessionClientCache();
       router.push('/');
       router.refresh();

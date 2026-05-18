@@ -75,6 +75,17 @@
   margin-bottom: 20px;
 }
 
+.flowError {
+  margin: 0 0 16px;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  font-family: var(--font-commissioner, system-ui);
+  color: var(--color-red, #c53029);
+  background: color-mix(in srgb, var(--color-red, #c53029) 8%, transparent);
+}
+
 .linesList {
   list-style: none;
   margin: 0 0 20px;

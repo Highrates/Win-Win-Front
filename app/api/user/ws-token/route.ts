@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { orderChatWsMetaFromAccessTokenJwt } from '@/lib/orderChat/parseJwtPayloadUnverified';
 import { getUserAccessTokenFromCookies } from '@/lib/userSessionServer';
 
 export async function GET() {
@@ -6,5 +7,6 @@ export async function GET() {
   if (!token) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
-  return NextResponse.json({ token });
+  const { sub, exp } = orderChatWsMetaFromAccessTokenJwt(token);
+  return NextResponse.json({ token, sub, exp });
 }

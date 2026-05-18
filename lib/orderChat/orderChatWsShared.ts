@@ -3,6 +3,7 @@
 /**
  * Одно Socket.IO-соединение на вариант (ЛК vs админка): TTL access JWT (`exp`), восстановление при обрыве.
  * Несколько `useOrderChat` с одним `variant` делят один сокет; при пересборке рассылается DOM-событие.
+ * Поля `sub` и `exp` приходят с BFF (`/api/user/ws-token`, `/api/admin/ws-token`); JWT в браузере не разбирается.
  */
 
 import { io, type Socket } from 'socket.io-client';
@@ -14,13 +15,20 @@ import {
   ORDER_CHAT_WS_REFRESH_FALLBACK_MS,
 } from '@/lib/orderChat/constants';
 import type { OrderChatVariant } from '@/lib/orderChat/constants';
-import { jwtExpiresAtMs } from '@/lib/orderChat/decodeJwtPayloadUnsafe';
 import { getWsOrigin } from '@/lib/orderChat/wsOrigin';
+
+export type OrderChatWsAuth = {
+  token: string;
+  /** JWT `sub` с BFF; для UI «свои / чужие» сообщения */
+  sub: string | null;
+  /** JWT `exp` в секундах с epoch (с BFF); для планирования пересборки сокета */
+  exp: number | null;
+};
 
 type SharedSlice =
   | {
       socket: Socket;
-      token: string;
+      auth: OrderChatWsAuth;
     }
   | null;
 
@@ -61,13 +69,27 @@ export function disposeSharedOrderChatSocket(variant: OrderChatVariant): void {
   sharedByVariant[variant] = null;
 }
 
-export async function fetchOrderChatWsToken(variant: OrderChatVariant): Promise<string> {
+/**
+ * После logout: обнулить refcount, TTL и разорвать общий сокет (handlers снимает disconnect/removeAllListeners).
+ */
+export function teardownOrderChatWsForLogout(variant: OrderChatVariant): void {
+  clearTtl(variant);
+  refCountByVariant[variant] = 0;
+  recreateInFlight[variant] = false;
+  disposeSharedOrderChatSocket(variant);
+}
+
+export async function fetchOrderChatWsToken(variant: OrderChatVariant): Promise<OrderChatWsAuth> {
   const path = variant === 'account' ? '/api/user/ws-token' : '/api/admin/ws-token';
   const res = await fetch(path, { credentials: 'same-origin', cache: 'no-store' });
   if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
-  const j = (await res.json()) as { token?: string };
-  if (!j.token?.trim()) throw new Error('Нет токена для чата');
-  return j.token.trim();
+  const j = (await res.json()) as { token?: string; sub?: string | null; exp?: number | null };
+  const token = j.token?.trim();
+  if (!token) throw new Error('Нет токена для чата');
+  const sub = j.sub === undefined || j.sub === null ? null : String(j.sub);
+  let exp: number | null = null;
+  if (typeof j.exp === 'number' && Number.isFinite(j.exp)) exp = j.exp;
+  return { token, sub: sub === '' ? null : sub, exp };
 }
 
 export function waitOrderChatSocketConnect(socket: Socket, ms = 12000): Promise<void> {
@@ -93,25 +115,25 @@ function wireRecovery(socket: Socket, variant: OrderChatVariant) {
   });
 }
 
-function delayUntilNextRefresh(token: string): number {
-  const expMs = jwtExpiresAtMs(token);
-  if (expMs == null) return ORDER_CHAT_WS_REFRESH_FALLBACK_MS;
+function delayUntilNextRefresh(expSeconds: number | null): number {
+  if (expSeconds == null) return ORDER_CHAT_WS_REFRESH_FALLBACK_MS;
+  const expMs = expSeconds * 1000;
   const left = expMs - Date.now() - ORDER_CHAT_WS_REFRESH_BUFFER_MS;
   return Math.min(Math.max(left, 10_000), 24 * 60 * 60_000);
 }
 
-function scheduleTtlRefresh(variant: OrderChatVariant, token?: string): void {
+function scheduleTtlRefresh(variant: OrderChatVariant, auth?: OrderChatWsAuth): void {
   clearTtl(variant);
   if (refCountByVariant[variant] <= 0) return;
 
-  let tok = token ?? sharedByVariant[variant]?.token;
-  if (!tok) return;
+  const a = auth ?? sharedByVariant[variant]?.auth;
+  if (!a) return;
 
   ttlTimerByVariant[variant] = setTimeout(() => {
     ttlTimerByVariant[variant] = null;
     if (refCountByVariant[variant] <= 0) return;
     void runRecreateLocked(variant, 'jwt-ttl-or-fallback');
-  }, delayUntilNextRefresh(tok));
+  }, delayUntilNextRefresh(a.exp));
 }
 
 async function runRecreateLocked(variant: OrderChatVariant, reason: string): Promise<void> {
@@ -128,11 +150,11 @@ async function recreateSharedInner(variant: OrderChatVariant, reason: string): P
   if (refCountByVariant[variant] <= 0) return;
   try {
     disposeSharedOrderChatSocket(variant);
-    const token = await fetchOrderChatWsToken(variant);
-    const socket = connectNewSharedSocket(variant, token);
+    const auth = await fetchOrderChatWsToken(variant);
+    const socket = connectNewSharedSocket(variant, auth);
     await waitOrderChatSocketConnect(socket);
     clearTtl(variant);
-    scheduleTtlRefresh(variant, token);
+    scheduleTtlRefresh(variant, auth);
     emitSocketUpdated(variant, socket);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -147,39 +169,39 @@ async function recreateSharedInner(variant: OrderChatVariant, reason: string): P
   }
 }
 
-function connectNewSharedSocket(variant: OrderChatVariant, token: string): Socket {
+function connectNewSharedSocket(variant: OrderChatVariant, auth: OrderChatWsAuth): Socket {
   const origin = getWsOrigin();
   const url = `${origin}${ORDER_CHAT_SOCKET_NAMESPACE}`;
   const socket = io(url, {
-    auth: { token },
+    auth: { token: auth.token },
     transports: ['websocket', 'polling'],
     path: '/socket.io',
   });
   wireRecovery(socket, variant);
-  sharedByVariant[variant] = { socket, token };
+  sharedByVariant[variant] = { socket, auth };
   return socket;
 }
 
 /**
  * Если токен совпадает с активным подключением — возвращает существующий сокет иначе пересоздаёт.
  */
-export function getOrCreateSharedOrderChatSocket(variant: OrderChatVariant, token: string): Socket {
+export function getOrCreateSharedOrderChatSocket(variant: OrderChatVariant, auth: OrderChatWsAuth): Socket {
   const existing = sharedByVariant[variant];
-  if (existing && existing.token === token) {
+  if (existing && existing.auth.token === auth.token) {
     return existing.socket;
   }
 
   disposeSharedOrderChatSocket(variant);
-  return connectNewSharedSocket(variant, token);
+  return connectNewSharedSocket(variant, auth);
 }
 
 /**
  * После успешного получения токена подключить чат. Первый клиент включает TTL-таймер; последний монтирования — закрывает сокет.
  */
-export function registerOrderChatWsSession(variant: OrderChatVariant, initialToken: string): () => void {
+export function registerOrderChatWsSession(variant: OrderChatVariant, auth: OrderChatWsAuth): () => void {
   refCountByVariant[variant]++;
   if (refCountByVariant[variant] === 1) {
-    scheduleTtlRefresh(variant, initialToken);
+    scheduleTtlRefresh(variant, auth);
   }
 
   return () => {

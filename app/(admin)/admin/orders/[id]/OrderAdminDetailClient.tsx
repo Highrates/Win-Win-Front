@@ -11,7 +11,11 @@ import {
 } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
 import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
-import type { CommercialProposalSummaryApi } from '@/lib/commercialProposal/types';
+import { kpLineTotalRub, kpLineUnitAfterDiscount } from '@/lib/commercialProposal/kpOfferTotals';
+import type {
+  CommercialProposalApi,
+  CommercialProposalSummaryApi,
+} from '@/lib/commercialProposal/types';
 import styles from '../../catalog/catalogAdmin.module.css';
 import pn from '../../catalog/products/new/productNew.module.css';
 import od from './orderAdminDetail.module.css';
@@ -90,6 +94,23 @@ function formatQtyUnit(qty: number, unit: string): string {
   return `${qty}\u00A0${u}`;
 }
 
+function kpLineDisplayTitle(snapshot: Record<string, unknown> | null): string {
+  const n = snapshot?.productName;
+  if (typeof n === 'string' && n.trim()) return n.trim();
+  return '—';
+}
+
+function kpLineImageUrl(snapshot: Record<string, unknown> | null): string | null {
+  const u = snapshot?.imageUrl;
+  return typeof u === 'string' && u.trim() ? u.trim() : null;
+}
+
+function kpDiscountShown(pct: number | null): string | null {
+  if (pct == null || !Number.isFinite(pct) || pct <= 0) return null;
+  if (pct === Math.floor(pct)) return `${pct}%`;
+  return `${pct.toFixed(1).replace(/\.0$/, '')}%`;
+}
+
 function accountDisplayName(user: AdminOrderDetail['user']): string {
   const p = user.profile;
   const n = [p?.firstName, p?.lastName]
@@ -130,7 +151,10 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   const [saving, setSaving] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [kpSummaryLoading, setKpSummaryLoading] = useState(false);
   const [kpSummary, setKpSummary] = useState<CommercialProposalSummaryApi | null>(null);
+  const [publishedKpFull, setPublishedKpFull] = useState<CommercialProposalApi[]>([]);
+  const [loadingPublishedKpFull, setLoadingPublishedKpFull] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,9 +179,11 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   useEffect(() => {
     if (!order || order.status === ORDER_STATUS_DRAFT) {
       setKpSummary(null);
+      setKpSummaryLoading(false);
       return;
     }
     let cancelled = false;
+    setKpSummaryLoading(true);
     void (async () => {
       try {
         const s = await adminBackendJson<CommercialProposalSummaryApi>(
@@ -166,12 +192,44 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
         if (!cancelled) setKpSummary(s);
       } catch {
         if (!cancelled) setKpSummary(null);
+      } finally {
+        if (!cancelled) setKpSummaryLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [order?.id, order?.status]);
+
+  useEffect(() => {
+    const st = order?.status;
+    if (!kpSummary?.published?.length || st === ORDER_STATUS_DRAFT) {
+      setPublishedKpFull([]);
+      setLoadingPublishedKpFull(false);
+      return;
+    }
+    let cancelled = false;
+    const base = `orders/admin/${encodeURIComponent(orderId)}/commercial-proposals/published/`;
+    setLoadingPublishedKpFull(true);
+    setPublishedKpFull([]);
+    void (async () => {
+      try {
+        const rows = await Promise.all(
+          kpSummary.published.map((p) =>
+            adminBackendJson<CommercialProposalApi>(`${base}${p.versionNumber}`),
+          ),
+        );
+        if (!cancelled) setPublishedKpFull(rows);
+      } catch {
+        if (!cancelled) setPublishedKpFull([]);
+      } finally {
+        if (!cancelled) setLoadingPublishedKpFull(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kpSummary?.published, orderId, order?.status]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !order) return;
@@ -193,6 +251,11 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   const statusDirty = !!order && statusOpts.length > 0 && selectValue !== order.status;
 
   const linesTotal = useMemo(() => (order ? orderLinesTotalRub(order.items) : 0), [order]);
+
+  const showPublishedKpBlock =
+    !!order &&
+    order.status !== ORDER_STATUS_DRAFT &&
+    (kpSummaryLoading || kpSummary !== null);
 
   async function saveStatus() {
     if (!order || statusOpts.length === 0) return;
@@ -423,17 +486,137 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
             )}
           </div>
 
+          {showPublishedKpBlock ? (
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>{d.kpSectionPublished}</h2>
+              {kpSummaryLoading ? (
+                <p className={styles.muted}>{d.kpPublishedLoading}</p>
+              ) : kpSummary && kpSummary.published.length === 0 ? (
+                <p className={styles.muted}>{d.kpPublishedNone}</p>
+              ) : loadingPublishedKpFull ? (
+                <p className={styles.muted}>{d.kpPublishedLoading}</p>
+              ) : kpSummary!.published.length > 0 && publishedKpFull.length === 0 ? (
+                <p className={styles.error}>{d.kpPublishedDetailError}</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+                  {publishedKpFull.map((proposal) => {
+                    const kpTotalRub = proposal.lines.reduce((acc, ln) => acc + kpLineTotalRub(ln), 0);
+                    const kpTotalRounded = Math.round(kpTotalRub * 100) / 100;
+                    const dateStr = proposal.publishedAt
+                      ? formatAdminOrderDateTime(proposal.publishedAt, locale)
+                      : '—';
+                    return (
+                      <div key={proposal.id}>
+                        <p className={styles.cardNote} style={{ margin: '0 0 12px' }}>
+                          {d.kpPublishedVersionCaption(
+                            proposal.versionNumber,
+                            dateStr,
+                            listS.itemsCount(proposal.lines.length),
+                          )}
+                        </p>
+                        {proposal.lines.length === 0 ? (
+                          <p className={styles.muted}>{d.noItems}</p>
+                        ) : (
+                          <div className={styles.tableWrap}>
+                            <table className={styles.table}>
+                              <thead>
+                                <tr>
+                                  <th style={{ width: 54 }} aria-hidden />
+                                  <th>{d.thProduct}</th>
+                                  <th>{d.thQtyUnit}</th>
+                                  <th>{d.thPrice}</th>
+                                  <th>{d.thLineTotal}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {proposal.lines.map((ln) => {
+                                  const snap =
+                                    ln.snapshot && typeof ln.snapshot === 'object'
+                                      ? ln.snapshot
+                                      : null;
+                                  const meta = orderItemSnapshotMetaRows(snap, {
+                                    modification: d.snapshotModification,
+                                    elementFallback: d.snapshotElementFallback,
+                                  });
+                                  const unitEff = kpLineUnitAfterDiscount(ln);
+                                  const lineTotal = kpLineTotalRub(ln);
+                                  const img = kpLineImageUrl(snap);
+                                  const dc = kpDiscountShown(
+                                    ln.discountPercent != null && Number.isFinite(ln.discountPercent)
+                                      ? ln.discountPercent
+                                      : null,
+                                  );
+                                  return (
+                                    <tr key={ln.id}>
+                                      <td>
+                                        {img ? (
+                                          <img
+                                            className={styles.productListThumb}
+                                            src={img}
+                                            alt=""
+                                            width={46}
+                                            height={46}
+                                          />
+                                        ) : (
+                                          <div className={styles.productListThumbPh} aria-hidden />
+                                        )}
+                                      </td>
+                                      <td>
+                                        <Link
+                                          href={`/admin/catalog/products/${encodeURIComponent(ln.productId)}`}
+                                          className={styles.backLink}
+                                        >
+                                          <div className={styles.cardTitle}>{kpLineDisplayTitle(snap)}</div>
+                                        </Link>
+                                        {dc ? (
+                                          <div className={styles.cardNote}>
+                                            {d.kpDiscountLabel}: {dc}
+                                          </div>
+                                        ) : null}
+                                        {meta.length > 0 ? (
+                                          <ul
+                                            className={styles.cardNote}
+                                            style={{ margin: '8px 0 0', paddingLeft: 18 }}
+                                          >
+                                            {meta.map((m, mi) => (
+                                              <li key={mi}>
+                                                {m.label}: {m.value}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        ) : null}
+                                      </td>
+                                      <td>{formatQtyUnit(ln.quantity, ln.unit)}</td>
+                                      <td>{formatMoneyInt(unitEff, order.currency, numberLocale)}</td>
+                                      <td>{formatMoneyInt(lineTotal, order.currency, numberLocale)}</td>
+                                    </tr>
+                                  );
+                                })}
+                                <tr>
+                                  <td aria-hidden />
+                                  <td colSpan={3} style={{ textAlign: 'right', fontWeight: 600 }}>
+                                    {d.footerSumLabel}
+                                  </td>
+                                  <td style={{ fontWeight: 600 }}>
+                                    {formatMoneyInt(kpTotalRounded, order.currency, numberLocale)}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
+
           <div className={styles.section}>
             {d.actionsHintPrepareCp.trim() ? (
               <p className={styles.cardNote} style={{ marginBottom: 12 }}>
                 {d.actionsHintPrepareCp}
-              </p>
-            ) : null}
-            {kpSummary?.published?.[0] ? (
-              <p className={styles.cardNote} style={{ marginBottom: 8 }}>
-                {locale === 'zh'
-                  ? `已发布报价单：v${kpSummary.published[0].versionNumber}（${kpSummary.published[0].lineCount} 项）`
-                  : `Опубликовано КП: v${kpSummary.published[0].versionNumber} (${kpSummary.published[0].lineCount} поз.)`}
               </p>
             ) : null}
             {kpSummary?.draft ? (
@@ -444,14 +627,14 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
               </p>
             ) : null}
             <div className={styles.toolbar} style={{ marginBottom: 0 }}>
-              {order.status !== ORDER_STATUS_DRAFT ? (
+              {order.status !== ORDER_STATUS_DRAFT && order.status !== 'COMPLETED' ? (
                 <Link
                   href={`/admin/orders/${encodeURIComponent(order.id)}/kp`}
                   className={`${styles.btn} ${styles.btnPrimary}`}
                 >
                   {d.actionPrepareCp}
                 </Link>
-              ) : (
+              ) : order.status === ORDER_STATUS_DRAFT ? (
                 <button
                   type="button"
                   className={`${styles.btn} ${styles.btnPrimary}`}
@@ -460,7 +643,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                 >
                   {d.actionPrepareCp}
                 </button>
-              )}
+              ) : null}
               {order.status === 'PENDING_APPROVAL' ? (
                 <button
                   type="button"

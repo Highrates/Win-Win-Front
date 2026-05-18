@@ -1,14 +1,26 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { TBtn } from '@/components/TBtn/TBtn';
 import type { TeamBranchCard } from '@/lib/account/teamTeammateLeadMock';
+import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
+import {
+  filterCompletedPartnerLines,
+  formatPartnerRubWhole,
+  formatPartnerTableDate,
+  type PartnerProgramBonusLineApi,
+  type PartnerProgramSummaryApi,
+} from '@/lib/referrals/partnerProgramSummary';
 import styles from './page.module.css';
 
 const TEAM_RANGE_TABS = ['1 мес', '3 мес', '6 мес', 'За все время'] as const;
 
 const DASH = '—';
+
+function teamLineKey(line: PartnerProgramBonusLineApi): string {
+  return `${line.orderId}-${line.orderUpdatedAt}-${line.tier}-${line.bonusRub}`;
+}
 
 function TeammateBranchRow({ card }: { card: TeamBranchCard }) {
   const [open, setOpen] = useState(false);
@@ -69,8 +81,28 @@ function TeammateBranchRow({ card }: { card: TeamBranchCard }) {
   );
 }
 
-export function TeamSheetSection({ branchCards }: { branchCards: TeamBranchCard[] }) {
+export function TeamSheetSection({
+  branchCards,
+  partnerSummary,
+  partnerIncomeLoading = false,
+}: {
+  branchCards: TeamBranchCard[];
+  partnerSummary: PartnerProgramSummaryApi | null;
+  partnerIncomeLoading?: boolean;
+}) {
   const [rangeIndex, setRangeIndex] = useState(0);
+
+  const teamRows = useMemo(
+    () => filterCompletedPartnerLines(partnerSummary?.teamLines ?? []),
+    [partnerSummary?.teamLines],
+  );
+
+  const teamIncomeTotalLabel =
+    partnerIncomeLoading && !partnerSummary
+      ? '…'
+      : partnerSummary
+        ? formatPartnerRubWhole(partnerSummary.totals.teamCompletedRub)
+        : DASH;
 
   return (
     <div className={styles.sheetWrapper}>
@@ -95,7 +127,7 @@ export function TeamSheetSection({ branchCards }: { branchCards: TeamBranchCard[
         <div className={styles.tableSummary}>
           <div className={styles.tableSummaryLeft}>
             <span className={styles.tableSummaryLabel}>Доход от команды:</span>
-            <span className={styles.tableSummaryAmount}>{DASH}</span>
+            <span className={styles.tableSummaryAmount}>{teamIncomeTotalLabel}</span>
           </div>
           <div className={styles.tableSummaryRight}>
             <TBtn type="button" variant="ghost" trailingChevronDown>
@@ -131,14 +163,24 @@ export function TeamSheetSection({ branchCards }: { branchCards: TeamBranchCard[
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td className={styles.tdLeftTight}>{DASH}</td>
-              <td className={styles.tdDesigner}>{DASH}</td>
-              <td className={styles.tdCenterLevel}>{DASH}</td>
-              <td className={styles.tdRightTightFirst}>{DASH}</td>
-              <td className={styles.tdCenterPercent}>{DASH}</td>
-              <td className={styles.tdRightTight}>{DASH}</td>
-            </tr>
+            {teamRows.length === 0 ? (
+              <tr>
+                <td className={styles.tdLeftTight} colSpan={6}>
+                  {partnerIncomeLoading ? 'Загрузка…' : 'Нет начислений по завершённым заказам команды'}
+                </td>
+              </tr>
+            ) : (
+              teamRows.map((row) => (
+                <tr key={teamLineKey(row)}>
+                  <td className={styles.tdLeftTight}>{formatPartnerTableDate(row.orderUpdatedAt)}</td>
+                  <td className={styles.tdDesigner}>{formatOrderDisplayId(row.purchaserUserId)}</td>
+                  <td className={styles.tdCenterLevel}>L{row.tier}</td>
+                  <td className={styles.tdRightTightFirst}>{formatPartnerRubWhole(row.catalogTotalRub)}</td>
+                  <td className={styles.tdCenterPercent}>{row.percentApplied}%</td>
+                  <td className={styles.tdRightTight}>{formatPartnerRubWhole(row.bonusRub)}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

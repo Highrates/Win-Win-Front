@@ -14,7 +14,6 @@ import {
   type OrderChatVariant,
 } from '@/lib/orderChat/constants';
 import { computeOrderChatMessageDeletableInUi } from '@/lib/orderChat/orderChatDeletionUi';
-import { decodeJwtPayloadUnsafe } from '@/lib/orderChat/decodeJwtPayloadUnsafe';
 import {
   fetchOrderChatWsToken,
   getOrCreateSharedOrderChatSocket,
@@ -393,9 +392,8 @@ export function useOrderChat(opts: {
       setLoading(true);
       setError(null);
       try {
-        const token = await fetchOrderChatWsToken(variant);
-        const sub = decodeJwtPayloadUnsafe(token)?.sub ?? null;
-        viewerRef.current = sub;
+        const wsAuth = await fetchOrderChatWsToken(variant);
+        viewerRef.current = wsAuth.sub;
 
         const res = await fetch(
           orderChatMessagesListUrl(variant, orderId, { limit: CHAT_MESSAGES_PAGE_DEFAULT }),
@@ -423,8 +421,8 @@ export function useOrderChat(opts: {
           document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
         }
 
-        unregisterSession = registerOrderChatWsSession(variant, token);
-        const socket = getOrCreateSharedOrderChatSocket(variant, token);
+        unregisterSession = registerOrderChatWsSession(variant, wsAuth);
+        const socket = getOrCreateSharedOrderChatSocket(variant, wsAuth);
         await waitOrderChatSocketConnect(socket);
         if (disposed) return;
         attachSocketHandlers(socket);

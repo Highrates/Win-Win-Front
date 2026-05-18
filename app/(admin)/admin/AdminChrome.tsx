@@ -17,6 +17,7 @@ import {
   settingsSubLabel,
   type AdminLocale,
 } from '@/lib/admin-i18n/adminChromeI18n';
+import { teardownOrderChatWsForLogout } from '@/lib/orderChat/orderChatWsShared';
 import styles from './layout.module.css';
 
 const CATALOG_CHILDREN = [
@@ -193,6 +194,7 @@ export function AdminChrome({
 
   async function logout() {
     await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
+    teardownOrderChatWsForLogout('admin');
     router.push('/admin/login');
     router.refresh();
   }

@@ -157,7 +157,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
     }
   }
 
-  async function saveDraft() {
+  async function saveDraft(): Promise<boolean> {
     setSaving(true);
     setError(null);
     try {
@@ -184,8 +184,10 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
       setLines(dr.lines);
       const s = await adminBackendJson<CommercialProposalSummaryApi>(basePath);
       setSummary(s);
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось сохранить');
+      return false;
     } finally {
       setSaving(false);
     }
@@ -195,7 +197,8 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
     setPublishing(true);
     setError(null);
     try {
-      await saveDraft();
+      const draftSaved = await saveDraft();
+      if (!draftSaved) return;
       const publishBody =
         orderStatus === 'PENDING_APPROVAL' ? { nextOrderStatus: nextOrderStatus as NextOrderStatusChoice } : {};
       await adminBackendJson<{ versionNumber: number }>(`${basePath}/publish`, {
@@ -259,7 +262,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
 
       {loading ? <p className={styles.cardNote}>Загрузка…</p> : null}
       {error ? (
-        <p style={{ color: 'var(--color-red, #c53029)' }} role="alert">
+        <p style={{ color: 'var(--color-red, #c53029)' }} role="alert" aria-live="polite">
           {error}
         </p>
       ) : null}
@@ -303,7 +306,10 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                 type="button"
                 className={`${styles.btn} ${styles.btnPrimary}`}
                 disabled={publishing || lines.length === 0}
-                onClick={() => setPublishConfirmOpen(true)}
+                onClick={() => {
+                  setError(null);
+                  setPublishConfirmOpen(true);
+                }}
               >
                 {publishing ? d.kpPublishing : d.kpPublish}
               </button>
@@ -515,11 +521,15 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
         numberLocale={numberLocale}
         labels={publishConfirmLabels}
         publishing={publishing}
+        draftOrPublishError={publishConfirmOpen ? error : null}
         showNextStatus={orderStatus === 'PENDING_APPROVAL'}
         nextOrderStatus={nextOrderStatus}
         onNextOrderStatus={setNextOrderStatus}
         onClose={() => {
-          if (!publishing) setPublishConfirmOpen(false);
+          if (!publishing) {
+            setPublishConfirmOpen(false);
+            setError(null);
+          }
         }}
         onConfirm={() => void executePublish()}
       />

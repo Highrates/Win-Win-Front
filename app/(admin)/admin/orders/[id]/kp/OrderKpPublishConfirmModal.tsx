@@ -31,6 +31,8 @@ type Props = {
   numberLocale: string;
   labels: Labels;
   publishing: boolean;
+  /** Ошибка сохранения черновика / публикации — дубль подсказки из редактора */
+  draftOrPublishError?: string | null;
   /** Заказ «На согласовании» — выбор следующего статуса заказа */
   showNextStatus: boolean;
   nextOrderStatus: NextOrderStatusChoice;
@@ -63,6 +65,7 @@ export function OrderKpPublishConfirmModal({
   numberLocale,
   labels,
   publishing,
+  draftOrPublishError,
   showNextStatus,
   nextOrderStatus,
   onNextOrderStatus,
@@ -148,6 +151,12 @@ export function OrderKpPublishConfirmModal({
               </span>
               <span className={own.grandNew}>{newF}</span>
             </p>
+
+            {draftOrPublishError?.trim() ? (
+              <p className={own.flowError} role="alert" aria-live="polite">
+                {draftOrPublishError.trim()}
+              </p>
+            ) : null}
 
             {showNextStatus ? (
               <div className={own.statusBlock}>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendFetch, adminBackendJson } from '@/lib/adminBackendFetch';
+import { TextField } from '@/components/TextField';
 import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import styles from './siteSettings.module.css';
@@ -12,7 +13,15 @@ type SiteSettingsAdminPayload = {
   caseRoomTypeOptions: string[];
 };
 
-type TabKey = 'hero' | 'other';
+type OrderSettingsAdminPayload = {
+  designerOwnCatalogBonusPercent: number;
+  designerOwnMinimumCatalogSiteTotalRub: number;
+  kpMaxLineDiscountPercent: number;
+  catalogBasisNote: string;
+  referralPayoutRulesNote: string;
+};
+
+type TabKey = 'hero' | 'other' | 'orders';
 
 export function SiteSettingsClient() {
   const [tab, setTab] = useState<TabKey>('hero');
@@ -25,6 +34,11 @@ export function SiteSettingsClient() {
   const [designerServiceOptions, setDesignerServiceOptions] = useState<string[]>([]);
   const [caseRoomTypeOptions, setCaseRoomTypeOptions] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const [orderDesignerPct, setOrderDesignerPct] = useState('');
+  const [orderMinCatalogRub, setOrderMinCatalogRub] = useState('');
+  const [orderKpMaxDisc, setOrderKpMaxDisc] = useState('');
+  const [orderSettingsError, setOrderSettingsError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,6 +62,28 @@ export function SiteSettingsClient() {
       setLoading(false);
     }
   }, []);
+
+  const loadOrderSettings = useCallback(async () => {
+    setOrderSettingsError(null);
+    try {
+      const res = await adminBackendFetch('settings/admin/orders', { method: 'GET', cache: 'no-store' });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { message?: string };
+        setOrderSettingsError(typeof j?.message === 'string' ? j.message : 'Не удалось загрузить настройки заказов');
+        return;
+      }
+      const data = (await res.json()) as OrderSettingsAdminPayload;
+      setOrderDesignerPct(String(data.designerOwnCatalogBonusPercent ?? 0));
+      setOrderMinCatalogRub(String(data.designerOwnMinimumCatalogSiteTotalRub ?? 0));
+      setOrderKpMaxDisc(String(data.kpMaxLineDiscountPercent ?? 100));
+    } catch {
+      setOrderSettingsError('Не удалось загрузить настройки заказов');
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOrderSettings();
+  }, [loadOrderSettings]);
 
   useEffect(() => {
     void load();
@@ -153,6 +189,50 @@ export function SiteSettingsClient() {
     }
   }
 
+  async function saveOrderSettings() {
+    setSaving(true);
+    setSaveError(null);
+    setOrderSettingsError(null);
+    const pct = Number(String(orderDesignerPct).replace(',', '.'));
+    const minRub = Number(String(orderMinCatalogRub).replace(/\s+/g, '').replace(',', '.'));
+    const kp = Number(String(orderKpMaxDisc).replace(',', '.'));
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      setSaveError('Процент дизайнера: число от 0 до 100.');
+      setSaving(false);
+      return;
+    }
+    if (!Number.isFinite(minRub) || minRub < 0) {
+      setSaveError('Порог каталога: неотрицательное число.');
+      setSaving(false);
+      return;
+    }
+    if (!Number.isFinite(kp) || kp < 0 || kp > 100) {
+      setSaveError('Лимит скидки КП: число от 0 до 100.');
+      setSaving(false);
+      return;
+    }
+    try {
+      const res = await adminBackendFetch('settings/admin/orders', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          designerOwnCatalogBonusPercent: pct,
+          designerOwnMinimumCatalogSiteTotalRub: minRub,
+          kpMaxLineDiscountPercent: kp,
+        }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        setSaveError(typeof j?.message === 'string' ? j.message : 'Не удалось сохранить настройки заказов');
+        return;
+      }
+      await loadOrderSettings();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Не удалось сохранить настройки заказов');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className={styles.panel}>
       <div className={styles.tabs} role="tablist" aria-label="Настройки сайта">
@@ -173,6 +253,15 @@ export function SiteSettingsClient() {
           onClick={() => setTab('other')}
         >
           Прочие настройки
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'orders'}
+          className={`${styles.tabBtn} ${tab === 'orders' ? styles.tabBtnActive : ''}`}
+          onClick={() => setTab('orders')}
+        >
+          Заказы
         </button>
       </div>
 
@@ -337,6 +426,51 @@ export function SiteSettingsClient() {
               ))}
             </tbody>
           </table>
+        </section>
+      ) : null}
+
+      {tab === 'orders' ? (
+        <section aria-label="Заказы">
+          {orderSettingsError ? <p className={catalogStyles.error}>{orderSettingsError}</p> : null}
+          <div style={{ maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 14, marginTop: 8 }}>
+            <TextField
+              label="Бонус дизайнера со своего заказа, %"
+              type="number"
+              min={0}
+              max={100}
+              step="0.5"
+              name="designerOwnCatalogBonusPercent"
+              value={orderDesignerPct}
+              onChange={(e) => setOrderDesignerPct(e.target.value)}
+              autoComplete="off"
+            />
+            <TextField
+              label="Мин. сумма заказа для бонуса, ₽"
+              type="number"
+              min={0}
+              step={1}
+              name="designerOwnMinimumCatalogSiteTotalRub"
+              value={orderMinCatalogRub}
+              onChange={(e) => setOrderMinCatalogRub(e.target.value)}
+              autoComplete="off"
+            />
+            <TextField
+              label="Макс. скидка по строке коммерческого предложения, %"
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              name="kpMaxLineDiscountPercent"
+              value={orderKpMaxDisc}
+              onChange={(e) => setOrderKpMaxDisc(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+            <button type="button" className={catalogStyles.btn} disabled={saving} onClick={() => void saveOrderSettings()}>
+              {saving ? 'Сохранение…' : 'Сохранить'}
+            </button>
+          </div>
         </section>
       ) : null}
     </div>

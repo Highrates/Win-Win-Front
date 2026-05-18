@@ -2,9 +2,6 @@
 
 import styles from '../page.module.css';
 
-/** Заглушка до расчёта бонусов на бэкенде */
-const PLACEHOLDER_EXPECTED_BONUS = '~12 500 ₽';
-
 function CtaChevron({ open }: { open: boolean }) {
   return (
     <span className={styles.ctaAccordionChevron} data-open={open || undefined} aria-hidden>
@@ -22,8 +19,8 @@ function CtaBlock({
 }: {
   count: number;
   total: string;
-  /** Только для десктопной панели `ctaSnowPanel` */
-  expectedBonus?: string;
+  /** Отформатированная сумма бонуса или «—» */
+  expectedBonus: string;
 }) {
   const w = count === 1 ? 'товар' : count > 1 && count < 5 ? 'товара' : 'товаров';
   return (
@@ -36,15 +33,13 @@ function CtaBlock({
       </div>
       <div className={styles.ctaRightInfo}>
         <div className={styles.ctaPrice}>{total}</div>
-        {expectedBonus != null ? (
-          <div className={styles.ctaExpectedBonus}>
-            <img src="/icons/wallet-add.svg" alt="" width={16} height={16} className={styles.ctaExpectedBonusIcon} aria-hidden />
-            <span className={styles.ctaExpectedBonusLine}>
-              <span className={styles.ctaExpectedBonusLabel}>Ожидаемый бонус: </span>
-              <span className={styles.ctaExpectedBonusValue}>{expectedBonus}</span>
-            </span>
-          </div>
-        ) : null}
+        <div className={styles.ctaExpectedBonus}>
+          <img src="/icons/wallet-add.svg" alt="" width={16} height={16} className={styles.ctaExpectedBonusIcon} aria-hidden />
+          <span className={styles.ctaExpectedBonusLine}>
+            <span className={styles.ctaExpectedBonusLabel}>Ожидаемый бонус: </span>
+            <span className={styles.ctaExpectedBonusValue}>{expectedBonus}</span>
+          </span>
+        </div>
       </div>
     </>
   );
@@ -56,6 +51,8 @@ export type AccountProjectsCtaProps = {
   onToggleAccordion: () => void;
   itemCount: number;
   displayTotal: string;
+  /** Отформатированная сумма («—», если недоступна) по настройкам программы своего заказа */
+  expectedBonusDisplay: string;
   /** Перенос всех позиций проекта в черновик заказа и переход в «Подготовка заказа». */
   onCheckout?: () => void | Promise<void>;
   checkoutBusy?: boolean;
@@ -67,6 +64,7 @@ export function AccountProjectsCta({
   onToggleAccordion,
   itemCount,
   displayTotal,
+  expectedBonusDisplay,
   onCheckout,
   checkoutBusy = false,
 }: AccountProjectsCtaProps) {
@@ -103,7 +101,7 @@ export function AccountProjectsCta({
           >
             <div className={styles.ctaAccordionContent}>
               <div className={styles.ctaAccordionSnowStack}>
-                <CtaBlock count={itemCount} total={displayTotal} />
+                <CtaBlock count={itemCount} total={displayTotal} expectedBonus={expectedBonusDisplay} />
               </div>
               <button
                 type="button"
@@ -124,7 +122,7 @@ export function AccountProjectsCta({
   return (
     <div className={styles.ctaRow}>
       <div className={styles.ctaSnowPanel}>
-        <CtaBlock count={itemCount} total={displayTotal} expectedBonus={PLACEHOLDER_EXPECTED_BONUS} />
+        <CtaBlock count={itemCount} total={displayTotal} expectedBonus={expectedBonusDisplay} />
       </div>
       <button
         type="button"

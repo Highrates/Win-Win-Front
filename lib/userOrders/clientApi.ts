@@ -1,7 +1,12 @@
 import type { UserOrderDetailApi, UserOrdersListResponse } from './types';
 
-export async function fetchUserOrdersList(page = 1, limit = 50): Promise<UserOrdersListResponse> {
+export async function fetchUserOrdersList(
+  page = 1,
+  limit = 50,
+  opts?: { scope?: 'work' | 'completed' },
+): Promise<UserOrdersListResponse> {
   const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (opts?.scope) qs.set('scope', opts.scope);
   const res = await fetch(`/api/user/orders?${qs}`, { credentials: 'include', cache: 'no-store' });
   if (!res.ok) {
     let msg = res.statusText;

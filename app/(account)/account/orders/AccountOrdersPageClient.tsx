@@ -23,11 +23,15 @@ import type { OrderPreparationDraftApi, OrderPreparationLineApi } from '@/lib/or
 import { ORDER_TABS, orderTabQueryParamForUrl, ACCOUNT_WORK_NOTIFICATIONS_EVENT } from '@/lib/account/orders';
 import { fetchUserOrdersList } from '@/lib/userOrders/clientApi';
 import {
-  filterInWorkOrders,
   mapUserOrderToWorkCard,
   sortUserOrdersByUpdatedDesc,
 } from '@/lib/userOrders/mapOrderToWorkCard';
 import type { UserOrderListItemApi } from '@/lib/userOrders/types';
+import {
+  fetchPublicOrderProgram,
+  formatDesignerOwnExpectedBonusLabel,
+  type OrderProgramPublic,
+} from '@/lib/orderProgram/publicOrderProgram';
 import { AccordionBig } from './AccordionBig';
 import { SubmitOrderConfirmationModal } from './components/SubmitOrderConfirmationModal';
 import styles from './page.module.css';
@@ -126,23 +130,42 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   const [inWorkOrders, setInWorkOrders] = useState<UserOrderListItemApi[]>([]);
   const [inWorkLoading, setInWorkLoading] = useState(false);
   const [inWorkError, setInWorkError] = useState<string | null>(null);
+  const [completedOrders, setCompletedOrders] = useState<UserOrderListItemApi[]>([]);
+  const [completedLoading, setCompletedLoading] = useState(false);
+  const [completedError, setCompletedError] = useState<string | null>(null);
   const [workOrderDetailId, setWorkOrderDetailId] = useState<string | null>(null);
   const [workTabUnread, setWorkTabUnread] = useState(0);
+  const [orderProgram, setOrderProgram] = useState<OrderProgramPublic | null>(null);
 
   const isPreparationTab = selectedIndex === 0;
   const isInWorkTab = selectedIndex === 1;
+  const isCompletedTab = selectedIndex === 2;
 
   const loadInWorkOrders = useCallback(async () => {
     setInWorkLoading(true);
     setInWorkError(null);
     try {
-      const res = await fetchUserOrdersList(1, 50);
-      setInWorkOrders(sortUserOrdersByUpdatedDesc(filterInWorkOrders(res.items)));
+      const res = await fetchUserOrdersList(1, 50, { scope: 'work' });
+      setInWorkOrders(sortUserOrdersByUpdatedDesc(res.items));
     } catch (e) {
       setInWorkError(e instanceof Error ? e.message : 'Не удалось загрузить заказы');
       setInWorkOrders([]);
     } finally {
       setInWorkLoading(false);
+    }
+  }, []);
+
+  const loadCompletedOrders = useCallback(async () => {
+    setCompletedLoading(true);
+    setCompletedError(null);
+    try {
+      const res = await fetchUserOrdersList(1, 50, { scope: 'completed' });
+      setCompletedOrders(sortUserOrdersByUpdatedDesc(res.items));
+    } catch (e) {
+      setCompletedError(e instanceof Error ? e.message : 'Не удалось загрузить заказы');
+      setCompletedOrders([]);
+    } finally {
+      setCompletedLoading(false);
     }
   }, []);
 
@@ -190,6 +213,16 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    void fetchPublicOrderProgram().then((cfg) => {
+      if (!cancelled) setOrderProgram(cfg);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const onWorkNotifications = () => void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
     window.addEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
     return () => window.removeEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
@@ -206,8 +239,13 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   }, [isInWorkTab, loadInWorkOrders]);
 
   useEffect(() => {
-    if (!isInWorkTab) setWorkOrderDetailId(null);
-  }, [isInWorkTab]);
+    if (!isCompletedTab) return;
+    void loadCompletedOrders();
+  }, [isCompletedTab, loadCompletedOrders]);
+
+  useEffect(() => {
+    if (isPreparationTab) setWorkOrderDetailId(null);
+  }, [isPreparationTab]);
 
   useEffect(() => {
     if (!isPreparationTab || !draft?.orderId) return;
@@ -241,6 +279,11 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
     if (!draft?.lines.length) return 0;
     return sumSelectedLines(draft.lines, selectedIds);
   }, [draft?.lines, selectedIds]);
+
+  const preparationBonusLabel = useMemo(
+    () => formatDesignerOwnExpectedBonusLabel(selectedTotalRub, orderProgram),
+    [selectedTotalRub, orderProgram],
+  );
 
   const onEnterSelectionMode = () => {
     setSelectionMode(true);
@@ -359,6 +402,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
       setSubmitModalOpen(false);
       await refreshDraft();
       void loadInWorkOrders();
+      void loadCompletedOrders();
       onSelectOrderTab(1);
     } catch (e) {
       setDraftError(e instanceof Error ? e.message : 'Не удалось отправить заказ');
@@ -568,7 +612,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
                 <div className={styles.bonusRow}>
                   <div className={styles.bonusLeft}>
                     <img src="/icons/wallet-add.svg" alt="" width={16} height={16} aria-hidden />
-                    <span className={styles.bonusText}>Ожидаемый бонус: уточняется</span>
+                    <span className={styles.bonusText}>Ожидаемый бонус: {preparationBonusLabel}</span>
                   </div>
                 </div>
                 <Button
@@ -605,7 +649,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
                 <div className={styles.bonusRow}>
                   <div className={styles.bonusLeft}>
                     <img src="/icons/wallet-add.svg" alt="" width={16} height={16} aria-hidden />
-                    <span className={styles.bonusText}>Ожидаемый бонус: уточняется</span>
+                    <span className={styles.bonusText}>Ожидаемый бонус: {preparationBonusLabel}</span>
                   </div>
                 </div>
                 <Button
@@ -683,6 +727,61 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
                   key={order.id}
                   {...mapUserOrderToWorkCard(order, {
                     onOpenDetails: () => setWorkOrderDetailId(order.id),
+                    orderProgram,
+                  })}
+                />
+              ))
+            : null}
+        </div>
+      ) : null}
+
+      {isCompletedTab ? (
+        <div className={styles.inWorkList}>
+          {completedError ? <p className={styles.orderPrepError}>{completedError}</p> : null}
+          {completedLoading ? (
+            <div className={styles.ordersInWorkSkeleton} aria-busy="true" aria-label="Загрузка">
+              {[0, 1, 2, 3].map((k) => (
+                <div key={k} className={styles.orderWrapperSkeleton}>
+                  <div className={styles.skeletonInWorkCard}>
+                    <div className={styles.skeletonInWorkTop}>
+                      <div className={styles.skeletonInWorkLines}>
+                        <div
+                          className={`${styles.skeletonInWorkLine} ${styles.skeletonShimmer}`}
+                          style={{ width: '38%', height: 18 }}
+                        />
+                        <div
+                          className={`${styles.skeletonInWorkLine} ${styles.skeletonShimmer}`}
+                          style={{ width: '52%' }}
+                        />
+                        <div
+                          className={`${styles.skeletonInWorkLine} ${styles.skeletonShimmer}`}
+                          style={{ width: '72%' }}
+                        />
+                      </div>
+                      <div className={`${styles.skeletonInWorkLine} ${styles.skeletonShimmer}`} style={{ width: 20, height: 20 }} />
+                    </div>
+                    <div className={styles.skeletonInWorkDots}>
+                      <div className={`${styles.skeletonInWorkDot} ${styles.skeletonShimmer}`} />
+                      <div className={`${styles.skeletonInWorkDot} ${styles.skeletonShimmer}`} />
+                    </div>
+                  </div>
+                  <div className={styles.skeletonInWorkCta}>
+                    <div className={`${styles.skeletonInWorkCtaBtn} ${styles.skeletonShimmer}`} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {!completedLoading && !completedError && completedOrders.length === 0 ? (
+            <p className={styles.inWorkEmpty}>Нет завершённых заказов.</p>
+          ) : null}
+          {!completedLoading
+            ? completedOrders.map((order) => (
+                <AccountOrderWorkCard
+                  key={order.id}
+                  {...mapUserOrderToWorkCard(order, {
+                    onOpenDetails: () => setWorkOrderDetailId(order.id),
+                    orderProgram,
                   })}
                 />
               ))
@@ -692,7 +791,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
 
       <AccountOrderDetailModal orderId={workOrderDetailId} onClose={() => setWorkOrderDetailId(null)} />
 
-      {!isPreparationTab && !isInWorkTab ? (
+      {isPreparationTab ? null : !isInWorkTab && !isCompletedTab ? (
         <p className={styles.inWorkEmpty}>Раздел в разработке.</p>
       ) : null}
     </div>

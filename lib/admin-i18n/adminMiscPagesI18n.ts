@@ -21,7 +21,7 @@ export function adminPagesScreen(locale: AdminLocale) {
 
 export function adminReferralsPage(locale: AdminLocale) {
   return {
-    title: pick(locale, 'Реферальная программа (админ)', '推荐计划（管理）'),
+    title: pick(locale, 'Реферальная программа', '推荐计划'),
     lead: pick(locale, 'Настройки: %, фикс, баллы; отчёты', '设置：百分比、固定金额、积分；报表'),
     tabLabels: {
       percent: pick(locale, 'Настройка %', '百分比设置'),
@@ -29,11 +29,7 @@ export function adminReferralsPage(locale: AdminLocale) {
       reports: pick(locale, 'Отчёты', '报表'),
     },
     tabLeads: {
-      percent: pick(
-        locale,
-        'Ставки L1/L2, база начисления, версионирование правил — подключение к `ReferralConfig` и ТЗ.',
-        'L1/L2 费率、计提基数、规则版本化 — 对接 ReferralConfig 与需求文档。',
-      ),
+      percent: pick(locale, '', ''),
       payouts: pick(
         locale,
         'Заявки на выплату, статусы, выгрузка для бухгалтерии — общий контур с разделом «Заявки».',

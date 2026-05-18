@@ -9,7 +9,7 @@ import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrdersStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
-import { ADMIN_ACTIVE_STATUSES, ADMIN_COMPLETED_STATUSES, ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
+import { ADMIN_COMPLETED_STATUSES, ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
 import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
 import styles from '../catalog/catalogAdmin.module.css';
 import tabStyles from '../adminTabs.module.css';
@@ -19,6 +19,11 @@ export type AdminOrdersBucket = 'new' | 'active' | 'completed';
 const BUCKETS: AdminOrdersBucket[] = ['new', 'active', 'completed'];
 
 type ActiveOrderStatus = (typeof ORDER_STATUS_FLOW)[number];
+
+/** Вкладка «В работе»: можно перевести заказ в том числе в «Получено» / «Завершен». */
+const ADMIN_ACTIVE_BUCKET_STATUS_OPTIONS = ORDER_STATUS_FLOW.filter(
+  (s) => s !== 'PENDING_APPROVAL',
+) as readonly ActiveOrderStatus[];
 
 type AdminOrderRow = {
   id: string;
@@ -198,10 +203,9 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   function statusForActiveRow(row: AdminOrderRow): ActiveOrderStatus {
     const d = draftStatus[row.id];
     if (d) return d;
-    const fallback = ADMIN_ACTIVE_STATUSES[0] ?? 'APPROVED';
-    return ORDER_STATUS_FLOW.includes(row.status as ActiveOrderStatus)
-      ? (row.status as ActiveOrderStatus)
-      : fallback;
+    const opts = ADMIN_ACTIVE_BUCKET_STATUS_OPTIONS;
+    if (opts.includes(row.status as ActiveOrderStatus)) return row.status as ActiveOrderStatus;
+    return opts[0] ?? 'APPROVED';
   }
 
   async function saveActiveStatus(orderId: string, status: ActiveOrderStatus) {
@@ -354,7 +358,7 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
                           }
                           aria-label={s.thStatus}
                         >
-                          {ADMIN_ACTIVE_STATUSES.map((st) => (
+                          {ADMIN_ACTIVE_BUCKET_STATUS_OPTIONS.map((st) => (
                             <option key={st} value={st}>
                               {statusLabels[st]}
                             </option>

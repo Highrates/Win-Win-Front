@@ -36,5 +36,11 @@ export function useProjectLinesDerived(detail: DesignerProjectDetailApi | null, 
   /** Для блока «Общая сумма» — число позиций во всём проекте */
   const itemCount = detail?.lines.length ?? 0;
 
-  return { sectionTabs, visibleLines, displayTotal, itemCount };
+  return {
+    sectionTabs,
+    visibleLines,
+    displayTotal,
+    itemCount,
+    projectTotalRub,
+  };
 }

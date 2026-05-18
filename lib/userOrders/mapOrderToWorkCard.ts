@@ -1,6 +1,7 @@
 import type { AccountOrderWorkCardProps } from '@/components/AccountOrders/AccountOrderWorkCard';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { CUSTOMER_IN_WORK_STATUSES, orderStatusLabel } from '@/lib/orders/orderStatus';
+import { formatDesignerOwnExpectedBonusLabel, type OrderProgramPublic } from '@/lib/orderProgram/publicOrderProgram';
 import type { UserOrderListItemApi } from './types';
 
 const PLACEHOLDER = '/images/placeholder.svg';
@@ -53,7 +54,7 @@ export function sortUserOrdersByUpdatedDesc(orders: UserOrderListItemApi[]): Use
 
 export function mapUserOrderToWorkCard(
   order: UserOrderListItemApi,
-  opts?: { onOpenDetails?: () => void },
+  opts?: { onOpenDetails?: () => void; orderProgram?: OrderProgramPublic | null },
 ): AccountOrderWorkCardProps {
   const thumbs = order.items.map(orderItemThumb).filter(Boolean);
   const skuCount = order.items.length;
@@ -77,7 +78,7 @@ export function mapUserOrderToWorkCard(
             discountLabel: pct > 0 ? `−${pct}%` : '—',
             finalPrice: formatTotalRub(kp.newTotalRub, order.currency),
             oldPrice: formatTotalRub(kp.oldTotalRub, order.currency),
-            expectedBonus: 'уточняется',
+            expectedBonus: formatDesignerOwnExpectedBonusLabel(kp.newTotalRub, opts?.orderProgram),
             showDiscountStrip: hasDiscount,
           };
         })()

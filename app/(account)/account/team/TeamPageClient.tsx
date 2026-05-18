@@ -11,6 +11,7 @@ import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 import { copyTextToClipboard } from '@/lib/copyToClipboard';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { mapWinWinL1ToBranchCards, type WinWinTeamOverviewDto } from '@/lib/winWinTeam';
+import { fetchPartnerProgramSummary, type PartnerProgramSummaryApi } from '@/lib/referrals/partnerProgramSummary';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import profileSheetStyles from '../profile/page.module.css';
 import { TeamSheetSection } from './TeamSheetSection';
@@ -50,6 +51,8 @@ export function TeamPageClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [myWinWinReferral, setMyWinWinReferral] = useState<string | null>(null);
+  const [partnerSummary, setPartnerSummary] = useState<PartnerProgramSummaryApi | null>(null);
+  const [partnerIncomeLoading, setPartnerIncomeLoading] = useState(false);
 
   const [inviteDesignerModalOpen, setInviteDesignerModalOpen] = useState(false);
   const [inviteDesignerEmail, setInviteDesignerEmail] = useState('');
@@ -89,17 +92,29 @@ export function TeamPageClient() {
       if (res.status === 403) {
         setError('forbidden');
         setData(null);
+        setPartnerSummary(null);
+        setPartnerIncomeLoading(false);
         return;
       }
       if (!res.ok) {
         setError(await readApiErrorMessage(res));
         setData(null);
+        setPartnerSummary(null);
+        setPartnerIncomeLoading(false);
         return;
       }
       setData((await res.json()) as WinWinTeamOverviewDto);
+      setPartnerIncomeLoading(true);
+      setPartnerSummary(null);
+      void fetchPartnerProgramSummary()
+        .then((s) => setPartnerSummary(s))
+        .catch(() => setPartnerSummary(null))
+        .finally(() => setPartnerIncomeLoading(false));
     } catch {
       setError('Не удалось загрузить данные команды. Попробуйте позже.');
       setData(null);
+      setPartnerSummary(null);
+      setPartnerIncomeLoading(false);
     } finally {
       setLoading(false);
     }
@@ -272,7 +287,11 @@ export function TeamPageClient() {
         </div>
       </div>
 
-      <TeamSheetSection branchCards={filteredBranchCards} />
+      <TeamSheetSection
+        branchCards={filteredBranchCards}
+        partnerSummary={partnerSummary}
+        partnerIncomeLoading={partnerIncomeLoading}
+      />
 
       {inviteDesignerModalOpen ? (
         <>
