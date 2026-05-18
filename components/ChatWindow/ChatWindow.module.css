@@ -90,8 +90,9 @@
 .panelEmbedded {
   width: 100% !important;
   height: 100% !important;
-  min-height: 240px;
-  max-height: none !important;
+  /* В колонке админки ограничены родителем; без этого панель тянула страницу по высоте ленты */
+  min-height: 0 !important;
+  max-height: 100% !important;
   flex: 1;
 }
 
@@ -218,7 +219,8 @@
 }
 
 .messagesScroll {
-  flex: 1 1 auto;
+  /* flex-basis 0 — иначе лента тянет колонку по intrinsic высоте и футер оказывается обрезан при overflow родителя */
+  flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -235,6 +237,40 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.loadOlderWrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 4px 0 12px;
+  box-sizing: border-box;
+}
+
+.loadOlderBtn {
+  font-family: var(--font-commissioner);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-blue);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.loadOlderBtn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.loadOlderBtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.loadOlderBtn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
 }
 
 .message {
@@ -432,6 +468,28 @@ a.docChip:hover {
   outline: none;
 }
 
+/* Горизонтальная засечка между днями (не время у каждой реплики). */
+.daySeparatorWrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px 4px;
+  box-sizing: border-box;
+}
+
+.daySeparatorText {
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.35;
+  color: var(--color-gray);
+  background: rgba(0, 0, 0, 0.04);
+}
+
 .dividerWrap {
   width: 24px;
   height: 16px;
@@ -591,6 +649,7 @@ a.docChip:hover {
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   color: var(--color-gray);
+  white-space: pre-line;
 }
 
 .pendingOutgoingStrip {

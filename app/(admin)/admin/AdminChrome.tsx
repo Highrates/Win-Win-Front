@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { useAdminOrderChatStaffUnreadEvents } from '@/hooks/useAdminOrderChatStaffUnreadEvents';
 import { AdminLocaleProvider } from '@/lib/admin-i18n/adminLocaleContext';
 import {
   ADMIN_LOCALE_STORAGE_KEY,
@@ -70,6 +71,7 @@ export function AdminChrome({
   initialLocale: AdminLocale;
 }) {
   const pathname = usePathname() ?? '';
+  useAdminOrderChatStaffUnreadEvents(pathname === '/admin/login');
   const router = useRouter();
   const [locale, setLocale] = useState<AdminLocale>(initialLocale);
   const [localeReady, setLocaleReady] = useState(false);

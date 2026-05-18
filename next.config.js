@@ -8,6 +8,8 @@
  */
 const nextConfig = {
   reactStrictMode: true,
+  /** Локальные workspace-пакеты (file:../packages/*) — иначе re-export в lib/ ломает статический анализ. */
+  transpilePackages: ['@win-win/order-status', '@win-win/order-item-snapshot'],
   images: {
     remotePatterns: [
       {

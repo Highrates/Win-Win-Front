@@ -135,6 +135,9 @@ export function AccountOrderWorkCard({
     attachChatFiles,
     removePendingChatAttachment,
     deleteChatMessage,
+    chatHasOlderHistory,
+    chatLoadingOlderHistory,
+    loadOlderChatMessages,
   } = useOrderChat({
     orderId,
     enabled: chatOpen,
@@ -217,6 +220,9 @@ export function AccountOrderWorkCard({
         onAttachFiles={attachChatFiles}
         onRemovePendingAttachment={removePendingChatAttachment}
         onDeleteMessage={deleteChatMessage}
+        hasOlderHistory={chatHasOlderHistory}
+        loadingOlderHistory={chatLoadingOlderHistory}
+        onLoadOlderHistory={loadOlderChatMessages}
       />
       <div className={styles.orderCard}>
         <div className={styles.orderCardTop}>

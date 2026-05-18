@@ -12,6 +12,10 @@ import {
   useState,
 } from 'react';
 import type { OrderChatPendingUiAttachment } from '@/lib/orderChat/types';
+import {
+  formatOrderChatDaySeparatorLabel,
+  orderChatLocalDayKey,
+} from '@/lib/orderChat/formatOrderChatDaySeparator';
 import { openOrderChatPhotoSwipe } from '@/lib/orderChat/openOrderChatPhotoSwipe';
 import styles from './ChatWindow.module.css';
 
@@ -30,6 +34,10 @@ export type ChatWindowMessage = {
   isDeleted?: boolean;
   /** Показать кнопку удаления (если задан onDeleteMessage) */
   deletable?: boolean;
+  /** Только order chat: для пересчёта кнопки «удалить» по истечении окна (24 ч). */
+  ocAuthorUserId?: string;
+  ocAuthorRole?: 'CUSTOMER' | 'STAFF';
+  ocCreatedAtIso?: string;
 };
 
 type Props = {
@@ -68,7 +76,26 @@ type Props = {
   /** Убрать файл из очереди перед отправкой (по clientKey из pendingOutgoing) */
   onRemovePendingAttachment?: (clientKey: string) => void;
   onDeleteMessage?: (messageId: string) => void | Promise<void>;
+  /** Есть сообщения старее верха списка (пагинация). */
+  hasOlderHistory?: boolean;
+  loadingOlderHistory?: boolean;
+  onLoadOlderHistory?: () => void | Promise<void>;
+  /** Подпись кнопки «раньше» (например по локали админки). По умолчанию — русский для ЛК. */
+  loadOlderHistoryLabel?: string;
+  /**
+   * Локаль для заголовков дня («Сегодня», «Вчера», формат крайних дат) между блоками сообщений.
+   * Должна совпадать с локалью времени в сообщениях (напр. **`ru-RU`** / **`zh-CN`** для админки).
+   */
+  messageDayLocale?: string;
 };
+
+/** Безопасная подстановка id в атрибут / селектор. */
+function escapeAttrSelectorSegment(value: string): string {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value);
+  }
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
 
 function CloseIcon() {
   return (
@@ -87,6 +114,16 @@ function MessageBetweenDivider() {
   return (
     <div className={styles.dividerWrap} aria-hidden>
       <div className={styles.dividerLine} />
+    </div>
+  );
+}
+
+function DaySeparatorRibbon({ iso, locale }: { iso: string; locale: string }) {
+  const label = formatOrderChatDaySeparatorLabel(iso, locale);
+  if (!label.trim()) return null;
+  return (
+    <div className={styles.daySeparatorWrap}>
+      <p className={styles.daySeparatorText}>{label}</p>
     </div>
   );
 }
@@ -190,6 +227,11 @@ export function ChatWindow({
   onAttachFiles,
   onRemovePendingAttachment,
   onDeleteMessage,
+  hasOlderHistory = false,
+  loadingOlderHistory = false,
+  onLoadOlderHistory,
+  loadOlderHistoryLabel = 'Показать раньше',
+  messageDayLocale = 'ru-RU',
 }: Props) {
   const titleId = useId();
   const fileInputId = useId();
@@ -200,31 +242,87 @@ export function ChatWindow({
   const [blendReady, setBlendReady] = useState(false);
   const embedded = variant === 'embedded';
 
-  /** Прокручивает область сообщений так, чтобы внизу был конец истории и поле композера оставалось «у последних». */
+  /** Прокручивает область сообщений к низу (новые сообщения внизу). */
   const scrollMessagesToBottom = useCallback(() => {
     const el = messagesScrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, []);
 
-  const messagesFingerprint = useMemo(() => {
-    if (messages.length === 0) return '0';
-    const tail = messages[messages.length - 1]!;
-    return `${messages.length}:${tail.id}`;
-  }, [messages]);
+  const listStatsRef = useRef<{ length: number; headId?: string; tailId?: string }>({
+    length: 0,
+  });
 
+  /** Не отодвигаем к низу при prepend «старее» сверху; при новых внизу — докручиваем низ; при перезагрузке хвоста — докручиваем низ. */
   useLayoutEffect(() => {
-    if (!open) return;
-    scrollMessagesToBottom();
+    if (!open) {
+      listStatsRef.current = { length: 0 };
+      return;
+    }
+
+    const el = messagesScrollRef.current;
+    if (!el) return;
+
+    const prev = listStatsRef.current;
+    const headId = messages[0]?.id;
+    const tailId = messages.length ? messages[messages.length - 1].id : undefined;
+
+    let raf0 = 0;
     let raf1 = 0;
-    const raf0 = requestAnimationFrame(() => {
-      raf1 = requestAnimationFrame(scrollMessagesToBottom);
-    });
+    const bumpBottomWithRafs = () => {
+      scrollMessagesToBottom();
+      raf0 = requestAnimationFrame(() => {
+        scrollMessagesToBottom();
+        raf1 = requestAnimationFrame(scrollMessagesToBottom);
+      });
+    };
+
+    const prepend =
+      prev.length > 0 &&
+      messages.length > prev.length &&
+      headId !== undefined &&
+      headId !== prev.headId;
+
+    const append =
+      prev.length > 0 &&
+      messages.length > prev.length &&
+      headId !== undefined &&
+      headId === prev.headId &&
+      tailId !== undefined &&
+      prev.tailId !== undefined &&
+      tailId !== prev.tailId;
+
+    const tailReload =
+      prev.length > messages.length &&
+      messages.length > 0 &&
+      tailId !== undefined &&
+      prev.tailId !== undefined &&
+      tailId === prev.tailId &&
+      headId !== undefined &&
+      headId !== prev.headId;
+
+    const initialFill = prev.length === 0 && messages.length > 0;
+
+    if (prepend && prev.headId) {
+      const keep = el.querySelector(`[data-oc-msg-id="${escapeAttrSelectorSegment(prev.headId)}"]`);
+      if (keep instanceof HTMLElement) keep.scrollIntoView({ block: 'nearest' });
+    } else if (initialFill || append || tailReload) {
+      bumpBottomWithRafs();
+    }
+
+    listStatsRef.current = {
+      length: messages.length,
+      headId,
+      tailId,
+    };
+
     return () => {
       cancelAnimationFrame(raf0);
       cancelAnimationFrame(raf1);
     };
-  }, [open, blendReady, messagesFingerprint, scrollMessagesToBottom]);
+  }, [open, messages, scrollMessagesToBottom]);
+
+  const messagesFingerprint = useMemo(() => messages.map((m) => m.id).join('\0'), [messages]);
 
   /** Картинки в лентах могут дорисоваться после layout — подтягиваем низ только если уже у «предпоследних» сообщений. */
   useEffect(() => {
@@ -359,43 +457,72 @@ export function ChatWindow({
           ) : null}
           {messages.length > 0 ? (
               <div className={styles.messagesList}>
-                {messages.map((m, index) => (
-                  <Fragment key={m.id}>
-                    <article className={styles.message}>
-                      <div className={styles.senderInfo}>
-                        <div className={styles.senderLeft}>
-                          {m.senderAvatarUrl ? (
-                            <img className={styles.avatar} src={m.senderAvatarUrl} alt="" width={24} height={24} />
-                          ) : (
-                            <div className={styles.avatar} aria-hidden />
-                          )}
-                          <span className={styles.senderName}>{m.senderName}</span>
+                {hasOlderHistory && onLoadOlderHistory ? (
+                  <div className={styles.loadOlderWrap}>
+                    <button
+                      type="button"
+                      className={styles.loadOlderBtn}
+                      disabled={loadingOlderHistory}
+                      onClick={() => void onLoadOlderHistory()}
+                    >
+                      {loadingOlderHistory ? `${loadOlderHistoryLabel}…` : loadOlderHistoryLabel}
+                    </button>
+                  </div>
+                ) : null}
+                {messages.map((m, index) => {
+                  const iso = m.ocCreatedAtIso?.trim();
+                  const dayKey = iso ? orderChatLocalDayKey(iso) : null;
+                  const prev = messages[index - 1];
+                  const prevIso = prev?.ocCreatedAtIso?.trim();
+                  const prevKey = prevIso ? orderChatLocalDayKey(prevIso) : null;
+                  const showDaySep = iso && dayKey != null && (index === 0 || dayKey !== prevKey);
+
+                  const next = messages[index + 1];
+                  const nextIso = next?.ocCreatedAtIso?.trim();
+                  const nextKey =
+                    nextIso != null ? orderChatLocalDayKey(nextIso) : null;
+                  const showBetweenDivider =
+                    index < messages.length - 1 && dayKey != null && nextKey != null && dayKey === nextKey;
+
+                  return (
+                    <Fragment key={m.id}>
+                      {showDaySep ? <DaySeparatorRibbon iso={iso!} locale={messageDayLocale} /> : null}
+                      <article className={styles.message} data-oc-msg-id={m.id}>
+                        <div className={styles.senderInfo}>
+                          <div className={styles.senderLeft}>
+                            {m.senderAvatarUrl ? (
+                              <img className={styles.avatar} src={m.senderAvatarUrl} alt="" width={24} height={24} />
+                            ) : (
+                              <div className={styles.avatar} aria-hidden />
+                            )}
+                            <span className={styles.senderName}>{m.senderName}</span>
+                          </div>
+                          {m.deletable && onDeleteMessage ? (
+                            <button
+                              type="button"
+                              className={styles.messageDeleteBtn}
+                              aria-label="Удалить сообщение"
+                              onClick={() => void onDeleteMessage(m.id)}
+                            >
+                              ×
+                            </button>
+                          ) : null}
+                          <span className={styles.messageTime}>{m.timeLabel}</span>
                         </div>
-                        {m.deletable && onDeleteMessage ? (
-                          <button
-                            type="button"
-                            className={styles.messageDeleteBtn}
-                            aria-label="Удалить сообщение"
-                            onClick={() => void onDeleteMessage(m.id)}
-                          >
-                            ×
-                          </button>
+                        {!m.isDeleted &&
+                        ((m.documents?.length ?? 0) > 0 || (m.images?.length ?? 0) > 0) ? (
+                          <MessageAttachments message={m} onOpenChatImage={openChatImage} />
                         ) : null}
-                        <span className={styles.messageTime}>{m.timeLabel}</span>
-                      </div>
-                      {!m.isDeleted &&
-                      ((m.documents?.length ?? 0) > 0 || (m.images?.length ?? 0) > 0) ? (
-                        <MessageAttachments message={m} onOpenChatImage={openChatImage} />
-                      ) : null}
-                      {m.isDeleted ? (
-                        <p className={styles.messageDeleted}>Сообщение удалено</p>
-                      ) : m.content?.trim() ? (
-                        <p className={styles.messageBody}>{m.content.trim()}</p>
-                      ) : null}
-                    </article>
-                    {index < messages.length - 1 ? <MessageBetweenDivider /> : null}
-                  </Fragment>
-                ))}
+                        {m.isDeleted ? (
+                          <p className={styles.messageDeleted}>Сообщение удалено</p>
+                        ) : m.content?.trim() ? (
+                          <p className={styles.messageBody}>{m.content.trim()}</p>
+                        ) : null}
+                      </article>
+                      {showBetweenDivider ? <MessageBetweenDivider /> : null}
+                    </Fragment>
+                  );
+                })}
               </div>
             ) : null}
         </div>

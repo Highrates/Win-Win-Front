@@ -86,6 +86,7 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     notesHint: pick(locale, 'Видно только в админке; сохранение на сервере — позже.', '仅管理端可见；稍后支持服务端保存。'),
     chatPlaceholder: pick(locale, 'Сообщение…', '消息…'),
     chatEmpty: pick(locale, 'Пока нет сообщений', '暂无消息'),
+    chatLoadOlder: pick(locale, 'Показать раньше', '更早消息'),
     footerSumLabel: pick(locale, 'Сумма', '合计'),
     actionPrepareCp: pick(locale, 'Сформировать КП', '生成报价单'),
     actionCancelOrder: pick(locale, 'Удалить заявку', '删除申请'),

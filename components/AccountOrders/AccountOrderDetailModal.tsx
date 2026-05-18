@@ -427,6 +427,9 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
     attachChatFiles,
     removePendingChatAttachment,
     deleteChatMessage,
+    chatHasOlderHistory,
+    chatLoadingOlderHistory,
+    loadOlderChatMessages,
   } = useOrderChat({
     orderId: order?.id ?? null,
     enabled: chatOpen,
@@ -487,6 +490,9 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
           onAttachFiles={attachChatFiles}
           onRemovePendingAttachment={removePendingChatAttachment}
           onDeleteMessage={deleteChatMessage}
+          hasOlderHistory={chatHasOlderHistory}
+          loadingOlderHistory={chatLoadingOlderHistory}
+          onLoadOlderHistory={loadOlderChatMessages}
         />
         <header className={panelModal.header}>
           <button type="button" className={panelModal.iconBtn} onClick={onClose} aria-label="Закрыть">

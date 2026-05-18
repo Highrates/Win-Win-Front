@@ -1,12 +1,30 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { io, type Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import { adminBackendPath } from '@/lib/adminBackendFetch';
 import type { ChatWindowMessage } from '@/components/ChatWindow/ChatWindow';
-import { ORDER_CHAT_SOCKET_NAMESPACE } from '@/lib/orderChat/constants';
+import {
+  CHAT_MESSAGES_PAGE_DEFAULT,
+  ORDER_CHAT_ATTACHMENT_REFS_PAYLOAD_MAX_CHARS,
+  ORDER_CHAT_ATTACHMENTS_MAX,
+  ORDER_CHAT_POST_BODY_MAX_CHARS,
+  ORDER_CHAT_SOCKET_UPDATED_EVENT,
+  ORDER_CHAT_UPLOAD_MAX_FILE_BYTES,
+  type OrderChatVariant,
+} from '@/lib/orderChat/constants';
+import { computeOrderChatMessageDeletableInUi } from '@/lib/orderChat/orderChatDeletionUi';
 import { decodeJwtPayloadUnsafe } from '@/lib/orderChat/decodeJwtPayloadUnsafe';
-import { getWsOrigin } from '@/lib/orderChat/wsOrigin';
+import {
+  fetchOrderChatWsToken,
+  getOrCreateSharedOrderChatSocket,
+  registerOrderChatWsSession,
+  waitOrderChatSocketConnect,
+} from '@/lib/orderChat/orderChatWsShared';
+import {
+  describeOrderChatUploadFailure,
+  orderChatFileTooLargeUserMessage,
+} from '@/lib/orderChat/orderChatUploadError';
 import { readUpstreamJsonErrorMessage } from '@/lib/readUpstreamJsonError';
 import type {
   OrderChatApiMessage,
@@ -15,34 +33,11 @@ import type {
   PendingAttachmentRef,
 } from '@/lib/orderChat/types';
 
+export type { OrderChatVariant } from '@/lib/orderChat/constants';
+
 const PROFILE_AVATAR_PLACEHOLDER = '/images/placeholder.svg';
 /** В ЛК сообщения сотрудника показываем с фирменным аватаром менеджера. */
 const STAFF_AVATAR_ACCOUNT = '/images/Admin-avatar.jpeg';
-
-export type OrderChatVariant = 'account' | 'admin';
-
-let shared: { socket: Socket; token: string } | null = null;
-
-function disposeSharedSocket(): void {
-  shared?.socket.disconnect();
-  shared = null;
-}
-
-function getSharedSocket(token: string): Socket {
-  const origin = getWsOrigin();
-  const url = `${origin}${ORDER_CHAT_SOCKET_NAMESPACE}`;
-  if (shared?.socket && shared.token === token) {
-    return shared.socket;
-  }
-  disposeSharedSocket();
-  const socket = io(url, {
-    auth: { token },
-    transports: ['websocket', 'polling'],
-    path: '/socket.io',
-  });
-  shared = { socket, token };
-  return socket;
-}
 
 /** iOS/macOS иногда отдаёт File.type пустым — ищем картинку по расширению для превью и kind */
 function inferMimeFromFilename(name: string): string | null {
@@ -81,19 +76,24 @@ async function parseOrderChatUploadResponse(res: Response): Promise<{
   return { url, filename, mimeType, kind };
 }
 
-async function fetchWsToken(variant: OrderChatVariant): Promise<string> {
-  const path = variant === 'account' ? '/api/user/ws-token' : '/api/admin/ws-token';
-  const res = await fetch(path, { credentials: 'same-origin', cache: 'no-store' });
-  if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
-  const j = (await res.json()) as { token?: string };
-  if (!j.token?.trim()) throw new Error('Нет токена для чата');
-  return j.token.trim();
-}
-
-function messagesUrl(variant: OrderChatVariant, orderId: string): string {
+function orderChatMessagesPath(variant: OrderChatVariant, orderId: string): string {
   return variant === 'account'
     ? `/api/user/orders/${encodeURIComponent(orderId)}/chat/messages`
     : adminBackendPath(`orders/admin/${encodeURIComponent(orderId)}/chat/messages`);
+}
+
+function orderChatMessagesListUrl(
+  variant: OrderChatVariant,
+  orderId: string,
+  opts?: { limit?: number; before?: string },
+): string {
+  const base = orderChatMessagesPath(variant, orderId);
+  const params = new URLSearchParams();
+  if (opts?.limit != null) params.set('limit', String(opts.limit));
+  const beforeTrim = opts?.before?.trim();
+  if (beforeTrim) params.set('before', beforeTrim);
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
 }
 
 function readUrl(variant: OrderChatVariant, orderId: string): string {
@@ -114,21 +114,6 @@ function deleteUrl(variant: OrderChatVariant, orderId: string, messageId: string
     : adminBackendPath(
         `orders/admin/${encodeURIComponent(orderId)}/chat/messages/${encodeURIComponent(messageId)}`,
       );
-}
-
-function waitSocketConnect(socket: Socket, ms = 12000): Promise<void> {
-  if (socket.connected) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('Нет соединения с чатом')), ms);
-    socket.once('connect', () => {
-      clearTimeout(t);
-      resolve();
-    });
-    socket.once('connect_error', (err: Error) => {
-      clearTimeout(t);
-      reject(err);
-    });
-  });
 }
 
 function mapApiToUi(
@@ -167,8 +152,14 @@ function mapApiToUi(
         .map((a) => ({ id: a.id, src: a.fileUrl, alt: '' }))
     : undefined;
 
-  const deletable =
-    !deleted && (variant === 'admin' || (variant === 'account' && isMineCustomer));
+  const deletable = computeOrderChatMessageDeletableInUi({
+    variant,
+    viewerUserId,
+    deleted,
+    authorUserId: m.authorUserId,
+    authorRole: m.authorRole,
+    createdAtIso: m.createdAt,
+  });
 
   const avatarRaw = m.authorAvatarUrl?.trim();
   let senderAvatarUrl = avatarRaw && avatarRaw.length > 0 ? avatarRaw : PROFILE_AVATAR_PLACEHOLDER;
@@ -186,6 +177,9 @@ function mapApiToUi(
     documents: docs?.length ? docs : undefined,
     images: imgs?.length ? imgs : undefined,
     deletable,
+    ocAuthorUserId: m.authorUserId,
+    ocAuthorRole: m.authorRole,
+    ocCreatedAtIso: m.createdAt,
   };
 }
 
@@ -203,7 +197,12 @@ export function useOrderChat(opts: {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [pendingRefs, setPendingRefs] = useState<PendingAttachmentRef[]>([]);
+  const [hasOlderHistory, setHasOlderHistory] = useState(false);
+  const [loadingOlderHistory, setLoadingOlderHistory] = useState(false);
   const viewerRef = useRef<string | null>(null);
+  /** Диалог по заказу: отсекаем WS-события «чужого» conversation при общем сокете. */
+  const conversationIdRef = useRef<string | null>(null);
+  const messagesRef = useRef<ChatWindowMessage[]>([]);
 
   const uploadBusy = useMemo(() => pendingRefs.some((r) => r.uploading), [pendingRefs]);
 
@@ -230,17 +229,77 @@ export function useOrderChat(opts: {
     return undefined;
   }, [pendingRefs]);
 
+  messagesRef.current = messages;
+
+  useEffect(() => {
+    if (!enabled || !orderId) return undefined;
+    const tick = (): void => {
+      setMessages((prev) =>
+        prev.map((row) => {
+          if (!row.ocCreatedAtIso || !row.ocAuthorUserId || !row.ocAuthorRole) return row;
+          return {
+            ...row,
+            deletable: computeOrderChatMessageDeletableInUi({
+              variant,
+              viewerUserId: viewerRef.current,
+              deleted: !!row.isDeleted,
+              authorUserId: row.ocAuthorUserId,
+              authorRole: row.ocAuthorRole,
+              createdAtIso: row.ocCreatedAtIso,
+            }),
+          };
+        }),
+      );
+    };
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, [enabled, orderId, variant]);
+
   const reloadMessages = useCallback(async () => {
     if (!orderId) return;
-    const res = await fetch(messagesUrl(variant, orderId), {
+    const res = await fetch(orderChatMessagesListUrl(variant, orderId, { limit: CHAT_MESSAGES_PAGE_DEFAULT }), {
       credentials: 'same-origin',
       cache: 'no-store',
     });
     if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
     const data = (await res.json()) as OrderChatMessagesResponse;
     const viewer = viewerRef.current;
+    conversationIdRef.current = data.conversationId ?? null;
     setMessages((data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale)));
+    setHasOlderHistory(Boolean(data.hasOlder));
   }, [orderId, variant, timeLocale]);
+
+  const loadOlderChatMessages = useCallback(async () => {
+    if (!orderId || !hasOlderHistory || loadingOlderHistory) return;
+    const oldestId = messagesRef.current[0]?.id;
+    if (!oldestId) return;
+
+    setLoadingOlderHistory(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        orderChatMessagesListUrl(variant, orderId, {
+          limit: CHAT_MESSAGES_PAGE_DEFAULT,
+          before: oldestId,
+        }),
+        { credentials: 'same-origin', cache: 'no-store' },
+      );
+      if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
+      const data = (await res.json()) as OrderChatMessagesResponse;
+      const viewer = viewerRef.current;
+      const mapped = (data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale));
+      setHasOlderHistory(Boolean(data.hasOlder));
+      setMessages((prev) => {
+        const seen = new Set(prev.map((x) => x.id));
+        return [...mapped.filter((x) => !seen.has(x.id)), ...prev];
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось подгрузить историю');
+    } finally {
+      setLoadingOlderHistory(false);
+    }
+  }, [hasOlderHistory, loadingOlderHistory, orderId, timeLocale, variant]);
 
   useEffect(() => {
     if (!enabled || !orderId) {
@@ -253,15 +312,32 @@ export function useOrderChat(opts: {
       setMessages([]);
       setError(null);
       setLoading(false);
+      setHasOlderHistory(false);
+      setLoadingOlderHistory(false);
+      conversationIdRef.current = null;
       return undefined;
     }
 
     let disposed = false;
-    let socketRef: Socket | null = null;
+    let activeSocket: Socket | null = null;
+    let unregisterSession: (() => void) | null = null;
 
     const onCreated = (payload: OrderChatApiMessage) => {
       if (disposed || !payload?.id) return;
+      const cur = conversationIdRef.current;
+      if (
+        cur != null &&
+        cur !== '' &&
+        payload.conversationId != null &&
+        payload.conversationId !== cur
+      ) {
+        return;
+      }
       const viewer = viewerRef.current;
+      const curCid = conversationIdRef.current;
+      if ((!curCid || curCid === '') && payload.conversationId) {
+        conversationIdRef.current = payload.conversationId;
+      }
       setMessages((prev) => {
         if (prev.some((x) => x.id === payload.id)) return prev;
         return [...prev, mapApiToUi(payload, viewer, variant, timeLocale)];
@@ -289,23 +365,53 @@ export function useOrderChat(opts: {
       );
     };
 
+    const detachSocketHandlers = () => {
+      if (!activeSocket) return;
+      activeSocket.off('message_created', onCreated);
+      activeSocket.off('message_deleted', onDeleted);
+    };
+
+    const attachSocketHandlers = (socket: Socket) => {
+      detachSocketHandlers();
+      activeSocket = socket;
+      socket.on('message_created', onCreated);
+      socket.on('message_deleted', onDeleted);
+      socket.emit('join_order_chat', { orderId });
+    };
+
+    const onSocketLayerUpdated = ((ev: Event) => {
+      const ce = ev as CustomEvent<{ variant: OrderChatVariant; socket: Socket }>;
+      if (ce.detail?.variant !== variant || disposed) return;
+      attachSocketHandlers(ce.detail.socket);
+    }) as EventListener;
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(ORDER_CHAT_SOCKET_UPDATED_EVENT, onSocketLayerUpdated);
+    }
+
     void (async () => {
       setLoading(true);
       setError(null);
       try {
-        const token = await fetchWsToken(variant);
+        const token = await fetchOrderChatWsToken(variant);
         const sub = decodeJwtPayloadUnsafe(token)?.sub ?? null;
         viewerRef.current = sub;
 
-        const res = await fetch(messagesUrl(variant, orderId), {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
+        const res = await fetch(
+          orderChatMessagesListUrl(variant, orderId, { limit: CHAT_MESSAGES_PAGE_DEFAULT }),
+          {
+            credentials: 'same-origin',
+            cache: 'no-store',
+          },
+        );
         if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
         const data = (await res.json()) as OrderChatMessagesResponse;
         if (disposed) return;
+        conversationIdRef.current = data.conversationId ?? null;
         const viewer = viewerRef.current;
-        setMessages((data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale)));
+        const rows = (data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale));
+        setMessages(rows);
+        setHasOlderHistory(Boolean(data.hasOlder));
 
         await fetch(readUrl(variant, orderId), {
           method: 'POST',
@@ -317,16 +423,18 @@ export function useOrderChat(opts: {
           document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
         }
 
-        socketRef = getSharedSocket(token);
-        await waitSocketConnect(socketRef);
+        unregisterSession = registerOrderChatWsSession(variant, token);
+        const socket = getOrCreateSharedOrderChatSocket(variant, token);
+        await waitOrderChatSocketConnect(socket);
         if (disposed) return;
-        socketRef.emit('join_order_chat', { orderId });
-        socketRef.on('message_created', onCreated);
-        socketRef.on('message_deleted', onDeleted);
+        attachSocketHandlers(socket);
       } catch (e) {
+        unregisterSession?.();
+        unregisterSession = null;
         if (!disposed) {
           setError(e instanceof Error ? e.message : 'Не удалось загрузить чат');
           setMessages([]);
+          setHasOlderHistory(false);
         }
       } finally {
         if (!disposed) setLoading(false);
@@ -335,11 +443,12 @@ export function useOrderChat(opts: {
 
     return () => {
       disposed = true;
-      if (socketRef) {
-        socketRef.off('message_created', onCreated);
-        socketRef.off('message_deleted', onDeleted);
-        socketRef.emit('leave_order_chat', { orderId });
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(ORDER_CHAT_SOCKET_UPDATED_EVENT, onSocketLayerUpdated);
       }
+      detachSocketHandlers();
+      activeSocket?.emit('leave_order_chat', { orderId });
+      unregisterSession?.();
     };
   }, [enabled, orderId, variant, timeLocale]);
 
@@ -350,10 +459,28 @@ export function useOrderChat(opts: {
       const ready = pendingRefs.filter((r) => r.fileUrl?.trim() && !r.uploading);
       if (!body && ready.length === 0) return;
 
+      if (body.length > ORDER_CHAT_POST_BODY_MAX_CHARS) {
+        setError(`Сообщение длиннее ${ORDER_CHAT_POST_BODY_MAX_CHARS.toLocaleString()} символов`);
+        return;
+      }
+      if (ready.length > ORDER_CHAT_ATTACHMENTS_MAX) {
+        setError(`Не более ${ORDER_CHAT_ATTACHMENTS_MAX} вложений в сообщении`);
+        return;
+      }
+      let refsPayloadChars = 0;
+      for (const r of ready) {
+        const mt = r.mimeType?.trim() ?? '';
+        refsPayloadChars += r.fileUrl.length + r.filename.length + mt.length;
+      }
+      if (refsPayloadChars > ORDER_CHAT_ATTACHMENT_REFS_PAYLOAD_MAX_CHARS) {
+        setError('Суммарный размер полей вложений слишком большой — удалите часть файлов или напишите в поддержку');
+        return;
+      }
+
       setSending(true);
       setError(null);
       try {
-        const res = await fetch(messagesUrl(variant, orderId), {
+        const res = await fetch(orderChatMessagesPath(variant, orderId), {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
@@ -404,6 +531,16 @@ export function useOrderChat(opts: {
       if (!orderId || files.length === 0) return;
       setError(null);
 
+      if (pendingRefs.length + files.length > ORDER_CHAT_ATTACHMENTS_MAX) {
+        setError(`Не более ${ORDER_CHAT_ATTACHMENTS_MAX} вложений в сообщении`);
+        return;
+      }
+      const tooLarge = files.find((f) => f.size > ORDER_CHAT_UPLOAD_MAX_FILE_BYTES);
+      if (tooLarge) {
+        setError(`${orderChatFileTooLargeUserMessage()} Файл: «${tooLarge.name}».`);
+        return;
+      }
+
       for (const file of files) {
         const clientToken =
           typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -436,7 +573,11 @@ export function useOrderChat(opts: {
             credentials: 'same-origin',
             body: fd,
           });
-          if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
+          if (!res.ok) {
+            throw new Error(
+              await describeOrderChatUploadFailure(res, ORDER_CHAT_UPLOAD_MAX_FILE_BYTES),
+            );
+          }
           const row = await parseOrderChatUploadResponse(res);
           setPendingRefs((p) =>
             p.map((x) =>
@@ -461,7 +602,7 @@ export function useOrderChat(opts: {
         }
       }
     },
-    [orderId, variant],
+    [orderId, variant, pendingRefs],
   );
 
   const removePendingAttachment = useCallback((clientToken: string) => {
@@ -521,5 +662,8 @@ export function useOrderChat(opts: {
     removePendingChatAttachment: removePendingAttachment,
     deleteChatMessage: deleteMessage,
     reloadChat: reloadMessages,
+    chatHasOlderHistory: hasOlderHistory,
+    chatLoadingOlderHistory: loadingOlderHistory,
+    loadOlderChatMessages,
   };
 }

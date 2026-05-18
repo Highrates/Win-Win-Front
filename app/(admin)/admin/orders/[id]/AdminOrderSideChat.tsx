@@ -33,6 +33,9 @@ export function AdminOrderSideChat({ orderId }: { orderId: string }) {
     attachChatFiles,
     removePendingChatAttachment,
     deleteChatMessage,
+    chatHasOlderHistory,
+    chatLoadingOlderHistory,
+    loadOlderChatMessages,
   } = useOrderChat({
     orderId,
     enabled: chatEnabled,
@@ -84,6 +87,11 @@ export function AdminOrderSideChat({ orderId }: { orderId: string }) {
               onAttachFiles={attachChatFiles}
               onRemovePendingAttachment={removePendingChatAttachment}
               onDeleteMessage={deleteChatMessage}
+              hasOlderHistory={chatHasOlderHistory}
+              loadingOlderHistory={chatLoadingOlderHistory}
+              onLoadOlderHistory={loadOlderChatMessages}
+              loadOlderHistoryLabel={d.chatLoadOlder}
+              messageDayLocale={timeLocale}
               onClose={() => {}}
             />
           </div>

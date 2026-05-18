@@ -8,6 +8,7 @@ export type OrderChatApiAttachment = {
 
 export type OrderChatApiMessage = {
   id: string;
+  conversationId?: string;
   authorUserId: string;
   authorRole: 'CUSTOMER' | 'STAFF';
   authorLabel: string;
@@ -22,6 +23,8 @@ export type OrderChatApiMessage = {
 export type OrderChatMessagesResponse = {
   conversationId: string | null;
   messages: OrderChatApiMessage[];
+  /** Есть сообщения старее первого элемента `messages`; подгружать блоком через `before`. */
+  hasOlder?: boolean;
 };
 
 export type PendingAttachmentRef = {
