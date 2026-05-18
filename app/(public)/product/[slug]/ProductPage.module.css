@@ -995,11 +995,10 @@ a.productDetailsInteractItem {
 }
 
 .accordionPanel[data-open] {
-  max-height: 800px;
-}
-
-.accordionPanel > .accordionContent {
-  overflow: hidden;
+  max-height: min(60vh, 36rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .accordionContent {
