@@ -9,6 +9,10 @@ import {
   adminBackendJson,
   adminUploadMediaLibrary,
 } from '@/lib/adminBackendFetch';
+import {
+  readCollapsedFolderIds,
+  writeCollapsedFolderIds,
+} from '@/lib/adminMediaLibrary/folderTreeCollapseStorage';
 import type {
   MediaFolderRow,
   MediaLibraryScope,
@@ -150,13 +154,17 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
     return Array.from(folderIdsWithChildren).every((id) => collapsedFolderIds.has(id));
   }, [collapsedFolderIds, folderIdsWithChildren]);
 
+  function persistCollapsedFolderIds(next: Set<string>) {
+    writeCollapsedFolderIds(libraryScope, next);
+  }
+
   function toggleCollapseAllFolders() {
     if (folderIdsWithChildren.size === 0) return;
-    if (allFoldersCollapsed) {
-      setCollapsedFolderIds(new Set());
-    } else {
-      setCollapsedFolderIds(new Set(folderIdsWithChildren));
-    }
+    const next = allFoldersCollapsed
+      ? new Set<string>()
+      : new Set(folderIdsWithChildren);
+    setCollapsedFolderIds(next);
+    persistCollapsedFolderIds(next);
   }
 
   function toggleFolderCollapse(id: string) {
@@ -164,6 +172,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      persistCollapsedFolderIds(next);
       return next;
     });
   }
@@ -265,7 +274,19 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
   useEffect(() => {
     setFolderFilter(null);
+    setCollapsedFolderIds(readCollapsedFolderIds(libraryScope));
   }, [libraryScope]);
+
+  useEffect(() => {
+    if (folders.length === 0) return;
+    setCollapsedFolderIds((prev) => {
+      const folderIdSet = new Set(folders.map((f) => f.id));
+      const next = new Set(Array.from(prev).filter((id) => folderIdSet.has(id)));
+      if (next.size === prev.size) return prev;
+      writeCollapsedFolderIds(libraryScope, next);
+      return next;
+    });
+  }, [folders, libraryScope]);
 
   useEffect(() => {
     loadFolders();
