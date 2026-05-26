@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { fetchProductsSearch } from '@/lib/catalogPublic';
+import { fetchProductsSearch } from '@/lib/server/catalogAuthFetch';
 import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
 import { CategoryCatalogContent } from '@/app/(public)/categories/CategoryCatalogContent';
 import { CATEGORY_PER_PAGE } from '@/app/(public)/categories/categoryCatalogData';
-import { CatalogSectionsTabs } from './CatalogSectionsTabs';
+import { CatalogIndexBody } from './CatalogIndexBody';
 import { CATALOG_PREVIEW_IMAGE_SRC } from './catalogHero';
 
 export const metadata: Metadata = {
@@ -33,7 +33,10 @@ export default async function CatalogIndexPage({ searchParams }: Props) {
     );
   }
 
+  const firstRoot = roots[0];
+
   let search = await fetchProductsSearch({
+    categoryId: firstRoot.id,
     page: rawPage,
     limit: CATEGORY_PER_PAGE,
   });
@@ -41,6 +44,7 @@ export default async function CatalogIndexPage({ searchParams }: Props) {
   const pageEff = Math.min(rawPage, totalPages);
   if (pageEff !== rawPage) {
     search = await fetchProductsSearch({
+      categoryId: firstRoot.id,
       page: pageEff,
       limit: CATEGORY_PER_PAGE,
     });
@@ -61,8 +65,14 @@ export default async function CatalogIndexPage({ searchParams }: Props) {
       catalogHits={search.hits}
       catalogTotal={search.total}
       previewImageSrc={CATALOG_PREVIEW_IMAGE_SRC}
-      belowPreview={
-        <CatalogSectionsTabs key="catalog-index-strip" initialRoots={roots} />
+      catalogIndexBody={
+        <CatalogIndexBody
+          roots={roots}
+          initialCategoryId={firstRoot.id}
+          initialHits={search.hits}
+          initialTotal={search.total}
+          initialPage={pageEff}
+        />
       }
     />
   );

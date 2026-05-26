@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { PRODUCT_CARD_PLACEHOLDER, productCardImageOnError } from '@/lib/productCardImageUrls';
 import productListStyles from './AccountProductList.module.css';
 
 export type AccountDetailedProductMetaRow = { label: string; value: string };
@@ -34,7 +35,7 @@ type AccountDetailedProductRowProps = {
   footerExtra?: ReactNode;
 };
 
-const PLACEHOLDER = '/images/placeholder.svg';
+const PLACEHOLDER = PRODUCT_CARD_PLACEHOLDER;
 
 export function AccountDetailedProductRow({
   product,
@@ -107,6 +108,9 @@ export function AccountDetailedProductRow({
             src={imageSrc}
             alt={product.name}
             className={productListStyles.productCardDetailedImage}
+            loading="lazy"
+            decoding="async"
+            onError={productCardImageOnError}
           />
         </div>
         <div className={productListStyles.productCardDetailedBody}>

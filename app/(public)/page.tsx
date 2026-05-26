@@ -1,4 +1,5 @@
-import { fetchCuratedBrandCollectionBySlug, fetchCuratedProductCollectionBySlug } from '@/lib/catalogPublic';
+import { fetchCuratedBrandCollectionBySlug } from '@/lib/catalogPublic';
+import { fetchCuratedProductCollectionBySlug } from '@/lib/server/catalogAuthFetch';
 import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
 import { mapBrandProductRowsToRecommendationItems } from '@/lib/publicCollectionsPublic';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';

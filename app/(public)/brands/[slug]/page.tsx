@@ -2,17 +2,13 @@ import Link from 'next/link';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ProductCard } from '@/components/ProductCard/ProductCard';
+import { ProductGridWithLikes } from '@/components/ProductGridWithLikes';
 import {
   BRAND_CATEGORY_TABS,
 } from '@/lib/public/brands';
-import {
-  brandCoverImageUrl,
-  fetchPublicBrandBySlug,
-  plainTextExcerptFromHtml,
-  productPriceToNumber,
-} from '@/lib/brandsPublic';
-import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
+import { brandCoverImageUrl, plainTextExcerptFromHtml } from '@/lib/brandsPublic';
+import { fetchPublicBrandBySlug } from '@/lib/server/brandAuthFetch';
+import { brandProductRowToProductGridItem } from '@/lib/productGridItem';
 import { MoreAboutBrandModal } from './MoreAboutBrandModal';
 import styles from './BrandPage.module.css';
 
@@ -62,23 +58,7 @@ export default async function BrandPage({
     { label: name, href: '', current: true },
   ];
 
-  const brandProducts = row.products.map((p) => {
-    const ordered = [...p.images].sort((a, b) => a.sortOrder - b.sortOrder);
-    const galleryUrls = ordered.map((im) => resolveMediaUrlForServer(im.url));
-    const useGallery = galleryUrls.length > 1;
-    const title = (p.displayName ?? p.name).trim() || p.name;
-    return {
-      key: p.slug,
-      slug: p.slug,
-      name: title,
-      price: productPriceToNumber(p.price),
-      imageUrl: galleryUrls[0] ?? '/images/placeholder.svg',
-      imageUrls: useGallery ? galleryUrls : undefined,
-      productId: p.id,
-      collections: typeof p.casesLinkedCount === 'number' ? p.casesLinkedCount : 0,
-      likes: typeof p.likesDisplayCount === 'number' ? p.likesDisplayCount : 0,
-    };
-  });
+  const brandProducts = row.products.map(brandProductRowToProductGridItem);
 
   return (
     <main>
@@ -170,21 +150,7 @@ export default async function BrandPage({
                 <span className={styles.marketSectionRowResultValue}>{brandProducts.length}</span>
               </div>
             </div>
-            <div className={styles.marketGrid}>
-              {brandProducts.map((p) => (
-                <ProductCard
-                  key={p.key}
-                  slug={p.slug}
-                  name={p.name}
-                  price={p.price}
-                  imageUrl={p.imageUrl}
-                  imageUrls={p.imageUrls}
-                  productId={p.productId}
-                  collections={p.collections}
-                  likes={p.likes}
-                />
-              ))}
-            </div>
+            <ProductGridWithLikes items={brandProducts} gridClassName={styles.marketGrid} />
           </div>
         </div>
       </section>

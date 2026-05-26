@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
+import { establishUserClientSession } from '@/lib/userSessionClient';
 import { setUserAccessToken } from '@/lib/userAuthStorage';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
@@ -57,12 +58,7 @@ function LoginEmailFormInner() {
           }
 
           setUserAccessToken(data.access_token);
-          await fetch('/api/user/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ access_token: data.access_token }),
-            credentials: 'same-origin',
-          }).catch(() => {});
+          await establishUserClientSession(data.access_token);
 
           let inviteToken: string | null = null;
           try {

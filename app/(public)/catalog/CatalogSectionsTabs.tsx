@@ -12,10 +12,12 @@ const DRAG_THRESHOLD = 5;
 
 type Props = {
   initialRoots: HomeCatalogRoot[];
+  /** Смена корневой категории (таб) — для обновления сетки товаров на `/catalog`. */
+  onActiveCategoryChange?: (categoryId: string) => void;
 };
 
 /** Страница `/catalog`: табы как на странице брендов + горизонтальная полоса карточек как на главной. */
-export function CatalogSectionsTabs({ initialRoots }: Props) {
+export function CatalogSectionsTabs({ initialRoots, onActiveCategoryChange }: Props) {
   const [roots, setRoots] = useState<HomeCatalogRoot[]>(initialRoots);
 
   const pullTree = useCallback(async () => {
@@ -187,7 +189,11 @@ export function CatalogSectionsTabs({ initialRoots }: Props) {
               aria-selected={tab.id === activeId}
               aria-controls={cardsPanelId}
               className={tab.id === activeId ? brandsStyles.tabActive : brandsStyles.tab}
-              onClick={() => setActiveId(tab.id)}
+              onClick={() => {
+                if (tab.id === activeId) return;
+                setActiveId(tab.id);
+                onActiveCategoryChange?.(tab.id);
+              }}
             >
               {tab.name}
             </button>

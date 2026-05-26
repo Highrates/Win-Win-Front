@@ -1,7 +1,7 @@
 'use client';
 
 import { useToggleLike } from '@/hooks/useToggleLike';
-import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
+import { LikeHeartInteract } from '@/components/LikeHeartInteract';
 
 type Props = {
   designerId: string;
@@ -29,36 +29,19 @@ export function DesignerLikeInteract({ designerId, likesDisplayCount, liked, set
     setControlledLiked: controlled ? setLiked : undefined,
   });
 
-  if (like.auth !== true) {
-    return (
-      <button
-        type="button"
-        className={cn.interactItem}
-        disabled
-        aria-disabled="true"
-        aria-label="Войдите, чтобы поставить лайк дизайнеру"
-      >
-        <LikeHeartSvg className={cn.interactIcon} />
-        <span className={cn.interactValue}>{Math.max(0, likesDisplayCount)}</span>
-      </button>
-    );
-  }
-
   return (
-    <button
-      type="button"
-      className={cn.interactItem}
-      disabled={like.busy || !like.interactiveReady}
-      aria-label={like.liked ? 'Убрать лайк дизайнеру' : 'Поставить лайк дизайнеру'}
-      onClick={() => void like.toggle()}
-    >
-      {like.liked ? (
-        <LikeHeartSvg active className={cn.heartIconActive ?? cn.interactIcon} />
-      ) : (
-        <LikeHeartSvg className={cn.interactIcon} />
-      )}
-      <span className={cn.interactValue}>{Math.max(0, like.count)}</span>
-    </button>
+    <LikeHeartInteract
+      state={like}
+      classNames={{
+        interactItem: cn.interactItem,
+        interactIcon: cn.interactIcon,
+        interactValue: cn.interactValue,
+        heartIconActive: cn.heartIconActive,
+      }}
+      suppressMicroLoadUi={controlled}
+      guestAriaLabel="Войдите, чтобы поставить лайк дизайнеру"
+      likeAriaLabel="Поставить лайк дизайнеру"
+      unlikeAriaLabel="Убрать лайк дизайнеру"
+    />
   );
 }
-

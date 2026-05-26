@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useToggleLike } from '@/hooks/useToggleLike';
+import { LikeBurstOverlay, useLikeBurst } from '@/components/LikeBurstHearts';
+import burstStyles from '@/components/LikeBurstHearts/LikeBurstHearts.module.css';
 import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
 import designerCardStyles from '@/app/(public)/designers/DesignersPage.module.css';
 
@@ -25,6 +27,7 @@ export function FavoriteDesignerCard({
   onUnliked: (designerId: string) => void;
 }) {
   const [liked, setLiked] = useState(true);
+  const { burstId, triggerBurst } = useLikeBurst();
   const like = useToggleLike({
     kind: 'designer',
     id: designer.id,
@@ -58,11 +61,15 @@ export function FavoriteDesignerCard({
             <div style={{ position: 'relative', zIndex: 3, pointerEvents: 'auto' }}>
               <button
                 type="button"
-                className={designerCardStyles.interactItem}
+                className={`${designerCardStyles.interactItem} ${burstStyles.wrap}`}
                 disabled={like.busy}
                 aria-label={liked ? 'Убрать лайк дизайнеру' : 'Поставить лайк дизайнеру'}
-                onClick={() => void like.toggle()}
+                onClick={() => {
+                  if (!liked) triggerBurst();
+                  void like.toggle();
+                }}
               >
+                <LikeBurstOverlay burstId={burstId} />
                 {liked ? (
                   <LikeHeartSvg active className={designerCardStyles.heartIconActive} />
                 ) : (

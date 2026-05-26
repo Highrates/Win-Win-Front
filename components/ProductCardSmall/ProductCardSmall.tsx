@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useToggleLike } from '@/hooks/useToggleLike';
+import type { LikesBulkUiState } from '@/lib/likesBulkUi';
 import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
+import { LikeHeartInteract } from '@/components/LikeHeartInteract';
 import {
   normalizeProductCardImageUrls,
   productCardImageOnError,
@@ -27,6 +29,8 @@ export interface ProductCardSmallProps {
   onPickToggle?: () => void;
   heartActive?: boolean;
   likesInteractive?: boolean;
+  /** Page-level bulk (каталог /projects) — без micro-batch на карточку. */
+  productLikesBulk?: LikesBulkUiState;
 }
 
 function formatPrice(value: number): string {
@@ -49,6 +53,7 @@ export function ProductCardSmall({
   onPickToggle,
   heartActive,
   likesInteractive = true,
+  productLikesBulk,
 }: ProductCardSmallProps) {
   const primarySrc = normalizeProductCardImageUrls(imageUrl, imageUrls)[0];
   const productHref = `/product/${encodeURIComponent(slug)}`;
@@ -57,36 +62,41 @@ export function ProductCardSmall({
       ? `/projects?product=${encodeURIComponent(productId)}`
       : null;
 
+  const pageBulk = productLikesBulk != null;
+  const bulkReady = pageBulk && productLikesBulk.status === 'ready';
+  const bulkLoading = pageBulk && productLikesBulk.status === 'loading';
+  const bulkError = pageBulk && productLikesBulk.status === 'error';
+
   const heartFilledControlled = heartActive !== undefined;
-  const likeInteractive = !pickMode && !!(productId && likesInteractive && !heartFilledControlled);
+  const controlledFromBulk = bulkReady;
+  const likeInteractive = !pickMode && !!(productId && likesInteractive);
   const like = useToggleLike({
     kind: 'product',
     id: productId,
     likesDisplayCount: likes,
     enabled: likeInteractive,
-    mode: 'uncontrolled',
+    mode: bulkReady || (heartFilledControlled && !pickMode) ? 'controlled' : 'uncontrolled',
+    controlledLiked: bulkReady
+      ? productLikesBulk.liked
+      : heartFilledControlled
+        ? !!heartActive
+        : undefined,
+    setControlledLiked: bulkReady
+      ? productLikesBulk.onLikedChange
+      : undefined,
   });
 
-  const heartFilled = heartFilledControlled ? !!heartActive : like.liked;
+  const heartFilled = bulkReady
+    ? productLikesBulk.liked
+    : heartFilledControlled
+      ? !!heartActive
+      : like.liked;
 
   const showLikesColumn = true;
 
   let heartBlock: ReactNode = null;
   if (showLikesColumn) {
-    if (!pickMode && like.auth !== true) {
-      heartBlock = (
-        <button
-          type="button"
-          className={styles.interactItem}
-          disabled
-          aria-disabled="true"
-          aria-label="Войдите, чтобы поставить лайк"
-        >
-          <LikeHeartSvg className={styles.interactIcon} />
-          <span className={styles.interactValue}>{Math.max(0, likes)}</span>
-        </button>
-      );
-    } else if (pickMode || heartFilledControlled || !productId || !likesInteractive) {
+    if (pickMode || (heartFilledControlled && !controlledFromBulk) || !productId || !likesInteractive) {
       heartBlock = (
         <div className={styles.interactItem}>
           <LikeHeartSvg
@@ -98,23 +108,19 @@ export function ProductCardSmall({
       );
     } else {
       heartBlock = (
-        <button
-          type="button"
-          className={styles.interactItem}
-          disabled={like.busy || !like.interactiveReady}
-          aria-label={heartFilled ? 'Убрать лайк' : 'Поставить лайк'}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            void like.toggle();
+        <LikeHeartInteract
+          state={like}
+          classNames={{
+            interactItem: styles.interactItem,
+            interactIcon: styles.interactIcon,
+            interactValue: styles.interactValue,
+            heartIconActive: styles.heartIconActive,
           }}
-        >
-          <LikeHeartSvg
-            active={heartFilled}
-            className={heartFilled ? styles.heartIconActive : styles.interactIcon}
-          />
-          <span className={styles.interactValue}>{Math.max(0, like.count)}</span>
-        </button>
+          suppressMicroLoadUi={bulkReady || heartFilledControlled}
+          bulkLoading={bulkLoading}
+          bulkError={bulkError}
+          stopPropagation
+        />
       );
     }
   }

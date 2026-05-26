@@ -1,7 +1,7 @@
 'use client';
 
 import { useToggleLike } from '@/hooks/useToggleLike';
-import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
+import { LikeHeartInteract } from '@/components/LikeHeartInteract';
 import styles from './ProductPage.module.css';
 
 type Props = {
@@ -19,35 +19,15 @@ export function ProductPdpHeartInteract({ productId, likesDisplayCount }: Props)
     mode: 'uncontrolled',
   });
 
-  if (like.auth !== true) {
-    return (
-      <button
-        type="button"
-        className={styles.productDetailsInteractItem}
-        disabled
-        aria-disabled="true"
-        aria-label="Войдите, чтобы поставить лайк"
-      >
-        <LikeHeartSvg className={styles.productDetailsInteractIcon} />
-        <span className={styles.productDetailsInteractValue}>{Math.max(0, likesDisplayCount)}</span>
-      </button>
-    );
-  }
-
   return (
-    <button
-      type="button"
-      className={styles.productDetailsInteractItem}
-      disabled={like.busy || !like.interactiveReady}
-      aria-label={like.liked ? 'Убрать лайк' : 'Поставить лайк'}
-      onClick={() => void like.toggle()}
-    >
-      {like.liked ? (
-        <LikeHeartSvg active className={styles.productDetailsHeartActive} />
-      ) : (
-        <LikeHeartSvg className={styles.productDetailsInteractIcon} />
-      )}
-      <span className={styles.productDetailsInteractValue}>{Math.max(0, like.count)}</span>
-    </button>
+    <LikeHeartInteract
+      state={like}
+      classNames={{
+        interactItem: styles.productDetailsInteractItem,
+        interactIcon: styles.productDetailsInteractIcon,
+        interactValue: styles.productDetailsInteractValue,
+        heartIconActive: styles.productDetailsHeartActive,
+      }}
+    />
   );
 }

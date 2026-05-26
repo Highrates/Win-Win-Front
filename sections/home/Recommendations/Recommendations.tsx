@@ -1,4 +1,5 @@
-import { ProductCard } from '@/components/ProductCard';
+import { ProductGridWithLikes } from '@/components/ProductGridWithLikes';
+import { recommendationItemsToProductGridItems } from '@/lib/productGridItem';
 import styles from './Recommendations.module.css';
 import type { RecommendationsStaticItem } from './recommendationsStaticItem';
 
@@ -12,28 +13,14 @@ type RecommendationsProps = {
 };
 
 export function Recommendations({ title = 'Рекомендации', id, items }: RecommendationsProps) {
-  if (!items.length) return null;
+  const gridItems = recommendationItemsToProductGridItems(items);
+  if (!gridItems.length) return null;
 
   return (
     <section id={id} className={styles.section}>
       <div className="padding-global">
         <h5 className={styles.title}>{title}</h5>
-        <div className={styles.grid}>
-          {items.map((p) => (
-            <ProductCard
-              key={p.productId ?? p.variantId ?? p.slug}
-              slug={p.slug}
-              name={p.name}
-              price={p.price}
-              variantId={p.variantId}
-              imageUrl={p.imageUrl}
-              imageUrls={p.imageUrls}
-              productId={p.productId}
-              collections={p.collections ?? 0}
-              likes={typeof p.likes === 'number' ? p.likes : 0}
-            />
-          ))}
-        </div>
+        <ProductGridWithLikes items={gridItems} gridClassName={styles.grid} />
       </div>
     </section>
   );

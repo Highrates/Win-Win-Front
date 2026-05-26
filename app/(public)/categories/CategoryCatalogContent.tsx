@@ -5,15 +5,13 @@ import {
   CatalogSubcategoryCardsStrip,
   type CatalogSubcategoryCardItem,
 } from '@/app/(public)/catalog/CatalogSubcategoryCardsStrip';
-import { ProductCard } from '@/components/ProductCard';
+import { CatalogProductGrid } from '@/components/CatalogProductGrid/CatalogProductGrid';
 import {
   CATEGORY_PER_PAGE,
   buildCatalogPaginationEntries,
   categoryCatalogPageHref,
 } from './categoryCatalogData';
 import type { CatalogProductSearchHit } from '@/lib/catalogPublic';
-import { parseProductPriceFromApi } from '@/lib/productSpecsFromApi';
-import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import styles from './CategoryPage.module.css';
 
 export type CategoryBreadcrumb = {
@@ -37,6 +35,8 @@ type Props = {
   previewImageSrc?: string;
   /** Только `/catalog`: табы разделов + полоса карточек после превью */
   belowPreview?: ReactNode;
+  /** `/catalog`: табы + сетка с клиентской подгрузкой по категории */
+  catalogIndexBody?: ReactNode;
   /** `/catalog/[slug]`: корневая категория — полоса прямых подкатегорий */
   showSubcategoryCardsStrip?: boolean;
   subcategoryItems?: CatalogSubcategoryCardItem[];
@@ -52,6 +52,7 @@ export function CategoryCatalogContent({
   catalogTotal,
   previewImageSrc = '/images/placeholder.svg',
   belowPreview,
+  catalogIndexBody,
   showSubcategoryCardsStrip = false,
   subcategoryItems,
 }: Props) {
@@ -109,7 +110,7 @@ export function CategoryCatalogContent({
         </div>
       </section>
 
-      {belowPreview}
+      {catalogIndexBody ? null : belowPreview}
 
       {showSubcategoryCardsStrip && subcategoryItems && subcategoryItems.length > 0 ? (
         <div className={styles.categoryScrollCatalogSlot} aria-label="Подкатегории">
@@ -117,6 +118,9 @@ export function CategoryCatalogContent({
         </div>
       ) : null}
 
+      {catalogIndexBody}
+
+      {catalogIndexBody ? null : (
       <section className={styles.marketSection} aria-label="Каталог товаров">
         <div className="padding-global">
           <div className={styles.marketSectionInner}>
@@ -140,42 +144,7 @@ export function CategoryCatalogContent({
                 <span className={styles.marketSectionRowResultValue}>{catalogTotal}</span>
               </div>
             </div>
-            <div className={styles.marketGrid}>
-              {catalogHits.map((hit) => {
-                const thumb =
-                  typeof hit.thumbUrl === 'string' && hit.thumbUrl.trim()
-                    ? resolveMediaUrlForServer(hit.thumbUrl)
-                    : undefined;
-                const rawGallery =
-                  Array.isArray(hit.imageUrls) && hit.imageUrls.length > 0
-                    ? hit.imageUrls.filter(
-                        (u): u is string => typeof u === 'string' && Boolean(u.trim()),
-                      )
-                    : [];
-                const galleryResolved = Array.from(new Set(rawGallery.map((u) => u.trim()))).map((u) =>
-                  resolveMediaUrlForServer(u),
-                );
-                const price = parseProductPriceFromApi(hit.price);
-                const priceMin = parseProductPriceFromApi(hit.priceMin ?? hit.price);
-                const priceMax = parseProductPriceFromApi(hit.priceMax ?? hit.price);
-                const useGallery = galleryResolved.length > 1;
-                return (
-                  <ProductCard
-                    key={hit.id}
-                    slug={hit.slug}
-                    name={hit.name}
-                    productId={hit.id}
-                    price={price}
-                    priceMin={priceMin}
-                    priceMax={priceMax}
-                    imageUrl={useGallery ? galleryResolved[0] : thumb}
-                    imageUrls={useGallery ? galleryResolved : undefined}
-                    collections={hit.casesLinkedCount ?? 0}
-                    likes={typeof hit.likesDisplayCount === 'number' ? hit.likesDisplayCount : 0}
-                  />
-                );
-              })}
-            </div>
+            <CatalogProductGrid catalogHits={catalogHits} />
             <nav className={styles.paginationWrapper} aria-label="Пагинация">
               {page <= 1 ? (
                 <span className={styles.paginationBtnDisabled}>НАЗАД</span>
@@ -226,6 +195,7 @@ export function CategoryCatalogContent({
           </div>
         </div>
       </section>
+      )}
     </main>
   );
 }

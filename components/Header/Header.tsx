@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useBrandsNavMenu } from '@/components/BrandsNavContext';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
+import { USER_SESSION_CHANGED_EVENT } from '@/lib/userSessionClient';
 import styles from './Header.module.css';
 
 const MENU_SECTIONS = [
@@ -117,7 +118,7 @@ export function Header({
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const load = async () => {
       try {
         const res = await fetch('/api/user/session', { cache: 'no-store', credentials: 'same-origin' });
         const data = (await res.json().catch(() => ({}))) as { authenticated?: boolean };
@@ -126,9 +127,15 @@ export function Header({
       } catch {
         if (!cancelled) setAccountEntryHref('/login');
       }
-    })();
+    };
+    void load();
+    const onSessionChanged = () => {
+      void load();
+    };
+    window.addEventListener(USER_SESSION_CHANGED_EVENT, onSessionChanged);
     return () => {
       cancelled = true;
+      window.removeEventListener(USER_SESSION_CHANGED_EVENT, onSessionChanged);
     };
   }, []);
 

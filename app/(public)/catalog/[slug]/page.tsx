@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { fetchCategoryBySlug, fetchProductsSearch } from '@/lib/catalogPublic';
+import { fetchCategoryBySlug } from '@/lib/catalogPublic';
+import { fetchProductsSearch } from '@/lib/server/catalogAuthFetch';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import { CategoryCatalogContent } from '@/app/(public)/categories/CategoryCatalogContent';
 import { CATEGORY_PER_PAGE } from '@/app/(public)/categories/categoryCatalogData';

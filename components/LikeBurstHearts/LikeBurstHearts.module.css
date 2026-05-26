@@ -1,0 +1,50 @@
+.wrap {
+  position: relative;
+  overflow: visible;
+}
+
+.burstHost {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  color: var(--color-red);
+  font-size: 9px;
+  line-height: 1;
+  animation: likeBurstFloat 0.8s ease-out forwards;
+}
+
+@keyframes likeBurstFloat {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  70% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% - 32px)) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle {
+    animation: none;
+    display: none;
+  }
+}

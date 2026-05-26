@@ -254,6 +254,34 @@
   text-transform: uppercase;
 }
 
+.projectsLikesBulkStatus {
+  margin: 0 0 16px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  font-family: var(--font-commissioner);
+}
+
+.projectsLikesBulkRetryWrap {
+  margin-top: 16px;
+}
+
+.projectsLikesBulkRetryBtn {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: underline;
+}
+
+.projectsLikesBulkRetryBtn:hover {
+  opacity: 0.8;
+}
+
 .projectsEmpty {
   margin: 0;
   font-size: var(--text-body);

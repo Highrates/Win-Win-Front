@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { consumeDesignerListLikeStateStale } from '@/lib/designerListLikesStale';
-import { getCachedIsAuthenticated } from '@/lib/userSessionClient';
+import { useMemo } from 'react';
+import { usePageLikesBulk } from '@/hooks/usePageLikesBulk';
 import { DesignerLikeInteract } from '@/components/DesignerLikeInteract/DesignerLikeInteract';
 import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
 import styles from './DesignersPage.module.css';
@@ -43,70 +42,17 @@ function ArrowIcon({ className }: { className?: string }) {
 
 export function DesignersCardsClient({ items }: { items: DesignersListItem[] }) {
   const ids = useMemo(() => items.map((x) => x.id).filter(Boolean), [items]);
-  const [likedById, setLikedById] = useState<Record<string, boolean>>({});
-  const [auth, setAuth] = useState<boolean | null>(null);
-  const [bulkStatus, setBulkStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [bulkAttempt, setBulkAttempt] = useState(0);
-
-  /** BFCache («Назад» из профиля): страница может восстановиться без ремаунта — снова тянем bulk. */
-  useEffect(() => {
-    const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) setBulkAttempt((x) => x + 1);
-    };
-    window.addEventListener('pageshow', onPageShow);
-    return () => window.removeEventListener('pageshow', onPageShow);
-  }, []);
-
-  /** Лайк поставили на странице дизайнера — при заходе на список снова загружаем bulk (иначе возможен клиентский/маршрутный кеш). */
-  useLayoutEffect(() => {
-    if (consumeDesignerListLikeStateStale()) setBulkAttempt((x) => x + 1);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const ok = await getCachedIsAuthenticated();
-      if (cancelled) return;
-      setAuth(ok);
-      if (!ok || ids.length === 0) return;
-      setBulkStatus('loading');
-      try {
-        const res = await fetch('/api/user/likes/designers/me/bulk', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ designerIds: ids }),
-        });
-        if (!res.ok) {
-          if (!cancelled) setBulkStatus('error');
-          return;
-        }
-        const j = (await res.json()) as { byId?: Record<string, { liked?: boolean }> };
-        const byId = j.byId ?? {};
-        const next: Record<string, boolean> = {};
-        for (const id of ids) next[id] = byId[id]?.liked === true;
-        if (!cancelled) {
-          setLikedById(next);
-          setBulkStatus('ready');
-        }
-      } catch {
-        if (!cancelled) setBulkStatus('error');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [ids, bulkAttempt]);
+  const bulk = usePageLikesBulk('designer', ids);
 
   return (
     <div className={styles.designersCardsWrapper}>
       {items.map((designer) => {
         const avatar = designer.photoUrl?.trim() ? designer.photoUrl.trim() : '/images/placeholder.svg';
         const likesDisplayCount = Math.max(0, designer.likesDisplayCount ?? 0);
-        const liked = likedById[designer.id] === true;
-        const canUseControlled = auth === true && bulkStatus === 'ready';
-        const bulkLoading = auth === true && bulkStatus === 'loading';
-        const bulkError = auth === true && bulkStatus === 'error';
+        const liked = bulk.likedById[designer.id] === true;
+        const canUseControlled = bulk.auth === true && bulk.status === 'ready';
+        const bulkLoading = bulk.auth === true && bulk.status === 'loading';
+        const bulkError = bulk.auth === true && bulk.status === 'error';
         return (
           <div key={designer.id || designer.slug} className={styles.designerCard}>
             <div className={styles.designerCardInner}>
@@ -164,7 +110,7 @@ export function DesignersCardsClient({ items }: { items: DesignersListItem[] }) 
                           liked={canUseControlled ? liked : undefined}
                           setLiked={
                             canUseControlled
-                              ? (v) => setLikedById((prev) => ({ ...prev, [designer.id]: v }))
+                              ? (v) => bulk.setLiked(designer.id, v)
                               : undefined
                           }
                           classNames={{
@@ -190,16 +136,9 @@ export function DesignersCardsClient({ items }: { items: DesignersListItem[] }) 
           </div>
         );
       })}
-      {auth === true && bulkStatus === 'error' ? (
+      {bulk.auth === true && bulk.status === 'error' ? (
         <div role="status" aria-label="Ошибка загрузки лайков" style={{ marginTop: 12 }}>
-          <button
-            type="button"
-            className={styles.paginationBtn}
-            onClick={() => {
-              setBulkStatus('loading');
-              setBulkAttempt((x) => x + 1);
-            }}
-          >
+          <button type="button" className={styles.paginationBtn} onClick={bulk.retry}>
             Повторить загрузку лайков
           </button>
         </div>
@@ -207,4 +146,3 @@ export function DesignersCardsClient({ items }: { items: DesignersListItem[] }) 
     </div>
   );
 }
-

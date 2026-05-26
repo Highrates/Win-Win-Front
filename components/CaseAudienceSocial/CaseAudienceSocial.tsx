@@ -1,7 +1,8 @@
 'use client';
 
 import { useToggleLike } from '@/hooks/useToggleLike';
-import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
+import type { LikesBulkUiState } from '@/lib/likesBulkUi';
+import { LikeHeartInteract } from '@/components/LikeHeartInteract';
 
 type ClassNames = {
   interactItem: string;
@@ -14,50 +15,39 @@ type Props = {
   caseId: string;
   likesDisplayCount: number;
   classNames: ClassNames;
+  /** Page-level bulk с /projects — без micro-batch GET на каждый кейс. */
+  caseLikesBulk?: LikesBulkUiState;
 };
 
-export function CaseAudienceSocial({ caseId, likesDisplayCount, classNames: cn }: Props) {
+export function CaseAudienceSocial({ caseId, likesDisplayCount, classNames: cn, caseLikesBulk }: Props) {
+  const bulkReady = caseLikesBulk?.status === 'ready';
+  const bulkLoading = caseLikesBulk?.status === 'loading';
+  const bulkError = caseLikesBulk?.status === 'error';
+
   const like = useToggleLike({
     kind: 'case',
     id: caseId,
     likesDisplayCount,
     enabled: true,
-    mode: 'uncontrolled',
+    mode: bulkReady ? 'controlled' : 'uncontrolled',
+    controlledLiked: bulkReady ? caseLikesBulk.liked : undefined,
+    setControlledLiked: bulkReady ? caseLikesBulk.onLikedChange : undefined,
   });
-
-  const showHeart = true;
 
   return (
     <>
-      {showHeart ? (
-        like.auth !== true ? (
-          <button
-            type="button"
-            className={cn.interactItem}
-            disabled
-            aria-disabled="true"
-            aria-label="Войдите, чтобы поставить лайк"
-          >
-            <LikeHeartSvg className={cn.interactIcon} />
-            <span className={cn.interactValue}>{Math.max(0, likesDisplayCount)}</span>
-          </button>
-        ) : (
-        <button
-          type="button"
-          className={cn.interactItem}
-          disabled={like.busy || !like.interactiveReady}
-          aria-label={like.liked ? 'Убрать лайк' : 'Поставить лайк'}
-          onClick={() => void like.toggle()}
-        >
-          {like.liked ? (
-            <LikeHeartSvg active className={cn.heartActive} />
-          ) : (
-            <LikeHeartSvg className={cn.interactIcon} />
-          )}
-          <span className={cn.interactValue}>{Math.max(0, like.count)}</span>
-        </button>
-        )
-      ) : null}
+      <LikeHeartInteract
+        state={like}
+        classNames={{
+          interactItem: cn.interactItem,
+          interactIcon: cn.interactIcon,
+          interactValue: cn.interactValue,
+          heartIconActive: cn.heartActive,
+        }}
+        suppressMicroLoadUi={bulkReady}
+        bulkLoading={bulkLoading}
+        bulkError={bulkError}
+      />
       <div className={cn.interactItem}>
         <img
           src="/icons/message.svg"

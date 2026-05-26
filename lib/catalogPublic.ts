@@ -3,7 +3,6 @@ import { CATALOG_PUBLIC_TAG, catalogPublicFetchNext } from './catalogCache';
 import { dedupeById } from './dedupeById';
 import { jsonFromResponse } from './jsonFromResponse';
 import { getServerApiBase } from './serverApiBase';
-
 /** `GET /catalog/categories/tree` */
 export type PublicCategoryTreeChild = {
   id: string;
@@ -120,6 +119,8 @@ export type CatalogProductSearchHit = {
   casesLinkedCount?: number;
   /** Публичный счётчик лайков (реальные + админ). */
   likesDisplayCount?: number;
+  /** Только при SSR/запросе с Bearer: лайкнул ли текущий пользователь. */
+  likedByMe?: boolean;
 };
 
 export type CatalogProductSearchResponse = {
@@ -128,37 +129,6 @@ export type CatalogProductSearchResponse = {
   page: number;
   limit: number;
 };
-
-export async function fetchProductsSearch(params: {
-  categoryId?: string;
-  page?: number;
-  limit?: number;
-}): Promise<CatalogProductSearchResponse> {
-  const base = getServerApiBase();
-  const page = Math.max(1, params.page ?? 1);
-  const limit = Math.min(Math.max(1, params.limit ?? 20), 100);
-  const qs = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
-  });
-  if (params.categoryId?.trim()) qs.set('categoryId', params.categoryId.trim());
-  try {
-    const res = await fetch(`${base}/catalog/products/search?${qs}`, {
-      next: catalogPublicFetchNext(),
-    });
-    if (!res.ok) {
-      return { hits: [], total: 0, page, limit };
-    }
-    return await jsonFromResponse<CatalogProductSearchResponse>(res, {
-      hits: [],
-      total: 0,
-      page,
-      limit,
-    });
-  } catch {
-    return { hits: [], total: 0, page, limit };
-  }
-}
 
 /** `GET /catalog/curated-collections/:slug` — коллекция брендов для витрины. */
 export type PublicBrandCollectionBrand = {
@@ -207,29 +177,9 @@ export type PublicProductCollectionPayload = {
   products: PublicBrandProductRow[];
 };
 
-export async function fetchCuratedProductCollectionBySlug(
-  slug: string,
-): Promise<PublicProductCollectionPayload | null> {
-  const base = getServerApiBase();
-  try {
-    const res = await fetch(
-      `${base}/catalog/curated-collections/${encodeURIComponent(slug)}`,
-      { next: catalogPublicFetchNext() },
-    );
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    const data = await jsonFromResponse<
-      (PublicBrandCollectionPayload | PublicProductCollectionPayload) | null
-    >(res, null);
-    if (!data || data.kind !== 'PRODUCT' || !Array.isArray(data.products)) return null;
-    return { ...data, products: dedupeById(data.products) };
-  } catch {
-    return null;
-  }
-}
-
 /** `GET /catalog/products/:slug/set-siblings` — соседи по кураторским наборам. */
 export type PublicSetSiblingProduct = {
+  productId: string;
   /** id варианта по умолчанию (для `?v=` на карточке) */
   id: string;
   slug: string;
@@ -237,23 +187,8 @@ export type PublicSetSiblingProduct = {
   price: unknown;
   thumbUrl: string | null;
   imageUrls: string[];
+  likedByMe?: boolean;
 };
-
-export async function fetchProductSetSiblingsBySlug(
-  slug: string,
-): Promise<{ items: PublicSetSiblingProduct[] }> {
-  const base = getServerApiBase();
-  try {
-    const res = await fetch(
-      `${base}/catalog/products/${encodeURIComponent(slug)}/set-siblings`,
-      { next: catalogPublicFetchNext() },
-    );
-    if (!res.ok) return { items: [] };
-    return await jsonFromResponse<{ items: PublicSetSiblingProduct[] }>(res, { items: [] });
-  } catch {
-    return { items: [] };
-  }
-}
 
 /** Query `vs` / `v` — выбранный SKU; `sz` — размер без SKU. */
 export async function fetchPublicProductBySlug(

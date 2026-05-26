@@ -4,10 +4,15 @@ import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useToggleLike } from '@/hooks/useToggleLike';
 import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
+import { LikeHeartInteract } from '@/components/LikeHeartInteract';
+import type { LikesBulkUiState } from '@/lib/likesBulkUi';
 import { normalizeProductCardImageUrls, productCardImageOnError } from '@/lib/productCardImageUrls';
 import styles from './ProductCard.module.css';
 
 const SLIDE_MS = 380;
+
+/** @alias LikesBulkUiState */
+export type ProductCardLikesBulkState = LikesBulkUiState;
 
 export interface ProductCardProps {
   slug: string;
@@ -33,6 +38,8 @@ export interface ProductCardProps {
   likesInteractive?: boolean;
   /** После успешного POST/DELETE лайка (серверные liked и likesDisplayCount). */
   onLikedChange?: (state: { liked: boolean; likesDisplayCount: number; productId: string }) => void;
+  /** Лайки с сетки каталога (CatalogProductGrid). */
+  productLikesBulk?: ProductCardLikesBulkState;
 }
 
 function formatCardPrice(value: number, priceMin?: number, priceMax?: number): string {
@@ -67,6 +74,7 @@ export function ProductCard({
   heartActive,
   likesInteractive = true,
   onLikedChange,
+  productLikesBulk,
 }: ProductCardProps) {
   const urls = useMemo(() => normalizeProductCardImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
   const urlsKey = urls.join('\0');
@@ -77,14 +85,23 @@ export function ProductCard({
   const touchStartX = useRef<number | null>(null);
   const blockLinkClickRef = useRef(false);
 
+  const pageBulk = productLikesBulk != null;
+  const bulkReady = pageBulk && productLikesBulk.status === 'ready';
+  const bulkLoading = pageBulk && productLikesBulk.status === 'loading';
+  const bulkError = pageBulk && productLikesBulk.status === 'error';
+
   const heartFilledControlled = heartActive !== undefined;
   const controlledInteractive = Boolean(
-    productId && likesInteractive && heartFilledControlled,
+    productId && likesInteractive && (heartFilledControlled || bulkReady),
   );
-  const [controlledLiked, setControlledLiked] = useState(() => !!heartActive);
+  const [controlledLiked, setControlledLiked] = useState(() =>
+    bulkReady ? productLikesBulk.liked : !!heartActive,
+  );
+  const bulkLiked = bulkReady ? productLikesBulk.liked : undefined;
   useEffect(() => {
-    if (controlledInteractive) setControlledLiked(!!heartActive);
-  }, [heartActive, controlledInteractive]);
+    if (bulkReady) setControlledLiked(!!bulkLiked);
+    else if (controlledInteractive) setControlledLiked(!!heartActive);
+  }, [heartActive, controlledInteractive, bulkReady, bulkLiked]);
 
   const likeInteractive = !!(productId && likesInteractive);
   const onLikeMutationSuccess = useCallback(
@@ -98,9 +115,17 @@ export function ProductCard({
     id: productId,
     likesDisplayCount: likes,
     enabled: likeInteractive,
-    mode: controlledInteractive ? 'controlled' : 'uncontrolled',
-    controlledLiked: controlledInteractive ? controlledLiked : undefined,
-    setControlledLiked: controlledInteractive ? setControlledLiked : undefined,
+    mode: bulkReady || controlledInteractive ? 'controlled' : 'uncontrolled',
+    controlledLiked: bulkReady
+      ? productLikesBulk.liked
+      : controlledInteractive
+        ? controlledLiked
+        : undefined,
+    setControlledLiked: bulkReady
+      ? productLikesBulk.onLikedChange
+      : controlledInteractive
+        ? setControlledLiked
+        : undefined,
     onMutationSuccess: onLikedChange ? onLikeMutationSuccess : undefined,
   });
 
@@ -341,18 +366,7 @@ export function ProductCard({
             </div>
           )}
           {showLikesColumn ? (
-            like.auth !== true ? (
-              <button
-                type="button"
-                className={styles.interactItem}
-                disabled
-                aria-disabled="true"
-                aria-label="Войдите, чтобы поставить лайк"
-              >
-                <LikeHeartSvg className={styles.interactIcon} />
-                <span className={styles.interactValue}>{Math.max(0, likes)}</span>
-              </button>
-            ) : !productId || !likesInteractive ? (
+            !productId || !likesInteractive ? (
               <div className={styles.interactItem}>
                 <LikeHeartSvg
                   active={heartFilled}
@@ -361,23 +375,19 @@ export function ProductCard({
                 <span className={styles.interactValue}>{Math.max(0, like.count)}</span>
               </div>
             ) : (
-              <button
-                type="button"
-                className={styles.interactItem}
-                disabled={like.busy || (!controlledInteractive && !like.interactiveReady)}
-                aria-label={heartFilled ? 'Убрать лайк' : 'Поставить лайк'}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  void like.toggle();
+              <LikeHeartInteract
+                state={like}
+                classNames={{
+                  interactItem: styles.interactItem,
+                  interactIcon: styles.interactIcon,
+                  interactValue: styles.interactValue,
+                  heartIconActive: styles.heartIconActive,
                 }}
-              >
-                <LikeHeartSvg
-                  active={heartFilled}
-                  className={heartFilled ? styles.heartIconActive : styles.interactIcon}
-                />
-                <span className={styles.interactValue}>{Math.max(0, like.count)}</span>
-              </button>
+                suppressMicroLoadUi={bulkReady || controlledInteractive}
+                bulkLoading={bulkLoading}
+                bulkError={bulkError}
+                stopPropagation
+              />
             )
           ) : null}
           <div className={styles.interactItem}>

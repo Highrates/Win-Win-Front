@@ -15,6 +15,7 @@ import {
   registerPhoneStart,
   registerPhoneVerify,
 } from '@/lib/registerApi';
+import { establishUserClientSession } from '@/lib/userSessionClient';
 import { setUserAccessToken } from '@/lib/userAuthStorage';
 import { validateEmailRequired, validateE164Phone } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
@@ -184,13 +185,7 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
         ...(designerInviteToken ? { designerInviteToken } : {}),
       });
       setUserAccessToken(data.access_token);
-      // Чтобы server-side /account видел авторизацию (cookie httpOnly).
-      await fetch('/api/user/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ access_token: data.access_token }),
-        credentials: 'same-origin',
-      }).catch(() => {});
+      await establishUserClientSession(data.access_token);
       const pending = (data.user as { profile?: { profileOnboardingPending?: boolean } | null } | undefined)?.profile
         ?.profileOnboardingPending;
       if (designerInviteToken) {

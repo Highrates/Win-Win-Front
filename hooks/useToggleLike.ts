@@ -2,10 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchLikedMeBatched, setLikedMeBatchCache, type LikesMeBatchKind } from '@/lib/likesMeBatch';
 import { markDesignerListLikeStateStale } from '@/lib/designerListLikesStale';
+import { markCaseListLikesStale } from '@/lib/caseListLikesStale';
+import { markProductListLikesStale } from '@/lib/productListLikesStale';
+import { usePageAuth } from '@/contexts/UserAuthContext';
 import { getCachedIsAuthenticated } from '@/lib/userSessionClient';
 
-export type ToggleLikeKind = 'product' | 'case' | 'designer';
+export type ToggleLikeKind = LikesMeBatchKind;
 
 export type UseToggleLikeOptions = {
   kind: ToggleLikeKind;
@@ -20,14 +24,6 @@ export type UseToggleLikeOptions = {
   /** После успешного ответа (серверные liked и счётчик). Только для kind === 'product' в типичном использовании. */
   onMutationSuccess?: (state: { liked: boolean; likesDisplayCount: number; id: string }) => void;
 };
-
-function mePath(kind: ToggleLikeKind, id: string): string {
-  return kind === 'product'
-    ? `/api/user/likes/products/${encodeURIComponent(id)}/me`
-    : kind === 'case'
-      ? `/api/user/likes/cases/${encodeURIComponent(id)}/me`
-      : `/api/user/likes/designers/${encodeURIComponent(id)}/me`;
-}
 
 function togglePath(kind: ToggleLikeKind, id: string): string {
   return kind === 'product'
@@ -60,8 +56,12 @@ export function useToggleLike(options: UseToggleLikeOptions) {
     onMutationSuccess,
   } = options;
   const router = useRouter();
-  const [auth, setAuth] = useState<boolean | null>(null);
+  const pageAuth = usePageAuth();
+  const [auth, setAuth] = useState<boolean | null>(pageAuth ?? null);
   const [likedFromApi, setLikedFromApi] = useState<boolean | null>(null);
+  const [loadLoading, setLoadLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [count, setCount] = useState(likesDisplayCount);
   const [busy, setBusy] = useState(false);
   const countRef = useRef(count);
@@ -76,31 +76,52 @@ export function useToggleLike(options: UseToggleLikeOptions) {
   }, [likesDisplayCount]);
 
   useEffect(() => {
+    if (pageAuth !== undefined) setAuth(pageAuth);
+  }, [pageAuth]);
+
+  const retryLoad = useCallback(() => {
+    if (isControlled) return;
+    setLoadError(false);
+    setLoadAttempt((x) => x + 1);
+  }, [isControlled]);
+
+  useEffect(() => {
     let cancelled = false;
     if (!enabled || !id || isControlled) {
       setLikedFromApi(null);
+      setLoadLoading(false);
+      setLoadError(false);
+      return;
     }
+    setLoadLoading(true);
+    setLoadError(false);
     void (async () => {
-      const ok = await getCachedIsAuthenticated();
+      const ok = pageAuth ?? (await getCachedIsAuthenticated());
       if (cancelled) return;
       setAuth(ok);
-      if (!ok || !enabled || !id || isControlled) return;
+      if (!ok || !enabled || !id) {
+        setLoadLoading(false);
+        return;
+      }
       try {
-        const res = await fetch(mePath(kind, id), {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!res.ok || cancelled) return;
-        const j = (await res.json()) as { liked?: boolean };
-        if (!cancelled) setLikedFromApi(j.liked === true);
+        const liked = await fetchLikedMeBatched(kind, id);
+        if (!cancelled) {
+          setLikedFromApi(liked);
+          setLoadError(false);
+        }
       } catch {
-        /* ignore */
+        if (!cancelled) {
+          setLikedFromApi(null);
+          setLoadError(true);
+        }
+      } finally {
+        if (!cancelled) setLoadLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [kind, id, enabled, isControlled]);
+  }, [kind, id, enabled, isControlled, pageAuth, loadAttempt]);
 
   const likedForUi = isControlled ? !!controlledLiked : likedFromApi === true;
   const interactiveReady = isControlled || likedFromApi !== null;
@@ -158,7 +179,10 @@ export function useToggleLike(options: UseToggleLikeOptions) {
       if (isControlled) setControlledLiked?.(serverLiked);
       else setLikedFromApi(serverLiked);
       setCount(finalCount);
+      setLikedMeBatchCache(kind, id, serverLiked);
       if (kind === 'designer') markDesignerListLikeStateStale();
+      if (kind === 'product') markProductListLikesStale();
+      if (kind === 'case') markCaseListLikesStale();
       onMutationSuccess?.({ liked: serverLiked, likesDisplayCount: finalCount, id });
     } catch {
       rollback();
@@ -170,11 +194,13 @@ export function useToggleLike(options: UseToggleLikeOptions) {
   return {
     auth,
     liked: likedForUi,
-    /** Для aria / иконки (как раньше heartFilled при интерактиве). */
     likedFilled: likedForUi,
     count,
     busy,
     interactiveReady,
+    loadLoading,
+    loadError,
+    retryLoad,
     toggle,
   };
 }

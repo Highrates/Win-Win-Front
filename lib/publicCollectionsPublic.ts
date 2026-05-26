@@ -22,6 +22,7 @@ export function mapBrandProductRowsToRecommendationItems(
       productId: p.id,
       collections: typeof p.casesLinkedCount === 'number' ? p.casesLinkedCount : 0,
       likes: typeof p.likesDisplayCount === 'number' ? p.likesDisplayCount : 0,
+      likedByMe: p.likedByMe,
     };
   });
 }

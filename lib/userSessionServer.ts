@@ -1,6 +1,13 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getServerApiBase } from './serverApiBase';
 import { USER_ACCESS_TOKEN_COOKIE, userCookieSecure } from './userAuth';
+
+export type ServerUserSession = {
+  authenticated: boolean;
+  accessToken: string | null;
+};
 
 export function getUserAccessTokenFromCookies(): string | null {
   return cookies().get(USER_ACCESS_TOKEN_COOKIE)?.value?.trim() || null;
@@ -28,6 +35,26 @@ export function withUserAuthorizationHeaders(init?: RequestInit): RequestInit {
     (next.headers as Headers).set('Authorization', `Bearer ${token}`);
   }
   return next;
+}
+
+/** Одна проверка сессии на RSC-рендер (layout + fetch с likedByMe). */
+export const getServerUserSession = cache(async (): Promise<ServerUserSession> => {
+  const token = getUserAccessTokenFromCookies();
+  if (!token) return { authenticated: false, accessToken: null };
+  try {
+    const res = await fetch(`${getServerApiBase()}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return { authenticated: false, accessToken: null };
+    return { authenticated: true, accessToken: token };
+  } catch {
+    return { authenticated: false, accessToken: null };
+  }
+});
+
+export async function getServerUserAuthenticated(): Promise<boolean> {
+  return (await getServerUserSession()).authenticated;
 }
 
 export type UserSessionGetResult =

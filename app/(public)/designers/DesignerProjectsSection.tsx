@@ -7,12 +7,19 @@ import {
   useRef,
   useLayoutEffect,
   useEffect,
+  useMemo,
   type ReactNode,
 } from 'react';
+import { buildLikesBulkUiProp } from '@/lib/buildLikesBulkUiProp';
+import { markCaseListLikesStale } from '@/lib/caseListLikesStale';
+import { markProductListLikesStale } from '@/lib/productListLikesStale';
+import { useLikesBulk } from '@/hooks/useLikesBulk';
+import type { LikesBulkUiState } from '@/lib/likesBulkUi';
 import { ProductCardSmall } from '@/components/ProductCardSmall';
 import { CaseAudienceSocial } from '@/components/CaseAudienceSocial/CaseAudienceSocial';
 import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
 import { useToggleLike } from '@/hooks/useToggleLike';
+import { LikeHeartInteract } from '@/components/LikeHeartInteract';
 import { DesignerViewToggle, type ViewMode } from './[slug]/DesignerViewToggle';
 import { MoreAboutProjectModal, type ProjectProduct } from './[slug]/MoreAboutProjectModal';
 
@@ -48,6 +55,7 @@ function CaseCoverLikeButton({
   caseId,
   likesDisplayCount,
   classNames,
+  caseLikesBulk,
 }: {
   caseId: string;
   likesDisplayCount: number;
@@ -57,42 +65,36 @@ function CaseCoverLikeButton({
     iconActive: string;
     value: string;
   };
+  caseLikesBulk?: LikesBulkUiState;
 }) {
-  const like = useToggleLike({ kind: 'case', id: caseId, likesDisplayCount, enabled: true, mode: 'uncontrolled' });
-  const show = true;
-  if (like.auth !== true) {
-    return (
-      <button
-        type="button"
-        className={classNames.btn}
-        disabled
-        aria-disabled="true"
-        aria-label="Войдите, чтобы поставить лайк"
-      >
-        <LikeHeartSvg className={classNames.icon} />
-        <span className={classNames.value}>{Math.max(0, likesDisplayCount)}</span>
-      </button>
-    );
-  }
+  const bulkReady = caseLikesBulk?.status === 'ready';
+  const bulkLoading = caseLikesBulk?.status === 'loading';
+  const bulkError = caseLikesBulk?.status === 'error';
+
+  const like = useToggleLike({
+    kind: 'case',
+    id: caseId,
+    likesDisplayCount,
+    enabled: true,
+    mode: bulkReady ? 'controlled' : 'uncontrolled',
+    controlledLiked: bulkReady ? caseLikesBulk.liked : undefined,
+    setControlledLiked: bulkReady ? caseLikesBulk.onLikedChange : undefined,
+  });
+
   return (
-    <button
-      type="button"
-      className={classNames.btn}
-      disabled={like.busy || !like.interactiveReady}
-      aria-label={like.liked ? 'Убрать лайк' : 'Поставить лайк'}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        void like.toggle();
+    <LikeHeartInteract
+      state={like}
+      classNames={{
+        interactItem: classNames.btn,
+        interactIcon: classNames.icon,
+        interactValue: classNames.value,
+        heartIconActive: classNames.iconActive,
       }}
-    >
-      {like.liked ? (
-        <LikeHeartSvg active className={classNames.iconActive} />
-      ) : (
-        <LikeHeartSvg className={classNames.icon} />
-      )}
-      <span className={classNames.value}>{Math.max(0, like.count)}</span>
-    </button>
+      suppressMicroLoadUi={bulkReady}
+      bulkLoading={bulkLoading}
+      bulkError={bulkError}
+      stopPropagation
+    />
   );
 }
 
@@ -201,9 +203,63 @@ export function DesignerProjectsSection({
     setModalProject(null);
   }, []);
 
+  const caseIds = useMemo(
+    () => projects.map((p) => p.id?.trim()).filter((id): id is string => Boolean(id)),
+    [projects],
+  );
+  const productIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of projects) {
+      for (const pr of p.products) {
+        const id = pr.productId?.trim();
+        if (id) s.add(id);
+      }
+    }
+    return [...s];
+  }, [projects]);
+
+  const caseBulk = useLikesBulk('case', caseIds);
+  const productBulk = useLikesBulk('product', productIds);
+
+  const onCaseLikedChange = useCallback(
+    (id: string, liked: boolean) => {
+      caseBulk.setLiked(id, liked);
+      markCaseListLikesStale();
+    },
+    [caseBulk.setLiked],
+  );
+
+  const onProductLikedChange = useCallback(
+    (id: string, liked: boolean) => {
+      productBulk.setLiked(id, liked);
+      markProductListLikesStale();
+    },
+    [productBulk.setLiked],
+  );
+
+  const caseBulkUi = useCallback(
+    (caseId: string | undefined) => buildLikesBulkUiProp(caseBulk, caseId, onCaseLikedChange),
+    [caseBulk, onCaseLikedChange],
+  );
+
+  const productBulkUi = useCallback(
+    (productId: string | undefined) => buildLikesBulkUiProp(productBulk, productId, onProductLikedChange),
+    [productBulk, onProductLikedChange],
+  );
+
   useEffect(() => {
     if (gridOnly) setActiveView('grid');
   }, [gridOnly]);
+
+  const showBulkStatus =
+    (caseBulk.auth === true && caseIds.length > 0) || (productBulk.auth === true && productIds.length > 0);
+  const bulkLoading = showBulkStatus && (caseBulk.status === 'loading' || productBulk.status === 'loading');
+  const bulkError = showBulkStatus && (caseBulk.status === 'error' || productBulk.status === 'error');
+
+  const retryBulk = useCallback(() => {
+    if (caseBulk.status === 'error') caseBulk.retry();
+    if (productBulk.status === 'error') productBulk.retry();
+  }, [caseBulk, productBulk]);
 
   return (
     <>
@@ -220,6 +276,12 @@ export function DesignerProjectsSection({
 
       {projects.length === 0 ? (
         <p className={stylesModule.projectsEmpty}>У дизайнера пока нет опубликованных кейсов.</p>
+      ) : null}
+
+      {bulkLoading ? (
+        <p className={stylesModule.projectsLikesBulkStatus} role="status" aria-live="polite">
+          Загружаем лайки…
+        </p>
       ) : null}
 
       {!gridOnly && activeView === 'list' && projects.length > 0 ? (
@@ -244,6 +306,7 @@ export function DesignerProjectsSection({
                             <CaseAudienceSocial
                               caseId={project.id}
                               likesDisplayCount={project.likesDisplayCount}
+                              caseLikesBulk={caseBulkUi(project.id)}
                               classNames={{
                                 interactItem: stylesModule.projectInteractItem,
                                 interactIcon: stylesModule.projectInteractIcon,
@@ -360,6 +423,7 @@ export function DesignerProjectsSection({
                     collections={p.collections}
                     likes={p.likes}
                     comments={p.comments}
+                    productLikesBulk={productBulkUi(p.productId)}
                   />
                 ))}
               </ProjectProductsWithScrollCue>
@@ -392,6 +456,7 @@ export function DesignerProjectsSection({
                 <CaseCoverLikeButton
                   caseId={project.id}
                   likesDisplayCount={project.likesDisplayCount}
+                  caseLikesBulk={caseBulkUi(project.id)}
                   classNames={{
                     btn: stylesModule.sliderCoverLikeBtn,
                     icon: stylesModule.sliderCoverLikeIcon,
@@ -413,6 +478,14 @@ export function DesignerProjectsSection({
               />
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {bulkError ? (
+        <div className={stylesModule.projectsLikesBulkRetryWrap} role="status">
+          <button type="button" className={stylesModule.projectsLikesBulkRetryBtn} onClick={retryBulk}>
+            Повторить загрузку лайков
+          </button>
         </div>
       ) : null}
 

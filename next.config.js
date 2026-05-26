@@ -6,6 +6,22 @@
  * Safari + webpack HMR: сообщение «access control checks» на `*.hot-update.json` часто ложное для dev;
  * попробуйте `npm run dev:turbo` или Chrome. Явный `allowedDevOrigins` в Next включает строгий block-режим — не добавляем без необходимости.
  */
+function backendOriginForUploads() {
+  const raw = (
+    process.env.API_URL ||
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://127.0.0.1:3001/api/v1'
+  ).trim();
+  try {
+    return new URL(raw.replace(/\/+$/, '')).origin;
+  } catch {
+    return 'http://127.0.0.1:3001';
+  }
+}
+
+const uploadBackendOrigin = backendOriginForUploads();
+
 const nextConfig = {
   reactStrictMode: true,
   /** Локальные workspace-пакеты (file:../packages/*) — иначе re-export в lib/ ломает статический анализ. */
@@ -27,7 +43,14 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    return [{ source: '/favicon.ico', destination: '/images/favicon.svg' }];
+    return [
+      { source: '/favicon.ico', destination: '/images/favicon.svg' },
+      /** Локальные файлы API: браузер грузит с origin Next, не с 127.0.0.1:3001 */
+      {
+        source: '/uploads/:path*',
+        destination: `${uploadBackendOrigin}/uploads/:path*`,
+      },
+    ];
   },
   async redirects() {
     return [

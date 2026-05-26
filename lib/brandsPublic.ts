@@ -1,7 +1,5 @@
 import { catalogPublicFetchNext } from './catalogCache';
-import { dedupeById } from './dedupeById';
 import { getServerApiBase } from './serverApiBase';
-
 /** Ответ `GET /brands` (элемент списка). */
 export type PublicBrandListRow = {
   id: string;
@@ -30,6 +28,7 @@ export type PublicBrandProductRow = {
   images: { url: string; sortOrder: number }[];
   casesLinkedCount?: number;
   likesDisplayCount?: number;
+  likedByMe?: boolean;
 };
 
 export type PublicBrandDetailPayload = PublicBrandListRow & {
@@ -59,25 +58,6 @@ export async function fetchPublicBrands(): Promise<PublicBrandListRow[]> {
   }
 }
 
-export async function fetchPublicBrandBySlug(slug: string): Promise<PublicBrandDetailPayload | null> {
-  const base = getServerApiBase();
-  try {
-    const res = await fetch(`${base}/brands/${encodeURIComponent(slug)}`, {
-      next: catalogPublicFetchNext(),
-    });
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    const data = (await res.json()) as PublicBrandDetailPayload | null;
-    if (!data?.slug) return null;
-    if (data.products?.length) {
-      return { ...data, products: dedupeById(data.products) };
-    }
-    return data;
-  } catch {
-    return null;
-  }
-}
-
 /** Первые N брендов в порядке sortOrder (супер-меню). */
 export function publicBrandsMenuSlice(
   brands: PublicBrandListRow[],
@@ -102,14 +82,7 @@ export function brandsSortedAlphabetically(brands: PublicBrandListRow[]): Public
   return [...brands].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 }
 
-export function productPriceToNumber(price: unknown): number {
-  if (typeof price === 'number' && !Number.isNaN(price)) return price;
-  if (typeof price === 'string') {
-    const n = parseFloat(price);
-    return Number.isNaN(n) ? 0 : n;
-  }
-  return 0;
-}
+export { productPriceToNumber } from './productPrice';
 
 export function plainTextExcerptFromHtml(html: string | null | undefined, maxLen = 280): string {
   if (!html?.trim()) return '';

@@ -9,4 +9,5 @@ export type RecommendationsStaticItem = {
   productId?: string;
   collections?: number;
   likes?: number;
+  likedByMe?: boolean;
 };

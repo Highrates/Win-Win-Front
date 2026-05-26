@@ -3,7 +3,8 @@ import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Recommendations } from '@/sections/home';
-import { fetchProductSetSiblingsBySlug, fetchPublicProductBySlug } from '@/lib/catalogPublic';
+import { fetchPublicProductBySlug } from '@/lib/catalogPublic';
+import { fetchProductSetSiblingsBySlug } from '@/lib/server/catalogAuthFetch';
 import { parsePublicProduct, pickPublicProductVariant } from '@/lib/publicProductFromApi';
 import { parseProductPriceFromApi } from '@/lib/productSpecsFromApi';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
@@ -88,12 +89,20 @@ export default async function ProductPage({
 
   const setSiblingCards =
     siblingsRes.items.length > 0
-      ? siblingsRes.items.map((it) => ({
-          slug: it.slug,
-          name: it.name,
-          price: parseProductPriceFromApi(it.price),
-          imageUrls: it.imageUrls.map((u) => resolveMediaUrlForServer(u)),
-        }))
+      ? siblingsRes.items.map((it) => {
+          const imageUrls = it.imageUrls.map((u) => resolveMediaUrlForServer(u));
+          const useGallery = imageUrls.length > 1;
+          return {
+            slug: it.slug,
+            name: it.name,
+            price: parseProductPriceFromApi(it.price),
+            productId: it.productId,
+            variantId: it.id,
+            imageUrl: imageUrls[0],
+            imageUrls: useGallery ? imageUrls : undefined,
+            likedByMe: it.likedByMe,
+          };
+        })
       : [];
 
   const priceMinNum = parseProductPriceFromApi(product.priceMin);
@@ -239,7 +248,11 @@ export default async function ProductPage({
         </div>
       </section>
       {setSiblingCards.length > 0 ? (
-        <Recommendations id="product-recommendations" title="Наборы" items={setSiblingCards} />
+        <Recommendations
+          id="product-recommendations"
+          title="Наборы"
+          items={setSiblingCards}
+        />
       ) : null}
     </main>
   );

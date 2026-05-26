@@ -7,7 +7,10 @@ import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
-import { resetUserSessionClientCache } from '@/lib/userSessionClient';
+import {
+  invalidateUserClientCaches,
+  resetUserSessionClientCache,
+} from '@/lib/userSessionClient';
 import { teardownOrderChatWsForLogout } from '@/lib/orderChat/orderChatWsShared';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import styles from './page.module.css';
@@ -145,13 +148,13 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
     try {
       await fetch('/api/user/logout', { method: 'POST', credentials: 'same-origin' });
       teardownOrderChatWsForLogout('account');
-      resetUserSessionClientCache();
+      invalidateUserClientCaches({ authenticated: false });
       router.push('/');
       router.refresh();
     } catch {
       /* cookie всё равно мог очиститься; ведём на главную */
       teardownOrderChatWsForLogout('account');
-      resetUserSessionClientCache();
+      invalidateUserClientCaches({ authenticated: false });
       router.push('/');
       router.refresh();
     } finally {
