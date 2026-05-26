@@ -53,7 +53,7 @@ async function flushKind(kind: LikesMeBatchKind) {
     if (s.pending.size === 0) return;
   }
 
-  const ids = [...s.pending];
+  const ids = Array.from(s.pending);
   s.pending.clear();
   if (!ids.length) return;
 

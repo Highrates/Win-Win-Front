@@ -69,7 +69,7 @@ export async function fetchLikesBulkByIds(
   ids: string[],
   opts?: FetchLikesBulkOptions,
 ): Promise<Record<string, boolean>> {
-  const unique = [...new Set(ids.map((x) => x.trim()).filter(Boolean))];
+  const unique = Array.from(new Set(ids.map((x) => x.trim()).filter(Boolean)));
   if (!unique.length) return {};
 
   const fetchImpl = opts?.fetchImpl ?? fetch;

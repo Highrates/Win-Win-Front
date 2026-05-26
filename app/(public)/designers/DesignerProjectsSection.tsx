@@ -215,7 +215,7 @@ export function DesignerProjectsSection({
         if (id) s.add(id);
       }
     }
-    return [...s];
+    return Array.from(s);
   }, [projects]);
 
   const caseBulk = useLikesBulk('case', caseIds);

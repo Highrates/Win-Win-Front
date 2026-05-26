@@ -25,7 +25,7 @@ export function useLikesBulk(
   const skip = options?.skip === true;
   const pageAuth = usePageAuth();
   const ids = useMemo(
-    () => [...new Set(entityIds.map((x) => x.trim()).filter(Boolean))],
+    () => Array.from(new Set(entityIds.map((x) => x.trim()).filter(Boolean))),
     [entityIds],
   );
   const idsKey = ids.join('\0');

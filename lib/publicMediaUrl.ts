@@ -20,7 +20,7 @@ function collectStorageApiOrigins(): string[] {
   }
   out.add('http://127.0.0.1:3001');
   out.add('http://localhost:3001');
-  return [...out];
+  return Array.from(out);
 }
 
 /** `http://127.0.0.1:3001/uploads/...` → `/uploads/...` (тот же origin, что у Next; см. rewrite в next.config). */
