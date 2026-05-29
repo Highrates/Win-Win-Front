@@ -15,6 +15,7 @@ function LoginEmailFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromDesignerInvite = searchParams.get('fromDesignerInvite') === '1';
+  const resetOk = searchParams.get('reset') === 'ok';
   const [idError, setIdError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -138,6 +139,11 @@ function LoginEmailFormInner() {
         {formError ? (
           <p className={styles.authError} role="alert">
             {formError}
+          </p>
+        ) : null}
+        {resetOk && !formError ? (
+          <p className={styles.authOtpHint} role="status">
+            Пароль обновлён. Войдите с новым паролем.
           </p>
         ) : null}
         <Link href="/login/forgot-password" className={styles.authForgotLink}>

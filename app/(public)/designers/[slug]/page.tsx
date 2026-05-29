@@ -177,7 +177,7 @@ export default async function DesignerPage({
                         height={20}
                         className={styles.interactIcon}
                       />
-                      <span>{Math.max(0, designer.casesCount ?? 0)}</span>
+                      <span className={styles.interactValue}>{Math.max(0, designer.casesCount ?? 0)}</span>
                     </div>
                     {designer.id ? (
                       <DesignerLikeInteract
@@ -186,13 +186,14 @@ export default async function DesignerPage({
                         classNames={{
                           interactItem: styles.interactItem,
                           interactIcon: styles.interactIcon,
+                          interactValue: styles.interactValue,
                           heartIconActive: styles.heartIconActive,
                         }}
                       />
                     ) : (
                       <div className={styles.interactItem}>
                         <LikeHeartSvg className={styles.interactIcon} />
-                        <span>0</span>
+                        <span className={styles.interactValue}>0</span>
                       </div>
                     )}
                   </div>

@@ -14,7 +14,7 @@ export default function ForgotPasswordPage() {
     <AuthPageShell
       sectionAriaLabel="Восстановление пароля"
       title="Забыли пароль"
-      subtitle="Укажите email — отправим ссылку для сброса пароля."
+      subtitle="Укажите email, который использовали при регистрации. Проверьте папку «Спам», если письма нет во «Входящих»."
       backHref="/login"
     >
       <ForgotPasswordForm />
