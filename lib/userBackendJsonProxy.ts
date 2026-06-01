@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
-import { setUserAccessTokenCookie } from '@/lib/userAuth';
+import { establishUserSessionFromAuthJson } from '@/lib/userSessionEstablish';
 import { getUserAccessTokenFromCookies } from '@/lib/userSessionServer';
 
 function nextResponseFromUpstream(res: Response, bodyText: string): NextResponse {
@@ -21,7 +21,7 @@ type ProxyJsonBase = {
 /**
  * Прокси JSON (GET/PATCH/POST) к Nest с Authorization: текущий JWT.
  * Пробрасывает тело и content-type ответа как есть.
- * `setCookieFromAccessToken` — снять `access_token` из JSON и записать в httpOnly cookie (только POST-флоу авторизации).
+ * `setCookieFromAccessToken` — установить httpOnly cookie через `establishUserSessionFromAuthJson`.
  */
 export async function proxyUserBearer(
   { request, backendPath, method, body }: ProxyJsonBase,
@@ -62,20 +62,7 @@ export async function proxyUserBearer(
     return nextResponseFromUpstream(res, text);
   }
 
-  let parsed: { access_token?: string; user?: unknown };
-  try {
-    parsed = JSON.parse(text) as { access_token?: string; user?: unknown };
-  } catch {
-    return NextResponse.json({ message: 'Invalid JSON' }, { status: 502 });
-  }
-
-  if (!parsed.access_token || typeof parsed.access_token !== 'string') {
-    return NextResponse.json({ message: 'No access_token in response' }, { status: 502 });
-  }
-
-  const response = NextResponse.json({ ok: true, user: parsed.user ?? null });
-  setUserAccessTokenCookie(response, request, parsed.access_token);
-  return response;
+  return establishUserSessionFromAuthJson(request, text, { includeTokenInJson: false });
 }
 
 /**

@@ -15,11 +15,21 @@ import {
   registerPhoneStart,
   registerPhoneVerify,
 } from '@/lib/registerApi';
-import { establishUserClientSession } from '@/lib/userSessionClient';
-import { setUserAccessToken } from '@/lib/userAuthStorage';
+import {
+  buildDesignerInviteProfilePath,
+  sanitizeCallbackUrl,
+} from '@/lib/authRedirect';
+import { invalidateUserClientCaches } from '@/lib/userSessionClient';
 import { validateEmailRequired, validateE164Phone } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 import flowStyles from './RegisterFlow.module.css';
+
+function appendReferralWarningParam(url: string, warning?: string): string {
+  const w = warning?.trim();
+  if (!w) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}referralWarning=${encodeURIComponent(w)}`;
+}
 
 export type RegisterChannel = 'phone' | 'email';
 
@@ -34,6 +44,10 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
   );
   const designerInviteToken = useMemo(
     () => (searchParams.get('designerInvite') ?? '').trim() || undefined,
+    [searchParams],
+  );
+  const callbackUrl = useMemo(
+    () => searchParams.get('callbackUrl'),
     [searchParams],
   );
   const prefillEmail = useMemo(
@@ -184,20 +198,18 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
         ...(refFromUrl && refFromUrl.length >= 3 ? { referralCode: refFromUrl } : {}),
         ...(designerInviteToken ? { designerInviteToken } : {}),
       });
-      setUserAccessToken(data.access_token);
-      await establishUserClientSession(data.access_token);
-      const pending = (data.user as { profile?: { profileOnboardingPending?: boolean } | null } | undefined)?.profile
-        ?.profileOnboardingPending;
+      invalidateUserClientCaches({ authenticated: true });
       if (designerInviteToken) {
-        const q = new URLSearchParams();
-        q.set('tab', 'info');
-        q.set('partnerApply', '1');
-        if (refFromUrl) q.set('prefillRef', refFromUrl);
-        router.push(`/account/profile?${q.toString()}`);
-      } else if (pending === true || pending === undefined) {
-        router.push('/account/profile?tab=info&welcome=1');
+        router.replace(
+          appendReferralWarningParam(buildDesignerInviteProfilePath(refFromUrl), data.referralWarning),
+        );
       } else {
-        router.push('/account/orders');
+        const pending = data.user?.profile?.profileOnboardingPending;
+        const target =
+          pending === true || pending === undefined
+            ? '/account/profile?tab=info&welcome=1'
+            : sanitizeCallbackUrl(callbackUrl, '/account/orders');
+        router.replace(appendReferralWarningParam(target, data.referralWarning));
       }
       router.refresh();
     } catch (err) {

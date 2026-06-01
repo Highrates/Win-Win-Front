@@ -4,6 +4,9 @@
 const PREFIX = '/api/password-reset';
 
 async function readApiError(res: Response): Promise<string> {
+  if (res.status === 429) {
+    return 'Слишком много попыток. Подождите минуту и попробуйте снова.';
+  }
   const t = await res.text();
   try {
     const j = JSON.parse(t) as { message?: string | string[] };

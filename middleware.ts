@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/adminAuth';
+import { isGuestAuthPath, sanitizeCallbackUrl } from '@/lib/authRedirect';
+import { USER_ACCESS_TOKEN_COOKIE } from '@/lib/userAuth';
 
 const HERO_ROTATION_COOKIE = 'winwin-hero-idx';
 
@@ -47,6 +49,19 @@ function publicVitrineCsp(): string {
   ].join('; ');
 }
 
+function hasAuthCookie(request: NextRequest, name: string): boolean {
+  return !!request.cookies.get(name)?.value?.trim();
+}
+
+function redirectToLoginWithCallback(request: NextRequest, pathname: string): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = '/login/email';
+  url.search = '';
+  const returnTo = `${pathname}${request.nextUrl.search}`;
+  url.searchParams.set('callbackUrl', returnTo);
+  return NextResponse.redirect(url);
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -68,21 +83,49 @@ export function middleware(request: NextRequest) {
     return res;
   }
 
-  if (pathname === '/admin/login') {
+  if (pathname.startsWith('/account')) {
+    if (!hasAuthCookie(request, USER_ACCESS_TOKEN_COOKIE)) {
+      return redirectToLoginWithCallback(request, pathname);
+    }
     return NextResponse.next();
   }
 
-  const token = request.cookies.get(ADMIN_ACCESS_TOKEN_COOKIE)?.value;
-  if (!token) {
+  if (isGuestAuthPath(pathname) && hasAuthCookie(request, USER_ACCESS_TOKEN_COOKIE)) {
     const url = request.nextUrl.clone();
-    url.pathname = '/admin/login';
-    url.searchParams.set('from', pathname);
+    url.pathname = sanitizeCallbackUrl(request.nextUrl.searchParams.get('callbackUrl'));
+    url.search = '';
     return NextResponse.redirect(url);
+  }
+
+  if (pathname.startsWith('/admin')) {
+    if (pathname === '/admin/login') {
+      return NextResponse.next();
+    }
+    if (!hasAuthCookie(request, ADMIN_ACCESS_TOKEN_COOKIE)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin/login';
+      url.searchParams.set('from', pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/', '/designers/:path*', '/projects', '/projects/:path*', '/admin', '/admin/:path*'],
+  matcher: [
+    '/',
+    '/designers/:path*',
+    '/projects',
+    '/projects/:path*',
+    '/account',
+    '/account/:path*',
+    '/login',
+    '/login/:path*',
+    '/register',
+    '/register/:path*',
+    '/admin',
+    '/admin/:path*',
+  ],
 };

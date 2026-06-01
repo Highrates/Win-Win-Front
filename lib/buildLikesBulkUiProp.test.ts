@@ -25,7 +25,8 @@ describe('buildLikesBulkUiProp', () => {
       liked: true,
       onLikedChange: expect.any(Function),
     });
-    ui?.onLikedChange?.(false);
+    if (ui?.status !== 'ready') throw new Error('expected ready state');
+    ui.onLikedChange(false);
     expect(onLikedChange).toHaveBeenCalledWith('p1', false);
   });
 

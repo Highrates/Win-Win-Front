@@ -5,16 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
-import { establishUserClientSession } from '@/lib/userSessionClient';
-import { setUserAccessToken } from '@/lib/userAuthStorage';
+import { navigateAfterUserAuth } from '@/lib/userAuthNavigation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
-
-const INVITE_KEY = 'winwin-designer-invite';
 
 function LoginEmailFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromDesignerInvite = searchParams.get('fromDesignerInvite') === '1';
+  const designerInviteToken = (searchParams.get('designerInvite') ?? '').trim() || undefined;
+  const callbackUrl = searchParams.get('callbackUrl');
   const resetOk = searchParams.get('reset') === 'ok';
   const [idError, setIdError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -49,67 +47,22 @@ function LoginEmailFormInner() {
           });
           const data = (await res.json().catch(() => ({}))) as {
             ok?: boolean;
-            access_token?: string;
             error?: string;
             user?: { profile?: { profileOnboardingPending?: boolean } | null };
           };
-          if (!res.ok || !data.access_token) {
+          if (!res.ok || data.ok !== true) {
             setFormError(data.error || 'Не удалось войти');
             return;
           }
 
-          setUserAccessToken(data.access_token);
-          await establishUserClientSession(data.access_token);
-
-          let inviteToken: string | null = null;
-          try {
-            inviteToken = sessionStorage.getItem(INVITE_KEY);
-          } catch {
-            /* */
+          const nav = await navigateAfterUserAuth(router, {
+            callbackUrl,
+            user: data.user,
+            designerInviteToken,
+          });
+          if (!nav.ok) {
+            setFormError(nav.error);
           }
-
-          if (fromDesignerInvite || inviteToken) {
-            if (!inviteToken) {
-              setFormError('Сессия приглашения утеряна. Откройте ссылку из письма снова.');
-              return;
-            }
-            const cr = await fetch('/api/user/designer-invite/claim', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-              body: JSON.stringify({ token: inviteToken }),
-              credentials: 'same-origin',
-            });
-            const cj = (await cr.json().catch(() => ({}))) as { prefillRef?: string; message?: string };
-            try {
-              sessionStorage.removeItem(INVITE_KEY);
-            } catch {
-              /* */
-            }
-            if (cr.ok) {
-              const q = new URLSearchParams();
-              q.set('tab', 'info');
-              q.set('partnerApply', '1');
-              const pr = typeof cj.prefillRef === 'string' ? cj.prefillRef.trim() : '';
-              if (pr) q.set('prefillRef', pr);
-              router.push(`/account/profile?${q.toString()}`);
-              router.refresh();
-              return;
-            }
-            setFormError(
-              typeof cj.message === 'string' && cj.message.trim()
-                ? cj.message
-                : 'Не удалось применить приглашение',
-            );
-            return;
-          }
-
-          const pending = data.user?.profile?.profileOnboardingPending;
-          if (pending === true) {
-            router.push('/account/profile?tab=info&welcome=1');
-          } else {
-            router.push('/account/orders');
-          }
-          router.refresh();
         } catch (err) {
           setFormError(err instanceof Error ? err.message : 'Не удалось войти');
         } finally {

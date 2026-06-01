@@ -4,6 +4,9 @@
 const PREFIX = '/api/register';
 
 async function readApiError(res: Response): Promise<string> {
+  if (res.status === 429) {
+    return 'Слишком много попыток. Подождите минуту и попробуйте снова.';
+  }
   const t = await res.text();
   try {
     const j = JSON.parse(t) as { message?: string | string[] };
@@ -64,8 +67,15 @@ export async function registerComplete(body: {
   /** JWT приглашения дизайнера — из ?designerInvite= (invite wins over URL ref на бэкенде) */
   designerInviteToken?: string;
 }): Promise<{
-  access_token: string;
-  user: { id: string; email: string | null; phone: string | null; role: string; profile?: { profileOnboardingPending?: boolean } | null };
+  ok: boolean;
+  referralWarning?: string;
+  user: {
+    id: string;
+    email: string | null;
+    phone: string | null;
+    role: string;
+    profile?: { profileOnboardingPending?: boolean } | null;
+  } | null;
 }> {
   return postJson('complete', body);
 }

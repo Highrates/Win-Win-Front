@@ -1,16 +1,15 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { CustomerAccountSidebarContainer } from '@/components/CustomerAccountSidebar/CustomerAccountSidebarContainer';
-import { USER_ACCESS_TOKEN_COOKIE } from '@/lib/userAuth';
+import { getServerUserSession } from '@/lib/userSessionServer';
 import styles from './AccountLayout.module.css';
 
-export default function AccountLayout({
+export default async function AccountLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const token = cookies().get(USER_ACCESS_TOKEN_COOKIE)?.value;
-  if (!token) {
+  const session = await getServerUserSession();
+  if (!session.authenticated) {
     redirect('/login/email');
   }
   return (

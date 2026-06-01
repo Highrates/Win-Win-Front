@@ -14,6 +14,7 @@ export type ProfileDto = {
   winWinReferralCode?: string | null;
   partnerApplicationSubmittedAt?: string | null;
   partnerApplicationRejectedAt?: string | null;
+  partnerApplicationReferralCode?: string | null;
   email?: string | null;
   referralInviteCodeExempt?: boolean;
   designerSlug?: string | null;

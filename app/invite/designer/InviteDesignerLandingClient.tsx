@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-const INVITE_KEY = 'winwin-designer-invite';
 
 function Inner() {
   const sp = useSearchParams();
@@ -38,12 +37,9 @@ function Inner() {
         const prefillRef = (j.prefillRef ?? '').trim();
         const email = (j.email ?? '').trim();
         if (j.accountExists) {
-          try {
-            sessionStorage.setItem(INVITE_KEY, t);
-          } catch {
-            /* */
-          }
-          router.replace('/login/email?fromDesignerInvite=1');
+          const q = new URLSearchParams();
+          q.set('designerInvite', t);
+          router.replace(`/login/email?${q.toString()}`);
           return;
         }
         const q = new URLSearchParams();

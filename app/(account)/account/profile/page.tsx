@@ -122,6 +122,7 @@ function ProfilePageContent() {
 
   const [partnerAppModalOpen, setPartnerAppModalOpen] = useState(false);
   const [inviteDesignerModalOpen, setInviteDesignerModalOpen] = useState(false);
+  const [referralWarningBanner, setReferralWarningBanner] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('/images/placeholder.svg');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -307,6 +308,16 @@ function ProfilePageContent() {
   }, [profileModalOpen, profile, applyProfileDto]);
 
   useEffect(() => {
+    const warn = searchParams.get('referralWarning')?.trim();
+    if (!warn) return;
+    setReferralWarningBanner(warn);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('referralWarning');
+    const q = next.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
     const tab = searchParams.get('tab');
     const key: ProfileTabKey = tab === 'income' ? 'income' : tab === 'settings' ? 'settings' : 'info';
     selectTab(key);
@@ -350,7 +361,10 @@ function ProfilePageContent() {
     if (searchParams.get('partnerApply') !== '1') return;
     if (loading) return;
     if (!profile) return;
-    const prefill = searchParams.get('prefillRef')?.trim();
+    const prefill =
+      searchParams.get('prefillRef')?.trim() ||
+      profile.partnerApplicationReferralCode?.trim() ||
+      '';
     partnerApp.reset();
     if (prefill) partnerApp.setReferralCode(prefill);
     const pending =
@@ -408,9 +422,10 @@ function ProfilePageContent() {
       coverLetter: partnerApp.about,
       referralInviteExempt,
       referralCode: partnerApp.referralCode,
+      storedReferralCode: profile?.partnerApplicationReferralCode,
       file: partnerApp.file,
     });
-  }, [partnerApp, referralInviteExempt]);
+  }, [partnerApp, referralInviteExempt, profile?.partnerApplicationReferralCode]);
 
   const submitInviteDesigner = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -484,6 +499,11 @@ function ProfilePageContent() {
       {loadError ? (
         <p className={flowStyles.formError} role="alert">
           {loadError}
+        </p>
+      ) : null}
+      {referralWarningBanner ? (
+        <p className={styles.partnerReferralExemptNote} role="status">
+          {referralWarningBanner}
         </p>
       ) : null}
 
@@ -966,7 +986,13 @@ function ProfilePageContent() {
                         onChange={(e) => partnerApp.setReferralCode(e.target.value)}
                         placeholder="Введите номер"
                         autoComplete="off"
+                        readOnly={Boolean(profile?.partnerApplicationReferralCode?.trim())}
                       />
+                      {profile?.partnerApplicationReferralCode?.trim() ? (
+                        <p className={styles.partnerReferralExemptNote}>
+                          Спонсор закреплён по приглашению или ссылке регистрации.
+                        </p>
+                      ) : null}
                     </div>
                   )}
                   <div className={styles.partnerFormField}>

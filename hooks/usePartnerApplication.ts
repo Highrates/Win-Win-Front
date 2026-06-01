@@ -23,6 +23,8 @@ export function usePartnerApplication(onSuccessProfile: (p: ProfileDto) => void)
       coverLetter: string;
       referralInviteExempt: boolean;
       referralCode: string;
+      /** Уже закреплённый ref (invite / ?ref= при регистрации). */
+      storedReferralCode?: string | null;
       file: File | null;
     }) => {
       setError(null);
@@ -32,7 +34,8 @@ export function usePartnerApplication(onSuccessProfile: (p: ProfileDto) => void)
         return;
       }
       if (!params.referralInviteExempt) {
-        const ref = params.referralCode.trim();
+        const ref =
+          params.referralCode.trim() || (params.storedReferralCode ?? '').trim();
         if (ref.length < 3) {
           setError('Укажите реферальный номер приглашающего');
           return;
@@ -54,7 +57,9 @@ export function usePartnerApplication(onSuccessProfile: (p: ProfileDto) => void)
         const fd = new FormData();
         fd.set('coverLetter', text);
         if (!params.referralInviteExempt) {
-          fd.set('referralCode', params.referralCode.trim());
+          const ref =
+            params.referralCode.trim() || (params.storedReferralCode ?? '').trim();
+          fd.set('referralCode', ref);
         }
         fd.set('file', params.file);
         const res = await fetch('/api/user/partner-application', {

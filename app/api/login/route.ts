@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
-import { setUserAccessTokenCookie } from '@/lib/userAuth';
+import { normalizeLoginEmailOrPhone } from '@/lib/loginEmailOrPhoneNormalize';
+import { establishUserSessionResponse } from '@/lib/userSessionEstablish';
 
 async function readNestError(res: Response): Promise<string | null> {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
-        emailOrPhone: emailOrPhone.includes('@') ? emailOrPhone.toLowerCase() : emailOrPhone,
+        emailOrPhone: normalizeLoginEmailOrPhone(emailOrPhone),
         password,
       }),
       cache: 'no-store',
@@ -51,6 +52,12 @@ export async function POST(request: Request) {
   }
 
   if (!res.ok) {
+    if (res.status === 429) {
+      return NextResponse.json(
+        { error: 'Слишком много попыток входа. Подождите минуту и попробуйте снова.' },
+        { status: 429 },
+      );
+    }
     if (res.status === 401) {
       return NextResponse.json({ error: 'Неверный email/телефон или пароль' }, { status: 401 });
     }
@@ -71,26 +78,11 @@ export async function POST(request: Request) {
   }
 
   const data = (await res.json()) as { access_token?: string };
-  const token = data.access_token;
+  const token = data.access_token?.trim();
   if (!token) {
     return NextResponse.json({ error: 'Нет access_token в ответе API' }, { status: 502 });
   }
 
-  let me: unknown = null;
-  try {
-    const meRes = await fetch(`${getServerApiBase()}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    });
-    if (meRes.ok) {
-      me = await meRes.json();
-    }
-  } catch {
-    /* ignore */
-  }
-
-  const response = NextResponse.json({ ok: true, access_token: token, user: me });
-  setUserAccessTokenCookie(response, request, token);
-  return response;
+  return establishUserSessionResponse(request, token);
 }
 

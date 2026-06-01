@@ -13,6 +13,15 @@ export function getUserAccessTokenFromCookies(): string | null {
   return cookies().get(USER_ACCESS_TOKEN_COOKIE)?.value?.trim() || null;
 }
 
+/** Сброс httpOnly-cookie сессии из RSC (layout, getServerUserSession). */
+export function clearUserSessionCookieFromStore(): void {
+  try {
+    cookies().delete(USER_ACCESS_TOKEN_COOKIE);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function clearUserSessionCookieInResponse(
   res: NextResponse,
   request: Request,
@@ -46,7 +55,10 @@ export const getServerUserSession = cache(async (): Promise<ServerUserSession> =
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
     });
-    if (!res.ok) return { authenticated: false, accessToken: null };
+    if (!res.ok) {
+      clearUserSessionCookieFromStore();
+      return { authenticated: false, accessToken: null };
+    }
     return { authenticated: true, accessToken: token };
   } catch {
     return { authenticated: false, accessToken: null };

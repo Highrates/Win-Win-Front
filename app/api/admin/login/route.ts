@@ -57,6 +57,12 @@ export async function POST(request: Request) {
   }
 
   if (!res.ok) {
+    if (res.status === 429) {
+      return NextResponse.json(
+        { error: 'Слишком много попыток входа. Подождите минуту и попробуйте снова.' },
+        { status: 429 },
+      );
+    }
     if (res.status === 401) {
       return NextResponse.json({ error: MSG_401 }, { status: 401 });
     }

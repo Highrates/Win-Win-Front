@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import { establishUserSessionFromAuthJson } from '@/lib/userSessionEstablish';
 
 function isAllowed(slug: string[]): boolean {
   const s = slug.filter((p) => p.length > 0);
@@ -7,6 +8,22 @@ function isAllowed(slug: string[]): boolean {
   if (s.length === 2 && s[0] === 'phone' && (s[1] === 'start' || s[1] === 'verify')) return true;
   if (s.length === 2 && s[0] === 'email' && (s[1] === 'start' || s[1] === 'verify')) return true;
   return false;
+}
+
+function isRegisterComplete(slug: string[]): boolean {
+  const s = slug.filter((p) => p.length > 0);
+  return s.length === 1 && s[0] === 'complete';
+}
+
+async function readNestErrorMessage(buf: ArrayBuffer): Promise<string | null> {
+  try {
+    const errBody = JSON.parse(new TextDecoder().decode(buf)) as { message?: string | string[] };
+    if (Array.isArray(errBody.message)) return errBody.message.join(', ');
+    if (typeof errBody.message === 'string') return errBody.message;
+  } catch {
+    /* empty */
+  }
+  return null;
 }
 
 export async function POST(request: NextRequest, { params }: { params: { slug: string[] } }) {
@@ -56,6 +73,18 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
   }
 
   const buf = await res.arrayBuffer();
+
+  if (isRegisterComplete(slug) && res.ok) {
+    return establishUserSessionFromAuthJson(request, new TextDecoder().decode(buf));
+  }
+
+  if (isRegisterComplete(slug) && !res.ok) {
+    const nestMsg = await readNestErrorMessage(buf);
+    if (nestMsg) {
+      return NextResponse.json({ message: nestMsg }, { status: res.status });
+    }
+  }
+
   const out = new NextResponse(buf, { status: res.status });
   const ct = res.headers.get('content-type');
   if (ct) out.headers.set('content-type', ct);
