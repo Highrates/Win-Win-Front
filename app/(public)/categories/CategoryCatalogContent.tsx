@@ -5,12 +5,7 @@ import {
   CatalogSubcategoryCardsStrip,
   type CatalogSubcategoryCardItem,
 } from '@/app/(public)/catalog/CatalogSubcategoryCardsStrip';
-import { CatalogProductGrid } from '@/components/CatalogProductGrid/CatalogProductGrid';
-import {
-  CATEGORY_PER_PAGE,
-  buildCatalogPaginationEntries,
-  categoryCatalogPageHref,
-} from './categoryCatalogData';
+import { CategoryCatalogGridClient } from '@/app/(public)/categories/CategoryCatalogGridClient';
 import type { CatalogProductSearchHit } from '@/lib/catalogPublic';
 import styles from './CategoryPage.module.css';
 
@@ -26,10 +21,7 @@ type Props = {
   /** Строка над H1 (родитель); на странице «Гостиная» — null */
   parentCategoryName: string | null;
   breadcrumbs: CategoryBreadcrumb[];
-  /** База URL для пагинации: `/catalog` или `/catalog/<slug>` */
-  paginationBasePath: string;
-  /** Текущая страница каталога (уже сжата к допустимому диапазону) */
-  catalogPage: number;
+  categoryId: string;
   catalogHits: CatalogProductSearchHit[];
   catalogTotal: number;
   previewImageSrc?: string;
@@ -46,8 +38,7 @@ export function CategoryCatalogContent({
   categoryTitle,
   parentCategoryName,
   breadcrumbs,
-  paginationBasePath,
-  catalogPage,
+  categoryId,
   catalogHits,
   catalogTotal,
   previewImageSrc = '/images/placeholder.svg',
@@ -56,9 +47,6 @@ export function CategoryCatalogContent({
   showSubcategoryCardsStrip = false,
   subcategoryItems,
 }: Props) {
-  const totalPages = Math.max(1, Math.ceil(catalogTotal / CATEGORY_PER_PAGE));
-  const page = Math.min(Math.max(1, catalogPage), totalPages);
-
   return (
     <main>
       <section className={styles.previewPageSection}>
@@ -144,54 +132,11 @@ export function CategoryCatalogContent({
                 <span className={styles.marketSectionRowResultValue}>{catalogTotal}</span>
               </div>
             </div>
-            <CatalogProductGrid catalogHits={catalogHits} />
-            <nav className={styles.paginationWrapper} aria-label="Пагинация">
-              {page <= 1 ? (
-                <span className={styles.paginationBtnDisabled}>НАЗАД</span>
-              ) : (
-                <Link
-                  href={categoryCatalogPageHref(paginationBasePath, page - 1)}
-                  className={styles.paginationBtn}
-                >
-                  НАЗАД
-                </Link>
-              )}
-              <div className={styles.paginationPages}>
-                {buildCatalogPaginationEntries(page, totalPages).map((entry, idx) =>
-                  entry === 'ellipsis' ? (
-                    <span
-                      key={`ellipsis-${idx}`}
-                      className={styles.paginationEllipsis}
-                      aria-hidden="true"
-                    >
-                      …
-                    </span>
-                  ) : entry === page ? (
-                    <span key={entry} className={styles.paginationPageCurrent}>
-                      {entry}
-                    </span>
-                  ) : (
-                    <Link
-                      key={entry}
-                      href={categoryCatalogPageHref(paginationBasePath, entry)}
-                      className={styles.paginationPage}
-                    >
-                      {entry}
-                    </Link>
-                  ),
-                )}
-              </div>
-              {page >= totalPages ? (
-                <span className={styles.paginationBtnDisabled}>ДАЛЕЕ</span>
-              ) : (
-                <Link
-                  href={categoryCatalogPageHref(paginationBasePath, page + 1)}
-                  className={styles.paginationBtn}
-                >
-                  ДАЛЕЕ
-                </Link>
-              )}
-            </nav>
+            <CategoryCatalogGridClient
+              categoryId={categoryId}
+              initialHits={catalogHits}
+              initialTotal={catalogTotal}
+            />
           </div>
         </div>
       </section>

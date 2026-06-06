@@ -138,7 +138,7 @@ export function DesignersCardsClient({ items }: { items: DesignersListItem[] }) 
       })}
       {bulk.auth === true && bulk.status === 'error' ? (
         <div role="status" aria-label="Ошибка загрузки лайков" style={{ marginTop: 12 }}>
-          <button type="button" className={styles.paginationBtn} onClick={bulk.retry}>
+          <button type="button" className={styles.textActionBtn} onClick={bulk.retry}>
             Повторить загрузку лайков
           </button>
         </div>

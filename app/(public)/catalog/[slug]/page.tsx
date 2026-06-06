@@ -8,7 +8,6 @@ import { CATEGORY_PER_PAGE } from '@/app/(public)/categories/categoryCatalogData
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -22,30 +21,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title, description };
 }
 
-export default async function CatalogSlugPage({ params, searchParams }: Props) {
+export default async function CatalogSlugPage({ params }: Props) {
   const { slug } = await params;
-  const { page: pageParam } = await searchParams;
-  const rawPage = Math.max(1, parseInt(String(pageParam || '1'), 10) || 1);
 
   const category = await fetchCategoryBySlug(slug);
   if (!category) {
     notFound();
   }
 
-  let search = await fetchProductsSearch({
+  const search = await fetchProductsSearch({
     categoryId: category.id,
-    page: rawPage,
+    page: 1,
     limit: CATEGORY_PER_PAGE,
   });
-  const totalPages = Math.max(1, Math.ceil(search.total / CATEGORY_PER_PAGE));
-  const pageEff = Math.min(rawPage, totalPages);
-  if (pageEff !== rawPage) {
-    search = await fetchProductsSearch({
-      categoryId: category.id,
-      page: pageEff,
-      limit: CATEGORY_PER_PAGE,
-    });
-  }
 
   const isRoot = category.parentId == null;
   const previewImageSrc = resolveMediaUrlForServer(category.backgroundImageUrl);
@@ -81,8 +69,7 @@ export default async function CatalogSlugPage({ params, searchParams }: Props) {
       categoryTitle={category.name}
       parentCategoryName={isRoot ? null : category.parent!.name}
       breadcrumbs={breadcrumbs}
-      paginationBasePath={`/catalog/${slug}`}
-      catalogPage={pageEff}
+      categoryId={category.id}
       catalogHits={search.hits}
       catalogTotal={search.total}
       previewImageSrc={previewImageSrc}

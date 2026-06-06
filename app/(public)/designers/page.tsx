@@ -3,10 +3,9 @@ import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import { DesignersSearchBox } from './DesignersSearchBox';
-import { DesignersCardsClient } from './DesignersCardsClient';
+import { DesignersListClient } from './DesignersListClient';
+import { DESIGNERS_PER_PAGE } from './designersListConstants';
 import styles from './DesignersPage.module.css';
-
-const DESIGNERS_PER_PAGE = 48;
 
 type ListItem = {
   id: string;
@@ -59,33 +58,20 @@ function ArrowIcon({ className }: { className?: string }) {
   );
 }
 
-function designersListHref(opts: { page?: number; q: string }): string {
-  const sp = new URLSearchParams();
-  if (opts.q.trim()) sp.set('q', opts.q.trim());
-  if (opts.page && opts.page > 1) sp.set('page', String(opts.page));
-  const qs = sp.toString();
-  return qs ? `/designers?${qs}` : '/designers';
-}
-
 export const metadata: Metadata = {
   title: 'Дизайнеры — Win-Win',
   description: 'Каталог дизайнеров Win-Win',
 };
 
 type Props = {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ q?: string }>;
 };
 
 export default async function DesignersPage({ searchParams }: Props) {
-  const { page: pageParam, q: qRaw } = await searchParams;
-  const requestedPage = Math.max(1, parseInt(String(pageParam || '1'), 10) || 1);
+  const { q: qRaw } = await searchParams;
   const q = typeof qRaw === 'string' ? qRaw.trim() : '';
 
-  const first = await fetchDesigners(requestedPage, DESIGNERS_PER_PAGE, q || undefined);
-  const totalPages = Math.max(1, Math.ceil(first.total / DESIGNERS_PER_PAGE));
-  const page = Math.min(requestedPage, totalPages);
-  const { items, total } = page === requestedPage ? first : await fetchDesigners(page, DESIGNERS_PER_PAGE, q || undefined);
-  const designersOnPage = items;
+  const { items, total } = await fetchDesigners(1, DESIGNERS_PER_PAGE, q || undefined);
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -145,53 +131,7 @@ export default async function DesignersPage({ searchParams }: Props) {
               </div>
             </div>
 
-            <DesignersCardsClient items={designersOnPage} />
-
-            {total > DESIGNERS_PER_PAGE && (
-              <nav className={styles.paginationWrapper} aria-label="Пагинация">
-                {page <= 1 ? (
-                  <span className={styles.paginationBtnDisabled}>НАЗАД</span>
-                ) : (
-                  <Link
-                    href={designersListHref({ page: page - 1, q })}
-                    className={styles.paginationBtn}
-                  >
-                    НАЗАД
-                  </Link>
-                )}
-                <div className={styles.paginationPages}>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (n) =>
-                      n === page ? (
-                        <span
-                          key={n}
-                          className={styles.paginationPageCurrent}
-                        >
-                          {n}
-                        </span>
-                      ) : (
-                        <Link
-                          key={n}
-                          href={designersListHref({ page: n, q })}
-                          className={styles.paginationPage}
-                        >
-                          {n}
-                        </Link>
-                      )
-                  )}
-                </div>
-                {page >= totalPages ? (
-                  <span className={styles.paginationBtnDisabled}>ДАЛЕЕ</span>
-                ) : (
-                  <Link
-                    href={designersListHref({ page: page + 1, q })}
-                    className={styles.paginationBtn}
-                  >
-                    ДАЛЕЕ
-                  </Link>
-                )}
-              </nav>
-            )}
+            <DesignersListClient initialItems={items} initialTotal={total} query={q} />
           </div>
         </div>
       </section>

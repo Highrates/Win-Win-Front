@@ -12,14 +12,7 @@ export const metadata: Metadata = {
   description: 'Каталог мебели и предметов интерьера',
 };
 
-type Props = {
-  searchParams: Promise<{ page?: string }>;
-};
-
-export default async function CatalogIndexPage({ searchParams }: Props) {
-  const { page: pageParam } = await searchParams;
-  const rawPage = Math.max(1, parseInt(String(pageParam || '1'), 10) || 1);
-
+export default async function CatalogIndexPage() {
   const roots = await fetchHomeCatalogRoots();
 
   if (roots.length === 0) {
@@ -35,20 +28,11 @@ export default async function CatalogIndexPage({ searchParams }: Props) {
 
   const firstRoot = roots[0];
 
-  let search = await fetchProductsSearch({
+  const search = await fetchProductsSearch({
     categoryId: firstRoot.id,
-    page: rawPage,
+    page: 1,
     limit: CATEGORY_PER_PAGE,
   });
-  const totalPages = Math.max(1, Math.ceil(search.total / CATEGORY_PER_PAGE));
-  const pageEff = Math.min(rawPage, totalPages);
-  if (pageEff !== rawPage) {
-    search = await fetchProductsSearch({
-      categoryId: firstRoot.id,
-      page: pageEff,
-      limit: CATEGORY_PER_PAGE,
-    });
-  }
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false as const },
@@ -60,8 +44,7 @@ export default async function CatalogIndexPage({ searchParams }: Props) {
       categoryTitle="Каталог"
       parentCategoryName={null}
       breadcrumbs={breadcrumbs}
-      paginationBasePath="/catalog"
-      catalogPage={pageEff}
+      categoryId={firstRoot.id}
       catalogHits={search.hits}
       catalogTotal={search.total}
       previewImageSrc={CATALOG_PREVIEW_IMAGE_SRC}
@@ -71,7 +54,6 @@ export default async function CatalogIndexPage({ searchParams }: Props) {
           initialCategoryId={firstRoot.id}
           initialHits={search.hits}
           initialTotal={search.total}
-          initialPage={pageEff}
         />
       }
     />

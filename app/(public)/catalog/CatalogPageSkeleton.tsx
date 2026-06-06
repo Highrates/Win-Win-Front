@@ -53,15 +53,6 @@ export function CatalogPageSkeleton() {
                 </div>
               ))}
             </div>
-            <div className={styles.paginationSkeleton}>
-              <div className={`${styles.shimmer} ${styles.pageBtn}`} />
-              <div className={styles.pageNums}>
-                {Array.from({ length: 5 }, (_, i) => (
-                  <div key={i} className={`${styles.shimmer} ${styles.pageDot}`} />
-                ))}
-              </div>
-              <div className={`${styles.shimmer} ${styles.pageBtn}`} />
-            </div>
           </div>
         </div>
       </section>

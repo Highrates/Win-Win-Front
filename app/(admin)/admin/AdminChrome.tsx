@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useAdminOrderChatStaffUnreadEvents } from '@/hooks/useAdminOrderChatStaffUnreadEvents';
+import { AdminDeployRecovery } from '@/lib/adminDeployRecovery/AdminDeployRecovery';
 import { AdminConfirmProvider } from '@/lib/adminConfirm/AdminConfirmProvider';
 import { AdminQueryProvider } from '@/lib/adminQuery/AdminQueryProvider';
 import { AdminLocaleProvider } from '@/lib/admin-i18n/adminLocaleContext';
@@ -275,9 +276,11 @@ function AdminShellBody({ sidebar, children }: { sidebar: ReactNode; children: R
 export function AdminChrome({
   children,
   initialLocale,
+  buildId,
 }: {
   children: React.ReactNode;
   initialLocale: AdminLocale;
+  buildId: string;
 }) {
   const pathname = usePathname() ?? '';
   const isLoginPage = pathname === '/admin/login';
@@ -327,6 +330,7 @@ export function AdminChrome({
 
   return (
     <AdminLocaleProvider locale={locale} localeReady={localeReady}>
+      <AdminDeployRecovery buildId={buildId} />
       <AdminQueryProvider>
         <AdminConfirmProvider>
           <AdminShellBody
