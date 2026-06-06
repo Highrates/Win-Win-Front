@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { adminDashboardStrings } from '@/lib/admin-i18n/adminChromeI18n';
 import { getAdminLocale } from '@/lib/admin-i18n/getAdminLocale';
-import styles from './dashboard.module.css';
+import styles from './catalog/catalogAdmin.module.css';
 
 export default function AdminDashboardPage() {
   const locale = getAdminLocale();
@@ -10,7 +10,7 @@ export default function AdminDashboardPage() {
     <main>
       <h1 className={styles.title}>{title}</h1>
       <p className={styles.lead}>{lead}</p>
-      <ul className={styles.grid}>
+      <ul className={styles.grid} aria-label={title}>
         {links.map(({ href, label, note }) => (
           <li key={href}>
             <Link href={href} className={styles.card}>
