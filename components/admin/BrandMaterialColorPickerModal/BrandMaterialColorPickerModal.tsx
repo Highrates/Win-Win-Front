@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import type {
   AdminBrandMaterial,
@@ -27,27 +28,6 @@ type Props = {
   /** Подтверждение выбора — массив «материал-цветов», в порядке клика/из библиотеки. */
   onConfirm: (picked: BrandMaterialColorPick[]) => void;
 };
-
-function ModalCloseButton({ onClick, label }: { onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      className={catalogStyles.modalCloseIconBtn}
-      onClick={onClick}
-      aria-label={label}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M18 6L6 18M6 6l12 12"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
-  );
-}
 
 export function BrandMaterialColorPickerModal({
   open,
@@ -147,7 +127,7 @@ export function BrandMaterialColorPickerModal({
           <h2 className={`${catalogStyles.groupHeading} ${styles.title}`}>
             {title ?? 'Выберите «материал-цвет»'}
           </h2>
-          <ModalCloseButton onClick={onClose} label="Закрыть" />
+          <AdminModalCloseButton onClick={onClose} label="Закрыть" />
         </div>
         <div className={styles.body}>
           {!brandId ? (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import styles from '../../../catalog/catalogAdmin.module.css';
 import { KpGrossFieldsEditor } from './KpGrossFieldsEditor';
 
@@ -60,14 +61,7 @@ export function OrderKpGrossEditModal({ open, productName, snapshot, onClose, on
           <h2 id="kp-gross-edit-title" className={modalStyles.panelTitle}>
             Габариты брутто
           </h2>
-          <button
-            type="button"
-            className={styles.modalCloseIconBtn}
-            aria-label="Закрыть"
-            onClick={onClose}
-          >
-            ×
-          </button>
+          <AdminModalCloseButton label="Закрыть" onClick={onClose} />
         </div>
         <div className={modalStyles.body} style={{ width: '100%', boxSizing: 'border-box' }}>
           <p className={styles.cardNote} style={{ marginTop: 0, marginBottom: 16 }}>

@@ -8,6 +8,7 @@ type ProfileMe = {
   firstName?: string | null;
   lastName?: string | null;
   winWinPartnerApproved?: boolean;
+  userGroupLabel?: string | null;
   partnerApplicationSubmittedAt?: string | null;
   partnerApplicationRejectedAt?: string | null;
 };
@@ -20,6 +21,7 @@ function displayName(firstName: string | null | undefined, lastName: string | nu
 export function CustomerAccountSidebarContainer() {
   const [userName, setUserName] = useState('Имя пользователя');
   const [isWinWinPartner, setIsWinWinPartner] = useState(false);
+  const [userGroupLabel, setUserGroupLabel] = useState<string | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [orderChatNotify, setOrderChatNotify] = useState(false);
   const [workTabNotify, setWorkTabNotify] = useState(false);
@@ -34,6 +36,7 @@ export function CustomerAccountSidebarContainer() {
         if (cancelled) return;
         setUserName(displayName(data.firstName, data.lastName));
         setIsWinWinPartner(Boolean(data.winWinPartnerApproved));
+        setUserGroupLabel(data.userGroupLabel?.trim() ? data.userGroupLabel.trim() : null);
       } catch {
         /* keep defaults */
       } finally {
@@ -92,6 +95,7 @@ export function CustomerAccountSidebarContainer() {
     <CustomerAccountSidebar
       userName={userName}
       isWinWinPartner={isWinWinPartner}
+      userGroupLabel={userGroupLabel}
       profileLoaded={profileLoaded}
       menuItemsWithNotification={orderChatNotify ? ['/account/orders'] : []}
       menuHrefOverrides={menuHrefOverrides}

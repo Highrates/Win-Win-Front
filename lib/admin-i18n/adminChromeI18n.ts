@@ -56,17 +56,19 @@ export function settingsGroupLabel(locale: AdminLocale): string {
 
 export function settingsSubLabel(
   locale: AdminLocale,
-  key: 'pricing' | 'staff' | 'referrals' | 'site',
+  key: 'pricing' | 'staff' | 'userGroups' | 'referrals' | 'site',
 ): string {
   const ru = {
     pricing: 'Ценообразование',
     staff: 'Сотрудники',
+    userGroups: 'Группы пользователей',
     referrals: 'Реферальная программа',
     site: 'Настройки сайта',
   };
   const zh = {
     pricing: '定价',
     staff: '员工',
+    userGroups: '用户组',
     referrals: '推荐计划',
     site: '网站设置',
   };

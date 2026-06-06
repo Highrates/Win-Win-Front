@@ -20,6 +20,8 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
+import { AdminTableRemoveButton } from '@/components/admin/AdminTableRemoveButton/AdminTableRemoveButton';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { AdminSelect, AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
@@ -72,32 +74,9 @@ function SortableItemRow({
         <strong>{label}</strong>
       </td>
       <td className={styles.tableCellActions}>
-        <AdminCompactBtn type="button" variant="danger" onClick={onRemove}>
-          {removeLabel}
-        </AdminCompactBtn>
+        <AdminTableRemoveButton label={removeLabel} onClick={onRemove} />
       </td>
     </tr>
-  );
-}
-
-function ModalCloseButton({ onClick, label }: { onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      className={styles.modalCloseIconBtn}
-      onClick={onClick}
-      aria-label={label}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M18 6L6 18M6 6l12 12"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
   );
 }
 
@@ -369,7 +348,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
               <h2 className={objStyles.dialogTitle} style={{ margin: 0, paddingRight: 8 }}>
                 {s.addProduct}
               </h2>
-              <ModalCloseButton onClick={() => setAddPickerOpen(false)} label={s.close} />
+              <AdminModalCloseButton onClick={() => setAddPickerOpen(false)} label={s.close} />
             </div>
             <AdminSearchBox
               className={styles.searchBoxFull}

@@ -3,6 +3,9 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import compactStyles from '@/components/AdminCompactBtn/AdminCompactBtn.module.css';
+import { AdminTextField, AdminSelect } from '@/components/AdminTextField/AdminTextField';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
+import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
 import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
@@ -796,35 +799,38 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
       {createOpen ? (
         <div
-          className={styles.modalBackdrop}
+          className={modalStyles.overlay}
           role="presentation"
-          onClick={() => !createSaving && setCreateOpen(false)}
+          onMouseDown={(e) => e.target === e.currentTarget && !createSaving && setCreateOpen(false)}
         >
           <div
-            className={styles.modal}
+            className={modalStyles.panel}
             role="dialog"
             aria-modal
             aria-labelledby="objects-new-folder-title"
-            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <h2 id="objects-new-folder-title" className={styles.dialogTitle}>
-              {s.newFolderDialogTitle}
-            </h2>
-            <form onSubmit={submitCreateFolder} className={catalogStyles.form}>
-              <label className={catalogStyles.label}>
-                {s.labelName}
-                <input
-                  className={catalogStyles.input}
+            <div className={modalStyles.panelHead}>
+              <h2 id="objects-new-folder-title" className={modalStyles.panelTitle}>
+                {s.newFolderDialogTitle}
+              </h2>
+              <AdminModalCloseButton
+                label={s.cancel}
+                disabled={createSaving}
+                onClick={() => setCreateOpen(false)}
+              />
+            </div>
+            <form onSubmit={submitCreateFolder}>
+              <div className={modalStyles.body}>
+                <AdminTextField
+                  label={s.labelName}
                   value={createName}
                   onChange={(e) => setCreateName(e.target.value)}
                   required
                   autoFocus
                 />
-              </label>
-              <label className={catalogStyles.label}>
-                {s.labelParentFolder}
-                <select
-                  className={styles.modalSelect}
+                <AdminSelect
+                  label={s.labelParentFolder}
                   value={createParentId}
                   onChange={(e) => setCreateParentId(e.target.value)}
                 >
@@ -835,9 +841,9 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
                       {f.name}
                     </option>
                   ))}
-                </select>
-              </label>
-              <div className={styles.modalActionsCreate}>
+                </AdminSelect>
+              </div>
+              <div className={modalStyles.panelFooter}>
                 <AdminCompactBtn
                   type="button"
                   variant="outline"
@@ -857,70 +863,73 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
       {folderSettings ? (
         <div
-          className={styles.modalBackdrop}
+          className={modalStyles.overlay}
           role="presentation"
-          onClick={() => !folderDeleting && setFolderSettings(null)}
+          onMouseDown={(e) =>
+            e.target === e.currentTarget && !folderDeleting && setFolderSettings(null)
+          }
         >
           <div
-            className={styles.modal}
+            className={modalStyles.panel}
             role="dialog"
             aria-modal
             aria-labelledby="objects-folder-settings-title"
-            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <h2 id="objects-folder-settings-title" className={styles.dialogTitle}>
-              {s.folderDialogTitle}
-            </h2>
-            <div className={catalogStyles.form}>
-              <label className={catalogStyles.label}>
-                {s.labelName}
-                <input
-                  className={`${styles.modalInput} ${styles.modalInputReadonly}`}
-                  value={folderSettings.name}
-                  disabled
-                  readOnly
-                />
-              </label>
-              <label className={catalogStyles.label}>
-                {s.labelParentFolder}
-                <input
-                  className={`${styles.modalInput} ${styles.modalInputReadonly}`}
-                  value={folderParentDisplayName(folderSettings, folderList, s.folderRoot)}
-                  disabled
-                  readOnly
-                />
-              </label>
-              <p className={catalogStyles.muted} style={{ margin: '0 0 4px' }}>
+            <div className={modalStyles.panelHead}>
+              <h2 id="objects-folder-settings-title" className={modalStyles.panelTitle}>
+                {s.folderDialogTitle}
+              </h2>
+              <AdminModalCloseButton
+                label={s.cancel}
+                disabled={folderDeleting}
+                onClick={() => setFolderSettings(null)}
+              />
+            </div>
+            <div className={modalStyles.body}>
+              <AdminTextField
+                label={s.labelName}
+                value={folderSettings.name}
+                disabled
+                readOnly
+              />
+              <AdminTextField
+                label={s.labelParentFolder}
+                value={folderParentDisplayName(folderSettings, folderList, s.folderRoot)}
+                disabled
+                readOnly
+              />
+              <p className={catalogStyles.muted}>
                 {s.pathStats(
                   folderSettings.pathKey,
                   folderSettings._count.objects,
                   folderSettings._count.children
                 )}
               </p>
-              <div className={styles.modalActionsCreate}>
+            </div>
+            <div className={modalStyles.panelFooter}>
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                disabled={folderDeleting}
+                onClick={() => setFolderSettings(null)}
+              >
+                {s.cancel}
+              </AdminCompactBtn>
+              {isProtectedMediaFolder(folderSettings) ? (
+                <span className={catalogStyles.muted} style={{ alignSelf: 'center' }}>
+                  {s.systemFolderNoDelete}
+                </span>
+              ) : (
                 <AdminCompactBtn
+                  variant="danger"
                   type="button"
-                  variant="outline"
                   disabled={folderDeleting}
-                  onClick={() => setFolderSettings(null)}
+                  onClick={() => void deleteFolderFromSettings()}
                 >
-                  {s.cancel}
+                  {folderDeleting ? s.deleting : s.delete}
                 </AdminCompactBtn>
-                {isProtectedMediaFolder(folderSettings) ? (
-                  <span className={catalogStyles.muted} style={{ alignSelf: 'center' }}>
-                    {s.systemFolderNoDelete}
-                  </span>
-                ) : (
-                  <AdminCompactBtn
-                    variant="danger"
-                    type="button"
-                    disabled={folderDeleting}
-                    onClick={() => void deleteFolderFromSettings()}
-                  >
-                    {folderDeleting ? s.deleting : s.delete}
-                  </AdminCompactBtn>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -928,56 +937,57 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
       {detail || detailLoading ? (
         <div
-          className={styles.modalBackdrop}
+          className={modalStyles.overlay}
           role="presentation"
-          onClick={() => !detailSaving && !detailDeleting && closeDetail()}
+          onMouseDown={(e) =>
+            e.target === e.currentTarget && !detailSaving && !detailDeleting && closeDetail()
+          }
         >
           <div
-            className={styles.modal}
+            className={modalStyles.panel}
             role="dialog"
             aria-modal
             aria-labelledby="objects-detail-title"
-            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
+            <div className={modalStyles.panelHead}>
+              <h2 id="objects-detail-title" className={modalStyles.panelTitle}>
+                {s.detailPropertiesTitle}
+              </h2>
+              <AdminModalCloseButton
+                label={s.close}
+                disabled={detailSaving || detailDeleting}
+                onClick={closeDetail}
+              />
+            </div>
             {detailLoading ? (
-              <p className={catalogStyles.muted}>{s.loading}</p>
+              <div className={modalStyles.body}>
+                <p className={catalogStyles.muted}>{s.loading}</p>
+              </div>
             ) : detail ? (
               <>
-                <h2 id="objects-detail-title" className={styles.modalTitle}>
-                  {s.detailPropertiesTitle}
-                </h2>
-                <div className={styles.modalField}>
-                  <label className={styles.modalLabel} htmlFor="objects-detail-name">
-                    {s.fileNameLabel}
-                  </label>
-                  <input
-                    id="objects-detail-name"
-                    className={styles.modalInput}
+                <div className={modalStyles.body}>
+                  <AdminTextField
+                    label={s.fileNameLabel}
                     value={detailOriginalName}
                     onChange={(e) => setDetailOriginalName(e.target.value)}
                     autoComplete="off"
                   />
-                </div>
-                <div className={styles.modalStats}>
-                  <div>
-                    {formatKindLabel(
-                      detail.mimeType,
-                      detailOriginalName || detail.originalName,
-                      s.fileGeneric
-                    )}
-                    {detail.width && detail.height
-                      ? `, ${detail.width} × ${detail.height}px`
-                      : ''}
-                    {`, ${formatBytes(detail.byteSize)}`}
+                  <div className={styles.detailMeta}>
+                    <div>
+                      {formatKindLabel(
+                        detail.mimeType,
+                        detailOriginalName || detail.originalName,
+                        s.fileGeneric
+                      )}
+                      {detail.width && detail.height
+                        ? `, ${detail.width} × ${detail.height}px`
+                        : ''}
+                      {`, ${formatBytes(detail.byteSize)}`}
+                    </div>
                   </div>
-                </div>
-                <div className={styles.modalField}>
-                  <label className={styles.modalLabel} htmlFor="objects-detail-folder">
-                    {s.folderLabel}
-                  </label>
-                  <select
-                    id="objects-detail-folder"
-                    className={styles.modalSelect}
+                  <AdminSelect
+                    label={s.folderLabel}
                     value={detailFolderId}
                     onChange={(e) => setDetailFolderId(e.target.value)}
                   >
@@ -988,21 +998,15 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
                         {f.name}
                       </option>
                     ))}
-                  </select>
-                </div>
-                <div className={styles.modalField}>
-                  <label className={styles.modalLabel} htmlFor="objects-detail-alt">
-                    Alt text
-                  </label>
-                  <input
-                    id="objects-detail-alt"
-                    className={styles.modalInput}
+                  </AdminSelect>
+                  <AdminTextField
+                    label="Alt text"
                     value={detailAlt}
                     onChange={(e) => setDetailAlt(e.target.value)}
                     placeholder={s.altDescriptionPlaceholder}
                   />
                 </div>
-                <div className={styles.modalActions}>
+                <div className={`${modalStyles.panelFooter} ${styles.detailFooter}`}>
                   <AdminCompactBtn
                     variant="danger"
                     type="button"
@@ -1011,7 +1015,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
                   >
                     {detailDeleting ? s.deleting : s.delete}
                   </AdminCompactBtn>
-                  <div className={styles.modalActionsEnd}>
+                  <div className={styles.detailFooterEnd}>
                     <AdminCompactBtn
                       type="button"
                       variant="outline"
@@ -1038,76 +1042,80 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
       {uploadBatch ? (
         <div
-          className={styles.modalBackdrop}
+          className={modalStyles.overlay}
           role="dialog"
           aria-modal
           aria-labelledby="objects-upload-progress-title"
           aria-busy={uploadInProgress}
         >
-          <div className={`${styles.modal} ${styles.uploadProgressModal}`}>
-            <h2 id="objects-upload-progress-title" className={styles.modalTitle}>
-              {s.uploadProgressTitle}
-            </h2>
-            <p className={styles.uploadProgressSummary}>
-              {s.uploadProgressCount(uploadFinishedCount, uploadBatch.length)}
-            </p>
-            <div
-              className={styles.uploadProgressBar}
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={uploadBatch.length}
-              aria-valuenow={uploadFinishedCount}
-              aria-label={s.uploadProgressTitle}
-            >
-              <div
-                className={styles.uploadProgressBarFill}
-                style={{ width: `${(uploadFinishedCount / uploadBatch.length) * 100}%` }}
-              />
+          <div className={`${modalStyles.panel} ${modalStyles.panelWide} ${styles.uploadProgressPanel}`}>
+            <div className={modalStyles.panelHead}>
+              <h2 id="objects-upload-progress-title" className={modalStyles.panelTitle}>
+                {s.uploadProgressTitle}
+              </h2>
             </div>
-            <ul className={styles.uploadProgressList}>
-              {uploadBatch.map((item, index) => (
-                <li
-                  key={`${index}-${item.fileName}`}
-                  className={`${styles.uploadProgressItem} ${
-                    item.status === 'done'
-                      ? styles.uploadProgressItemDone
-                      : item.status === 'error'
-                        ? styles.uploadProgressItemError
-                        : item.status === 'cancelled'
-                          ? styles.uploadProgressItemCancelled
-                          : ''
-                  }`}
-                >
-                  <div className={styles.uploadProgressThumb}>
-                    {item.previewUrl ? (
-                      <img src={item.previewUrl} alt="" />
-                    ) : (
-                      <span className={styles.uploadProgressThumbPlaceholder}>{s.fileGeneric}</span>
-                    )}
-                  </div>
-                  <div className={styles.uploadProgressMeta}>
-                    <span className={styles.uploadProgressName}>{item.fileName}</span>
-                    <span
-                      className={`${styles.uploadProgressStatus} ${
-                        item.status === 'error' ? styles.uploadProgressStatusError : ''
-                      }`}
-                    >
-                      {item.status === 'pending'
-                        ? s.uploadStatusPending
-                        : item.status === 'uploading'
-                          ? s.uploadStatusUploading
-                          : item.status === 'done'
-                            ? s.uploadStatusDone
-                            : item.status === 'cancelled'
-                              ? s.uploadStatusCancelled
-                              : item.error ?? s.uploadStatusError}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className={modalStyles.body}>
+              <p className={styles.uploadProgressSummary}>
+                {s.uploadProgressCount(uploadFinishedCount, uploadBatch.length)}
+              </p>
+              <div
+                className={styles.uploadProgressBar}
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={uploadBatch.length}
+                aria-valuenow={uploadFinishedCount}
+                aria-label={s.uploadProgressTitle}
+              >
+                <div
+                  className={styles.uploadProgressBarFill}
+                  style={{ width: `${(uploadFinishedCount / uploadBatch.length) * 100}%` }}
+                />
+              </div>
+              <ul className={styles.uploadProgressList}>
+                {uploadBatch.map((item, index) => (
+                  <li
+                    key={`${index}-${item.fileName}`}
+                    className={`${styles.uploadProgressItem} ${
+                      item.status === 'done'
+                        ? styles.uploadProgressItemDone
+                        : item.status === 'error'
+                          ? styles.uploadProgressItemError
+                          : item.status === 'cancelled'
+                            ? styles.uploadProgressItemCancelled
+                            : ''
+                    }`}
+                  >
+                    <div className={styles.uploadProgressThumb}>
+                      {item.previewUrl ? (
+                        <img src={item.previewUrl} alt="" />
+                      ) : (
+                        <span className={styles.uploadProgressThumbPlaceholder}>{s.fileGeneric}</span>
+                      )}
+                    </div>
+                    <div className={styles.uploadProgressMeta}>
+                      <span className={styles.uploadProgressName}>{item.fileName}</span>
+                      <span
+                        className={`${styles.uploadProgressStatus} ${
+                          item.status === 'error' ? styles.uploadProgressStatusError : ''
+                        }`}
+                      >
+                        {item.status === 'pending'
+                          ? s.uploadStatusPending
+                          : item.status === 'uploading'
+                            ? s.uploadStatusUploading
+                            : item.status === 'done'
+                              ? s.uploadStatusDone
+                              : item.status === 'cancelled'
+                                ? s.uploadStatusCancelled
+                                : item.error ?? s.uploadStatusError}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
             {uploadInProgress ? (
-              <div className={styles.uploadProgressActions}>
+              <div className={modalStyles.panelFooter}>
                 <AdminCompactBtn type="button" variant="outline" onClick={cancelUploadBatch}>
                   {s.cancel}
                 </AdminCompactBtn>

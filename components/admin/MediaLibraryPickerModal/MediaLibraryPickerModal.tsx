@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import compactStyles from '@/components/AdminCompactBtn/AdminCompactBtn.module.css';
 import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
@@ -455,15 +456,11 @@ export function MediaLibraryPickerModal({
           <h2 id="media-picker-title" className={pickStyles.modalTitle}>
             {title}
           </h2>
-          <button
-            type="button"
-            className={pickStyles.closeBtn}
-            aria-label="Закрыть"
+          <AdminModalCloseButton
+            label="Закрыть"
             disabled={uploading}
             onClick={() => !uploading && onClose()}
-          >
-            ×
-          </button>
+          />
         </header>
 
         <div className={pickStyles.body}>

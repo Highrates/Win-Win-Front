@@ -294,97 +294,27 @@
   color: var(--color-gray, #9d9d9d);
 }
 
-.modalBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(5, 24, 38, 0.35);
-}
-
-.modal {
-  width: 100%;
-  max-width: 420px;
-  max-height: min(90vh, 560px);
-  overflow: auto;
-  padding: 20px 22px;
-  border-radius: 12px;
-  background: var(--color-white, #fff);
-  box-shadow: 0 16px 48px rgba(5, 24, 38, 0.18);
-  font-family: var(--font-commissioner, system-ui);
-}
-
-.modalTitle {
-  margin: 0 0 12px;
-  font-size: var(--text-card-16-400, 16px);
-  font-weight: 400;
-  color: var(--color-black, #000);
-}
-
-.modalStats {
-  margin: 0 0 16px;
+.detailMeta {
+  margin: 0;
   padding: 10px 12px;
   border-radius: 8px;
   background: var(--color-bright-snow, #f5f7f8);
-  font-size: 0.875rem;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: var(--text-caption, 14px);
+  font-weight: var(--text-caption-weight, 300);
   line-height: 1.5;
-  color: var(--color-black, #1a1a1a);
-}
-
-.modalField {
-  margin-bottom: 14px;
-}
-
-.modalLabel {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
   color: var(--color-ink-black, #051826);
 }
 
-.modalSelect,
-.modalInput {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--account-hairline-color, #e2e6e8);
-  border-radius: 8px;
-  font-family: var(--font-commissioner, system-ui);
-  font-size: 0.9375rem;
-}
-
-.modalInputReadonly:disabled {
-  opacity: 0.92;
-  cursor: default;
-  background: var(--color-bright-snow, #f5f7f8);
-  color: var(--color-black, #1a1a1a);
-}
-
-.modalActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
+.detailFooter {
   justify-content: space-between;
-  margin-top: 20px;
 }
 
-.modalActionsEnd {
+.detailFooterEnd {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-left: auto;
-}
-
-.modalActionsCreate {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 20px;
 }
 
 .uploadIcon {
@@ -399,11 +329,8 @@
   pointer-events: none;
 }
 
-.dialogTitle {
-  margin: 0 0 12px;
-  font-size: var(--text-card-16-400, 16px);
-  font-weight: 400;
-  color: var(--color-black, #000);
+.uploadProgressPanel {
+  max-width: min(520px, 100%);
 }
 
 /**
@@ -436,19 +363,15 @@
   gap: 6px;
 }
 
-.uploadProgressModal {
-  max-width: 520px;
-}
-
 .uploadProgressSummary {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 0.875rem;
   color: var(--color-gray, #9d9d9d);
 }
 
 .uploadProgressBar {
   height: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 0;
   border-radius: 999px;
   background: var(--color-bright-snow, #f5f7f8);
   overflow: hidden;
@@ -544,10 +467,4 @@
 
 .uploadProgressItemCancelled {
   opacity: 0.72;
-}
-
-.uploadProgressActions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
 }

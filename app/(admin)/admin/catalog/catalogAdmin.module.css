@@ -94,6 +94,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 4px;
+  margin-bottom: 14px;
 }
 
 .modalHeaderRow {
@@ -438,8 +439,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   padding: 0;
   border: none;
@@ -449,9 +450,53 @@
   cursor: pointer;
 }
 
-.modalCloseIconBtn:hover {
+.modalCloseIconBtn:hover:not(:disabled) {
   background: var(--color-bright-snow, #f5f7f8);
   color: var(--color-ink-black, #051826);
+}
+
+.modalCloseIconBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.modalCloseIconSvg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.tableRemoveIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(197, 48, 41, 0.38);
+  border-radius: 50%;
+  background: rgba(197, 48, 41, 0.06);
+  color: var(--color-red, #c53029);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tableRemoveIconBtn:hover:not(:disabled) {
+  background: rgba(197, 48, 41, 0.12);
+  border-color: rgba(197, 48, 41, 0.55);
+}
+
+.tableRemoveIconBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tableRemoveIconSvg {
+  display: block;
+  width: 11px;
+  height: 11px;
 }
 
 .label {

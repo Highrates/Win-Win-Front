@@ -57,6 +57,7 @@ const CATALOG_CHILDREN = [
 const SETTINGS_CHILDREN = [
   { href: '/admin/settings/pricing', key: 'pricing' as const },
   { href: '/admin/settings/staff', key: 'staff' as const },
+  { href: '/admin/user-groups', key: 'userGroups' as const },
   { href: '/admin/referrals', key: 'referrals' as const },
   { href: '/admin/settings/site', key: 'site' as const },
 ];

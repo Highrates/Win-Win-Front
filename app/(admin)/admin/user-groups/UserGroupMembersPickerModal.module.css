@@ -1,0 +1,19 @@
+.body {
+  min-height: 320px;
+}
+
+.selectedHint {
+  margin: 0;
+  font-size: var(--text-caption, 14px);
+  color: var(--color-gray, #9d9d9d);
+}
+
+.tableWrap {
+  margin-top: 4px;
+  max-height: min(48vh, 360px);
+  overflow: auto;
+}
+
+.rowDisabled td:not(:first-child) {
+  opacity: 0.55;
+}

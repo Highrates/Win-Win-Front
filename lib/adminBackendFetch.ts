@@ -51,7 +51,13 @@ export async function adminBackendJson<T>(apiPath: string, init?: RequestInit): 
     throw new AdminBackendRequestError(await readAdminApiError(res), res.status);
   }
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  if (!text.trim()) return undefined as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new AdminBackendRequestError('Некорректный ответ сервера', res.status);
+  }
 }
 
 async function throwAdminUploadError(res: Response): Promise<never> {

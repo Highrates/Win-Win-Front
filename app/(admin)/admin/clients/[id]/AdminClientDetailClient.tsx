@@ -15,6 +15,7 @@ import styles from '../clients.module.css';
 import { DesignerProjectsAdminClient } from '../../designer-projects/DesignerProjectsAdminClient';
 import { OrdersAdminClient } from '../../orders/OrdersAdminClient';
 import { parseApiCaseList, roomTypesCommaSeparated, type ApiCase } from '@/lib/account/caseApiSchema';
+import type { UserGroupMembership, UserGroupRow } from '@/lib/adminUserGroupsTypes';
 
 const TAB_ORDERS = 0;
 const TAB_INFO = 1;
@@ -117,6 +118,11 @@ export function AdminClientDetailClient({ id }: { id: string }) {
   const [casesLoading, setCasesLoading] = useState(false);
   const [casesError, setCasesError] = useState<string | null>(null);
   const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
+  const [userGroups, setUserGroups] = useState<UserGroupRow[]>([]);
+  const [groupMembership, setGroupMembership] = useState<UserGroupMembership | null>(null);
+  const [groupSelect, setGroupSelect] = useState('');
+  const [groupSaving, setGroupSaving] = useState(false);
+  const [groupError, setGroupError] = useState<string | null>(null);
   const { confirm } = useAdminConfirm();
 
   const load = useCallback(async () => {
@@ -201,6 +207,53 @@ export function AdminClientDetailClient({ id }: { id: string }) {
       cancelled = true;
     };
   }, [tab, id, isPartner, s.errLoad, s.errStatus]);
+
+  useEffect(() => {
+    if (tab !== TAB_INFO) return;
+    let cancelled = false;
+    setGroupError(null);
+    void (async () => {
+      try {
+        const [groups, membership] = await Promise.all([
+          adminBackendJson<UserGroupRow[]>('settings/admin/user-groups'),
+          adminBackendJson<UserGroupMembership>(`users/admin/${encodeURIComponent(id)}/group`),
+        ]);
+        if (cancelled) return;
+        setUserGroups(groups);
+        setGroupMembership(membership);
+        setGroupSelect(membership.groupId ?? '');
+      } catch (e) {
+        if (!cancelled) {
+          setGroupError(e instanceof Error ? e.message : s.errLoad);
+          setUserGroups([]);
+          setGroupMembership(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, id, s.errLoad]);
+
+  async function saveClientGroup() {
+    setGroupSaving(true);
+    setGroupError(null);
+    try {
+      const membership = await adminBackendJson<UserGroupMembership>(
+        `users/admin/${encodeURIComponent(id)}/group`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ groupId: groupSelect || null }),
+        },
+      );
+      setGroupMembership(membership);
+      setGroupSelect(membership.groupId ?? '');
+    } catch (e) {
+      setGroupError(e instanceof Error ? e.message : s.errLoad);
+    } finally {
+      setGroupSaving(false);
+    }
+  }
 
   useEffect(() => {
     if (tab !== TAB_CASES) return;
@@ -311,6 +364,43 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                 <div>
                   <dt>{s.dtStatus}</dt>
                   <dd>{isPartner ? s.statusPartner : s.statusDefault}</dd>
+                </div>
+                <div>
+                  <dt>Группа пользователей</dt>
+                  <dd>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 360 }}>
+                      <select
+                        value={groupSelect}
+                        onChange={(e) => setGroupSelect(e.target.value)}
+                        disabled={groupSaving}
+                        style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #ccc' }}
+                      >
+                        <option value="">Без группы (основные профили)</option>
+                        {userGroups.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name} ({g.label})
+                          </option>
+                        ))}
+                      </select>
+                      {groupMembership?.groupLabel ? (
+                        <span className={catalogStyles.muted}>
+                          Текущий лейбл в ЛК: {groupMembership.groupLabel}
+                        </span>
+                      ) : null}
+                      <AdminCompactBtn
+                        type="button"
+                        disabled={groupSaving}
+                        onClick={() => void saveClientGroup()}
+                      >
+                        {groupSaving ? 'Сохранение…' : 'Сохранить группу'}
+                      </AdminCompactBtn>
+                      {groupError ? (
+                        <span className={catalogStyles.error} role="alert">
+                          {groupError}
+                        </span>
+                      ) : null}
+                    </div>
+                  </dd>
                 </div>
                 {isPartner ? (
                   <div>

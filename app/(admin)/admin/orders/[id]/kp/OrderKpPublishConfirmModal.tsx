@@ -11,6 +11,7 @@ import { KP_PUBLISH_NEXT_STATUSES } from '@/lib/orders/orderStatus';
 import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
 import type { KpOfferTotals } from '@/lib/commercialProposal/kpOfferTotals';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
 import catalogStyles from '../../../catalog/catalogAdmin.module.css';
 import own from './OrderKpPublishConfirmModal.module.css';
@@ -127,15 +128,11 @@ export function OrderKpPublishConfirmModal({
           <h2 id="kp-publish-confirm-title" className={modalStyles.panelTitle}>
             {labels.title}
           </h2>
-          <button
-            type="button"
-            className={catalogStyles.modalCloseIconBtn}
-            aria-label="Закрыть"
+          <AdminModalCloseButton
+            label="Закрыть"
             disabled={publishing}
             onClick={onClose}
-          >
-            ×
-          </button>
+          />
         </div>
         <div className={own.bodySplit}>
           <div className={own.summaryCol}>

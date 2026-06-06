@@ -10,6 +10,7 @@ import {
 } from '@/lib/commercialProposal/buildSnapshotFromAdminVariant';
 import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import styles from '../../../catalog/catalogAdmin.module.css';
@@ -179,14 +180,7 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
           <h2 id="kp-replace-title" className={modalStyles.panelTitle}>
             Заменить товар
           </h2>
-          <button
-            type="button"
-            className={styles.modalCloseIconBtn}
-            aria-label="Закрыть"
-            onClick={onClose}
-          >
-            ×
-          </button>
+          <AdminModalCloseButton label="Закрыть" onClick={onClose} />
         </div>
         <div className={`${modalStyles.body} ${own.body}`}>
           {!productId ? (

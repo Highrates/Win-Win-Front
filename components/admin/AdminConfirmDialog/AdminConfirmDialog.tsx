@@ -3,8 +3,8 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
-import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 
 type Props = {
@@ -74,15 +74,11 @@ export function AdminConfirmDialog({
           <h2 id={titleId} className={modalStyles.panelTitle}>
             {title}
           </h2>
-          <button
-            type="button"
-            className={catalogStyles.modalCloseIconBtn}
-            aria-label={cancelLabel}
+          <AdminModalCloseButton
+            label={cancelLabel}
             disabled={loading}
             onClick={() => !loading && onClose()}
-          >
-            ×
-          </button>
+          />
         </div>
         {children ? (
           <div id={`${titleId}-body`} className={modalStyles.body}>

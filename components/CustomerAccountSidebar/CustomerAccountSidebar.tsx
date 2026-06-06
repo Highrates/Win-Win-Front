@@ -17,6 +17,8 @@ export type CustomerAccountSidebarProps = {
   menuItemsWithNotification?: string[];
   /** Переопределение href (например, `/account/orders?tab=work` при уведомлении на вкладке «В работе») */
   menuHrefOverrides?: Partial<Record<string, string>>;
+  /** Лейбл группы пользователя (бейдж в шапке меню). */
+  userGroupLabel?: string | null;
 };
 
 /** ЛК: чёрный stroke; избранное/проекты — account-sidebar (в /icons/heart и collections — серый для карточек) */
@@ -104,6 +106,7 @@ export function CustomerAccountSidebar({
   profileLoaded = false,
   menuItemsWithNotification = [],
   menuHrefOverrides = {},
+  userGroupLabel = null,
 }: CustomerAccountSidebarProps) {
   const pathname = usePathname() ?? '';
   const notifySet = new Set(menuItemsWithNotification);
@@ -180,7 +183,12 @@ export function CustomerAccountSidebar({
                 <img src="/icons/account-sidebar/edit.svg" alt="" width={16} height={16} />
               </Link>
             </div>
-            {showDesignerNav ? <p className={styles.partnerStatus}>Партнер Win-Win</p> : <p className={styles.partnerStatus} aria-hidden />}
+            {showDesignerNav ? <p className={styles.partnerStatus}>Партнер Win-Win</p> : null}
+            {userGroupLabel ? (
+              <p className={styles.partnerStatus}>{userGroupLabel}</p>
+            ) : !showDesignerNav ? (
+              <p className={styles.partnerStatus} aria-hidden />
+            ) : null}
           </div>
         )}
 

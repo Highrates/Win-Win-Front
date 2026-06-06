@@ -72,3 +72,14 @@
   border-top-style: solid;
   border-top-color: var(--account-hairline-color, rgba(0, 0, 0, 0.2));
 }
+
+.panelFooter :global([class*='btnNeutral']) {
+  background: var(--color-white, #fff);
+  color: var(--color-black, #000);
+  border: var(--account-hairline-width, 0.7px) solid var(--account-hairline-color, rgba(0, 0, 0, 0.2));
+}
+
+.panelFooter :global([class*='btnNeutral']):hover:not(:disabled) {
+  filter: none;
+  background: #e6e6e6;
+}
