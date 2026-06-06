@@ -2,14 +2,23 @@
 
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/Button';
-import { TBtn } from '@/components/TBtn/TBtn';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import compactStyles from '@/components/AdminCompactBtn/AdminCompactBtn.module.css';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import {
   adminBackendJson,
   adminUploadMediaLibrary,
 } from '@/lib/adminBackendFetch';
+import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
+import { isHeavyMediaObject } from '@/lib/adminMediaLibrary/heavyMedia';
+import {
+  readCollapsedFolderIds,
+  writeCollapsedFolderIds,
+} from '@/lib/adminMediaLibrary/folderTreeCollapseStorage';
 import type {
   MediaFolderRow,
+  MediaLibraryScope,
   MediaLibraryTab,
   MediaObjectRow,
 } from '@/lib/adminMediaLibraryTypes';
@@ -88,6 +97,8 @@ function selectionAllowed(
   return true;
 }
 
+const PICKER_LIBRARY_SCOPE: MediaLibraryScope = 'winwin';
+
 export function MediaLibraryPickerModal({
   open,
   title = 'Выберите медиафайл',
@@ -130,6 +141,29 @@ export function MediaLibraryPickerModal({
     return m;
   }, [folders]);
 
+  const folderIdsWithChildren = useMemo(
+    () => new Set(folders.filter((f) => f._count.children > 0).map((f) => f.id)),
+    [folders],
+  );
+
+  const allFoldersCollapsed = useMemo(() => {
+    if (folderIdsWithChildren.size === 0) return false;
+    return Array.from(folderIdsWithChildren).every((id) => collapsedFolderIds.has(id));
+  }, [collapsedFolderIds, folderIdsWithChildren]);
+
+  function persistCollapsedFolderIds(next: Set<string>) {
+    writeCollapsedFolderIds(PICKER_LIBRARY_SCOPE, next);
+  }
+
+  function toggleCollapseAllFolders() {
+    if (folderIdsWithChildren.size === 0) return;
+    const next = allFoldersCollapsed
+      ? new Set<string>()
+      : new Set(folderIdsWithChildren);
+    setCollapsedFolderIds(next);
+    persistCollapsedFolderIds(next);
+  }
+
   useEffect(() => {
     if (!open) return;
     setTab(tabForFilter(mediaFilter));
@@ -139,7 +173,7 @@ export function MediaLibraryPickerModal({
     setSelectedId(null);
     setSelectedIds([]);
     setError(null);
-    setCollapsedFolderIds(new Set());
+    setCollapsedFolderIds(readCollapsedFolderIds(PICKER_LIBRARY_SCOPE));
   }, [open, mediaFilter]);
 
   useEffect(() => {
@@ -162,15 +196,12 @@ export function MediaLibraryPickerModal({
     setLoading(true);
     setError(null);
     try {
-      const sp = new URLSearchParams();
+      const sp = adminListParams({ page: 1, limit: 40, q: debouncedQ });
       sp.set('tab', tab);
       sp.set('scope', 'winwin');
-      if (debouncedQ) sp.set('q', debouncedQ);
       if (folderFilter) sp.set('folderId', folderFilter);
-      const data = await adminBackendJson<MediaObjectRow[]>(
-        `catalog/admin/media/objects?${sp.toString()}`,
-      );
-      setObjects(data);
+      const data = await adminBackendList<MediaObjectRow>('catalog/admin/media/objects', sp);
+      setObjects(data.items);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки');
       setObjects([]);
@@ -188,6 +219,17 @@ export function MediaLibraryPickerModal({
     if (!open) return;
     void loadObjects();
   }, [open, loadObjects]);
+
+  useEffect(() => {
+    if (!open || folders.length === 0) return;
+    setCollapsedFolderIds((prev) => {
+      const folderIdSet = new Set(folders.map((f) => f.id));
+      const next = new Set(Array.from(prev).filter((id) => folderIdSet.has(id)));
+      if (next.size === prev.size) return prev;
+      writeCollapsedFolderIds(PICKER_LIBRARY_SCOPE, next);
+      return next;
+    });
+  }, [folders, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -212,6 +254,7 @@ export function MediaLibraryPickerModal({
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      persistCollapsedFolderIds(next);
       return next;
     });
   }
@@ -409,7 +452,7 @@ export function MediaLibraryPickerModal({
         onClick={(e) => e.stopPropagation()}
       >
         <header className={pickStyles.header}>
-          <h2 id="media-picker-title" className={pickStyles.title}>
+          <h2 id="media-picker-title" className={pickStyles.modalTitle}>
             {title}
           </h2>
           <button
@@ -429,7 +472,29 @@ export function MediaLibraryPickerModal({
               className={`${libStyles.folderSidebar} ${pickStyles.pickerFolderColumn}`}
               aria-label="Папки"
             >
-              <p className={libStyles.folderSidebarTitle}>Папки</p>
+              <div className={libStyles.folderSidebarTitleRow}>
+                <p className={libStyles.folderSidebarTitle}>Папки</p>
+                {folderIdsWithChildren.size > 0 ? (
+                  <button
+                    type="button"
+                    className={libStyles.folderCollapseAllBtn}
+                    onClick={toggleCollapseAllFolders}
+                    aria-label={
+                      allFoldersCollapsed ? 'Развернуть все папки' : 'Свернуть все папки'
+                    }
+                    title={
+                      allFoldersCollapsed ? 'Развернуть все папки' : 'Свернуть все папки'
+                    }
+                  >
+                    <span
+                      className={`${libStyles.folderCollapseAllChevron} ${allFoldersCollapsed ? libStyles.folderCollapseAllChevronCollapsed : ''}`}
+                      aria-hidden
+                    >
+                      ▼
+                    </span>
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
                 className={`${libStyles.folderBtn} ${folderFilter === null ? libStyles.folderBtnActive : ''}`}
@@ -442,58 +507,55 @@ export function MediaLibraryPickerModal({
 
             <div className={`${libStyles.main} ${pickStyles.pickerMainColumn}`}>
               <div className={catalogStyles.toolbar}>
-                <input
-                  type="search"
-                  className={catalogStyles.search}
+                <AdminSearchBox
+                  className={catalogStyles.searchBoxToolbar}
                   placeholder="Поиск по имени или alt…"
+                  ariaLabel="Поиск медиафайлов"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  aria-label="Поиск медиафайлов"
                 />
-                <input
-                  ref={fileInputRef}
-                  id={uploadInputId}
-                  type="file"
-                  multiple
-                  accept={uploadAccept}
-                  className={pickStyles.hiddenInput}
-                  onChange={onPickUpload}
-                />
-                <TBtn
-                  variant="ghost"
-                  type="button"
-                  className={libStyles.uploadGhost}
-                  disabled={uploading}
-                  onClick={() => fileInputRef.current?.click()}
+                <div
+                  className={`${libStyles.uploadWrap} ${uploading ? libStyles.uploadLabelDisabled : ''}`}
                 >
-                  <img src="/icons/document-download.svg" alt="" width={20} height={20} />
-                  {uploading ? 'Загрузка…' : 'Загрузить в библиотеку'}
-                </TBtn>
+                  <span
+                    className={`${compactStyles.btn} ${compactStyles.btnNeutral} ${libStyles.uploadFace}`}
+                    aria-hidden
+                  >
+                    <img
+                      src="/icons/document-download.svg"
+                      alt=""
+                      width={14}
+                      height={14}
+                      className={libStyles.uploadIcon}
+                    />
+                    {uploading ? 'Загрузка…' : 'Загрузить'}
+                  </span>
+                  <input
+                    ref={fileInputRef}
+                    id={uploadInputId}
+                    type="file"
+                    multiple
+                    accept={uploadAccept}
+                    className={libStyles.fileInputOverlay}
+                    disabled={uploading}
+                    onChange={onPickUpload}
+                    aria-label="Загрузить в библиотеку"
+                    title="Загрузить в библиотеку"
+                  />
+                </div>
               </div>
-
-              {multiMode ? (
-                <p className={pickStyles.filterHint}>
-                  Выберите один или несколько кадров в списке и нажмите «Добавить выбранные», либо загрузите
-                  несколько файлов сразу.
-                </p>
-              ) : null}
 
               {filterHint ? (
                 <p className={pickStyles.filterHint}>{filterHint}</p>
               ) : (
-                <div className={libStyles.tabs} role="tablist" aria-label="Тип медиафайла">
-                  {tabs.map(({ key, label }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      role="tab"
-                      aria-selected={tab === key}
-                      className={`${libStyles.tab} ${tab === key ? libStyles.tabActive : ''}`}
-                      onClick={() => setTab(key)}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <div className={pickStyles.tabsSpacer}>
+                  <AdminTabs
+                    variant="pill"
+                    ariaLabel="Тип медиафайла"
+                    items={tabs.map(({ key, label }) => ({ id: key, label }))}
+                    activeId={tab}
+                    onChange={setTab}
+                  />
                 </div>
               )}
 
@@ -512,7 +574,10 @@ export function MediaLibraryPickerModal({
                         ? selectedIds.includes(row.id)
                         : row.id === selectedId;
                       return (
-                        <li key={row.id} className={libStyles.objectCard}>
+                        <li
+                          key={row.id}
+                          className={`${libStyles.objectCard} ${isHeavyMediaObject(row) ? libStyles.objectCardHeavy : ''}`.trim()}
+                        >
                           <button
                             type="button"
                             disabled={!allowed}
@@ -583,34 +648,30 @@ export function MediaLibraryPickerModal({
 
         <footer className={pickStyles.footer}>
           <div className={pickStyles.footerActions}>
-            <TBtn
+            <AdminCompactBtn
               type="button"
-              className={pickStyles.footerActionBtn}
+              variant="outline"
               disabled={uploading}
               onClick={onClose}
             >
               Отмена
-            </TBtn>
+            </AdminCompactBtn>
             {multiMode ? (
-              <Button
-                variant="primary"
+              <AdminCompactBtn
                 type="button"
-                className={pickStyles.footerActionBtn}
                 disabled={!canConfirmBatch}
                 onClick={() => confirmBatch()}
               >
-                {batchCount > 0 ? `Добавить выбранные (${batchCount})` : 'Добавить выбранные'}
-              </Button>
+                {batchCount > 0 ? `Добавить (${batchCount})` : 'Добавить'}
+              </AdminCompactBtn>
             ) : (
-              <Button
-                variant="primary"
+              <AdminCompactBtn
                 type="button"
-                className={pickStyles.footerActionBtn}
                 disabled={!canConfirm}
                 onClick={() => confirmSelection()}
               >
                 Выбрать
-              </Button>
+              </AdminCompactBtn>
             )}
           </div>
         </footer>

@@ -19,8 +19,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { AdminSelect, AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminBackendList, adminBackendListAll, adminListParams } from '@/lib/adminListResponse';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminProductSetEditorStrings } from '@/lib/admin-i18n/adminProductSetsI18n';
@@ -29,6 +33,8 @@ import type { AdminProductRow } from '../catalog/products/adminProductTypes';
 import styles from '../catalog/catalogAdmin.module.css';
 import objStyles from '../objects/objectsLibrary.module.css';
 import type { ProductSetDetail } from './productSetsAdminTypes';
+
+const PRODUCT_SET_FORM_ID = 'product-set-editor-form';
 
 function rowKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -65,10 +71,10 @@ function SortableItemRow({
       <td>
         <strong>{label}</strong>
       </td>
-      <td>
-        <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={onRemove}>
+      <td className={styles.tableCellActions}>
+        <AdminCompactBtn type="button" variant="danger" onClick={onRemove}>
           {removeLabel}
-        </button>
+        </AdminCompactBtn>
       </td>
     </tr>
   );
@@ -139,7 +145,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
     let cancelled = false;
     void (async () => {
       try {
-        const b = await adminBackendJson<AdminBrandRow[]>('catalog/admin/brands');
+        const b = await adminBackendListAll<AdminBrandRow>('catalog/admin/brands');
         if (!cancelled) setBrands(b);
       } catch {
         if (!cancelled) setBrands([]);
@@ -201,9 +207,11 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
     if (!addPickerOpen) return;
     setAddLoading(true);
     try {
-      const q = addDebouncedQ ? `?q=${encodeURIComponent(addDebouncedQ)}` : '';
-      const data = await adminBackendJson<AdminProductRow[]>(`catalog/admin/products${q}`);
-      setAddProductHits(data);
+      const res = await adminBackendList<AdminProductRow>(
+        'catalog/admin/products',
+        adminListParams({ page: 1, limit: 100, q: addDebouncedQ }),
+      );
+      setAddProductHits(res.items);
     } catch {
       setAddProductHits([]);
     } finally {
@@ -357,30 +365,20 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
             onClick={(ev) => ev.stopPropagation()}
             style={{ maxWidth: 640, width: '100%' }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 12,
-                marginBottom: 12,
-              }}
-            >
-              <h2 className={objStyles.modalTitle} style={{ margin: 0, paddingRight: 8 }}>
+            <div className={styles.modalHeaderRow}>
+              <h2 className={objStyles.dialogTitle} style={{ margin: 0, paddingRight: 8 }}>
                 {s.addProduct}
               </h2>
               <ModalCloseButton onClick={() => setAddPickerOpen(false)} label={s.close} />
             </div>
-            <input
-              type="search"
-              className={styles.search}
-              style={{ width: '100%', maxWidth: 'none', marginBottom: 12 }}
+            <AdminSearchBox
+              className={styles.searchBoxFull}
               placeholder={s.searchPh}
+              ariaLabel={s.searchAria}
               value={addQ}
               onChange={(e) => setAddQ(e.target.value)}
-              aria-label={s.searchAria}
             />
-            <div className={styles.tableWrap} style={{ maxHeight: 320, overflow: 'auto' }}>
+            <div className={`${styles.tableWrap} ${styles.tableScroll}`}>
               {addLoading ? (
                 <p className={styles.muted}>{c.loading}</p>
               ) : addProductHits.length === 0 ? (
@@ -432,165 +430,148 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                 </table>
               )}
             </div>
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 10,
-                marginTop: 14,
-                alignItems: 'center',
-              }}
-            >
-              <button
+            <div className={styles.formActions} style={{ marginTop: 14 }}>
+              <AdminCompactBtn
                 type="button"
-                className={styles.btn}
+                variant="outline"
                 onClick={() => setAddModalSelected(new Set())}
                 disabled={!addModalSelected.size}
               >
                 {s.clearSel}
-              </button>
-              <button
+              </AdminCompactBtn>
+              <AdminCompactBtn
                 type="button"
-                className={`${styles.btn} ${styles.btnPrimary}`}
                 disabled={!addModalSelected.size}
                 onClick={commitAddModalSelection}
               >
-                {s.addSelected}
-                {addModalSelected.size ? ` (${addModalSelected.size})` : ''}
-              </button>
+                {addModalSelected.size ? `${s.addSelected} (${addModalSelected.size})` : s.addSelected}
+              </AdminCompactBtn>
             </div>
           </div>
         </div>
       ) : null}
 
-      <form className={`${styles.form} ${styles.formWide}`} onSubmit={submit}>
+      <div className={styles.detailTitleRow}>
         <h1 className={styles.title}>{isEdit ? s.titleEdit : s.titleNew}</h1>
+        <AdminCompactBtn
+          type="submit"
+          form={PRODUCT_SET_FORM_ID}
+          variant="accent"
+          disabled={saving || !!loadError || (isEdit && !loaded)}
+        >
+          {saving ? s.saveBusy : isEdit ? s.saveEdit : s.create}
+        </AdminCompactBtn>
+      </div>
 
-        <label className={styles.label}>
-          {s.nameLabel}
-          <input
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </label>
+      <form
+        id={PRODUCT_SET_FORM_ID}
+        className={`${styles.form} ${styles.formWide}`}
+        onSubmit={submit}
+      >
+        <AdminTextField
+          label={s.nameLabel}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
 
-        <label className={styles.label}>
-          {s.slugLabel}
-          <input
-            className={styles.input}
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder={s.slugPh}
-          />
-        </label>
+        <AdminTextField
+          label={s.slugLabel}
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          placeholder={s.slugPh}
+        />
 
-        <label className={styles.label}>
-          {s.desc}
-          <textarea
-            className={styles.textarea}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={5}
-          />
-        </label>
+        <AdminTextArea
+          label={s.desc}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={5}
+        />
 
-        <div className={styles.label}>
-          {s.coverBlock}
-          <div className={styles.fileRow}>
-            <button
+        <div className={styles.fieldBlock}>
+          <span className={styles.adminFieldLabel}>{s.coverBlock}</span>
+          {coverUrl.trim() ? (
+            <div className={styles.bgPreview} style={{ maxWidth: 360 }}>
+              <img src={coverUrl.trim()} alt="" />
+            </div>
+          ) : null}
+          <div className={styles.coverActions}>
+            <AdminCompactBtn
               type="button"
-              className={`${styles.btn} ${styles.btnPrimary}`}
               onClick={() => {
                 setSaveError(null);
                 setCoverPickerOpen(true);
               }}
             >
               {s.pickLibrary}
-            </button>
+            </AdminCompactBtn>
             {coverUrl.trim() ? (
-              <button
+              <AdminCompactBtn
                 type="button"
-                className={styles.btn}
+                variant="outline"
                 onClick={() => {
                   setCoverUrl('');
                   setCoverMediaObjectId(null);
                 }}
               >
                 {s.removeCover}
-              </button>
+              </AdminCompactBtn>
             ) : null}
           </div>
-          {coverUrl.trim() ? (
-            <div className={styles.bgPreview} style={{ marginTop: 10, maxWidth: 360 }}>
-              <img src={coverUrl.trim()} alt="" />
-            </div>
-          ) : null}
         </div>
 
-        <label className={styles.label}>
-          {s.brand}
-          <select
-            className={styles.input}
-            value={brandId}
-            onChange={(e) => setBrandId(e.target.value)}
-            aria-label={s.brandAria}
-          >
-            <option value="">{s.brandNone}</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className={styles.label}>
-          <div className={styles.labelCheckboxRow}>
-            <AccountCheckbox
-              id="product-set-active"
-              className={styles.adminCheckboxForm}
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              aria-label={s.activeAria}
-            />
-            <label htmlFor="product-set-active">{s.activeLabel}</label>
-          </div>
-        </div>
-
-        <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>
-          SEO
-        </h2>
-        <label className={styles.label}>
-          Meta title
-          <input className={styles.input} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
-        </label>
-        <label className={styles.label}>
-          Meta description
-          <textarea
-            className={styles.textarea}
-            value={seoDescription}
-            onChange={(e) => setSeoDescription(e.target.value)}
-            rows={3}
-          />
-        </label>
-
-        <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>
-          {s.productsTitle}
-        </h2>
-        <button
-          type="button"
-          className={`${styles.btn} ${styles.btnPrimary} ${styles.btnAlignStart}`}
-          style={{ marginBottom: 12 }}
-          onClick={() => {
-            setAddQ('');
-            setAddModalSelected(new Set());
-            setAddPickerOpen(true);
-          }}
+        <AdminSelect
+          label={s.brand}
+          value={brandId}
+          onChange={(e) => setBrandId(e.target.value)}
+          aria-label={s.brandAria}
         >
-          {s.addProductBtn}
-        </button>
+          <option value="">{s.brandNone}</option>
+          {brands.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </AdminSelect>
+
+        <h2 className={styles.groupHeading}>{s.seoHeading}</h2>
+        <AdminTextField
+          label={s.seoTitle}
+          value={seoTitle}
+          onChange={(e) => setSeoTitle(e.target.value)}
+        />
+        <AdminTextArea
+          label={s.seoDesc}
+          value={seoDescription}
+          onChange={(e) => setSeoDescription(e.target.value)}
+          rows={3}
+        />
+
+        <div className={styles.labelCheckboxRow}>
+          <AccountCheckbox
+            id="product-set-active"
+            className={styles.adminCheckboxForm}
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            aria-label={s.activeAria}
+          />
+          <label htmlFor="product-set-active">{s.activeLabel}</label>
+        </div>
+
+        <div className={styles.sectionHead} style={{ marginTop: 8 }}>
+          <h2 className={styles.groupHeading}>{s.productsTitle}</h2>
+          <AdminCompactBtn
+            type="button"
+            onClick={() => {
+              setAddQ('');
+              setAddModalSelected(new Set());
+              setAddPickerOpen(true);
+            }}
+          >
+            {s.addProductBtn}
+          </AdminCompactBtn>
+        </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onProductDragEnd}>
           <div className={styles.tableWrap}>
@@ -599,7 +580,7 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
                 <tr>
                   <th style={{ width: 36 }} aria-label={s.thOrder} />
                   <th>{s.thName}</th>
-                  <th />
+                  <th className={styles.tableCellActions} />
                 </tr>
               </thead>
               <tbody>
@@ -635,17 +616,10 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
 
         {saveError ? <p className={styles.error}>{saveError}</p> : null}
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
-          <button
-            type="submit"
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            disabled={saving || !!loadError || (isEdit && !loaded)}
-          >
-            {saving ? s.saveBusy : isEdit ? s.saveEdit : s.create}
-          </button>
-          <Link href="/admin/product-sets" className={styles.btn}>
+        <div className={styles.formActions}>
+          <AdminCompactBtnLink href="/admin/product-sets" variant="outline">
             {s.cancel}
-          </Link>
+          </AdminCompactBtnLink>
         </div>
       </form>
     </>

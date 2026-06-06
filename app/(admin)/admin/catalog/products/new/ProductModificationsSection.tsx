@@ -16,6 +16,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminProductModsStrings } from '@/lib/admin-i18n/adminProductModsI18n';
@@ -78,29 +80,23 @@ function SortableModificationRow({
       >
         ⋮⋮
       </button>
-      <input
-        type="text"
-        className={catalogStyles.input}
-        style={{ flex: 1, minWidth: 200 }}
+      <AdminTextField
+        className={pn.modFieldGrow}
         placeholder={ms.namePh}
         value={mod.name}
         onChange={(e) => onChange({ ...mod, name: e.target.value })}
+        aria-label={ms.namePh}
       />
-      <input
-        type="text"
-        className={catalogStyles.input}
-        style={{ width: 200 }}
+      <AdminTextField
+        className={pn.modFieldSlug}
         placeholder={ms.slugPh}
         value={mod.modificationSlug ?? ''}
         onChange={(e) => onChange({ ...mod, modificationSlug: e.target.value || null })}
+        aria-label={ms.slugPh}
       />
-      <button
-        type="button"
-        className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-        onClick={onRemove}
-      >
+      <AdminCompactBtn type="button" variant="danger" onClick={onRemove}>
         {ms.delete}
-      </button>
+      </AdminCompactBtn>
     </div>
   );
 }
@@ -208,28 +204,18 @@ export function ProductModificationsSection({
 
   return (
     <div className={pn.section}>
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-        }}
-      >
-        <h2 className={pn.sectionTitle} style={{ margin: 0 }}>
-          {ms.sectionTitle}
-        </h2>
-        <button
+      <div className={catalogStyles.sectionHead}>
+        <h2 className={catalogStyles.groupHeading}>{ms.sectionTitle}</h2>
+        <AdminCompactBtn
           type="button"
-          className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
+          variant="accent"
           onClick={() => {
             void saveModifications();
           }}
           disabled={saving}
         >
           {saving ? ms.saveBusy : ms.save}
-        </button>
+        </AdminCompactBtn>
       </div>
 
       {modifications.length === 0 ? (
@@ -257,10 +243,10 @@ export function ProductModificationsSection({
         </DndContext>
       )}
 
-      <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button type="button" className={catalogStyles.btn} onClick={addModification}>
+      <div className={catalogStyles.formActions}>
+        <AdminCompactBtn type="button" onClick={addModification}>
           {ms.addMod}
-        </button>
+        </AdminCompactBtn>
       </div>
 
       {msg ? (

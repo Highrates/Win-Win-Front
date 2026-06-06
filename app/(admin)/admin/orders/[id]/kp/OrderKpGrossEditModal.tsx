@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import modalStyles from '@/app/(account)/account/projects/components/CreateEditProjectModal.module.css';
+import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import styles from '../../../catalog/catalogAdmin.module.css';
 import { KpGrossFieldsEditor } from './KpGrossFieldsEditor';
 
@@ -61,8 +62,7 @@ export function OrderKpGrossEditModal({ open, productName, snapshot, onClose, on
           </h2>
           <button
             type="button"
-            className={modalStyles.closeBtn}
-            style={{ fontSize: 28, lineHeight: 1, fontWeight: 300 }}
+            className={styles.modalCloseIconBtn}
             aria-label="Закрыть"
             onClick={onClose}
           >
@@ -76,16 +76,16 @@ export function OrderKpGrossEditModal({ open, productName, snapshot, onClose, on
           <KpGrossFieldsEditor snapshot={draft} onSnapshotChange={setDraft} fullWidth />
         </div>
         <div className={modalStyles.panelFooter}>
-          <button type="button" className={styles.btn} onClick={onClose}>
+          <AdminCompactBtn type="button" variant="outline" onClick={onClose}>
             Отмена
-          </button>
-          <button
+          </AdminCompactBtn>
+          <AdminCompactBtn
             type="button"
-            className={`${styles.btn} ${styles.btnPrimary}`}
+            variant="accent"
             onClick={() => onSave(draft && typeof draft === 'object' ? draft : {})}
           >
             Сохранить
-          </button>
+          </AdminCompactBtn>
         </div>
       </div>
     </div>

@@ -2,9 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useAdminOrderChatStaffUnreadEvents } from '@/hooks/useAdminOrderChatStaffUnreadEvents';
+import { AdminConfirmProvider } from '@/lib/adminConfirm/AdminConfirmProvider';
+import { AdminQueryProvider } from '@/lib/adminQuery/AdminQueryProvider';
 import { AdminLocaleProvider } from '@/lib/admin-i18n/adminLocaleContext';
+import {
+  AdminSidebarBadgesProvider,
+  useAdminSidebarBadges,
+} from '@/lib/adminSidebarBadgesContext';
 import {
   ADMIN_LOCALE_STORAGE_KEY,
   adminBrandLine,
@@ -17,8 +23,28 @@ import {
   settingsSubLabel,
   type AdminLocale,
 } from '@/lib/admin-i18n/adminChromeI18n';
-import { teardownOrderChatWsForLogout } from '@/lib/orderChat/orderChatWsShared';
 import styles from './layout.module.css';
+
+const ADMIN_AVATAR_SRC = '/images/Admin-avatar.jpeg';
+
+function NavLinkLeading({ expandable, open }: { expandable?: boolean; open?: boolean }) {
+  return (
+    <span className={styles.navLinkLeading} aria-hidden={expandable ? undefined : true}>
+      {expandable ? (
+        <svg
+          className={`${styles.navChevron} ${open ? styles.navChevronOpen : ''}`}
+          xmlns="http://www.w3.org/2000/svg"
+          width="10"
+          height="6"
+          viewBox="0 0 10 6"
+          fill="none"
+        >
+          <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.2" />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
 
 const CATALOG_CHILDREN = [
   { href: '/admin/catalog/products', key: 'products' as const },
@@ -34,33 +60,215 @@ const SETTINGS_CHILDREN = [
   { href: '/admin/settings/site', key: 'site' as const },
 ];
 
-const NAV_HREFS = [
-  '/admin',
-  '/admin/modeling',
-  '/admin/clients',
-  '/admin/applications',
-  '/admin/orders',
+/** Порядок пунктов сайдбара между «Каталог» и «Настройки». */
+const MID_NAV_HREFS = [
   '/admin/brands',
-  '/admin/objects',
   '/admin/blog',
-  '/admin/pages',
+  '/admin/orders',
+  '/admin/applications',
+  '/admin/clients',
+  '/admin/objects',
   '/admin/journal',
 ] as const;
 
-function CatalogChevron({ open }: { open: boolean }) {
+function AdminSidebar({
+  locale,
+  localeReady,
+  pathname,
+  setAdminLocale,
+}: {
+  locale: AdminLocale;
+  localeReady: boolean;
+  pathname: string;
+  setAdminLocale: (next: AdminLocale) => void;
+}) {
+  const { pendingPartnerApps, pendingOrdersApproval, ordersChatUnread } = useAdminSidebarBadges();
+  const t = adminChromeStrings(locale);
+
+  const inCatalog =
+    pathname.startsWith('/admin/catalog') ||
+    pathname.startsWith('/admin/collections') ||
+    pathname.startsWith('/admin/product-sets');
+  const [catalogOpen, setCatalogOpen] = useState(inCatalog);
+  useEffect(() => {
+    if (inCatalog) setCatalogOpen(true);
+  }, [inCatalog]);
+
+  const inSettings =
+    pathname.startsWith('/admin/settings') || pathname.startsWith('/admin/referrals');
+  const [settingsOpen, setSettingsOpen] = useState(inSettings);
+  useEffect(() => {
+    if (inSettings) setSettingsOpen(true);
+  }, [inSettings]);
+
+  function renderNavLink(href: string) {
+    const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
+    const showPendingBadge =
+      href === '/admin/applications' && pendingPartnerApps != null && pendingPartnerApps > 0;
+    const showOrdersPendingBadge =
+      href === '/admin/orders' && pendingOrdersApproval != null && pendingOrdersApproval > 0;
+    const showOrdersChatUnreadBadge =
+      href === '/admin/orders' && ordersChatUnread != null && ordersChatUnread > 0;
+    return (
+      <Link
+        key={href}
+        href={href}
+        className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
+      >
+        <NavLinkLeading />
+        <span className={styles.navLinkLabel}>
+          {getNavLabel(locale, href)}
+          {showPendingBadge ? (
+            <span className={styles.navLinkCount}> ({pendingPartnerApps})</span>
+          ) : null}
+          {showOrdersPendingBadge ? (
+            <span className={styles.navLinkCount}> ({pendingOrdersApproval})</span>
+          ) : null}
+          {showOrdersChatUnreadBadge ? (
+            <span className={styles.navLinkCount} title="Непрочитанные сообщения от клиента">
+              {' '}
+              ({ordersChatUnread})
+            </span>
+          ) : null}
+        </span>
+      </Link>
+    );
+  }
+
   return (
-    <svg
-      className={styles.navChevronIcon}
-      data-open={open || undefined}
-      xmlns="http://www.w3.org/2000/svg"
-      width="10"
-      height="6"
-      viewBox="0 0 10 6"
-      fill="none"
-      aria-hidden
-    >
-      <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.2" />
-    </svg>
+    <aside className={styles.sidebar}>
+      <p className={styles.brand}>{adminBrandLine(locale)}</p>
+      <div className={styles.localeBlock}>
+        <p className={styles.localeHeading}>{t.langHeading}</p>
+        <div className={styles.localeRow} role="group" aria-label={t.langHeading}>
+          <button
+            type="button"
+            className={`${styles.localeBtn} ${locale === 'ru' ? styles.localeBtnActive : ''}`}
+            onClick={() => setAdminLocale('ru')}
+            disabled={!localeReady}
+          >
+            {t.langBtnRu}
+          </button>
+          <button
+            type="button"
+            className={`${styles.localeBtn} ${locale === 'zh' ? styles.localeBtnActive : ''}`}
+            onClick={() => setAdminLocale('zh')}
+            disabled={!localeReady}
+          >
+            {localeReady ? t.langBtnZh : '中文'}
+          </button>
+        </div>
+      </div>
+      <nav className={styles.nav} aria-label={t.navAria}>
+        {renderNavLink('/admin')}
+        <div className={styles.navGroup}>
+          <button
+            type="button"
+            className={`${styles.navLink} ${
+              pathname.startsWith('/admin/catalog') ||
+              pathname.startsWith('/admin/collections') ||
+              pathname.startsWith('/admin/product-sets')
+                ? styles.navLinkActive
+                : ''
+            }`}
+            aria-expanded={catalogOpen}
+            aria-controls="admin-nav-catalog-sub"
+            onClick={() => setCatalogOpen((o) => !o)}
+          >
+            <NavLinkLeading expandable open={catalogOpen} />
+            <span className={styles.navLinkLabel}>{catalogGroupLabel(locale)}</span>
+          </button>
+          {catalogOpen ? (
+            <div id="admin-nav-catalog-sub" className={styles.navSub}>
+              {CATALOG_CHILDREN.map(({ href, key }) => {
+                const active =
+                  href === '/admin/collections'
+                    ? pathname.startsWith('/admin/collections')
+                    : href === '/admin/product-sets'
+                      ? pathname.startsWith('/admin/product-sets')
+                      : pathname === href || pathname.startsWith(`${href}/`);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`${styles.navLink} ${styles.navSublink} ${
+                      active ? styles.navLinkActive : ''
+                    }`}
+                  >
+                    <NavLinkLeading />
+                    <span className={styles.navLinkLabel}>{catalogSubLabel(locale, key)}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+        {MID_NAV_HREFS.map((href) => renderNavLink(href))}
+        <div className={styles.navGroup}>
+          <button
+            type="button"
+            className={`${styles.navLink} ${inSettings ? styles.navLinkActive : ''}`}
+            aria-expanded={settingsOpen}
+            aria-controls="admin-nav-settings-sub"
+            onClick={() => setSettingsOpen((o) => !o)}
+          >
+            <NavLinkLeading expandable open={settingsOpen} />
+            <span className={styles.navLinkLabel}>{settingsGroupLabel(locale)}</span>
+          </button>
+          {settingsOpen ? (
+            <div id="admin-nav-settings-sub" className={styles.navSub}>
+              {SETTINGS_CHILDREN.map(({ href, key }) => {
+                const active =
+                  key === 'referrals'
+                    ? pathname.startsWith('/admin/referrals')
+                    : pathname === href || pathname.startsWith(`${href}/`);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`${styles.navLink} ${styles.navSublink} ${
+                      active ? styles.navLinkActive : ''
+                    }`}
+                  >
+                    <NavLinkLeading />
+                    <span className={styles.navLinkLabel}>{settingsSubLabel(locale, key)}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      </nav>
+      <div className={styles.sidebarProfile}>
+        <div className={styles.sidebarProfileMain}>
+          <img
+            src={ADMIN_AVATAR_SRC}
+            alt=""
+            width={32}
+            height={32}
+            className={styles.sidebarProfileAvatar}
+          />
+          <div className={styles.sidebarProfileText}>
+            <span className={styles.sidebarProfileName}>Solomon</span>
+            <span className={styles.sidebarProfileRole}>Админ</span>
+          </div>
+        </div>
+        <button type="button" className={styles.sidebarProfileMenu} aria-label="Меню профиля">
+          <span aria-hidden>⋯</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function AdminShellBody({ sidebar, children }: { sidebar: ReactNode; children: ReactNode }) {
+  return (
+    <div className={styles.shell}>
+      <div className={styles.body}>
+        {sidebar}
+        <div className={styles.content}>{children}</div>
+      </div>
+    </div>
   );
 }
 
@@ -72,7 +280,8 @@ export function AdminChrome({
   initialLocale: AdminLocale;
 }) {
   const pathname = usePathname() ?? '';
-  useAdminOrderChatStaffUnreadEvents(pathname === '/admin/login');
+  const isLoginPage = pathname === '/admin/login';
+  useAdminOrderChatStaffUnreadEvents(isLoginPage);
   const router = useRouter();
   const [locale, setLocale] = useState<AdminLocale>(initialLocale);
   const [localeReady, setLocaleReady] = useState(false);
@@ -94,93 +303,6 @@ export function AdminChrome({
     setLocaleReady(true);
   }, [initialLocale, router]);
 
-  const inCatalog =
-    pathname.startsWith('/admin/catalog') ||
-    pathname.startsWith('/admin/collections') ||
-    pathname.startsWith('/admin/product-sets');
-  const [catalogOpen, setCatalogOpen] = useState(inCatalog);
-  useEffect(() => {
-    if (inCatalog) setCatalogOpen(true);
-  }, [inCatalog]);
-
-  const inSettings =
-    pathname.startsWith('/admin/settings') || pathname.startsWith('/admin/referrals');
-  const [settingsOpen, setSettingsOpen] = useState(inSettings);
-  useEffect(() => {
-    if (inSettings) setSettingsOpen(true);
-  }, [inSettings]);
-
-  const [pendingPartnerApps, setPendingPartnerApps] = useState<number | null>(null);
-  const loadPendingPartnerApps = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/backend/users/admin/partner-applications/pending-count', {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      if (!res.ok) return;
-      const j = (await res.json()) as { total?: number };
-      setPendingPartnerApps(typeof j.total === 'number' ? j.total : 0);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const [pendingOrdersApproval, setPendingOrdersApproval] = useState<number | null>(null);
-  const loadPendingOrdersApproval = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/backend/orders/admin/pending-approval-count', {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      if (!res.ok) return;
-      const j = (await res.json()) as { total?: number };
-      setPendingOrdersApproval(typeof j.total === 'number' ? j.total : 0);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const [ordersChatUnread, setOrdersChatUnread] = useState<number | null>(null);
-  const loadOrdersChatUnread = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/backend/orders/admin/chat-unread-summary', {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      if (!res.ok) return;
-      const j = (await res.json()) as { total?: number };
-      setOrdersChatUnread(typeof j.total === 'number' ? j.total : 0);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadPendingPartnerApps();
-    void loadPendingOrdersApproval();
-    void loadOrdersChatUnread();
-  }, [loadPendingPartnerApps, loadPendingOrdersApproval, loadOrdersChatUnread, pathname]);
-
-  useEffect(() => {
-    const onRefreshPartner = () => {
-      void loadPendingPartnerApps();
-    };
-    const onRefreshOrders = () => {
-      void loadPendingOrdersApproval();
-    };
-    const onRefreshOrdersChatUnread = () => {
-      void loadOrdersChatUnread();
-    };
-    document.addEventListener('admin-partner-pending-refresh', onRefreshPartner);
-    document.addEventListener('admin-orders-pending-refresh', onRefreshOrders);
-    document.addEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
-    return () => {
-      document.removeEventListener('admin-partner-pending-refresh', onRefreshPartner);
-      document.removeEventListener('admin-orders-pending-refresh', onRefreshOrders);
-      document.removeEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
-    };
-  }, [loadPendingPartnerApps, loadPendingOrdersApproval, loadOrdersChatUnread]);
-
   function setAdminLocale(next: AdminLocale) {
     setLocale(next);
     try {
@@ -192,177 +314,32 @@ export function AdminChrome({
     router.refresh();
   }
 
-  async function logout() {
-    await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
-    teardownOrderChatWsForLogout('admin');
-    router.push('/admin/login');
-    router.refresh();
-  }
-
-  if (pathname === '/admin/login') {
+  if (isLoginPage) {
     return <>{children}</>;
   }
 
-  const t = adminChromeStrings(locale);
+  const sidebarProps = {
+    locale,
+    localeReady,
+    pathname,
+    setAdminLocale,
+  };
 
   return (
     <AdminLocaleProvider locale={locale} localeReady={localeReady}>
-      <div className={styles.shell}>
-        <div className={styles.body}>
-          <aside className={styles.sidebar}>
-            <p className={styles.brand}>{adminBrandLine(locale)}</p>
-            <div className={styles.localeBlock}>
-              <p className={styles.localeHeading}>{t.langHeading}</p>
-              <div className={styles.localeRow} role="group" aria-label={t.langHeading}>
-                <button
-                  type="button"
-                  className={`${styles.localeBtn} ${locale === 'ru' ? styles.localeBtnActive : ''}`}
-                  onClick={() => setAdminLocale('ru')}
-                  disabled={!localeReady}
-                >
-                  {t.langBtnRu}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.localeBtn} ${locale === 'zh' ? styles.localeBtnActive : ''}`}
-                  onClick={() => setAdminLocale('zh')}
-                  disabled={!localeReady}
-                >
-                  {localeReady ? t.langBtnZh : '中文'}
-                </button>
-              </div>
-            </div>
-            <nav aria-label={t.navAria}>
-              <div className={styles.navGroup}>
-                <div className={styles.navGroupRow}>
-                  <button
-                    type="button"
-                    className={styles.navChevronBtn}
-                    aria-expanded={catalogOpen}
-                    aria-controls="admin-nav-catalog-sub"
-                    onClick={() => setCatalogOpen((o) => !o)}
-                    title={t.expandCollapseChevron}
-                  >
-                    <CatalogChevron open={catalogOpen} />
-                  </button>
-                  <span
-                    className={`${styles.navLink} ${styles.navGroupLink} ${styles.navGroupTitle} ${
-                      pathname.startsWith('/admin/catalog') ||
-                      pathname.startsWith('/admin/collections') ||
-                      pathname.startsWith('/admin/product-sets')
-                        ? styles.navLinkActive
-                        : ''
-                    }`}
-                  >
-                    {catalogGroupLabel(locale)}
-                  </span>
-                </div>
-                {catalogOpen ? (
-                  <div id="admin-nav-catalog-sub" className={styles.navSub}>
-                    {CATALOG_CHILDREN.map(({ href, key }) => {
-                      const active =
-                        href === '/admin/collections'
-                          ? pathname.startsWith('/admin/collections')
-                          : href === '/admin/product-sets'
-                            ? pathname.startsWith('/admin/product-sets')
-                            : pathname === href || pathname.startsWith(`${href}/`);
-                      return (
-                        <Link
-                          key={href}
-                          href={href}
-                          className={`${styles.navLink} ${styles.navSublink} ${
-                            active ? styles.navLinkActive : ''
-                          }`}
-                        >
-                          {catalogSubLabel(locale, key)}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-              <div className={styles.navGroup}>
-                <div className={styles.navGroupRow}>
-                  <button
-                    type="button"
-                    className={styles.navChevronBtn}
-                    aria-expanded={settingsOpen}
-                    aria-controls="admin-nav-settings-sub"
-                    onClick={() => setSettingsOpen((o) => !o)}
-                    title={t.expandCollapseChevron}
-                  >
-                    <CatalogChevron open={settingsOpen} />
-                  </button>
-                  <span
-                    className={`${styles.navLink} ${styles.navGroupLink} ${styles.navGroupTitle} ${
-                      inSettings ? styles.navLinkActive : ''
-                    }`}
-                  >
-                    {settingsGroupLabel(locale)}
-                  </span>
-                </div>
-                {settingsOpen ? (
-                  <div id="admin-nav-settings-sub" className={styles.navSub}>
-                    {SETTINGS_CHILDREN.map(({ href, key }) => {
-                      const active =
-                        key === 'referrals'
-                          ? pathname.startsWith('/admin/referrals')
-                          : pathname === href || pathname.startsWith(`${href}/`);
-                      return (
-                        <Link
-                          key={href}
-                          href={href}
-                          className={`${styles.navLink} ${styles.navSublink} ${
-                            active ? styles.navLinkActive : ''
-                          }`}
-                        >
-                          {settingsSubLabel(locale, key)}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-              {NAV_HREFS.map((href) => {
-                const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
-                const showPendingBadge =
-                  href === '/admin/applications' && pendingPartnerApps != null && pendingPartnerApps > 0;
-                const showOrdersPendingBadge =
-                  href === '/admin/orders' &&
-                  pendingOrdersApproval != null &&
-                  pendingOrdersApproval > 0;
-                const showOrdersChatUnreadBadge =
-                  href === '/admin/orders' && ordersChatUnread != null && ordersChatUnread > 0;
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
-                  >
-                    {getNavLabel(locale, href)}
-                    {showPendingBadge ? (
-                      <span className={styles.navLinkCount}> ({pendingPartnerApps})</span>
-                    ) : null}
-                    {showOrdersPendingBadge ? (
-                      <span className={styles.navLinkCount}> ({pendingOrdersApproval})</span>
-                    ) : null}
-                    {showOrdersChatUnreadBadge ? (
-                      <span className={styles.navLinkCount} title="Непрочитанные сообщения от клиента">
-                        {' '}
-                        ({ordersChatUnread})
-                      </span>
-                    ) : null}
-                  </Link>
-                );
-              })}
-            </nav>
-            <button type="button" className={styles.logout} onClick={logout}>
-              {t.logout}
-            </button>
-          </aside>
-          <div className={styles.content}>{children}</div>
-        </div>
-      </div>
+      <AdminQueryProvider>
+        <AdminConfirmProvider>
+          <AdminShellBody
+            sidebar={
+              <AdminSidebarBadgesProvider enabled>
+                <AdminSidebar {...sidebarProps} />
+              </AdminSidebarBadgesProvider>
+            }
+          >
+            {children}
+          </AdminShellBody>
+        </AdminConfirmProvider>
+      </AdminQueryProvider>
     </AdminLocaleProvider>
   );
 }

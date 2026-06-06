@@ -75,6 +75,10 @@
   margin-bottom: 20px;
 }
 
+.statusSelect {
+  width: 100%;
+}
+
 .flowError {
   margin: 0 0 16px;
   padding: 12px;

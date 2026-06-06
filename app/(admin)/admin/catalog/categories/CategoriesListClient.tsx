@@ -2,13 +2,30 @@
 
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
+import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import {
+  ADMIN_LIST_DEFAULT_LIMIT,
+  adminBackendList,
+  adminListParams,
+  normalizeCategoriesListResponse,
+  type AdminListResponse,
+} from '@/lib/adminListResponse';
 import { adminCategoriesListStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
+import {
+  adminQueryKeys,
+  useAdminList,
+  useAdminListSearch,
+  useInvalidateAdminQueries,
+} from '@/lib/adminQuery';
 import styles from '../catalogAdmin.module.css';
 import { AdminCategorySearchTable } from './AdminCategorySearchTable';
 import { AdminCategorySortableTable } from './AdminCategorySortableTable';
@@ -20,45 +37,62 @@ function parentKey(parentId: string | null): string {
   return parentId ?? 'root';
 }
 
+type CategoriesQueryData = AdminListResponse<AdminCategoryRow> & { paginated: boolean };
+
 export function CategoriesListClient() {
   const router = useRouter();
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminCategoriesListStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
-  const [q, setQ] = useState('');
-  const [debouncedQ, setDebouncedQ] = useState('');
-  const [rows, setRows] = useState<AdminCategoryRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const invalidate = useInvalidateAdminQueries();
+  const { confirm } = useAdminConfirm();
+  const { q, setQ, debouncedQ, page, setPage } = useAdminListSearch();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q.trim()), 300);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = debouncedQ ? `?q=${encodeURIComponent(debouncedQ)}` : '';
-      const data = await adminBackendJson<AdminCategoryRow[]>(
-        `catalog/admin/categories${params}`
+  const { rows, data, loading, isFetching, error: listError, refetch } = useAdminList<
+    AdminCategoryRow,
+    CategoriesQueryData
+  >({
+    queryKey: adminQueryKeys.categories.list(debouncedQ ? { q: debouncedQ, page } : { q: '' }),
+    page,
+    q: debouncedQ,
+    errorFallback: s.errLoad,
+    queryFn: async () => {
+      if (!debouncedQ) {
+        const allRows = await adminBackendJson<AdminCategoryRow[]>('catalog/admin/categories');
+        const normalized = normalizeCategoriesListResponse(allRows);
+        return {
+          items: normalized.rows,
+          total: normalized.total,
+          page: normalized.page,
+          limit: normalized.limit,
+          paginated: normalized.paginated,
+        };
+      }
+      const res = await adminBackendList<AdminCategoryRow>(
+        'catalog/admin/categories',
+        adminListParams({ page, q: debouncedQ }),
       );
-      setRows(data);
-      setSelected(new Set());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : s.errLoad);
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedQ, s]);
+      const normalized = normalizeCategoriesListResponse(res);
+      return {
+        items: normalized.rows,
+        total: normalized.total,
+        page: normalized.page,
+        limit: normalized.limit,
+        paginated: normalized.paginated,
+      };
+    },
+  });
+
+  const listPaginated = data?.paginated ?? false;
+  const listTotal = data?.total ?? 0;
+  const error = mutationError ?? listError;
 
   useEffect(() => {
-    load();
-  }, [load]);
+    setSelected(new Set());
+  }, [debouncedQ]);
 
   const sortedRoots = useMemo(() => {
     if (debouncedQ) return [];
@@ -91,13 +125,13 @@ export function CategoriesListClient() {
         });
         await revalidatePublicCatalogCache();
         router.refresh();
-        await load();
+        await invalidate(adminQueryKeys.categories.all);
       } catch (e) {
-        setError(e instanceof Error ? e.message : s.errReorder);
-        await load();
+        setMutationError(e instanceof Error ? e.message : s.errReorder);
+        await invalidate(adminQueryKeys.categories.all);
       }
     },
-    [load, router, s],
+    [invalidate, router, s],
   );
 
   const onDragEndRoots = useCallback(
@@ -114,7 +148,7 @@ export function CategoriesListClient() {
       const next = arrayMove(flat, oldIndex, newIndex);
       await runReorder(null, next.map((r) => r.id));
     },
-    [sortedRoots, runReorder]
+    [sortedRoots, runReorder],
   );
 
   const onDragEndChildren = useCallback(
@@ -134,7 +168,7 @@ export function CategoriesListClient() {
       const next = arrayMove(siblings, oldIndex, newIndex);
       await runReorder(p, next.map((r) => r.id));
     },
-    [sortedChildren, runReorder]
+    [sortedChildren, runReorder],
   );
 
   function toggle(id: string) {
@@ -175,30 +209,28 @@ export function CategoriesListClient() {
 
   async function removeSelected() {
     if (!selected.size) return;
-    const ok = window.confirm(s.confirmDelete(selected.size));
-    if (!ok) return;
+    if (!(await confirm({ title: s.confirmDelete(selected.size) }))) return;
     setDeleting(true);
-    setError(null);
+    setMutationError(null);
     try {
       const res = await adminBackendJson<{ deleted: string[]; skipped: string[] }>(
         'catalog/admin/categories/bulk-delete',
         {
           method: 'POST',
           body: JSON.stringify({ ids: Array.from(selected) }),
-        }
+        },
       );
       if (res.skipped.length) {
-        setError(s.partialDelete(res.skipped.length, res.deleted.length));
-      } else {
-        setError(null);
+        setMutationError(s.partialDelete(res.skipped.length, res.deleted.length));
       }
       if (res.deleted.length > 0) {
         await revalidatePublicCatalogCache();
         router.refresh();
       }
-      await load();
+      setSelected(new Set());
+      await invalidate(adminQueryKeys.categories.all);
     } catch (e) {
-      setError(e instanceof Error ? e.message : s.errDelete);
+      setMutationError(e instanceof Error ? e.message : s.errDelete);
     } finally {
       setDeleting(false);
     }
@@ -211,58 +243,71 @@ export function CategoriesListClient() {
   const searchAllSelected = rows.length > 0 && selected.size === rows.length;
 
   return (
-    <>
-      <div className={styles.toolbar}>
-        <input
-          type="search"
-          className={styles.search}
-          placeholder={s.searchPh}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          aria-label={s.searchAria}
-        />
-        <Link href="/admin/catalog/categories/new" className={`${styles.btn} ${styles.btnPrimary}`}>
-          {s.create}
-        </Link>
-        <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
-          {!debouncedQ && rows.length > 0 ? (
-            <>
-              <button
+      <AdminListShell
+      loading={loading}
+      error={error}
+      onRetry={() => void refetch()}
+      loadingLabel={c.loading}
+      empty={s.empty}
+      isEmpty={!loading && !error && rows.length === 0}
+      isFetching={isFetching}
+      wrapContent={false}
+      toolbar={
+        <>
+          <div className={styles.toolbar}>
+            <AdminSearchBox
+              className={styles.searchBoxToolbar}
+              placeholder={s.searchPh}
+              ariaLabel={s.searchAria}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <AdminCompactBtnLink href="/admin/catalog/categories/new">{s.create}</AdminCompactBtnLink>
+            <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
+              {!debouncedQ && rows.length > 0 ? (
+                <>
+                  <AdminCompactBtn
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
+                  >
+                    {s.selectAll}
+                  </AdminCompactBtn>
+                  <AdminCompactBtn type="button" variant="outline" onClick={() => setSelected(new Set())}>
+                    {s.clear}
+                  </AdminCompactBtn>
+                </>
+              ) : null}
+              <AdminCompactBtn
                 type="button"
-                className={styles.btn}
-                onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
+                variant="danger"
+                disabled={!selected.size || deleting}
+                onClick={removeSelected}
               >
-                {s.selectAll}
-              </button>
-              <button type="button" className={styles.btn} onClick={() => setSelected(new Set())}>
-                {s.clear}
-              </button>
-            </>
+                {deleting ? s.deleting : s.delete(selected.size)}
+              </AdminCompactBtn>
+            </div>
+          </div>
+          {debouncedQ ? (
+            <p className={styles.muted} style={{ marginBottom: 12 }}>
+              {s.searchReorderHint}
+            </p>
           ) : null}
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnDanger}`}
-            disabled={!selected.size || deleting}
-            onClick={removeSelected}
-          >
-            {deleting ? s.deleting : s.delete(selected.size)}
-          </button>
-        </div>
-      </div>
-
+        </>
+      }
+      pagination={
+        listPaginated ? (
+          <AdminListPagination
+            page={page}
+            total={listTotal}
+            limit={data?.limit ?? ADMIN_LIST_DEFAULT_LIMIT}
+            onPageChange={setPage}
+            disabled={isFetching}
+          />
+        ) : null
+      }
+    >
       {debouncedQ ? (
-        <p className={styles.muted} style={{ marginBottom: 12 }}>
-          {s.searchReorderHint}
-        </p>
-      ) : null}
-
-      {error ? <p className={styles.error}>{error}</p> : null}
-
-      {loading ? (
-        <p className={styles.muted}>{c.loading}</p>
-      ) : rows.length === 0 ? (
-        <p className={styles.muted}>{s.empty}</p>
-      ) : debouncedQ ? (
         <AdminCategorySearchTable
           rows={rows}
           selected={selected}
@@ -309,6 +354,6 @@ export function CategoriesListClient() {
           ) : null}
         </>
       )}
-    </>
+    </AdminListShell>
   );
 }

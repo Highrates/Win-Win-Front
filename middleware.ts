@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/adminAuth';
-import { isGuestAuthPath, sanitizeCallbackUrl } from '@/lib/authRedirect';
 import { USER_ACCESS_TOKEN_COOKIE } from '@/lib/userAuth';
 
 const HERO_ROTATION_COOKIE = 'winwin-hero-idx';
@@ -90,12 +89,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isGuestAuthPath(pathname) && hasAuthCookie(request, USER_ACCESS_TOKEN_COOKIE)) {
-    const url = request.nextUrl.clone();
-    url.pathname = sanitizeCallbackUrl(request.nextUrl.searchParams.get('callbackUrl'));
-    url.search = '';
-    return NextResponse.redirect(url);
-  }
+  // Уже авторизованных с login/register уводит RSC `redirectIfUserAuthenticated` (проверка JWT).
+  // Редирект здесь только по наличию cookie давал цикл с layout ЛК при протухшем токене.
 
   if (pathname.startsWith('/admin')) {
     if (pathname === '/admin/login') {

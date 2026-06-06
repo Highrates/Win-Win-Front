@@ -73,11 +73,21 @@ export function adminCategoryDetailStrings(locale: AdminLocale) {
     backCats: pick(locale, '← Категории', '← 类别'),
     saveBusy: pick(locale, 'Сохранение…', '保存中…'),
     save: pick(locale, 'Сохранить', '保存'),
+    delete: pick(locale, 'Удалить', '删除'),
+    deleteBusy: pick(locale, 'Удаление…', '删除中…'),
+    errDelete: pick(locale, 'Ошибка удаления', '删除失败'),
+    confirmDelete: (catName: string) =>
+      pick(locale, `Удалить категорию «${catName}»?`, `删除类别「${catName}」？`),
+    deleteBlocked: pick(
+      locale,
+      'Нельзя удалить: в категории есть товары или подкатегории.',
+      '无法删除：类别下仍有商品或子类别。',
+    ),
     saveOkPrefix: pick(locale, 'Сохран', '已保'), // legacy check — prefer equality
     coverMissing: pick(
       locale,
-      'Обложка не задана — при необходимости выберите изображение в форме ниже и сохраните.',
-      '尚未设置封面 — 可在下方选择图片并保存。',
+      'Обложка не задана — выберите изображение ниже и сохраните.',
+      '尚未设置封面 — 请在下方选择图片并保存。',
     ),
     name: pick(locale, 'Название категории', '类别名称'),
     activeAria: pick(locale, 'Активна на витрине', '在前台启用'),

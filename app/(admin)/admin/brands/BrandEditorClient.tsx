@@ -4,10 +4,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { RichBlock } from '@/components/RichBlock/RichBlock';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import {
+  ProductGalleryEditor,
+  type ProductGalleryFrame,
+} from '@/components/admin/ProductGalleryEditor/ProductGalleryEditor';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import { adminBrandEditorStrings } from '@/lib/admin-i18n/adminBrandEditorI18n';
+import { adminProductGalleryEditorStrings } from '@/lib/admin-i18n/adminProductGalleryEditorI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { createClientRandomId } from '@/lib/clientRandomId';
@@ -70,23 +77,21 @@ function brandColorToRow(c: AdminBrandMaterialColor): ColorRow {
 }
 
 const FORM_ID = 'brand-editor-form';
+const BRAND_GALLERY_MAX = 3;
 
-function parseGallery(raw: unknown): [string, string, string] {
-  const list: string[] = [];
-  if (Array.isArray(raw)) {
-    for (const x of raw) {
-      if (typeof x === 'string' && x.trim()) list.push(x.trim());
-      if (list.length >= 3) break;
-    }
-  }
-  while (list.length < 3) list.push('');
-  return [list[0] ?? '', list[1] ?? '', list[2] ?? ''];
+function galleryUrlsToFrames(raw: unknown): ProductGalleryFrame[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    .slice(0, BRAND_GALLERY_MAX)
+    .map((url) => ({ id: rowId(), url: url.trim() }));
 }
 
 export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const router = useRouter();
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminBrandEditorStrings(locale), [locale]);
+  const galleryStr = useMemo(() => adminProductGalleryEditorStrings(locale), [locale]);
   const common = useMemo(() => adminCommonI18n(locale), [locale]);
   const isEdit = !!brandId;
 
@@ -98,7 +103,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const [isActive, setIsActive] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
-  const [gallery, setGallery] = useState<[string, string, string]>(['', '', '']);
+  const [galleryFrames, setGalleryFrames] = useState<ProductGalleryFrame[]>([]);
   const [shortDescription, setShortDescription] = useState('');
   const [description, setDescription] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
@@ -112,7 +117,6 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const brandTargetRef = useRef<
     | 'logo'
     | 'background'
-    | number
     | { kind: 'brandColor'; materialId: string; colorId: string }
     | { kind: 'brandColorBatch'; materialId: string }
     | null
@@ -135,7 +139,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setIsActive(row.isActive);
       setLogoUrl(row.logoUrl ?? '');
       setBackgroundImageUrl(row.backgroundImageUrl ?? '');
-      setGallery(parseGallery(row.galleryImageUrls));
+      setGalleryFrames(galleryUrlsToFrames(row.galleryImageUrls));
       setShortDescription(row.shortDescription ?? '');
       setDescription(row.description ?? '');
       setSeoTitle(row.seoTitle ?? '');
@@ -196,13 +200,6 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     setPicker({ filter: 'image', title: s.pickerCover });
   }
 
-  function openGalleryPicker(slot: number) {
-    richPickResolver.current = null;
-    brandTargetRef.current = slot;
-    setSaveMsg(null);
-    setPicker({ filter: 'image', title: s.pickerGallery(slot + 1) });
-  }
-
   function handlePickerPick(sel: { url: string; id: string; originalName?: string }) {
     const resolveRich = richPickResolver.current;
     if (resolveRich) {
@@ -217,12 +214,6 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setLogoUrl(sel.url);
     } else if (t === 'background') {
       setBackgroundImageUrl(sel.url);
-    } else if (typeof t === 'number') {
-      setGallery((prev) => {
-        const next: [string, string, string] = [...prev] as [string, string, string];
-        next[t] = sel.url;
-        return next;
-      });
     } else if (t && typeof t === 'object' && t.kind === 'brandColor') {
       setMaterials((prev) =>
         prev.map((m) =>
@@ -379,19 +370,11 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     setBackgroundImageUrl('');
   }
 
-  function clearGallerySlot(slot: number) {
-    setGallery((prev) => {
-      const next: [string, string, string] = [...prev] as [string, string, string];
-      next[slot] = '';
-      return next;
-    });
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setSaveMsg(null);
-    const galleryUrls = gallery.map((s) => s.trim()).filter(Boolean);
+    const galleryUrls = galleryFrames.map((f) => f.url.trim()).filter(Boolean);
     const body = {
       name: name.trim(),
       slug: slug.trim() || undefined,
@@ -437,9 +420,9 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     return (
       <main>
         <p className={styles.error}>{loadError}</p>
-        <Link href="/admin/brands" className={styles.btn}>
+        <AdminCompactBtnLink href="/admin/brands" variant="outline">
           {common.backToList}
-        </Link>
+        </AdminCompactBtnLink>
       </main>
     );
   }
@@ -462,14 +445,14 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
 
       <div className={styles.detailTitleRow}>
         <h1 className={styles.detailTitle}>{isEdit ? name || s.titleFallback : s.titleNew}</h1>
-        <button
+        <AdminCompactBtn
           type="submit"
           form={FORM_ID}
-          className={`${styles.btn} ${styles.btnPrimary}`}
+          variant="accent"
           disabled={saving || !name.trim()}
         >
           {saving ? s.saving : isEdit ? s.save : s.create}
-        </button>
+        </AdminCompactBtn>
       </div>
 
       {saveMsg ? <p className={styles.error}>{saveMsg}</p> : null}
@@ -480,60 +463,53 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         </p>
       ) : null}
 
-      <form id={FORM_ID} className={styles.form} onSubmit={submit} style={{ maxWidth: 800 }}>
-        <label className={styles.label}>
-          {s.brandName}
-          <input
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            minLength={1}
-          />
-        </label>
+      <form id={FORM_ID} className={`${styles.form} ${pn.formWide}`} onSubmit={submit}>
+        <AdminTextField
+          label={s.brandName}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          minLength={1}
+        />
 
         {!isEdit ? (
-          <label className={styles.label}>
-            {s.slugOptional}
-            <input
-              className={styles.input}
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder={s.slugAutoPlaceholder}
-            />
-          </label>
+          <AdminTextField
+            label={s.slugOptional}
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder={s.slugAutoPlaceholder}
+          />
         ) : (
-          <label className={styles.label}>
-            {s.slugLabel}
-            <input className={styles.input} value={slug} onChange={(e) => setSlug(e.target.value)} required />
-          </label>
+          <AdminTextField
+            label={s.slugLabel}
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            required
+          />
         )}
 
-        <label className={styles.label}>
-          {s.shortDescLabel} <span className={styles.muted}>{s.shortDescHint}</span>
-          <textarea
-            className={styles.textarea}
-            value={shortDescription}
-            onChange={(e) => setShortDescription(e.target.value.slice(0, 400))}
-            rows={3}
-            maxLength={400}
-            placeholder={s.shortDescPlaceholder}
-          />
-          <span className={styles.muted} style={{ display: 'block', marginTop: 6 }}>
-            {shortDescription.length}/400
-          </span>
-        </label>
+        <AdminTextArea
+          label={`${s.shortDescLabel} ${s.shortDescHint}`}
+          value={shortDescription}
+          onChange={(e) => setShortDescription(e.target.value.slice(0, 400))}
+          rows={3}
+          maxLength={400}
+          placeholder={s.shortDescPlaceholder}
+        />
+        <p className={styles.muted} style={{ margin: '0 0 4px' }}>
+          {shortDescription.length}/400
+        </p>
 
-        <div className={styles.section} style={{ marginTop: 4 }}>
-          <h2 className={styles.sectionTitle}>{s.sectionLogo}</h2>
-          <div className={styles.fileRow}>
-            <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={openLogoPicker}>
-              {s.pickFromLibrary}
-            </button>
+        <div>
+          <h2 className={styles.groupHeading}>{s.sectionLogo}</h2>
+          <div className={styles.coverActions}>
+            <AdminCompactBtn type="button" onClick={openLogoPicker}>
+              {common.mediaLibrary}
+            </AdminCompactBtn>
             {logoUrl ? (
-              <button type="button" className={styles.btn} onClick={clearLogo}>
+              <AdminCompactBtn type="button" variant="danger" onClick={clearLogo}>
                 {s.removeLogo}
-              </button>
+              </AdminCompactBtn>
             ) : null}
           </div>
           {logoUrl ? (
@@ -553,29 +529,27 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
           ) : null}
         </div>
 
-        <div className={styles.label}>
-          <div className={styles.labelCheckboxRow}>
-            <AccountCheckbox
-              id="brand-active"
-              className={styles.adminCheckboxForm}
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              aria-label={s.publishedAria}
-            />
-            <label htmlFor="brand-active">{s.publishedLabel}</label>
-          </div>
+        <div className={styles.labelCheckboxRow}>
+          <AccountCheckbox
+            id="brand-active"
+            className={styles.adminCheckboxForm}
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            aria-label={s.publishedAria}
+          />
+          <label htmlFor="brand-active">{s.publishedLabel}</label>
         </div>
 
-        <div className={styles.section} style={{ marginTop: 8 }}>
-          <h2 className={styles.sectionTitle}>{s.sectionCover}</h2>
-          <div className={styles.fileRow}>
-            <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={openBackgroundPicker}>
-              {s.pickFromLibrary}
-            </button>
+        <div>
+          <h2 className={styles.groupHeading}>{s.sectionCover}</h2>
+          <div className={styles.coverActions}>
+            <AdminCompactBtn type="button" onClick={openBackgroundPicker}>
+              {common.mediaLibrary}
+            </AdminCompactBtn>
             {backgroundImageUrl ? (
-              <button type="button" className={styles.btn} onClick={clearCoverImage}>
+              <AdminCompactBtn type="button" variant="danger" onClick={clearCoverImage}>
                 {s.removeCover}
-              </button>
+              </AdminCompactBtn>
             ) : null}
           </div>
           {backgroundImageUrl ? (
@@ -585,38 +559,19 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
           ) : null}
         </div>
 
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>{s.sectionGallery}</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {[0, 1, 2].map((slot) => (
-              <div key={slot} className={styles.label}>
-                <span>{s.imageN(slot + 1)}</span>
-                <div className={styles.fileRow}>
-                  <button
-                    type="button"
-                    className={`${styles.btn} ${styles.btnPrimary}`}
-                    onClick={() => openGalleryPicker(slot)}
-                  >
-                    {s.pickFromLibrary}
-                  </button>
-                  {gallery[slot] ? (
-                    <button type="button" className={styles.btn} onClick={() => clearGallerySlot(slot)}>
-                      {s.remove}
-                    </button>
-                  ) : null}
-                </div>
-                {gallery[slot] ? (
-                  <div className={styles.bgPreview} style={{ marginTop: 8, maxWidth: 280 }}>
-                    <img src={gallery[slot]} alt="" />
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
+        <div>
+          <h2 className={styles.groupHeading}>{s.sectionGallery}</h2>
+          <ProductGalleryEditor
+            mode="full"
+            items={galleryFrames}
+            onChange={setGalleryFrames}
+            strings={galleryStr}
+            maxItems={BRAND_GALLERY_MAX}
+          />
         </div>
 
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>{s.sectionRich}</h2>
+        <div>
+          <h2 className={styles.groupHeading}>{s.sectionRich}</h2>
           <RichBlock
             value={description}
             onChange={setDescription}
@@ -626,41 +581,40 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         </div>
 
         {isEdit ? (
-          <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>{s.sectionMaterials}</h2>
+          <div className={pn.section}>
+            <div className={styles.sectionHead}>
+              <h2 className={styles.groupHeading}>{s.sectionMaterials}</h2>
+              <AdminCompactBtn
+                type="button"
+                variant="accent"
+                onClick={() => {
+                  void saveMaterials();
+                }}
+                disabled={materialsSaving || !materialsLoaded}
+              >
+                {materialsSaving ? s.saving : s.saveMaterials}
+              </AdminCompactBtn>
+            </div>
 
             {!materialsLoaded ? (
               <p className={styles.muted}>{s.loadingMaterials}</p>
             ) : (
               <div className={pn.repeatList}>
                 {materials.map((m) => (
-                  <div
-                    key={m.id}
-                    style={{
-                      border: '1px solid #c5d4e0',
-                      borderRadius: 8,
-                      padding: 12,
-                      marginBottom: 14,
-                    }}
-                  >
+                  <div key={m.id} className={pn.elementCard}>
                     <div className={pn.repeatRow}>
-                      <input
-                        type="text"
-                        className={styles.input}
-                        style={{ flex: 1, minWidth: 200 }}
-                        value={m.name}
+                      <AdminTextField
+                        className={pn.modFieldGrow}
                         placeholder={s.materialNamePh}
+                        value={m.name}
                         onChange={(e) => updateMaterialName(m.id, e.target.value)}
+                        aria-label={s.materialNamePh}
                       />
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnDanger}`}
-                        onClick={() => removeMaterial(m.id)}
-                      >
+                      <AdminCompactBtn type="button" variant="danger" onClick={() => removeMaterial(m.id)}>
                         {s.deleteMaterial}
-                      </button>
+                      </AdminCompactBtn>
                     </div>
-                    <div style={{ marginTop: 12, paddingLeft: 8 }}>
+                    <div style={{ marginTop: 12 }}>
                       <p className={styles.muted} style={{ margin: '0 0 8px' }}>
                         {s.colorsHeading}
                       </p>
@@ -671,60 +625,45 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
                           style={{ marginBottom: 8 }}
                         >
                           {c.imageUrl ? (
-                            <img className={pn.colorPreview} src={c.imageUrl} alt="" />
+                            <img className={pn.galleryThumb} src={c.imageUrl} alt="" />
                           ) : (
-                            <div className={pn.colorPreview} aria-hidden />
+                            <div className={pn.galleryThumb} aria-hidden />
                           )}
-                          <input
-                            type="text"
-                            className={styles.input}
-                            style={{ flex: 1, minWidth: 160 }}
-                            value={c.name}
+                          <AdminTextField
+                            className={pn.modFieldGrow}
                             placeholder={s.colorNamePh}
-                            onChange={(e) =>
-                              updateColor(m.id, c.id, { name: e.target.value })
-                            }
+                            value={c.name}
+                            onChange={(e) => updateColor(m.id, c.id, { name: e.target.value })}
+                            aria-label={s.colorNamePh}
                           />
                           <div className={pn.rowActions}>
-                            <button
+                            <AdminCompactBtn
                               type="button"
-                              className={styles.btn}
                               onClick={() => openBrandColorImagePicker(m.id, c.id)}
                             >
                               {common.mediaLibrary}
-                            </button>
-                            <button
+                            </AdminCompactBtn>
+                            <AdminCompactBtn
                               type="button"
-                              className={`${styles.btn} ${styles.btnDanger}`}
+                              variant="danger"
                               onClick={() => removeColorFromMaterial(m.id, c.id)}
                             >
                               {s.delete}
-                            </button>
+                            </AdminCompactBtn>
                           </div>
                         </div>
                       ))}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        <button
-                          type="button"
-                          className={styles.btn}
-                          onClick={() => openBrandColorBatchPicker(m.id)}
-                        >
+                      <div className={styles.formActions}>
+                        <AdminCompactBtn type="button" onClick={() => openBrandColorBatchPicker(m.id)}>
                           {s.addColorFromLib}
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.btn}
-                          onClick={() => addColorToMaterial(m.id)}
-                        >
+                        </AdminCompactBtn>
+                        <AdminCompactBtn type="button" onClick={() => addColorToMaterial(m.id)}>
                           {s.addColorEmpty}
-                        </button>
+                        </AdminCompactBtn>
                       </div>
                     </div>
                   </div>
                 ))}
-                <button type="button" className={styles.btn} onClick={addMaterial}>
-                  {s.addMaterial}
-                </button>
               </div>
             )}
 
@@ -736,48 +675,41 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
                 {materialsMsg}
               </p>
             ) : null}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.btnPrimary}`}
-                onClick={() => {
-                  void saveMaterials();
-                }}
-                disabled={materialsSaving || !materialsLoaded}
-              >
-                {materialsSaving ? s.saving : s.saveMaterials}
-              </button>
+
+            <div className={styles.formActions}>
+              <AdminCompactBtn type="button" onClick={addMaterial}>
+                {s.addMaterial}
+              </AdminCompactBtn>
             </div>
           </div>
         ) : (
           <p className={styles.muted}>{s.materialsAfterCreate}</p>
         )}
 
-        <label className={styles.label}>
-          {s.seoTitle}
-          <input className={styles.input} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
-        </label>
-        <label className={styles.label}>
-          {s.seoDescription}
-          <textarea
-            className={styles.textarea}
-            value={seoDescription}
-            onChange={(e) => setSeoDescription(e.target.value)}
-            rows={4}
-          />
-        </label>
+        <div className={pn.section}>
+          <h2 className={styles.groupHeading}>SEO</h2>
+          <div className={pn.sectionStack}>
+            <AdminTextField
+              label={s.seoTitle}
+              value={seoTitle}
+              onChange={(e) => setSeoTitle(e.target.value)}
+            />
+            <AdminTextArea
+              label={s.seoDescription}
+              value={seoDescription}
+              onChange={(e) => setSeoDescription(e.target.value)}
+              rows={4}
+            />
+          </div>
+        </div>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-          <button
-            type="submit"
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            disabled={saving || !name.trim()}
-          >
+        <div className={styles.formActions}>
+          <AdminCompactBtn type="submit" variant="accent" disabled={saving || !name.trim()}>
             {saving ? s.saving : isEdit ? s.save : s.create}
-          </button>
-          <Link href="/admin/brands" className={styles.btn}>
+          </AdminCompactBtn>
+          <AdminCompactBtnLink href="/admin/brands" variant="outline">
             {s.cancel}
-          </Link>
+          </AdminCompactBtnLink>
         </div>
       </form>
     </main>

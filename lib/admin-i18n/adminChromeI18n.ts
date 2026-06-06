@@ -15,40 +15,34 @@ export function adminLocaleCookieString(locale: AdminLocale): string {
 
 const NAV_HREFS = [
   '/admin',
-  '/admin/modeling',
   '/admin/clients',
   '/admin/applications',
   '/admin/orders',
   '/admin/brands',
   '/admin/objects',
   '/admin/blog',
-  '/admin/pages',
   '/admin/journal',
 ] as const;
 
 const navRu: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin': 'Дашборд',
-  '/admin/modeling': 'Моделирование',
   '/admin/clients': 'Пользователи',
   '/admin/applications': 'Заявки',
   '/admin/orders': 'Заказы',
   '/admin/brands': 'Бренды',
   '/admin/objects': 'Медиафайлы',
   '/admin/blog': 'Блог',
-  '/admin/pages': 'Страницы',
   '/admin/journal': 'Журнал',
 };
 
 const navZh: Record<(typeof NAV_HREFS)[number], string> = {
   '/admin': '仪表板',
-  '/admin/modeling': '建模',
   '/admin/clients': '用户',
   '/admin/applications': '申请',
   '/admin/orders': '订单',
   '/admin/brands': '品牌',
   '/admin/objects': '媒体文件',
   '/admin/blog': '博客',
-  '/admin/pages': '页面',
   '/admin/journal': '日志',
 };
 
@@ -135,8 +129,6 @@ export function adminDashboardStrings(locale: AdminLocale) {
         { href: '/admin/referrals', label: '推荐', note: '推荐计划' },
         { href: '/admin/collections', label: '集合', note: '公开精选' },
         { href: '/admin/product-sets', label: '套装', note: '仅商品' },
-        { href: '/admin/pages', label: '页面', note: '信息页' },
-        { href: '/admin/modeling', label: '建模', note: '建模服务' },
       ] as const,
     };
   }
@@ -152,8 +144,6 @@ export function adminDashboardStrings(locale: AdminLocale) {
       { href: '/admin/referrals', label: 'Рефералы', note: 'Программа' },
       { href: '/admin/collections', label: 'Коллекции', note: 'Публичные подборки' },
       { href: '/admin/product-sets', label: 'Наборы', note: 'Только товары' },
-      { href: '/admin/pages', label: 'Страницы', note: 'Инфостраницы' },
-      { href: '/admin/modeling', label: 'Моделирование', note: 'Сервис моделирования' },
     ] as const,
   };
 }

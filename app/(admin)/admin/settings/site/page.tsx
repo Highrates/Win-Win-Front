@@ -15,7 +15,6 @@ export default function AdminSettingsSitePage() {
         </Link>
       </p>
       <h1 className={catalogStyles.title}>{t.title}</h1>
-      <p className={catalogStyles.lead}>{t.lead}</p>
       <SiteSettingsClient />
     </main>
   );

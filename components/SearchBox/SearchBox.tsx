@@ -1,12 +1,16 @@
 import type { ChangeEventHandler } from 'react';
 import styles from './SearchBox.module.css';
 
+export type SearchBoxVariant = 'default' | 'admin';
+
 type SearchBoxProps = {
   placeholder: string;
   ariaLabel: string;
   className?: string;
   value?: string;
   onChange?: ChangeEventHandler<HTMLInputElement>;
+  /** `admin` — компактное поле как AdminTextField (h-28, hairline). */
+  variant?: SearchBoxVariant;
 };
 
 function SearchIcon({ className }: { className?: string }) {
@@ -38,14 +42,27 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-export function SearchBox({ placeholder, ariaLabel, className, value, onChange }: SearchBoxProps) {
+export function SearchBox({
+  placeholder,
+  ariaLabel,
+  className,
+  value,
+  onChange,
+  variant = 'default',
+}: SearchBoxProps) {
+  const isAdmin = variant === 'admin';
+  const rootClass = isAdmin ? styles.searchBoxAdmin : styles.searchBoxInner;
+  const rowClass = isAdmin ? styles.searchRowAdmin : styles.searchRow;
+  const iconClass = isAdmin ? styles.searchIconAdmin : styles.searchIcon;
+  const inputClass = isAdmin ? styles.searchInputAdmin : styles.searchInput;
+
   return (
-    <div className={`${styles.searchBoxInner} ${className ?? ''}`}>
-      <div className={styles.searchRow}>
-        <SearchIcon className={styles.searchIcon} />
+    <div className={`${rootClass} ${className ?? ''}`.trim()}>
+      <div className={rowClass}>
+        <SearchIcon className={iconClass} />
         <input
           type="search"
-          className={styles.searchInput}
+          className={inputClass}
           placeholder={placeholder}
           aria-label={ariaLabel}
           value={value}
@@ -54,4 +71,9 @@ export function SearchBox({ placeholder, ariaLabel, className, value, onChange }
       </div>
     </div>
   );
+}
+
+/** SearchBox в стиле AdminTextField для админ-панели. */
+export function AdminSearchBox(props: Omit<SearchBoxProps, 'variant'>) {
+  return <SearchBox {...props} variant="admin" />;
 }

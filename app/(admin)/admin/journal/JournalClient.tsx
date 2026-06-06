@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { adminJournalStrings } from '@/lib/admin-i18n/adminJournalI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import styles from '../catalog/catalogAdmin.module.css';
 
 export type AuditLogRow = {
@@ -58,6 +59,7 @@ type SessionRes = { authenticated: boolean; user?: { role?: string } };
 export function JournalClient() {
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminJournalStrings(locale), [locale]);
+  const { confirm } = useAdminConfirm();
   const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
 
   const [page, setPage] = useState(1);
@@ -111,7 +113,7 @@ export function JournalClient() {
       setPurgeMessage(s.purgePasswordPrompt);
       return;
     }
-    if (!window.confirm(s.purgeConfirm)) {
+    if (!(await confirm({ title: s.purgeConfirm }))) {
       return;
     }
     setPurgeBusy(true);

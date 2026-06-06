@@ -1,14 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
-import { Button } from '@/components/Button';
-import { TBtn } from '@/components/TBtn/TBtn';
-import tbtnStyles from '@/components/TBtn/TBtn.module.css';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import compactStyles from '@/components/AdminCompactBtn/AdminCompactBtn.module.css';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import {
   adminBackendJson,
   adminUploadMediaLibrary,
 } from '@/lib/adminBackendFetch';
+import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
+import {
+  adminQueryErrorMessage,
+  adminQueryInitialLoading,
+  adminQueryKeys,
+  useAdminQuery,
+  useDebouncedValue,
+  useInvalidateAdminQueries,
+} from '@/lib/adminQuery';
+import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
+import { isHeavyMediaObject } from '@/lib/adminMediaLibrary/heavyMedia';
 import {
   readCollapsedFolderIds,
   writeCollapsedFolderIds,
@@ -20,6 +32,7 @@ import type {
   MediaObjectRow,
 } from '@/lib/adminMediaLibraryTypes';
 import { objectsLibraryStrings } from '@/lib/admin-i18n/adminObjectsLibraryStrings';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import catalogStyles from '../catalog/catalogAdmin.module.css';
 import styles from './objectsLibrary.module.css';
 
@@ -88,22 +101,36 @@ type ObjectsLibraryClientProps = {
   lead?: ReactNode;
 };
 
+type UploadBatchItem = {
+  previewUrl: string | null;
+  fileName: string;
+  status: 'pending' | 'uploading' | 'done' | 'error' | 'cancelled';
+  error?: string;
+};
+
+function isUploadAbortError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === 'AbortError';
+}
+
 export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   const uploadInputId = useId();
   const { locale } = useAdminLocale();
   const s = useMemo(() => objectsLibraryStrings(locale), [locale]);
+  const invalidate = useInvalidateAdminQueries();
+  const { confirm } = useAdminConfirm();
 
   const [libraryScope, setLibraryScope] = useState<MediaLibraryScope>('winwin');
   const [tab, setTab] = useState<MediaLibraryTab>('all');
   const [q, setQ] = useState('');
-  const [debouncedQ, setDebouncedQ] = useState('');
+  const debouncedQ = useDebouncedValue(q.trim());
   const [folderFilter, setFolderFilter] = useState<string | null>(null);
+  const [objectsPage, setObjectsPage] = useState(1);
 
-  const [folders, setFolders] = useState<MediaFolderRow[]>([]);
-  const [objects, setObjects] = useState<MediaObjectRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadBatch, setUploadBatch] = useState<UploadBatchItem[] | null>(null);
+  const uploadAbortRef = useRef<AbortController | null>(null);
+  const uploadCancelledRef = useRef(false);
+  const uploading = uploadBatch !== null;
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -123,6 +150,79 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   const [detailDeleting, setDetailDeleting] = useState(false);
 
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
+
+  const { data: folders = [], error: foldersQueryError } = useAdminQuery(
+    adminQueryKeys.mediaFolders.list(libraryScope),
+    () =>
+      adminBackendJson<MediaFolderRow[]>(`catalog/admin/media/folders?scope=${libraryScope}`),
+  );
+
+  const objectsListParams = useMemo(
+    () => ({
+      q: debouncedQ,
+      page: objectsPage,
+      tab,
+      folderId: folderFilter,
+      scope: libraryScope,
+    }),
+    [debouncedQ, objectsPage, tab, folderFilter, libraryScope],
+  );
+
+  const {
+    data: objectsData,
+    isLoading: objectsLoading,
+    isFetching: objectsFetching,
+    error: objectsQueryError,
+  } = useAdminQuery(
+    adminQueryKeys.mediaObjects.list(objectsListParams),
+    () => {
+      const sp = adminListParams({ page: objectsPage, limit: 40, q: debouncedQ });
+      sp.set('tab', tab);
+      sp.set('scope', libraryScope);
+      if (folderFilter) sp.set('folderId', folderFilter);
+      return adminBackendList<MediaObjectRow>('catalog/admin/media/objects', sp);
+    },
+  );
+
+  const objects = objectsData?.items ?? [];
+  const objectsTotal = objectsData?.total ?? 0;
+  const objectsLimit = objectsData?.limit ?? 40;
+  const loading = adminQueryInitialLoading(objectsLoading, objectsData);
+  const error =
+    mutationError ??
+    (foldersQueryError ? adminQueryErrorMessage(foldersQueryError, s.errLoadFolders) : null) ??
+    (objectsQueryError ? adminQueryErrorMessage(objectsQueryError, s.errLoadObjects) : null);
+
+  async function refreshMediaLibrary() {
+    await invalidate(adminQueryKeys.mediaFolders.all);
+    await invalidate(adminQueryKeys.mediaObjects.all);
+  }
+
+  function dismissUploadBatch(delayMs: number) {
+    window.setTimeout(() => {
+      setUploadBatch((prev) => {
+        prev?.forEach((item) => {
+          if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+        });
+        return null;
+      });
+      uploadAbortRef.current = null;
+      uploadCancelledRef.current = false;
+    }, delayMs);
+  }
+
+  function cancelUploadBatch() {
+    uploadCancelledRef.current = true;
+    uploadAbortRef.current?.abort();
+    setUploadBatch(
+      (prev) =>
+        prev?.map((item) =>
+          item.status === 'pending' || item.status === 'uploading'
+            ? { ...item, status: 'cancelled' as const }
+            : item,
+        ) ?? null,
+    );
+  }
 
   const userProfilesRootId = useMemo(
     () => folders.find((f) => f.pathKey === USER_PROFILES_ROOT_PATH_KEY)?.id,
@@ -236,46 +336,14 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   }
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q.trim()), 300);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  const loadFolders = useCallback(async () => {
-    try {
-      const data = await adminBackendJson<MediaFolderRow[]>(
-        `catalog/admin/media/folders?scope=${libraryScope}`,
-      );
-      setFolders(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : s.errLoadFolders);
-    }
-  }, [s.errLoadFolders, libraryScope]);
-
-  const loadObjects = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const sp = new URLSearchParams();
-      sp.set('tab', tab);
-      sp.set('scope', libraryScope);
-      if (debouncedQ) sp.set('q', debouncedQ);
-      if (folderFilter) sp.set('folderId', folderFilter);
-      const data = await adminBackendJson<MediaObjectRow[]>(
-        `catalog/admin/media/objects?${sp.toString()}`
-      );
-      setObjects(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : s.errLoadObjects);
-      setObjects([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [tab, debouncedQ, folderFilter, libraryScope, s.errLoadObjects]);
-
-  useEffect(() => {
     setFolderFilter(null);
+    setObjectsPage(1);
     setCollapsedFolderIds(readCollapsedFolderIds(libraryScope));
   }, [libraryScope]);
+
+  useEffect(() => {
+    setObjectsPage(1);
+  }, [debouncedQ, tab, folderFilter]);
 
   useEffect(() => {
     if (folders.length === 0) return;
@@ -287,14 +355,6 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
       return next;
     });
   }, [folders, libraryScope]);
-
-  useEffect(() => {
-    loadFolders();
-  }, [loadFolders]);
-
-  useEffect(() => {
-    loadObjects();
-  }, [loadObjects]);
 
   function openCreateFolder() {
     setCreateName('');
@@ -311,7 +371,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
     const name = createName.trim();
     if (!name) return;
     setCreateSaving(true);
-    setError(null);
+    setMutationError(null);
     try {
       await adminBackendJson<MediaFolderRow>('catalog/admin/media/folders', {
         method: 'POST',
@@ -321,9 +381,9 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
         }),
       });
       setCreateOpen(false);
-      await loadFolders();
+      await refreshMediaLibrary();
     } catch (err) {
-      setError(err instanceof Error ? err.message : s.errCreateFolder);
+      setMutationError(err instanceof Error ? err.message : s.errCreateFolder);
     } finally {
       setCreateSaving(false);
     }
@@ -332,20 +392,18 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   async function deleteFolderFromSettings() {
     if (!folderSettings) return;
     if (isProtectedMediaFolder(folderSettings)) return;
-    const ok = window.confirm(s.deleteFolderConfirm(folderSettings.name));
-    if (!ok) return;
+    if (!(await confirm({ title: s.deleteFolderConfirm(folderSettings.name) }))) return;
     setFolderDeleting(true);
-    setError(null);
+    setMutationError(null);
     try {
       await adminBackendJson(`catalog/admin/media/folders/${folderSettings.id}`, {
         method: 'DELETE',
       });
       if (folderFilter === folderSettings.id) setFolderFilter(null);
       setFolderSettings(null);
-      await loadFolders();
-      await loadObjects();
+      await refreshMediaLibrary();
     } catch (err) {
-      setError(err instanceof Error ? err.message : s.errDeleteFolder);
+      setMutationError(err instanceof Error ? err.message : s.errDeleteFolder);
     } finally {
       setFolderDeleting(false);
     }
@@ -354,7 +412,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   async function openDetail(id: string) {
     setDetail(null);
     setDetailLoading(true);
-    setError(null);
+    setMutationError(null);
     try {
       const row = await adminBackendJson<MediaObjectRow>(`catalog/admin/media/objects/${id}`);
       setDetail(row);
@@ -362,7 +420,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
       setDetailAlt(row.altText ?? '');
       setDetailFolderId(row.folderId ?? '');
     } catch (e) {
-      setError(e instanceof Error ? e.message : s.errOpenObject);
+      setMutationError(e instanceof Error ? e.message : s.errOpenObject);
     } finally {
       setDetailLoading(false);
     }
@@ -376,19 +434,17 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
   async function deleteDetail() {
     if (!detail) return;
-    const ok = window.confirm(s.deleteObjectConfirm);
-    if (!ok) return;
+    if (!(await confirm({ title: s.deleteObjectConfirm }))) return;
     setDetailDeleting(true);
-    setError(null);
+    setMutationError(null);
     try {
       await adminBackendJson(`catalog/admin/media/objects/${detail.id}`, {
         method: 'DELETE',
       });
       closeDetail();
-      await loadObjects();
-      await loadFolders();
+      await refreshMediaLibrary();
     } catch (e) {
-      setError(e instanceof Error ? e.message : s.errDeleteObject);
+      setMutationError(e instanceof Error ? e.message : s.errDeleteObject);
     } finally {
       setDetailDeleting(false);
     }
@@ -398,11 +454,11 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
     if (!detail) return;
     const name = detailOriginalName.trim();
     if (!name) {
-      setError(s.errNameRequired);
+      setMutationError(s.errNameRequired);
       return;
     }
     setDetailSaving(true);
-    setError(null);
+    setMutationError(null);
     try {
       const folderId = detailFolderId === '' ? null : detailFolderId;
       const updated = await adminBackendJson<MediaObjectRow>(
@@ -420,10 +476,9 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
       setDetailOriginalName(updated.originalName);
       setDetailAlt(updated.altText ?? '');
       setDetailFolderId(updated.folderId ?? '');
-      await loadObjects();
-      await loadFolders();
+      await refreshMediaLibrary();
     } catch (e) {
-      setError(e instanceof Error ? e.message : s.errSave);
+      setMutationError(e instanceof Error ? e.message : s.errSave);
     } finally {
       setDetailSaving(false);
     }
@@ -446,39 +501,99 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
     const list = Array.from(e.target.files ?? []);
     e.target.value = '';
     if (!list.length) return;
-    setUploading(true);
-    setError(null);
+
+    const batchItems: UploadBatchItem[] = list.map((file) => ({
+      fileName: file.name,
+      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      status: 'pending',
+    }));
+
+    uploadCancelledRef.current = false;
+    uploadAbortRef.current = null;
+    setUploadBatch(batchItems);
+    setMutationError(null);
     setUploadNotice(null);
     const errors: string[] = [];
+    let okCount = 0;
+
     try {
-      for (const file of list) {
+      for (let i = 0; i < list.length; i++) {
+        if (uploadCancelledRef.current) break;
+
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
+
+        setUploadBatch((prev) =>
+          prev?.map((item, index) => (index === i ? { ...item, status: 'uploading' } : item)) ?? null,
+        );
+
         try {
-          await adminUploadMediaLibrary(file, folderFilter);
+          await adminUploadMediaLibrary(list[i], folderFilter, controller.signal);
+          if (uploadCancelledRef.current) break;
+          okCount += 1;
+          setUploadBatch((prev) =>
+            prev?.map((item, index) => (index === i ? { ...item, status: 'done' } : item)) ?? null,
+          );
         } catch (err) {
+          if (isUploadAbortError(err) || uploadCancelledRef.current) {
+            setUploadBatch(
+              (prev) =>
+                prev?.map((item, index) =>
+                  index >= i && (item.status === 'pending' || item.status === 'uploading')
+                    ? { ...item, status: 'cancelled' as const }
+                    : item,
+                ) ?? null,
+            );
+            break;
+          }
           const msg = err instanceof Error ? err.message : s.errUploadFile;
-          errors.push(`${file.name}: ${msg}`);
+          errors.push(`${list[i].name}: ${msg}`);
+          setUploadBatch((prev) =>
+            prev?.map((item, index) =>
+              index === i ? { ...item, status: 'error', error: msg } : item,
+            ) ?? null,
+          );
         }
       }
+
+      if (uploadCancelledRef.current) {
+        if (okCount > 0) {
+          await refreshMediaLibrary();
+          setUploadNotice(s.uploadCancelledNotice(okCount));
+          window.setTimeout(() => setUploadNotice(null), 5000);
+        }
+        dismissUploadBatch(800);
+        return;
+      }
+
       if (errors.length) {
-        setError(
+        setMutationError(
           errors.length === list.length
             ? errors.join('\n')
-            : s.uploadPartialFail(errors.length, list.length, errors.join('\n'))
+            : s.uploadPartialFail(errors.length, list.length, errors.join('\n')),
         );
       }
-      const okCount = list.length - errors.length;
       if (okCount > 0) {
         setUploadNotice(
-          okCount === list.length ? s.uploadAllOk(okCount) : s.uploadPartialOk(okCount, list.length)
+          okCount === list.length ? s.uploadAllOk(okCount) : s.uploadPartialOk(okCount, list.length),
         );
         window.setTimeout(() => setUploadNotice(null), 5000);
-        await loadObjects();
-        await loadFolders();
+        await refreshMediaLibrary();
       }
+      dismissUploadBatch(1200);
+    } catch {
+      dismissUploadBatch(0);
     } finally {
-      setUploading(false);
+      uploadAbortRef.current = null;
     }
   }
+
+  const uploadFinishedCount =
+    uploadBatch?.filter(
+      (item) => item.status === 'done' || item.status === 'error' || item.status === 'cancelled',
+    ).length ?? 0;
+  const uploadInProgress =
+    uploadBatch?.some((item) => item.status === 'pending' || item.status === 'uploading') ?? false;
 
   const folderList = sortedFolders(folders);
 
@@ -518,25 +633,17 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
   return (
     <>
-      <div className={styles.mainScopeTabs} role="tablist" aria-label={s.tablistMainScopeAria}>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={libraryScope === 'winwin'}
-          className={`${styles.mainScopeTab} ${libraryScope === 'winwin' ? styles.mainScopeTabActive : ''}`}
-          onClick={() => setLibraryScope('winwin')}
-        >
-          {s.scopeWinwin}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={libraryScope === 'user'}
-          className={`${styles.mainScopeTab} ${libraryScope === 'user' ? styles.mainScopeTabActive : ''}`}
-          onClick={() => setLibraryScope('user')}
-        >
-          {s.scopeUser}
-        </button>
+      <div className={styles.tabsSpacer}>
+        <AdminTabs
+          compact
+          ariaLabel={s.tablistMainScopeAria}
+          items={[
+            { id: 'winwin' as const, label: s.scopeWinwin },
+            { id: 'user' as const, label: s.scopeUser },
+          ]}
+          activeId={libraryScope}
+          onChange={setLibraryScope}
+        />
       </div>
       {libraryScope === 'winwin' ? lead : null}
       {error ? (
@@ -584,34 +691,35 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
               ? renderFolderBranch(null, 0)
               : null}
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button
-              type="button"
-              className={catalogStyles.btn}
-              onClick={openCreateFolder}
-            >
+            <AdminCompactBtn type="button" onClick={openCreateFolder}>
               {s.newFolderButton}
-            </button>
+            </AdminCompactBtn>
           </div>
         </aside>
 
         <div className={styles.main}>
           <div className={catalogStyles.toolbar}>
-            <input
-              type="search"
-              className={catalogStyles.search}
+            <AdminSearchBox
+              className={catalogStyles.searchBoxToolbar}
               placeholder={s.searchPlaceholder}
+              ariaLabel={s.searchAriaLabel}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              aria-label={s.searchAriaLabel}
             />
             <div
               className={`${styles.uploadWrap} ${uploading ? styles.uploadLabelDisabled : ''}`}
             >
               <span
-                className={`${tbtnStyles.tbtn} ${tbtnStyles.tbtnGhost} ${styles.uploadGhost} ${styles.uploadFace}`}
+                className={`${compactStyles.btn} ${compactStyles.btnNeutral} ${styles.uploadFace}`}
                 aria-hidden
               >
-                <img src="/icons/document-download.svg" alt="" width={20} height={20} />
+                <img
+                  src="/icons/document-download.svg"
+                  alt=""
+                  width={14}
+                  height={14}
+                  className={styles.uploadIcon}
+                />
                 {uploading ? s.uploadLabelBusy : s.uploadLabel}
               </span>
               <input
@@ -627,19 +735,14 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
             </div>
           </div>
 
-          <div className={styles.tabs} role="tablist" aria-label={s.tablistAria}>
-            {tabs.map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                className={`${styles.tab} ${tab === key ? styles.tabActive : ''}`}
-                onClick={() => setTab(key)}
-              >
-                {label}
-              </button>
-            ))}
+          <div className={styles.tabsSpacer}>
+            <AdminTabs
+              variant="pill"
+              ariaLabel={s.tablistAria}
+              items={tabs.map(({ key, label }) => ({ id: key, label }))}
+              activeId={tab}
+              onChange={setTab}
+            />
           </div>
 
           {loading ? (
@@ -647,9 +750,12 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
           ) : objects.length === 0 ? (
             <p className={catalogStyles.muted}>{s.emptyList}</p>
           ) : (
-            <ul className={styles.grid}>
+            <ul className={styles.grid} style={objectsFetching ? { opacity: 0.65 } : undefined}>
               {objects.map((row) => (
-                <li key={row.id} className={styles.objectCard}>
+                <li
+                  key={row.id}
+                  className={`${styles.objectCard} ${isHeavyMediaObject(row) ? styles.objectCardHeavy : ''}`.trim()}
+                >
                   <div className={styles.thumbWrap}>
                     {renderThumb(row)}
                     <button
@@ -679,6 +785,14 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
           )}
         </div>
       </div>
+
+      <AdminListPagination
+        page={objectsPage}
+        total={objectsTotal}
+        limit={objectsLimit}
+        onPageChange={setObjectsPage}
+        disabled={objectsFetching}
+      />
 
       {createOpen ? (
         <div
@@ -724,22 +838,17 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
                 </select>
               </label>
               <div className={styles.modalActionsCreate}>
-                <TBtn
+                <AdminCompactBtn
                   type="button"
-                  className={styles.modalTBtn}
+                  variant="outline"
                   disabled={createSaving}
                   onClick={() => setCreateOpen(false)}
                 >
                   {s.cancel}
-                </TBtn>
-                <Button
-                  variant="primary"
-                  type="submit"
-                  className={styles.modalFooterBtn}
-                  disabled={createSaving}
-                >
+                </AdminCompactBtn>
+                <AdminCompactBtn type="submit" variant="accent" disabled={createSaving}>
                   {createSaving ? s.creating : s.create}
-                </Button>
+                </AdminCompactBtn>
               </div>
             </form>
           </div>
@@ -789,28 +898,27 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
                 )}
               </p>
               <div className={styles.modalActionsCreate}>
-                <TBtn
+                <AdminCompactBtn
                   type="button"
-                  className={styles.modalTBtn}
+                  variant="outline"
                   disabled={folderDeleting}
                   onClick={() => setFolderSettings(null)}
                 >
                   {s.cancel}
-                </TBtn>
+                </AdminCompactBtn>
                 {isProtectedMediaFolder(folderSettings) ? (
                   <span className={catalogStyles.muted} style={{ alignSelf: 'center' }}>
                     {s.systemFolderNoDelete}
                   </span>
                 ) : (
-                  <TBtn
+                  <AdminCompactBtn
                     variant="danger"
                     type="button"
-                    className={styles.modalTBtn}
                     disabled={folderDeleting}
                     onClick={() => void deleteFolderFromSettings()}
                   >
                     {folderDeleting ? s.deleting : s.delete}
-                  </TBtn>
+                  </AdminCompactBtn>
                 )}
               </div>
             </div>
@@ -895,36 +1003,115 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
                   />
                 </div>
                 <div className={styles.modalActions}>
-                  <TBtn
+                  <AdminCompactBtn
                     variant="danger"
                     type="button"
-                    className={styles.modalTBtn}
                     disabled={detailSaving || detailDeleting}
                     onClick={() => void deleteDetail()}
                   >
                     {detailDeleting ? s.deleting : s.delete}
-                  </TBtn>
+                  </AdminCompactBtn>
                   <div className={styles.modalActionsEnd}>
-                    <TBtn
+                    <AdminCompactBtn
                       type="button"
-                      className={styles.modalTBtn}
+                      variant="outline"
                       disabled={detailSaving || detailDeleting}
                       onClick={closeDetail}
                     >
                       {s.close}
-                    </TBtn>
-                    <Button
-                      variant="primary"
+                    </AdminCompactBtn>
+                    <AdminCompactBtn
                       type="button"
-                      className={styles.modalFooterBtn}
+                      variant="accent"
                       disabled={detailSaving || detailDeleting}
                       onClick={() => void saveDetail()}
                     >
                       {detailSaving ? s.saving : s.save}
-                    </Button>
+                    </AdminCompactBtn>
                   </div>
                 </div>
               </>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {uploadBatch ? (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal
+          aria-labelledby="objects-upload-progress-title"
+          aria-busy={uploadInProgress}
+        >
+          <div className={`${styles.modal} ${styles.uploadProgressModal}`}>
+            <h2 id="objects-upload-progress-title" className={styles.modalTitle}>
+              {s.uploadProgressTitle}
+            </h2>
+            <p className={styles.uploadProgressSummary}>
+              {s.uploadProgressCount(uploadFinishedCount, uploadBatch.length)}
+            </p>
+            <div
+              className={styles.uploadProgressBar}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={uploadBatch.length}
+              aria-valuenow={uploadFinishedCount}
+              aria-label={s.uploadProgressTitle}
+            >
+              <div
+                className={styles.uploadProgressBarFill}
+                style={{ width: `${(uploadFinishedCount / uploadBatch.length) * 100}%` }}
+              />
+            </div>
+            <ul className={styles.uploadProgressList}>
+              {uploadBatch.map((item, index) => (
+                <li
+                  key={`${index}-${item.fileName}`}
+                  className={`${styles.uploadProgressItem} ${
+                    item.status === 'done'
+                      ? styles.uploadProgressItemDone
+                      : item.status === 'error'
+                        ? styles.uploadProgressItemError
+                        : item.status === 'cancelled'
+                          ? styles.uploadProgressItemCancelled
+                          : ''
+                  }`}
+                >
+                  <div className={styles.uploadProgressThumb}>
+                    {item.previewUrl ? (
+                      <img src={item.previewUrl} alt="" />
+                    ) : (
+                      <span className={styles.uploadProgressThumbPlaceholder}>{s.fileGeneric}</span>
+                    )}
+                  </div>
+                  <div className={styles.uploadProgressMeta}>
+                    <span className={styles.uploadProgressName}>{item.fileName}</span>
+                    <span
+                      className={`${styles.uploadProgressStatus} ${
+                        item.status === 'error' ? styles.uploadProgressStatusError : ''
+                      }`}
+                    >
+                      {item.status === 'pending'
+                        ? s.uploadStatusPending
+                        : item.status === 'uploading'
+                          ? s.uploadStatusUploading
+                          : item.status === 'done'
+                            ? s.uploadStatusDone
+                            : item.status === 'cancelled'
+                              ? s.uploadStatusCancelled
+                              : item.error ?? s.uploadStatusError}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {uploadInProgress ? (
+              <div className={styles.uploadProgressActions}>
+                <AdminCompactBtn type="button" variant="outline" onClick={cancelUploadBatch}>
+                  {s.cancel}
+                </AdminCompactBtn>
+              </div>
             ) : null}
           </div>
         </div>

@@ -2,11 +2,23 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import { adminBackendFetch } from '@/lib/adminBackendFetch';
+import { useState } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
+import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
+import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { ADMIN_LIST_DEFAULT_LIMIT, adminSkipTakeParams } from '@/lib/adminListResponse';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
+import {
+  adminQueryErrorFromBackend,
+  adminQueryKeys,
+  useAdminList,
+  useAdminListSearch,
+  useInvalidateAdminQueries,
+} from '@/lib/adminQuery';
 import catalogStyles from '../catalog/catalogAdmin.module.css';
-import tabStyles from '../adminTabs.module.css';
+import { AdminTabs, AdminTabsLead, AdminTabsPanel } from '@/components/AdminTabs/AdminTabs';
 import appStyles from './applications.module.css';
 
 type TabKey = 'designer' | 'payouts';
@@ -43,6 +55,13 @@ type PartnerAppRow = {
   };
 };
 
+type PartnerListData = {
+  items: PartnerAppRow[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
 function formatName(p: PartnerAppRow['profile']): string {
   if (!p) return '—';
   const t = [p.firstName, p.lastName].filter((x) => x && String(x).trim()).join(' ').trim();
@@ -70,56 +89,48 @@ export function ApplicationsAdminClient({
   const router = useRouter();
   const { locale: adminLoc } = useAdminLocale();
   const consLocale: 'ru' | 'zh' = adminLoc === 'zh' ? 'zh' : 'ru';
+  const invalidate = useInvalidateAdminQueries();
+  const { confirm } = useAdminConfirm();
   const [tab, setTab] = useState<TabKey>('designer');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<PartnerAppRow[]>([]);
-  const [total, setTotal] = useState(0);
+  const { page, setPage } = useAdminListSearch();
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionKind, setActionKind] = useState<'accept' | 'reject' | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await adminBackendFetch('users/admin/partner-applications?skip=0&take=50', {
-        method: 'GET',
-      });
-      if (!res.ok) {
-        setError(designer.errLoad);
-        return;
-      }
-      const j = (await res.json()) as { items: PartnerAppRow[]; total: number };
-      setItems(Array.isArray(j.items) ? j.items : []);
-      setTotal(typeof j.total === 'number' ? j.total : 0);
-    } catch {
-      setError(designer.errLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [designer.errLoad]);
+  const { rows: items, total, loading, isFetching, error: listError, refetch } = useAdminList<PartnerAppRow>({
+    queryKey: adminQueryKeys.applications.partnerList(page),
+    page,
+    paramsMode: 'skipTake',
+    errorFallback: designer.errLoad,
+    enabled: tab === 'designer',
+    queryFn: async () => {
+      const j = await adminBackendJson<{ items: PartnerAppRow[]; total: number }>(
+        `users/admin/partner-applications?${adminSkipTakeParams({ page })}`,
+      );
+      return {
+        items: Array.isArray(j.items) ? j.items : [],
+        total: typeof j.total === 'number' ? j.total : 0,
+        page,
+        limit: ADMIN_LIST_DEFAULT_LIMIT,
+      };
+    },
+  });
 
-  useEffect(() => {
-    if (tab === 'designer') void load();
-  }, [tab, load]);
+  const error = mutationError ?? listError;
 
   async function acceptUser(userId: string) {
     setActionId(userId);
     setActionKind('accept');
-    setError(null);
+    setMutationError(null);
     try {
-      const res = await adminBackendFetch(`users/admin/partner-applications/${encodeURIComponent(userId)}/approve`, {
-        method: 'POST',
-        body: '{}',
-      });
-      if (!res.ok) {
-        setError(designer.errAccept);
-        return;
-      }
+      await adminBackendJson(
+        `users/admin/partner-applications/${encodeURIComponent(userId)}/approve`,
+        { method: 'POST', body: '{}' },
+      );
       document.dispatchEvent(new Event('admin-partner-pending-refresh'));
-      await load();
-    } catch {
-      setError(designer.errAccept);
+      await invalidate(adminQueryKeys.applications.all);
+    } catch (e) {
+      setMutationError(adminQueryErrorFromBackend(e, designer.errAccept));
     } finally {
       setActionId(null);
       setActionKind(null);
@@ -127,23 +138,19 @@ export function ApplicationsAdminClient({
   }
 
   async function rejectUser(userId: string) {
-    if (!window.confirm(designer.rejectConfirm)) return;
+    if (!(await confirm({ title: designer.rejectConfirm, confirmLabel: designer.reject }))) return;
     setActionId(userId);
     setActionKind('reject');
-    setError(null);
+    setMutationError(null);
     try {
-      const res = await adminBackendFetch(`users/admin/partner-applications/${encodeURIComponent(userId)}/reject`, {
-        method: 'POST',
-        body: '{}',
-      });
-      if (!res.ok) {
-        setError(designer.errReject);
-        return;
-      }
+      await adminBackendJson(
+        `users/admin/partner-applications/${encodeURIComponent(userId)}/reject`,
+        { method: 'POST', body: '{}' },
+      );
       document.dispatchEvent(new Event('admin-partner-pending-refresh'));
-      await load();
-    } catch {
-      setError(designer.errReject);
+      await invalidate(adminQueryKeys.applications.all);
+    } catch (e) {
+      setMutationError(adminQueryErrorFromBackend(e, designer.errReject));
     } finally {
       setActionId(null);
       setActionKind(null);
@@ -151,41 +158,43 @@ export function ApplicationsAdminClient({
   }
 
   return (
-    <main className={`${tabStyles.panel} ${appStyles.root}`}>
-      <h1>{title}</h1>
-      <div className={tabStyles.tabs} role="tablist" aria-label={title}>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'designer'}
-          className={`${tabStyles.tabBtn} ${tab === 'designer' ? tabStyles.tabBtnActive : ''}`}
-          onClick={() => setTab('designer')}
-        >
-          {labels.designer}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'payouts'}
-          className={`${tabStyles.tabBtn} ${tab === 'payouts' ? tabStyles.tabBtnActive : ''}`}
-          onClick={() => setTab('payouts')}
-        >
-          {labels.payouts}
-        </button>
-      </div>
+      <AdminTabsPanel as="main" className={appStyles.root}>
+      <h1 className={catalogStyles.title}>{title}</h1>
+      <AdminTabs
+        compact
+        ariaLabel={title}
+        items={[
+          { id: 'designer' as const, label: labels.designer },
+          { id: 'payouts' as const, label: labels.payouts },
+        ]}
+        activeId={tab}
+        onChange={setTab}
+      />
 
       {tab === 'designer' ? (
         <section aria-label={labels.designer}>
-          {error ? (
-            <p className={catalogStyles.error} role="alert" style={{ marginTop: 8 }}>
-              {error}
-            </p>
-          ) : null}
-          {loading ? <p className={catalogStyles.muted}>{designer.loading}</p> : null}
-          {!loading && !items.length ? <p className={catalogStyles.muted}>{designer.empty}</p> : null}
-          {!loading && items.length > 0 ? (
-            <div className={appStyles.tableWrap}>
-              <table className={`${catalogStyles.table} ${appStyles.table}`}>
+          <AdminListShell
+            loading={loading}
+            error={error}
+            onRetry={() => void refetch()}
+            loadingLabel={designer.loading}
+            empty={designer.empty}
+            isEmpty={!loading && !error && items.length === 0}
+            isFetching={isFetching}
+            styles={catalogStyles}
+            pagination={
+              !loading ? (
+                <AdminListPagination
+                  page={page}
+                  total={total}
+                  limit={ADMIN_LIST_DEFAULT_LIMIT}
+                  onPageChange={setPage}
+                  disabled={isFetching}
+                />
+              ) : null
+            }
+          >
+            <table className={`${catalogStyles.table} ${appStyles.tableMin}`}>
                 <thead>
                   <tr>
                     <th>{designer.thEmail}</th>
@@ -193,7 +202,7 @@ export function ApplicationsAdminClient({
                     <th>{designer.thSubmitted}</th>
                     <th>{designer.thRef}</th>
                     <th>{designer.thCv}</th>
-                    <th>{designer.thActions}</th>
+                    <th className={catalogStyles.tableCellActions}>{designer.thActions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -229,7 +238,11 @@ export function ApplicationsAdminClient({
                             '—'
                           )}
                         </td>
-                        <td onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                        <td
+                          className={catalogStyles.tableCellActions}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
                           <div className={appStyles.rowActions}>
                             <Link
                               href={`/admin/clients/${encodeURIComponent(row.id)}`}
@@ -238,9 +251,9 @@ export function ApplicationsAdminClient({
                             >
                               {designer.openClient}
                             </Link>
-                            <button
+                            <AdminCompactBtn
                               type="button"
-                              className={catalogStyles.btn}
+                              variant="accent"
                               disabled={actionId === row.id}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -248,10 +261,10 @@ export function ApplicationsAdminClient({
                               }}
                             >
                               {actionId === row.id && actionKind === 'accept' ? '…' : designer.accept}
-                            </button>
-                            <button
+                            </AdminCompactBtn>
+                            <AdminCompactBtn
                               type="button"
-                              className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+                              variant="danger"
                               disabled={actionId === row.id}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -259,7 +272,7 @@ export function ApplicationsAdminClient({
                               }}
                             >
                               {actionId === row.id && actionKind === 'reject' ? '…' : designer.reject}
-                            </button>
+                            </AdminCompactBtn>
                           </div>
                         </td>
                       </tr>
@@ -267,22 +280,14 @@ export function ApplicationsAdminClient({
                   })}
                 </tbody>
               </table>
-            </div>
-          ) : null}
-          {!loading && total > items.length ? (
-            <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
-              Всего: {total}
-            </p>
-          ) : null}
+          </AdminListShell>
         </section>
       ) : null}
       {tab === 'payouts' ? (
         <section aria-labelledby="applications-tab-payouts">
-          <p id="applications-tab-payouts" className={tabStyles.lead}>
-            {leads.payouts}
-          </p>
+          <AdminTabsLead id="applications-tab-payouts">{leads.payouts}</AdminTabsLead>
         </section>
       ) : null}
-    </main>
+    </AdminTabsPanel>
   );
 }

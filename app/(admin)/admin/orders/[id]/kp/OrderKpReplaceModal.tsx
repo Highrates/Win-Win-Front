@@ -2,13 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
 import type { AdminProductRow } from '@/app/(admin)/admin/catalog/products/adminProductTypes';
 import {
   buildSnapshotFromAdminVariant,
   type AdminVariantForKpSnapshot,
 } from '@/lib/commercialProposal/buildSnapshotFromAdminVariant';
-import modalStyles from '@/app/(account)/account/projects/components/CreateEditProjectModal.module.css';
+import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import styles from '../../../catalog/catalogAdmin.module.css';
+import kpStyles from './kpEditor.module.css';
 import own from './OrderKpReplaceModal.module.css';
 
 type ProductDetail = {
@@ -89,9 +94,11 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
       setSearching(true);
       setError(null);
       try {
-        const params = debouncedQ ? `?q=${encodeURIComponent(debouncedQ)}` : '';
-        const list = await adminBackendJson<AdminProductRow[]>(`catalog/admin/products${params}`);
-        if (!cancelled) setResults(Array.isArray(list) ? list : []);
+        const res = await adminBackendList<AdminProductRow>(
+          'catalog/admin/products',
+          adminListParams({ page: 1, limit: 50, q: debouncedQ }),
+        );
+        if (!cancelled) setResults(res.items);
       } catch (e) {
         if (!cancelled) {
           setResults([]);
@@ -167,15 +174,14 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={modalStyles.panel} style={{ maxWidth: 560, width: '100%' }}>
+      <div className={modalStyles.panel}>
         <div className={modalStyles.panelHead}>
           <h2 id="kp-replace-title" className={modalStyles.panelTitle}>
             Заменить товар
           </h2>
           <button
             type="button"
-            className={modalStyles.closeBtn}
-            style={{ fontSize: 28, lineHeight: 1, fontWeight: 300 }}
+            className={styles.modalCloseIconBtn}
             aria-label="Закрыть"
             onClick={onClose}
           >
@@ -185,34 +191,29 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
         <div className={`${modalStyles.body} ${own.body}`}>
           {!productId ? (
             <div className={own.searchBlock}>
-              <label className={styles.cardNote} style={{ display: 'block', marginBottom: 6 }}>
-                Поиск по названию или slug
-              </label>
-              <input
-                className={styles.input}
+              <AdminSearchBox
+                className={styles.searchBoxFull}
+                placeholder="Например, диван"
+                ariaLabel="Поиск по названию или slug"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Например, диван"
-                style={{ width: '100%', marginBottom: 12, boxSizing: 'border-box' }}
-                autoFocus
               />
-              {searching ? <p className={styles.cardNote}>Поиск…</p> : null}
+              {searching ? <p className={styles.muted}>Поиск…</p> : null}
               {!searching && results.length === 0 ? (
-                <p className={styles.cardNote}>{debouncedQ ? 'Ничего не найдено' : 'Введите запрос или выберите из списка'}</p>
+                <p className={styles.muted}>
+                  {debouncedQ ? 'Ничего не найдено' : 'Введите запрос или выберите из списка'}
+                </p>
               ) : null}
               <ul className={own.resultsList}>
                 {results.map((r) => (
-                  <li key={r.id} style={{ marginBottom: 8 }}>
+                  <li key={r.id}>
                     <button
                       type="button"
-                      className={styles.backLink}
-                      style={{ textAlign: 'left', width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
+                      className={kpStyles.resultPickBtn}
                       onClick={() => void loadProduct(r.id)}
                     >
                       {r.name}
-                      <span className={styles.cardNote} style={{ marginLeft: 8 }}>
-                        {r.slug}
-                      </span>
+                      <span className={styles.mutedInline}> {r.slug}</span>
                     </button>
                   </li>
                 ))}
@@ -220,49 +221,49 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
             </div>
           ) : (
             <div className={own.productBlock}>
-              {loadingDetail ? <p className={styles.cardNote}>Загрузка карточки…</p> : null}
+              {loadingDetail ? <p className={styles.muted}>Загрузка карточки…</p> : null}
               {detail && !loadingDetail ? (
                 <>
                   <p className={own.productName}>{detail.name}</p>
-                  <label className={styles.cardNote} htmlFor="kp-variant-select">
-                    Вариант (SKU)
-                  </label>
-                  <select
+                  <AdminSelect
+                    label="Вариант (SKU)"
                     id="kp-variant-select"
-                    className={styles.input}
                     value={variantId}
                     onChange={(e) => setVariantId(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box' }}
                   >
                     {variantOptions.map((v) => (
                       <option key={v.id} value={v.id}>
                         {(v.variantLabel || v.id).slice(0, 80)} — {v.price} ₽
                       </option>
                     ))}
-                  </select>
+                  </AdminSelect>
                 </>
               ) : null}
             </div>
           )}
-          {error ? <p style={{ color: 'var(--color-red, #c53029)', margin: '8px 0' }}>{error}</p> : null}
+          {error ? (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          ) : null}
         </div>
         <div className={modalStyles.panelFooter}>
           {productId ? (
-            <button type="button" className={styles.btn} onClick={backToSearch}>
+            <AdminCompactBtn type="button" variant="outline" onClick={backToSearch}>
               Назад к поиску
-            </button>
+            </AdminCompactBtn>
           ) : null}
-          <button type="button" className={styles.btn} onClick={onClose}>
+          <AdminCompactBtn type="button" variant="outline" onClick={onClose}>
             Отмена
-          </button>
-          <button
+          </AdminCompactBtn>
+          <AdminCompactBtn
             type="button"
-            className={`${styles.btn} ${styles.btnPrimary}`}
+            variant="accent"
             disabled={!detail || !variantId || applying}
             onClick={() => void confirm()}
           >
             {applying ? 'Применение…' : 'Применить'}
-          </button>
+          </AdminCompactBtn>
         </div>
       </div>
     </div>

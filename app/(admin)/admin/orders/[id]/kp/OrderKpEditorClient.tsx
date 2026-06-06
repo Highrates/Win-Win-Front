@@ -1,31 +1,22 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import type { CommercialProposalApi, CommercialProposalLineApi, CommercialProposalSummaryApi } from '@/lib/commercialProposal/types';
 import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
 import styles from '../../../catalog/catalogAdmin.module.css';
+import kpStyles from './kpEditor.module.css';
 import { kpGrossTotals } from '@/lib/commercialProposal/kpGrossDimensions';
 import { KpGrossDisplay, KpGrossTotalsDisplay } from '@/components/commercialProposal/KpGrossDisplay';
 import { kpLineTotalRub, kpOfferAggregates } from '@/lib/commercialProposal/kpOfferTotals';
 import { OrderKpGrossEditModal } from './OrderKpGrossEditModal';
 import { OrderKpPublishConfirmModal, type NextOrderStatusChoice } from './OrderKpPublishConfirmModal';
 import { OrderKpReplaceModal } from './OrderKpReplaceModal';
-
-const iconBtnStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 4,
-  border: 'none',
-  background: 'transparent',
-  cursor: 'pointer',
-  borderRadius: 4,
-};
 
 function lineTitle(snap: Record<string, unknown> | null): string {
   if (snap && typeof snap.productName === 'string' && snap.productName.trim()) return snap.productName.trim();
@@ -58,24 +49,23 @@ function OfferUnitPriceField({
   value,
   numberLocale,
   onChange,
-  className,
 }: {
   value: number;
   numberLocale: string;
   onChange: (n: number) => void;
-  className?: string;
 }) {
   const formatted = useMemo(() => formatOfferPriceInput(value, numberLocale), [value, numberLocale]);
 
   return (
-    <input
-      className={className}
+    <AdminTextField
+      className={kpStyles.fieldPrice}
+      controlClassName={kpStyles.fieldPrice}
       type="text"
       inputMode="decimal"
       autoComplete="off"
-      style={{ width: 200 }}
       value={formatted}
       onChange={(e) => onChange(parseOfferPriceInput(e.target.value))}
+      aria-label={numberLocale === 'zh-CN' ? '单价' : 'Цена за единицу'}
     />
   );
 }
@@ -248,45 +238,38 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
 
   return (
     <div>
-      <p className={styles.cardNote} style={{ marginBottom: 16 }}>
-        <Link href={`/admin/orders/${encodeURIComponent(orderId)}`} className={styles.backLink}>
-          {d.backList}
-        </Link>
-      </p>
-      <p className={styles.cardNote}>{publishedHint}</p>
+      <p className={styles.muted}>{publishedHint}</p>
       {summary?.draft ? (
-        <p className={styles.cardNote}>
-          Черновик: {summary.draft.lineCount} поз. · обновлён {new Date(summary.draft.updatedAt).toLocaleString(numberLocale)}
+        <p className={styles.muted}>
+          Черновик: {summary.draft.lineCount} поз. · обновлён{' '}
+          {new Date(summary.draft.updatedAt).toLocaleString(numberLocale)}
         </p>
       ) : null}
 
-      {loading ? <p className={styles.cardNote}>Загрузка…</p> : null}
+      {loading ? <p className={styles.muted}>Загрузка…</p> : null}
       {error ? (
-        <p style={{ color: 'var(--color-red, #c53029)' }} role="alert" aria-live="polite">
+        <p className={styles.error} role="alert" aria-live="polite">
           {error}
         </p>
       ) : null}
 
       {needsInit && !loading ? (
-        <div className={styles.section} style={{ marginTop: 16 }}>
-          <p className={styles.cardTitle}>Создать черновик КП из состава заказа</p>
-          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => void initDraft()}>
-            Создать черновик
-          </button>
+        <div className={styles.section}>
+          <h2 className={styles.groupHeading}>Создать черновик КП из состава заказа</h2>
+          <div className={styles.formActions}>
+            <AdminCompactBtn type="button" variant="accent" onClick={() => void initDraft()}>
+              Создать черновик
+            </AdminCompactBtn>
+          </div>
           {summary && summary.published.length > 0 ? (
-            <div style={{ marginTop: 16 }}>
-              <p className={styles.cardNote}>Или скопировать в новый черновик опубликованную версию:</p>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
+            <div className={styles.section}>
+              <p className={styles.muted}>Или скопировать в новый черновик опубликованную версию:</p>
+              <ul className={kpStyles.initCopyList}>
                 {summary.published.map((p) => (
-                  <li key={p.id} style={{ marginBottom: 8 }}>
-                    <button
-                      type="button"
-                      className={styles.backLink}
-                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-                      onClick={() => void initDraft(p.id)}
-                    >
+                  <li key={p.id}>
+                    <AdminCompactBtn type="button" variant="outline" onClick={() => void initDraft(p.id)}>
                       Копия КП v{p.versionNumber} ({p.lineCount} поз.)
-                    </button>
+                    </AdminCompactBtn>
                   </li>
                 ))}
               </ul>
@@ -297,14 +280,14 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
 
       {!loading && !needsInit ? (
         <>
-          <div className={styles.section} style={{ marginTop: 16 }}>
-            <div className={styles.toolbar} style={{ marginBottom: 12 }}>
-              <button type="button" className={styles.btn} disabled={saving} onClick={() => void saveDraft()}>
+          <div className={styles.section}>
+            <div className={`${styles.formActions} ${kpStyles.editorActions}`}>
+              <AdminCompactBtn type="button" variant="outline" disabled={saving} onClick={() => void saveDraft()}>
                 {saving ? 'Сохранение…' : 'Сохранить черновик'}
-              </button>
-              <button
+              </AdminCompactBtn>
+              <AdminCompactBtn
                 type="button"
-                className={`${styles.btn} ${styles.btnPrimary}`}
+                variant="accent"
                 disabled={publishing || lines.length === 0}
                 onClick={() => {
                   setError(null);
@@ -312,10 +295,10 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                 }}
               >
                 {publishing ? d.kpPublishing : d.kpPublish}
-              </button>
+              </AdminCompactBtn>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
+            <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -348,7 +331,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                         </td>
                         <td>
                           {meta.length ? (
-                            <ul className={styles.cardNote} style={{ margin: 0, paddingLeft: 16 }}>
+                            <ul className={`${styles.cardNote} ${kpStyles.itemMetaList}`}>
                               {meta.map((m, k) => (
                                 <li key={k}>
                                   {m.label}: {m.value}
@@ -360,15 +343,11 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                           )}
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                            <KpGrossDisplay
-                              snapshot={snap}
-                              className={styles.cardNote}
-                              style={{ fontSize: '0.8125rem', flex: 1 }}
-                            />
+                          <div className={kpStyles.grossCell}>
+                            <KpGrossDisplay snapshot={snap} className={`${styles.cardNote} ${kpStyles.grossDisplay}`} />
                             <button
                               type="button"
-                              style={{ ...iconBtnStyle, flexShrink: 0 }}
+                              className={kpStyles.iconBtn}
                               aria-label="Редактировать габариты брутто"
                               title="Редактировать габариты брутто"
                               onClick={() => setGrossEditLineIndex(i)}
@@ -378,20 +357,21 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                           </div>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <input
-                              className={styles.input}
+                          <div className={kpStyles.qtyRow}>
+                            <AdminTextField
+                              className={kpStyles.fieldQty}
+                              controlClassName={kpStyles.fieldQty}
                               type="number"
                               min={1}
-                              style={{ width: 72 }}
-                              value={line.quantity}
+                              value={String(line.quantity)}
                               onChange={(e) =>
                                 updateLine(i, { quantity: Math.max(1, parseInt(e.target.value, 10) || 1) })
                               }
+                              aria-label={d.kpQtyPieces}
                             />
-                            <input
-                              className={styles.input}
-                              style={{ width: 56 }}
+                            <AdminTextField
+                              className={kpStyles.fieldUnit}
+                              controlClassName={kpStyles.fieldUnit}
                               value={line.unit}
                               onChange={(e) => updateLine(i, { unit: e.target.value })}
                               aria-label={d.thUnit}
@@ -400,20 +380,19 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                         </td>
                         <td>
                           <OfferUnitPriceField
-                            className={styles.input}
                             value={line.offerUnitPrice}
                             numberLocale={numberLocale}
                             onChange={(n) => updateLine(i, { offerUnitPrice: n })}
                           />
                         </td>
                         <td>
-                          <input
-                            className={styles.input}
+                          <AdminTextField
+                            className={kpStyles.fieldDiscount}
+                            controlClassName={kpStyles.fieldDiscount}
                             type="number"
                             min={0}
                             max={100}
                             step={0.1}
-                            style={{ width: 72 }}
                             value={line.discountPercent ?? ''}
                             placeholder="0"
                             onChange={(e) => {
@@ -422,15 +401,17 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                                 discountPercent: v === '' ? null : parseFloat(v) || 0,
                               });
                             }}
+                            aria-label="Скидка %"
                           />
                         </td>
                         <td>
-                          <input
-                            className={styles.input}
-                            style={{ width: 120 }}
+                          <AdminTextField
+                            className={kpStyles.fieldDelivery}
+                            controlClassName={kpStyles.fieldDelivery}
                             value={line.deliveryEta ?? ''}
                             placeholder="65–80 дн."
                             onChange={(e) => updateLine(i, { deliveryEta: e.target.value || null })}
+                            aria-label="Срок поставки"
                           />
                         </td>
                         <td>
@@ -443,7 +424,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                         <td>
                           <button
                             type="button"
-                            style={iconBtnStyle}
+                            className={kpStyles.iconBtn}
                             aria-label={d.kpBtnReplace}
                             title={d.kpBtnReplace}
                             onClick={() => setReplaceLineIndex(i)}
@@ -457,15 +438,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                   {lines.length > 0 ? (
                     <tr>
                       <td colSpan={8} className={styles.cardNote}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            gap: 24,
-                            flexWrap: 'wrap',
-                          }}
-                        >
+                        <div className={kpStyles.totalsRow}>
                           <div>
                             {grossTotals.hasAny ? (
                               <>
@@ -474,24 +447,16 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
                               </>
                             ) : null}
                           </div>
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 12,
-                              flexWrap: 'wrap',
-                              marginLeft: 'auto',
-                            }}
-                          >
+                          <div className={kpStyles.totalsSum}>
                             <strong>Итого:</strong>
-                            <span className={styles.cardNote} style={{ textDecoration: 'line-through' }}>
+                            <span className={`${styles.cardNote} ${kpStyles.strikeTotal}`}>
                               {new Intl.NumberFormat(numberLocale, {
                                 style: 'currency',
                                 currency: 'RUB',
                                 maximumFractionDigits: 0,
                               }).format(kpTotals.oldTotalRub)}
                             </span>
-                            <span style={{ color: 'var(--color-red)' }}>{avgDiscountPctLabel}</span>
+                            <span className={kpStyles.discountPct}>{avgDiscountPctLabel}</span>
                             <strong>
                               {new Intl.NumberFormat(numberLocale, {
                                 style: 'currency',

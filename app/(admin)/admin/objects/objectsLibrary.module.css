@@ -1,33 +1,5 @@
-/* Вкладка верхнего уровня: витрина / ЛК (сразу под заголовком страницы) */
-.mainScopeTabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0;
-  margin: 0 0 8px;
-  border-bottom: 1px solid var(--account-hairline-color, #e2e6e8);
-}
-
-.mainScopeTab {
-  padding: 10px 16px;
-  margin-bottom: -1px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  font-family: var(--font-commissioner, system-ui);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-gray, #9d9d9d);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.mainScopeTab:hover {
-  color: var(--color-ink-black, #051826);
-}
-
-.mainScopeTabActive {
-  color: var(--color-ink-black, #051826);
-  border-bottom-color: var(--color-ink-black, #051826);
+.tabsSpacer {
+  margin-bottom: 20px;
 }
 
 .layout {
@@ -40,8 +12,10 @@
   width: 240px;
   flex-shrink: 0;
   padding: 14px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 12px;
+  border-width: var(--account-hairline-width);
+  border-style: solid;
+  border-color: var(--account-hairline-color);
   background: var(--color-white, #fff);
 }
 
@@ -189,69 +163,31 @@
   padding: 8px 10px;
   padding-right: 36px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   font-family: var(--font-commissioner, system-ui);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-black, #1a1a1a);
+  font-size: var(--text-body, 15px);
+  font-weight: var(--text-body-weight, 300);
+  color: var(--color-black, #000);
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background-color 0.15s ease;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .folderBtn:hover {
-  background: var(--color-bright-snow, #f5f7f8);
+  background: #e6e6e6;
 }
 
 .folderBtnActive {
-  background: var(--color-bright-snow, #f5f7f8);
-  box-shadow: inset 0 0 0 1px var(--account-hairline-color, #e2e6e8);
+  background: #e6e6e6;
 }
 
 .main {
   flex: 1;
   min-width: 0;
-}
-
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.tab {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--account-hairline-color, #e2e6e8);
-  background: var(--color-white, #fff);
-  font-family: var(--font-commissioner, system-ui);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-black, #1a1a1a);
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.tab:hover {
-  background: var(--color-bright-snow, #f5f7f8);
-}
-
-.tabActive {
-  border-color: var(--color-ink-black, #051826);
-  background: var(--color-ink-black, #051826);
-  color: var(--color-white, #fff);
-}
-
-.tabActive:hover {
-  background: var(--color-ink-black, #051826);
-  opacity: 0.95;
 }
 
 .grid {
@@ -267,15 +203,22 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--color-white, #fff);
-  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-width: var(--account-hairline-width);
+  border-style: solid;
+  border-color: var(--account-hairline-color);
   overflow: hidden;
   transition: box-shadow 0.2s ease;
 }
 
 .objectCard:hover {
   box-shadow: 0 6px 20px rgba(5, 24, 38, 0.08);
+}
+
+.objectCardHeavy {
+  border-width: 1px;
+  border-color: var(--color-red, #ff0000);
 }
 
 .thumbWrap {
@@ -375,10 +318,10 @@
 }
 
 .modalTitle {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-ink-black, #051826);
+  margin: 0 0 12px;
+  font-size: var(--text-card-16-400, 16px);
+  font-weight: 400;
+  color: var(--color-black, #000);
 }
 
 .modalStats {
@@ -432,31 +375,22 @@
 .modalActionsEnd {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   margin-left: auto;
 }
 
 .modalActionsCreate {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-end;
   margin-top: 20px;
 }
 
-.uploadGhost {
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-.uploadGhost img {
+.uploadIcon {
   flex-shrink: 0;
   display: block;
-}
-
-.uploadGhost:hover:not(:disabled) {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  filter: brightness(0) invert(1);
 }
 
 .uploadLabelDisabled {
@@ -465,21 +399,11 @@
   pointer-events: none;
 }
 
-.modalFooterBtn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.modalTBtn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
 .dialogTitle {
   margin: 0 0 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-ink-black, #051826);
+  font-size: var(--text-card-16-400, 16px);
+  font-weight: 400;
+  color: var(--color-black, #000);
 }
 
 /**
@@ -509,4 +433,121 @@
 
 .uploadWrap .uploadFace {
   pointer-events: none;
+  gap: 6px;
+}
+
+.uploadProgressModal {
+  max-width: 520px;
+}
+
+.uploadProgressSummary {
+  margin: 0 0 10px;
+  font-size: 0.875rem;
+  color: var(--color-gray, #9d9d9d);
+}
+
+.uploadProgressBar {
+  height: 6px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  background: var(--color-bright-snow, #f5f7f8);
+  overflow: hidden;
+}
+
+.uploadProgressBarFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-ink-black, #051826);
+  transition: width 0.25s ease;
+}
+
+.uploadProgressList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+}
+
+.uploadProgressItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-bright-snow, #f5f7f8);
+}
+
+.uploadProgressItemDone {
+  background: rgba(5, 120, 80, 0.08);
+}
+
+.uploadProgressItemError {
+  background: rgba(180, 35, 24, 0.08);
+}
+
+.uploadProgressThumb {
+  flex-shrink: 0;
+  width: 48px;
+  height: 36px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-white, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploadProgressThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.uploadProgressThumbPlaceholder {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-gray, #9d9d9d);
+  text-align: center;
+  padding: 4px;
+  line-height: 1.2;
+}
+
+.uploadProgressMeta {
+  min-width: 0;
+  flex: 1;
+}
+
+.uploadProgressName {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-black, #1a1a1a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploadProgressStatus {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--color-gray, #9d9d9d);
+}
+
+.uploadProgressStatusError {
+  color: var(--color-red, #ff0000);
+}
+
+.uploadProgressItemCancelled {
+  opacity: 0.72;
+}
+
+.uploadProgressActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { AdminLocale } from '@/lib/admin-i18n/adminChromeI18n';
 
 export type AdminLocaleContextValue = {
@@ -20,9 +20,8 @@ export function AdminLocaleProvider({
   localeReady: boolean;
   children: ReactNode;
 }) {
-  return (
-    <AdminLocaleContext.Provider value={{ locale, localeReady }}>{children}</AdminLocaleContext.Provider>
-  );
+  const value = useMemo(() => ({ locale, localeReady }), [locale, localeReady]);
+  return <AdminLocaleContext.Provider value={value}>{children}</AdminLocaleContext.Provider>;
 }
 
 export function useAdminLocale(): AdminLocaleContextValue {

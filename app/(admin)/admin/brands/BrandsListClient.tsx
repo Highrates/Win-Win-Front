@@ -1,12 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
+import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminBrandsListStrings } from '@/lib/admin-i18n/adminBrandsListI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
+import {
+  adminQueryKeys,
+  useAdminList,
+  useAdminListSearch,
+  useInvalidateAdminQueries,
+} from '@/lib/adminQuery';
 import styles from '../catalog/catalogAdmin.module.css';
 import type { AdminBrandRow } from './adminBrandTypes';
 
@@ -14,38 +25,27 @@ export function BrandsListClient() {
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminBrandsListStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
-  const [q, setQ] = useState('');
-  const [debouncedQ, setDebouncedQ] = useState('');
-  const [rows, setRows] = useState<AdminBrandRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const invalidate = useInvalidateAdminQueries();
+  const { confirm } = useAdminConfirm();
+
+  const { q, setQ, debouncedQ, page, setPage } = useAdminListSearch();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const { rows, total, limit, loading, isFetching, error: listError, refetch } = useAdminList<AdminBrandRow>({
+    queryKey: adminQueryKeys.brands.list({ q: debouncedQ, page }),
+    path: 'catalog/admin/brands',
+    page,
+    q: debouncedQ,
+    errorFallback: c.errLoad,
+  });
+
+  const error = mutationError ?? listError;
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q.trim()), 300);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = debouncedQ ? `?q=${encodeURIComponent(debouncedQ)}` : '';
-      const data = await adminBackendJson<AdminBrandRow[]>(`catalog/admin/brands${params}`);
-      setRows(data);
-      setSelected(new Set());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : c.errLoad);
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedQ, c.errLoad]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+    setSelected(new Set());
+  }, [debouncedQ]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -65,80 +65,85 @@ export function BrandsListClient() {
 
   async function removeSelected() {
     if (!selected.size) return;
-    const ok = window.confirm(s.confirmDelete(selected.size));
-    if (!ok) return;
+    if (!(await confirm({ title: s.confirmDelete(selected.size) }))) return;
     setDeleting(true);
-    setError(null);
+    setMutationError(null);
     try {
       const res = await adminBackendJson<{ deleted: string[]; skipped: string[] }>(
         'catalog/admin/brands/bulk-delete',
         {
           method: 'POST',
           body: JSON.stringify({ ids: Array.from(selected) }),
-        }
+        },
       );
       if (res.skipped.length) {
-        setError(s.partialDelete(res.skipped.length, res.deleted.length));
-      } else {
-        setError(null);
+        setMutationError(s.partialDelete(res.skipped.length, res.deleted.length));
       }
-      await load();
+      setSelected(new Set());
+      await invalidate(adminQueryKeys.brands.all);
     } catch (e) {
-      setError(e instanceof Error ? e.message : c.errDelete);
+      setMutationError(e instanceof Error ? e.message : c.errDelete);
     } finally {
       setDeleting(false);
     }
   }
 
   return (
-    <>
-      <div className={styles.toolbar}>
-        <input
-          type="search"
-          className={styles.search}
-          placeholder={s.searchPlaceholder}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          aria-label={s.searchAria}
-        />
-        <Link href="/admin/brands/new" className={`${styles.btn} ${styles.btnPrimary}`}>
-          {s.addBrand}
-        </Link>
-        <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
-          {rows.length > 0 ? (
-            <>
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
-              >
-                {s.selectAll}
-              </button>
-              <button type="button" className={styles.btn} onClick={() => setSelected(new Set())}>
-                {s.clearSelection}
-              </button>
-            </>
-          ) : null}
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnDanger}`}
-            disabled={!selected.size || deleting}
-            onClick={removeSelected}
-          >
-            {deleting ? s.deleteBusy : s.deleteWithCount(selected.size)}
-          </button>
+      <AdminListShell
+      loading={loading}
+      error={error}
+      onRetry={() => void refetch()}
+      loadingLabel={c.loading}
+      empty={s.empty}
+      isEmpty={!loading && !error && rows.length === 0}
+      isFetching={isFetching}
+      toolbar={
+        <div className={styles.toolbar}>
+          <AdminSearchBox
+            className={styles.searchBoxToolbar}
+            placeholder={s.searchPlaceholder}
+            ariaLabel={s.searchAria}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <AdminCompactBtnLink href="/admin/brands/new">{s.addBrand}</AdminCompactBtnLink>
+          <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
+            {rows.length > 0 ? (
+              <>
+                <AdminCompactBtn
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
+                >
+                  {s.selectAll}
+                </AdminCompactBtn>
+                <AdminCompactBtn type="button" variant="outline" onClick={() => setSelected(new Set())}>
+                  {s.clearSelection}
+                </AdminCompactBtn>
+              </>
+            ) : null}
+            <AdminCompactBtn
+              type="button"
+              variant="danger"
+              disabled={!selected.size || deleting}
+              onClick={removeSelected}
+            >
+              {deleting ? s.deleteBusy : s.deleteWithCount(selected.size)}
+            </AdminCompactBtn>
+          </div>
         </div>
-      </div>
-
-      {error ? <p className={styles.error}>{error}</p> : null}
-
-      {loading ? (
-        <p className={styles.muted}>{c.loading}</p>
-      ) : rows.length === 0 ? (
-        <p className={styles.muted}>{s.empty}</p>
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+      }
+      pagination={
+        <AdminListPagination
+          page={page}
+          total={total}
+          limit={limit}
+          onPageChange={setPage}
+          disabled={isFetching}
+        />
+      }
+    >
+      <table className={styles.table}>
             <thead>
               <tr>
                 <th style={{ width: 44 }}>
@@ -180,8 +185,6 @@ export function BrandsListClient() {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-    </>
+    </AdminListShell>
   );
 }

@@ -10,7 +10,7 @@ export default async function AccountLayout({
 }) {
   const session = await getServerUserSession();
   if (!session.authenticated) {
-    redirect('/login/email');
+    redirect('/api/user/clear-session?then=%2Flogin%2Femail');
   }
   return (
     <main>

@@ -3,16 +3,26 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
+import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrdersStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
-import { ADMIN_COMPLETED_STATUSES, ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
+import { ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
 import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
+import {
+  adminQueryKeys,
+  useAdminList,
+  useAdminListSearch,
+  useInvalidateAdminQueries,
+} from '@/lib/adminQuery';
 import styles from '../catalog/catalogAdmin.module.css';
-import tabStyles from '../adminTabs.module.css';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
 
 export type AdminOrdersBucket = 'new' | 'active' | 'completed';
 
@@ -127,12 +137,9 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   );
 
   const [bucketIndex, setBucketIndex] = useState(0);
-  const [page, setPage] = useState(1);
-  const [q, setQ] = useState('');
-  const [qActive, setQActive] = useState('');
-  const [data, setData] = useState<ListResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { q, setQ, debouncedQ, page, setPage } = useAdminListSearch(300, [bucketIndex, filterUserId]);
+  const invalidate = useInvalidateAdminQueries();
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<Record<string, ActiveOrderStatus>>({});
   const [unreadSummary, setUnreadSummary] = useState<ChatUnreadBuckets | null>(null);
@@ -161,6 +168,48 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   }, [loadUnreadSummary]);
 
   const bucket = BUCKETS[bucketIndex] ?? 'new';
+  const listParams = useMemo(
+    () => ({
+      page,
+      q: debouncedQ,
+      bucket,
+      userId: filterUserId?.trim() || undefined,
+    }),
+    [page, debouncedQ, bucket, filterUserId],
+  );
+
+  const {
+    rows,
+    data,
+    total,
+    limit,
+    loading,
+    isFetching,
+    error: listError,
+    refetch,
+  } = useAdminList<AdminOrderRow>({
+    queryKey: adminQueryKeys.orders.list(listParams),
+    page,
+    q: debouncedQ,
+    limit: 20,
+    errorFallback: s.errLoad,
+    queryFn: async () => {
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: '20',
+        bucket,
+      });
+      if (debouncedQ) qs.set('q', debouncedQ);
+      if (filterUserId?.trim()) qs.set('userId', filterUserId.trim());
+      return adminBackendJson<ListResponse>(`orders/admin?${qs}`);
+    },
+  });
+
+  const error = mutationError ?? listError;
+
+  useEffect(() => {
+    setDraftStatus({});
+  }, [data]);
 
   useEffect(() => {
     if (filterUserId?.trim() || embedded) return;
@@ -168,37 +217,11 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
     setBucketIndex(i);
   }, [embedded, filterUserId, searchParams]);
 
-  const load = useCallback(
-    async (p: number, search: string, b: AdminOrdersBucket) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const qs = new URLSearchParams({
-          page: String(p),
-          limit: '20',
-          bucket: b,
-        });
-        if (search.trim()) qs.set('q', search.trim());
-        if (filterUserId?.trim()) qs.set('userId', filterUserId.trim());
-        const res = await adminBackendJson<ListResponse>(`orders/admin?${qs}`);
-        setData(res);
-        setDraftStatus({});
-        void loadUnreadSummary();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : s.errLoad);
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [s.errLoad, filterUserId, loadUnreadSummary],
-  );
-
   useEffect(() => {
-    void load(page, qActive, bucket);
-  }, [load, page, qActive, bucket]);
+    void loadUnreadSummary();
+  }, [loadUnreadSummary, data]);
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   function statusForActiveRow(row: AdminOrderRow): ActiveOrderStatus {
     const d = draftStatus[row.id];
@@ -210,30 +233,27 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
 
   async function saveActiveStatus(orderId: string, status: ActiveOrderStatus) {
     setSavingId(orderId);
-    setError(null);
+    setMutationError(null);
     try {
       await adminBackendJson(`orders/admin/${orderId}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       });
-      const next = { ...draftStatus };
-      delete next[orderId];
-      setDraftStatus(next);
-      await load(page, qActive, bucket);
+      setDraftStatus((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      await invalidate(adminQueryKeys.orders.all);
       if (typeof document !== 'undefined') {
         document.dispatchEvent(new Event('admin-orders-pending-refresh'));
         document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : s.errSaveStatus);
+      setMutationError(e instanceof Error ? e.message : s.errSaveStatus);
     } finally {
       setSavingId(null);
     }
-  }
-
-  function applySearch() {
-    setPage(1);
-    setQActive(q);
   }
 
   function onSelectTab(index: number) {
@@ -247,171 +267,176 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
 
   return (
     <>
-      <div className={tabStyles.tabs} role="tablist" aria-label={s.tabsAria}>
-        {tabLabels.map((label, index) => {
+      <AdminTabs
+        variant={embedded ? 'pill' : 'underline'}
+        ariaLabel={s.tabsAria}
+        items={tabLabels.map((label, index) => {
           const b = BUCKETS[index] ?? 'new';
           const uc = bucketUnreadFor(unreadSummary, b);
-          return (
-            <button
-              key={BUCKETS[index]}
-              type="button"
-              role="tab"
-              aria-selected={bucketIndex === index}
-              className={`${tabStyles.tabBtn} ${bucketIndex === index ? tabStyles.tabBtnActive : ''}`}
-              onClick={() => onSelectTab(index)}
-            >
-              {label}
-              {uc > 0 ? ` (${uc})` : ''}
-            </button>
-          );
+          return {
+            id: index,
+            label: (
+              <>
+                {label}
+                {uc > 0 ? ` (${uc})` : ''}
+              </>
+            ),
+          };
         })}
-      </div>
+        activeId={bucketIndex}
+        onChange={onSelectTab}
+      />
 
-      {!filterUserId?.trim() ? (
-        <div className={styles.toolbar} style={embedded ? { marginBottom: 12 } : undefined}>
-          <input
-            type="search"
-            className={styles.search}
-            placeholder={s.searchPh}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') applySearch();
-            }}
-            aria-label={s.searchPh}
-          />
-          <button type="button" className={styles.btn} onClick={applySearch}>
-            {s.find}
-          </button>
-        </div>
-      ) : null}
-
-      {error ? <p className={styles.error}>{error}</p> : null}
-
-      {loading && !data ? <p className={styles.muted}>{c.loading}</p> : null}
-
-      {!loading && data?.items.length === 0 ? <p className={styles.muted}>{s.empty}</p> : null}
-
-      {data && data.items.length > 0 ? (
-        <div className={styles.tableWrap} style={loading ? { opacity: 0.65 } : undefined}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{s.thDate}</th>
-                <th>{s.thOrder}</th>
-                <th>{s.thClient}</th>
-                <th>{s.thSum}</th>
-                <th>{s.thStatus}</th>
-                {bucket === 'active' ? <th aria-label={s.save} /> : null}
-                <th scope="col" aria-label={s.thChat} style={{ width: 52, textAlign: 'center' }} />
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((row) => {
-                const hasChat = Boolean(row.hasChatMessages);
-                const unread = row.unreadCustomerChatCount ?? 0;
-                const isNew = bucket === 'new';
-                const isActive = bucket === 'active';
-                const isCompleted = bucket === 'completed';
-                const currentActive = statusForActiveRow(row);
-                const dirtyActive = isActive && currentActive !== row.status;
-                return (
-                  <tr key={row.id}>
-                    <td>{formatAdminOrderDateTime(row.createdAt, locale)}</td>
-                    <td>
-                      <Link href={`/admin/orders/${row.id}`} className={styles.backLink} title={row.id}>
-                        <code style={{ fontSize: '0.8125rem' }}>{formatOrderDisplayId(row.id)}</code>
-                      </Link>
-                      <div className={styles.cardNote} style={{ marginTop: 6 }}>
-                        {s.itemsCount(row.items.length)}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={styles.cardTitle} style={{ fontSize: '0.9375rem' }}>
-                        {clientListLabel(row)}
-                      </span>
-                      <div className={styles.cardNote} style={{ marginTop: 4 }}>
-                        {row.user.email || '—'}
-                        {row.user.phone ? (
-                          <>
-                            <br />
-                            {row.user.phone}
-                          </>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td>{formatMoney(row.totalAmount, row.currency, numberLocale)}</td>
-                    <td>
-                      {isNew ? (
-                        <span className={styles.cardNote}>{statusLabels.PENDING_APPROVAL}</span>
-                      ) : isCompleted ? (
-                        <span className={styles.cardNote}>{statusLabels[row.status] ?? row.status}</span>
-                      ) : (
-                        <select
-                          className={styles.input}
-                          value={currentActive}
-                          onChange={(e) =>
-                            setDraftStatus((d) => ({
-                              ...d,
-                              [row.id]: e.target.value as ActiveOrderStatus,
-                            }))
-                          }
-                          aria-label={s.thStatus}
-                        >
-                          {ADMIN_ACTIVE_BUCKET_STATUS_OPTIONS.map((st) => (
-                            <option key={st} value={st}>
-                              {statusLabels[st]}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                    {isActive ? (
-                      <td>
-                        <button
-                          type="button"
-                          disabled={!dirtyActive || savingId === row.id}
-                          className={styles.btn}
-                          onClick={() => void saveActiveStatus(row.id, currentActive)}
-                        >
-                          {savingId === row.id ? s.saving : s.save}
-                        </button>
-                      </td>
-                    ) : null}
-                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                      <Link
-                        href={`/admin/orders/${row.id}#order-chat`}
-                        className={styles.backLink}
-                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                        title={s.thChat}
-                        aria-label={
-                          unread > 0
-                            ? `${s.thChat}: ${formatOrderDisplayId(row.id)}, ${unread} непрочитано`
-                            : `${s.thChat}: ${formatOrderDisplayId(row.id)}`
+      <AdminListShell
+        loading={loading}
+        error={error}
+        onRetry={() => void refetch()}
+        loadingLabel={c.loading}
+        empty={s.empty}
+        isEmpty={!loading && !error && rows.length === 0}
+        isFetching={isFetching}
+        toolbar={
+          !filterUserId?.trim() ? (
+            <div className={styles.toolbar} style={embedded ? { marginBottom: 12 } : undefined}>
+              <AdminSearchBox
+                className={styles.searchBoxToolbar}
+                placeholder={s.searchPh}
+                ariaLabel={s.searchPh}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+          ) : undefined
+        }
+        pagination={
+          totalPages > 1 ? (
+            <div className={styles.toolbar} style={{ marginTop: 16 }}>
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                disabled={page <= 1 || isFetching}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                {s.back}
+              </AdminCompactBtn>
+              <span className={styles.cardNote}>{s.pageOf(page, totalPages, total)}</span>
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                disabled={page >= totalPages || isFetching}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {s.forward}
+              </AdminCompactBtn>
+            </div>
+          ) : null
+        }
+      >
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>{s.thDate}</th>
+              <th>{s.thOrder}</th>
+              <th>{s.thClient}</th>
+              <th>{s.thSum}</th>
+              <th>{s.thStatus}</th>
+              {bucket === 'active' ? <th aria-label={s.save} /> : null}
+              <th scope="col" aria-label={s.thChat} style={{ width: 52, textAlign: 'center' }} />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const hasChat = Boolean(row.hasChatMessages);
+              const unread = row.unreadCustomerChatCount ?? 0;
+              const isNew = bucket === 'new';
+              const isActive = bucket === 'active';
+              const isCompleted = bucket === 'completed';
+              const currentActive = statusForActiveRow(row);
+              const dirtyActive = isActive && currentActive !== row.status;
+              return (
+                <tr key={row.id}>
+                  <td>{formatAdminOrderDateTime(row.createdAt, locale)}</td>
+                  <td>
+                    <Link href={`/admin/orders/${row.id}`} className={styles.backLink} title={row.id}>
+                      <code style={{ fontSize: '0.8125rem' }}>{formatOrderDisplayId(row.id)}</code>
+                    </Link>
+                    <div className={styles.cardNote} style={{ marginTop: 6 }}>
+                      {s.itemsCount(row.items.length)}
+                    </div>
+                  </td>
+                  <td>
+                    <span className={styles.cardTitle} style={{ fontSize: '0.9375rem' }}>
+                      {clientListLabel(row)}
+                    </span>
+                    <div className={styles.cardNote} style={{ marginTop: 4 }}>
+                      {row.user.email || '—'}
+                      {row.user.phone ? (
+                        <>
+                          <br />
+                          {row.user.phone}
+                        </>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td>{formatMoney(row.totalAmount, row.currency, numberLocale)}</td>
+                  <td>
+                    {isNew ? (
+                      <span className={styles.cardNote}>{statusLabels.PENDING_APPROVAL}</span>
+                    ) : isCompleted ? (
+                      <span className={styles.cardNote}>{statusLabels[row.status] ?? row.status}</span>
+                    ) : (
+                      <AdminSelect
+                        className={styles.tableCellSelect}
+                        value={currentActive}
+                        onChange={(e) =>
+                          setDraftStatus((d) => ({
+                            ...d,
+                            [row.id]: e.target.value as ActiveOrderStatus,
+                          }))
                         }
+                        aria-label={s.thStatus}
                       >
-                        <OrderChatGlyph muted={!hasChat && unread === 0} unreadCount={unread} />
-                      </Link>
+                        {ADMIN_ACTIVE_BUCKET_STATUS_OPTIONS.map((st) => (
+                          <option key={st} value={st}>
+                            {statusLabels[st]}
+                          </option>
+                        ))}
+                      </AdminSelect>
+                    )}
+                  </td>
+                  {isActive ? (
+                    <td>
+                      <AdminCompactBtn
+                        type="button"
+                        variant="accent"
+                        disabled={!dirtyActive || savingId === row.id}
+                        onClick={() => void saveActiveStatus(row.id, currentActive)}
+                      >
+                        {savingId === row.id ? s.saving : s.save}
+                      </AdminCompactBtn>
                     </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
-
-      {data && totalPages > 1 ? (
-        <div className={styles.toolbar} style={{ marginTop: 16 }}>
-          <button type="button" className={styles.btn} disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-            {s.back}
-          </button>
-          <span className={styles.cardNote}>{s.pageOf(page, totalPages, data.total)}</span>
-          <button type="button" className={styles.btn} disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            {s.forward}
-          </button>
-        </div>
-      ) : null}
+                  ) : null}
+                  <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                    <Link
+                      href={`/admin/orders/${row.id}#order-chat`}
+                      className={styles.backLink}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      title={s.thChat}
+                      aria-label={
+                        unread > 0
+                          ? `${s.thChat}: ${formatOrderDisplayId(row.id)}, ${unread} непрочитано`
+                          : `${s.thChat}: ${formatOrderDisplayId(row.id)}`
+                      }
+                    >
+                      <OrderChatGlyph muted={!hasChat && unread === 0} unreadCount={unread} />
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </AdminListShell>
     </>
   );
 }

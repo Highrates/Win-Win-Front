@@ -3,10 +3,14 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { adminBackendFetch } from '@/lib/adminBackendFetch';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
+import { adminDetailErrorFromBackend, adminQueryErrorFromBackend } from '@/lib/adminQuery';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminApplicationDetailPage } from '@/lib/admin-i18n/adminMiscPagesI18n';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
+import clientsStyles from '../../clients/clients.module.css';
 import appStyles from '../applications.module.css';
 
 type DetailCopy = ReturnType<typeof adminApplicationDetailPage>;
@@ -33,11 +37,7 @@ function formatName(p: UserPayload['profile'] | undefined): string {
   return t || '—';
 }
 
-function formatAt(
-  iso: string | null | undefined,
-  loc: 'ru' | 'zh',
-  empty: string,
-) {
+function formatAt(iso: string | null | undefined, loc: 'ru' | 'zh', empty: string) {
   if (!iso) return empty;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return empty;
@@ -46,6 +46,7 @@ function formatAt(
 
 export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }) {
   const router = useRouter();
+  const { confirm } = useAdminConfirm();
   const { locale: adminLoc } = useAdminLocale();
   const consLocale: 'ru' | 'zh' = adminLoc === 'zh' ? 'zh' : 'ru';
   const [data, setData] = useState<UserPayload | null>(null);
@@ -59,23 +60,9 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/backend/users/admin/${encodeURIComponent(id)}`, {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      if (res.status === 404) {
-        setError(t.notFound);
-        setData(null);
-        return;
-      }
-      if (!res.ok) {
-        setError(t.errLoad);
-        setData(null);
-        return;
-      }
-      setData((await res.json()) as UserPayload);
-    } catch {
-      setError(t.errLoad);
+      setData(await adminBackendJson<UserPayload>(`users/admin/${encodeURIComponent(id)}`));
+    } catch (e) {
+      setError(adminDetailErrorFromBackend(e, { fallback: t.errLoad, notFound: t.notFound }));
       setData(null);
     } finally {
       setLoading(false);
@@ -93,8 +80,7 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
   const exempt = Boolean(data?.referralInviteCodeExempt);
   const approved = Boolean(p?.winWinPartnerApproved);
   const rejected = Boolean(p?.partnerApplicationRejectedAt);
-  const pendingReview =
-    Boolean(p?.partnerApplicationSubmittedAt) && !approved && !rejected;
+  const pendingReview = Boolean(p?.partnerApplicationSubmittedAt) && !approved && !rejected;
   const showActionButtons = Boolean(data && pendingReview);
 
   useEffect(() => {
@@ -103,11 +89,9 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch(
-          `/api/admin/backend/users/admin/by-winwin-referral-code/resolve?code=${encodeURIComponent(refCode)}`,
-          { credentials: 'same-origin', cache: 'no-store' },
+        const j = await adminBackendJson<{ userId?: string | null }>(
+          `users/admin/by-winwin-referral-code/resolve?code=${encodeURIComponent(refCode)}`,
         );
-        const j = (await res.json().catch(() => ({}))) as { userId?: string | null };
         if (!cancelled) setInviterUserId(typeof j.userId === 'string' ? j.userId : null);
       } catch {
         if (!cancelled) setInviterUserId(null);
@@ -123,18 +107,14 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
     setActionId('accept');
     setActionError(null);
     try {
-      const res = await adminBackendFetch(
+      await adminBackendJson(
         `users/admin/partner-applications/${encodeURIComponent(data.id)}/approve`,
         { method: 'POST', body: '{}' },
       );
-      if (!res.ok) {
-        setActionError(t.errAccept);
-        return;
-      }
       document.dispatchEvent(new Event('admin-partner-pending-refresh'));
       router.push('/admin/applications');
-    } catch {
-      setActionError(t.errAccept);
+    } catch (e) {
+      setActionError(adminQueryErrorFromBackend(e, t.errAccept));
     } finally {
       setActionId(null);
     }
@@ -142,55 +122,53 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
 
   async function doReject() {
     if (!data) return;
-    if (!window.confirm(t.rejectConfirm)) return;
+    if (!(await confirm({ title: t.rejectConfirm, confirmLabel: t.reject }))) return;
     setActionId('reject');
     setActionError(null);
     try {
-      const res = await adminBackendFetch(
+      await adminBackendJson(
         `users/admin/partner-applications/${encodeURIComponent(data.id)}/reject`,
         { method: 'POST', body: '{}' },
       );
-      if (!res.ok) {
-        setActionError(t.errReject);
-        return;
-      }
       document.dispatchEvent(new Event('admin-partner-pending-refresh'));
       router.push('/admin/applications');
-    } catch {
-      setActionError(t.errReject);
+    } catch (e) {
+      setActionError(adminQueryErrorFromBackend(e, t.errReject));
     } finally {
       setActionId(null);
     }
   }
 
   return (
-    <main className={catalogStyles.panel}>
-      <p>
+      <main>
+      <p className={catalogStyles.backRow}>
         <Link className={catalogStyles.backLink} href="/admin/applications">
           {t.back}
         </Link>
       </p>
-      <h1>{t.title}</h1>
+      <h1 className={catalogStyles.title}>{t.title}</h1>
+
       {showActionButtons ? (
-        <div className={appStyles.detailActions}>
-          <button
+        <div className={catalogStyles.formActions}>
+          <AdminCompactBtn
             type="button"
-            className={catalogStyles.btn}
+            variant="accent"
             disabled={actionId !== null}
             onClick={() => void doAccept()}
           >
             {actionId === 'accept' ? '…' : t.accept}
-          </button>
-          <button
+          </AdminCompactBtn>
+          <AdminCompactBtn
             type="button"
-            className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+            variant="danger"
             disabled={actionId !== null}
             onClick={() => void doReject()}
           >
             {actionId === 'reject' ? '…' : t.reject}
-          </button>
+          </AdminCompactBtn>
         </div>
       ) : null}
+
       {actionError ? (
         <p className={catalogStyles.error} role="alert">
           {actionError}
@@ -202,6 +180,7 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
           {error}
         </p>
       ) : null}
+
       {data && !error ? (
         <div className={appStyles.detailRoot}>
           <p>
@@ -213,9 +192,9 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
             </Link>
           </p>
 
-          <div className={appStyles.detailBlock}>
-            <h2 className={appStyles.detailBlockTitle}>{t.metaTitle}</h2>
-            <dl className={appStyles.detailDl}>
+          <section>
+            <h2 className={catalogStyles.groupHeading}>{t.metaTitle}</h2>
+            <dl className={clientsStyles.detailList}>
               <div>
                 <dt>{t.labelEmail}</dt>
                 <dd>{data.email?.trim() || '—'}</dd>
@@ -226,16 +205,12 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
               </div>
               <div>
                 <dt>{t.labelSubmitted}</dt>
-                <dd>
-                  {formatAt(p?.partnerApplicationSubmittedAt, consLocale, '—')}
-                </dd>
+                <dd>{formatAt(p?.partnerApplicationSubmittedAt, consLocale, '—')}</dd>
               </div>
               {p?.partnerApplicationRejectedAt ? (
                 <div>
                   <dt>{t.labelRejected}</dt>
-                  <dd>
-                    {formatAt(p.partnerApplicationRejectedAt, consLocale, '—')}
-                  </dd>
+                  <dd>{formatAt(p.partnerApplicationRejectedAt, consLocale, '—')}</dd>
                 </div>
               ) : null}
               <div>
@@ -243,15 +218,15 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
                 <dd>{approved ? t.statusApproved : t.statusPending}</dd>
               </div>
             </dl>
-          </div>
+          </section>
 
-          <div className={appStyles.detailBlock}>
-            <h2 className={appStyles.detailBlockTitle}>{t.aboutTitle}</h2>
+          <section>
+            <h2 className={catalogStyles.groupHeading}>{t.aboutTitle}</h2>
             <p className={appStyles.detailText}>{cover || '—'}</p>
-          </div>
+          </section>
 
-          <div className={appStyles.detailBlock}>
-            <h2 className={appStyles.detailBlockTitle}>{t.refTitle}</h2>
+          <section>
+            <h2 className={catalogStyles.groupHeading}>{t.refTitle}</h2>
             {exempt ? (
               <p className={appStyles.detailText}>{t.refExempt}</p>
             ) : (
@@ -268,7 +243,7 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
                   ) : (
                     <>
                       {refCode}{' '}
-                      <span className={catalogStyles.muted}>(приглашающий не найден)</span>
+                      <span className={catalogStyles.mutedInline}>(приглашающий не найден)</span>
                     </>
                   )
                 ) : (
@@ -276,10 +251,10 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
                 )}
               </p>
             )}
-          </div>
+          </section>
 
-          <div className={appStyles.detailBlock}>
-            <h2 className={appStyles.detailBlockTitle}>{t.cvTitle}</h2>
+          <section>
+            <h2 className={catalogStyles.groupHeading}>{t.cvTitle}</h2>
             {cv ? (
               <a href={cv} target="_blank" rel="noreferrer" className={catalogStyles.backLink}>
                 {t.openCv}
@@ -287,7 +262,7 @@ export function ApplicationDetailClient({ id, t }: { id: string; t: DetailCopy }
             ) : (
               <p className={appStyles.detailText}>{t.noCv}</p>
             )}
-          </div>
+          </section>
         </div>
       ) : null}
     </main>

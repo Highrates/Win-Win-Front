@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AdminCategoryRow } from '../../catalog/categories/adminCategoryTypes';
 import type { PricingProfileRow } from '../pricingAdminTypes';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminPillChip, AdminPillChipList } from '@/components/AdminPillChip/AdminPillChip';
+import { AdminSelect, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendFetch, adminBackendJson } from '@/lib/adminBackendFetch';
 import { adminPricingStrings } from '@/lib/admin-i18n/adminPricingI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
-import pn from '../../catalog/products/new/productNew.module.css';
 import styles from './pricingSettings.module.css';
 
 const ALL_CATEGORIES_VALUE = '__ALL__';
@@ -93,6 +96,7 @@ function defaultContainerMaxLimits(containerType: '40' | '20'): { kg: string; m3
 export function PricingSettingsClient() {
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminPricingStrings(locale), [locale]);
+  const { confirm } = useAdminConfirm();
   const sortLocale = locale === 'zh' ? 'zh' : 'ru';
 
   const [profiles, setProfiles] = useState<PricingProfileRow[]>([]);
@@ -103,7 +107,7 @@ export function PricingSettingsClient() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(() => emptyForm());
-  const [catSelectKey, setCatSelectKey] = useState(0);
+  const [catPick, setCatPick] = useState('');
   const [containerModalOpen, setContainerModalOpen] = useState(false);
   const [modalWeight, setModalWeight] = useState('');
   const [modalVolume, setModalVolume] = useState('');
@@ -151,7 +155,7 @@ export function PricingSettingsClient() {
     setForm(emptyForm());
     setSaveError(null);
     setConflictCategoryIds([]);
-    setCatSelectKey((k) => k + 1);
+    setCatPick('');
   }
 
   function startEdit(p: PricingProfileRow) {
@@ -159,7 +163,7 @@ export function PricingSettingsClient() {
     setForm(profileToForm(p));
     setSaveError(null);
     setConflictCategoryIds([]);
-    setCatSelectKey((k) => k + 1);
+    setCatPick('');
   }
 
   function addCategoryFromDropdown(raw: string) {
@@ -176,7 +180,7 @@ export function PricingSettingsClient() {
         return { ...prev, categoryIds: next };
       });
     }
-    setCatSelectKey((k) => k + 1);
+    setCatPick('');
   }
 
   function removeCategoryChip(id: string) {
@@ -322,7 +326,7 @@ export function PricingSettingsClient() {
   }
 
   async function remove(id: string) {
-    if (!confirm(s.confirmDeleteProfile)) return;
+    if (!(await confirm({ title: s.confirmDeleteProfile }))) return;
     setSaveError(null);
     try {
       await adminBackendJson(`catalog/admin/pricing-profiles/${id}`, { method: 'DELETE' });
@@ -337,7 +341,7 @@ export function PricingSettingsClient() {
     form.containerMaxWeightKg.trim() !== '' || form.containerMaxVolumeM3.trim() !== '';
 
   return (
-    <div className={styles.layout}>
+      <div className={styles.layout}>
       {loadError ? <p className={catalogStyles.error}>{loadError}</p> : null}
 
       {containerModalOpen ? (
@@ -352,48 +356,38 @@ export function PricingSettingsClient() {
             aria-labelledby="container-modal-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="container-modal-title" className={styles.modalTitle}>
+            <h3 id="container-modal-title" className={`${catalogStyles.groupHeading} ${styles.panelHeading}`}>
               {s.containerParams}
             </h3>
-            <label className={catalogStyles.label}>
-              {s.maxWeight}
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={modalWeight}
-                onChange={(e) => setModalWeight(e.target.value)}
-              />
-            </label>
-            <label className={catalogStyles.label}>
-              {s.maxVol}
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={modalVolume}
-                onChange={(e) => setModalVolume(e.target.value)}
-              />
-            </label>
-            <div className={styles.modalActions}>
-              <button type="button" className={catalogStyles.btn} onClick={applyContainerModal}>
+            <AdminTextField
+              label={s.maxWeight}
+              inputMode="decimal"
+              value={modalWeight}
+              onChange={(e) => setModalWeight(e.target.value)}
+            />
+            <AdminTextField
+              label={s.maxVol}
+              inputMode="decimal"
+              value={modalVolume}
+              onChange={(e) => setModalVolume(e.target.value)}
+            />
+            <div className={catalogStyles.formActions}>
+              <AdminCompactBtn variant="accent" type="button" onClick={applyContainerModal}>
                 {s.save}
-              </button>
-              <button
+              </AdminCompactBtn>
+              <AdminCompactBtn
                 type="button"
-                className={catalogStyles.btn}
+                variant="outline"
                 onClick={() => {
                   setModalWeight('');
                   setModalVolume('');
                 }}
               >
                 {s.clearFields}
-              </button>
-              <button
-                type="button"
-                className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                onClick={() => setContainerModalOpen(false)}
-              >
+              </AdminCompactBtn>
+              <AdminCompactBtn type="button" variant="outline" onClick={() => setContainerModalOpen(false)}>
                 {s.cancel}
-              </button>
+              </AdminCompactBtn>
             </div>
           </div>
         </div>
@@ -402,10 +396,10 @@ export function PricingSettingsClient() {
       <div className={styles.grid}>
         <section className={styles.listPanel}>
           <div className={styles.listHeader}>
-            <h2 className={styles.h2}>{s.profiles}</h2>
-            <button type="button" className={catalogStyles.btn} onClick={startNew}>
+            <h2 className={`${catalogStyles.groupHeading} ${styles.panelHeading}`}>{s.profiles}</h2>
+            <AdminCompactBtn type="button" onClick={startNew}>
               {s.newProfile}
-            </button>
+            </AdminCompactBtn>
           </div>
           <ul className={styles.profileList}>
             {profiles.map((p) => (
@@ -420,13 +414,14 @@ export function PricingSettingsClient() {
                     {s.containerBit(p.containerType, p.categoryIds.length)}
                   </span>
                 </button>
-                <button
+                <AdminCompactBtn
                   type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger} ${styles.btnDelete}`}
+                  variant="danger"
+                  className={styles.btnDelete}
                   onClick={() => remove(p.id)}
                 >
                   {s.delete}
-                </button>
+                </AdminCompactBtn>
               </li>
             ))}
           </ul>
@@ -434,99 +429,87 @@ export function PricingSettingsClient() {
         </section>
 
         <section className={styles.formPanel}>
-          <h2 className={styles.h2}>{editingId ? s.editTitle : s.newTitle}</h2>
+          <h2 className={`${catalogStyles.groupHeading} ${styles.panelHeading}`}>
+            {editingId ? s.editTitle : s.newTitle}
+          </h2>
           {saveError ? <p className={catalogStyles.error}>{saveError}</p> : null}
 
           <form className={styles.form} onSubmit={save}>
-            <label className={catalogStyles.label}>
-              {s.nameAdmin}
-              <input
-                className={catalogStyles.input}
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder={s.namePh}
-              />
-            </label>
+            <AdminTextField
+              label={s.nameAdmin}
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder={s.namePh}
+            />
 
-            <fieldset className={styles.fieldset}>
-              <legend>{s.legendCats}</legend>
-              <div className={pn.additionalCatsWrap}>
-                <label className={catalogStyles.label}>
-                  {s.addCat}
-                  <select
-                    key={catSelectKey}
-                    className={catalogStyles.input}
-                    defaultValue=""
-                    aria-label={s.addCatAria}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v) addCategoryFromDropdown(v);
-                    }}
-                  >
-                    <option value="">{s.choose}</option>
-                    {sortedCategories.length > 0 ? (
-                      <option value={ALL_CATEGORIES_VALUE}>{s.allCats}</option>
-                    ) : null}
-                    {categoriesAvailableToAdd.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {categoryLabel(c)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+            <div className={styles.formSection}>
+              <h3 className={`${catalogStyles.groupHeading} ${styles.sectionHeading}`}>{s.legendCats}</h3>
+              <div className={styles.catsWrap}>
+                <AdminSelect
+                  label={s.addCat}
+                  aria-label={s.addCatAria}
+                  value={catPick}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v) addCategoryFromDropdown(v);
+                    else setCatPick('');
+                  }}
+                >
+                  <option value="">{s.choose}</option>
+                  {sortedCategories.length > 0 ? (
+                    <option value={ALL_CATEGORIES_VALUE}>{s.allCats}</option>
+                  ) : null}
+                  {categoriesAvailableToAdd.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {categoryLabel(c)}
+                    </option>
+                  ))}
+                </AdminSelect>
                 {form.categoryIds.size > 0 ? (
-                  <ul className={pn.additionalCatChips} aria-label={s.selectedCatsAria}>
+                  <AdminPillChipList aria-label={s.selectedCatsAria}>
                     {Array.from(form.categoryIds).map((id) => {
                       const c = categories.find((x) => x.id === id);
                       if (!c) return null;
                       const label = categoryLabel(c);
                       const conflict = conflictCategoryIds.includes(id);
                       return (
-                        <li
+                        <AdminPillChip
                           key={id}
-                          className={`${pn.additionalCatChip} ${conflict ? styles.chipConflict : ''}`}
+                          variant={conflict ? 'conflict' : 'default'}
+                          onRemove={() => removeCategoryChip(id)}
+                          removeAriaLabel={s.removeAria(label)}
                         >
-                          <span className={pn.additionalCatChipLabel}>{label}</span>
-                          <button
-                            type="button"
-                            className={pn.additionalCatChipRemove}
-                            onClick={() => removeCategoryChip(id)}
-                            aria-label={s.removeAria(label)}
-                          >
-                            ×
-                          </button>
-                        </li>
+                          {label}
+                        </AdminPillChip>
                       );
                     })}
-                  </ul>
+                  </AdminPillChipList>
                 ) : (
-                  <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
+                  <p className={catalogStyles.muted} style={{ margin: 0 }}>
                     {s.noCatsSelected}
                   </p>
                 )}
               </div>
-            </fieldset>
+            </div>
 
             <div className={styles.containerTypeRow}>
-              <label className={catalogStyles.label} style={{ flex: 1, marginBottom: 0 }}>
-                {s.containerType}
-                <select
-                  className={catalogStyles.input}
-                  value={form.containerType}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, containerType: e.target.value === '20' ? '20' : '40' }))
-                  }
-                >
-                  <option value="40">40&apos; Standard</option>
-                  <option value="20">20&apos; Standard</option>
-                </select>
-              </label>
+              <AdminSelect
+                className={styles.containerTypeSelect}
+                label={s.containerType}
+                value={form.containerType}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, containerType: e.target.value === '20' ? '20' : '40' }))
+                }
+              >
+                <option value="40">40&apos; Standard</option>
+                <option value="20">20&apos; Standard</option>
+              </AdminSelect>
               <button type="button" className={styles.containerParamsLink} onClick={openContainerModal}>
                 {s.changeContainer}
               </button>
             </div>
             {hasCustomContainer ? (
-              <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
+              <p className={catalogStyles.muted} style={{ margin: 0 }}>
                 {s.customLimits(
                   form.containerMaxWeightKg.trim() || '—',
                   form.containerMaxVolumeM3.trim() || '—',
@@ -534,148 +517,108 @@ export function PricingSettingsClient() {
               </p>
             ) : null}
 
-            <fieldset className={styles.fieldset}>
-              <legend>{s.legendRates}</legend>
+            <div className={styles.formSection}>
+              <h3 className={`${catalogStyles.groupHeading} ${styles.sectionHeading}`}>{s.legendRates}</h3>
               <div className={styles.row3}>
-                <label className={catalogStyles.label}>
-                  {s.rateCny}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.cnyRate}
-                    onChange={(e) => setForm((f) => ({ ...f, cnyRate: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.rateUsd}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.usdRate}
-                    onChange={(e) => setForm((f) => ({ ...f, usdRate: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.rateEur}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.eurRate}
-                    onChange={(e) => setForm((f) => ({ ...f, eurRate: e.target.value }))}
-                  />
-                </label>
-              </div>
-            </fieldset>
-
-            <fieldset className={styles.fieldset}>
-              <legend>{s.legendLogistics}</legend>
-              <div className={styles.row2}>
-                <label className={catalogStyles.label}>
-                  {s.legChinaUsd}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.warehousePortUsd}
-                    onChange={(e) => setForm((f) => ({ ...f, warehousePortUsd: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.legFobUsd}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.fobUsd}
-                    onChange={(e) => setForm((f) => ({ ...f, fobUsd: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.legPortMsk}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.portMskRub}
-                    onChange={(e) => setForm((f) => ({ ...f, portMskRub: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.legOtherRub}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.extraLogisticsRub}
-                    onChange={(e) => setForm((f) => ({ ...f, extraLogisticsRub: e.target.value }))}
-                  />
-                </label>
-              </div>
-            </fieldset>
-
-            <fieldset className={styles.fieldset}>
-              <legend>{s.legendPercents}</legend>
-              <div className={styles.row2}>
-                <label className={catalogStyles.label}>
-                  {s.feeTransfer}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.transferCommissionPct}
-                    onChange={(e) => setForm((f) => ({ ...f, transferCommissionPct: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.dutyAdval}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.customsAdValoremPct}
-                    onChange={(e) => setForm((f) => ({ ...f, customsAdValoremPct: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.dutyWeight}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.customsWeightPct}
-                    onChange={(e) => setForm((f) => ({ ...f, customsWeightPct: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.vat}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.vatPct}
-                    onChange={(e) => setForm((f) => ({ ...f, vatPct: e.target.value }))}
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.agency}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={form.agentRub}
-                    onChange={(e) => setForm((f) => ({ ...f, agentRub: e.target.value }))}
-                  />
-                </label>
-              </div>
-            </fieldset>
-
-            <div className={styles.markupBlock}>
-              <label className={catalogStyles.label}>
-                {s.markup}
-                <input
-                  className={catalogStyles.input}
+                <AdminTextField
+                  label={s.rateCny}
                   inputMode="decimal"
-                  value={form.markupPct}
-                  onChange={(e) => setForm((f) => ({ ...f, markupPct: e.target.value }))}
+                  value={form.cnyRate}
+                  onChange={(e) => setForm((f) => ({ ...f, cnyRate: e.target.value }))}
                 />
-              </label>
+                <AdminTextField
+                  label={s.rateUsd}
+                  inputMode="decimal"
+                  value={form.usdRate}
+                  onChange={(e) => setForm((f) => ({ ...f, usdRate: e.target.value }))}
+                />
+                <AdminTextField
+                  label={s.rateEur}
+                  inputMode="decimal"
+                  value={form.eurRate}
+                  onChange={(e) => setForm((f) => ({ ...f, eurRate: e.target.value }))}
+                />
+              </div>
             </div>
 
-            <div className={styles.formActions}>
-              <button type="submit" className={catalogStyles.btn} disabled={saving}>
+            <div className={styles.formSection}>
+              <h3 className={`${catalogStyles.groupHeading} ${styles.sectionHeading}`}>{s.legendLogistics}</h3>
+              <div className={styles.row2}>
+                <AdminTextField
+                  label={s.legChinaUsd}
+                  inputMode="decimal"
+                  value={form.warehousePortUsd}
+                  onChange={(e) => setForm((f) => ({ ...f, warehousePortUsd: e.target.value }))}
+                />
+                <AdminTextField
+                  label={s.legFobUsd}
+                  inputMode="decimal"
+                  value={form.fobUsd}
+                  onChange={(e) => setForm((f) => ({ ...f, fobUsd: e.target.value }))}
+                />
+                <AdminTextField
+                  label={s.legPortMsk}
+                  inputMode="decimal"
+                  value={form.portMskRub}
+                  onChange={(e) => setForm((f) => ({ ...f, portMskRub: e.target.value }))}
+                />
+                <AdminTextField
+                  label={s.legOtherRub}
+                  inputMode="decimal"
+                  value={form.extraLogisticsRub}
+                  onChange={(e) => setForm((f) => ({ ...f, extraLogisticsRub: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className={styles.formSection}>
+              <h3 className={`${catalogStyles.groupHeading} ${styles.sectionHeading}`}>{s.legendPercents}</h3>
+              <div className={styles.row2}>
+                <AdminTextField
+                  label={s.feeTransfer}
+                  inputMode="decimal"
+                  value={form.transferCommissionPct}
+                  onChange={(e) => setForm((f) => ({ ...f, transferCommissionPct: e.target.value }))}
+                />
+                <AdminTextField
+                  label={s.dutyAdval}
+                  inputMode="decimal"
+                  value={form.customsAdValoremPct}
+                  onChange={(e) => setForm((f) => ({ ...f, customsAdValoremPct: e.target.value }))}
+                />
+                <AdminTextField
+                  label={s.dutyWeight}
+                  inputMode="decimal"
+                  value={form.customsWeightPct}
+                  onChange={(e) => setForm((f) => ({ ...f, customsWeightPct: e.target.value }))}
+                />
+                <AdminTextField
+                  label={s.vat}
+                  inputMode="decimal"
+                  value={form.vatPct}
+                  onChange={(e) => setForm((f) => ({ ...f, vatPct: e.target.value }))}
+                />
+                <AdminTextField
+                  label={s.agency}
+                  inputMode="decimal"
+                  value={form.agentRub}
+                  onChange={(e) => setForm((f) => ({ ...f, agentRub: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <AdminTextField
+              className={styles.markupBlock}
+              label={s.markup}
+              inputMode="decimal"
+              value={form.markupPct}
+              onChange={(e) => setForm((f) => ({ ...f, markupPct: e.target.value }))}
+            />
+
+            <div className={catalogStyles.formActions}>
+              <AdminCompactBtn type="submit" variant="accent" disabled={saving}>
                 {saving ? s.saving : s.saveProfile}
-              </button>
+              </AdminCompactBtn>
             </div>
           </form>
         </section>

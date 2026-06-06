@@ -18,6 +18,46 @@ export async function adminBackendFetch(apiPath: string, init?: RequestInit): Pr
   });
 }
 
+/** Ошибка прокси `/api/admin/backend/*` с HTTP-статусом Nest. */
+export class AdminBackendRequestError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'AdminBackendRequestError';
+    this.status = status;
+  }
+}
+
+export async function readAdminApiError(res: Response): Promise<string> {
+  let msg = res.statusText;
+  try {
+    const j = await res.json();
+    if (typeof j?.message === 'string') msg = j.message;
+    else if (Array.isArray(j?.message)) msg = j.message.join(', ');
+  } catch {
+    try {
+      msg = await res.text();
+    } catch {
+      /* ignore */
+    }
+  }
+  return msg || `HTTP ${res.status}`;
+}
+
+export async function adminBackendJson<T>(apiPath: string, init?: RequestInit): Promise<T> {
+  const res = await adminBackendFetch(apiPath, init);
+  if (!res.ok) {
+    throw new AdminBackendRequestError(await readAdminApiError(res), res.status);
+  }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+async function throwAdminUploadError(res: Response): Promise<never> {
+  throw new AdminBackendRequestError(await readAdminApiError(res), res.status);
+}
+
 export async function adminUploadCategoryImage(
   file: File,
 ): Promise<{ url: string; mediaObjectId: string }> {
@@ -28,21 +68,7 @@ export async function adminUploadCategoryImage(
     credentials: 'same-origin',
     body: fd,
   });
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      if (typeof j?.message === 'string') msg = j.message;
-      else if (Array.isArray(j?.message)) msg = j.message.join(', ');
-    } catch {
-      try {
-        msg = await res.text();
-      } catch {
-        /* ignore */
-      }
-    }
-    throw new Error(msg || `HTTP ${res.status}`);
-  }
+  if (!res.ok) await throwAdminUploadError(res);
   return res.json() as Promise<{ url: string; mediaObjectId: string }>;
 }
 
@@ -58,21 +84,7 @@ export async function adminUploadBrandImage(
     credentials: 'same-origin',
     body: fd,
   });
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      if (typeof j?.message === 'string') msg = j.message;
-      else if (Array.isArray(j?.message)) msg = j.message.join(', ');
-    } catch {
-      try {
-        msg = await res.text();
-      } catch {
-        /* ignore */
-      }
-    }
-    throw new Error(msg || `HTTP ${res.status}`);
-  }
+  if (!res.ok) await throwAdminUploadError(res);
   return res.json() as Promise<{ url: string }>;
 }
 
@@ -80,6 +92,7 @@ export async function adminUploadBrandImage(
 export async function adminUploadMediaLibrary(
   file: File,
   folderId?: string | null,
+  signal?: AbortSignal,
 ): Promise<MediaObjectRow> {
   const fd = new FormData();
   fd.append('file', file);
@@ -91,22 +104,9 @@ export async function adminUploadMediaLibrary(
     method: 'POST',
     credentials: 'same-origin',
     body: fd,
+    signal,
   });
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      if (typeof j?.message === 'string') msg = j.message;
-      else if (Array.isArray(j?.message)) msg = j.message.join(', ');
-    } catch {
-      try {
-        msg = await res.text();
-      } catch {
-        /* ignore */
-      }
-    }
-    throw new Error(msg || `HTTP ${res.status}`);
-  }
+  if (!res.ok) await throwAdminUploadError(res);
   return res.json() as Promise<MediaObjectRow>;
 }
 
@@ -120,45 +120,10 @@ export async function adminUploadRichMedia(file: File, type: 'image' | 'video'):
     credentials: 'same-origin',
     body: fd,
   });
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      if (typeof j?.message === 'string') msg = j.message;
-      else if (Array.isArray(j?.message)) msg = j.message.join(', ');
-    } catch {
-      try {
-        msg = await res.text();
-      } catch {
-        /* ignore */
-      }
-    }
-    throw new Error(msg || `HTTP ${res.status}`);
-  }
+  if (!res.ok) await throwAdminUploadError(res);
   const j = (await res.json()) as { url?: string };
   if (typeof j?.url !== 'string') throw new Error('Нет URL в ответе сервера');
   return j.url;
-}
-
-export async function adminBackendJson<T>(apiPath: string, init?: RequestInit): Promise<T> {
-  const res = await adminBackendFetch(apiPath, init);
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      if (typeof j?.message === 'string') msg = j.message;
-      else if (Array.isArray(j?.message)) msg = j.message.join(', ');
-    } catch {
-      try {
-        msg = await res.text();
-      } catch {
-        /* ignore */
-      }
-    }
-    throw new Error(msg || `HTTP ${res.status}`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
 }
 
 /** Сброс кэша публичного каталога на Next после мутаций в админке (см. `catalogCache.ts`). */

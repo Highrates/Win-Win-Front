@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { adminDetailErrorFromBackend } from '@/lib/adminQuery';
 import catalogStyles from '../../../../catalog/catalogAdmin.module.css';
 import clientsStyles from '../../../clients.module.css';
 import {
@@ -40,15 +42,9 @@ export function AdminCaseDetailClient({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/admin/backend/cases/admin/${encodeURIComponent(caseId)}`, {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!res.ok) {
-          if (!cancelled) setError(`Ошибка ${res.status}`);
-          return;
-        }
-        const dto = parseApiCaseRow(await res.json());
+        const dto = parseApiCaseRow(
+          await adminBackendJson<unknown>(`cases/admin/${encodeURIComponent(caseId)}`),
+        );
         if (cancelled) return;
         if (!dto) {
           setRow(null);
@@ -75,8 +71,15 @@ export function AdminCaseDetailClient({
             setProductLabels(pids.map((id) => items.find((x) => x.id === id) ?? { id, name: 'Товар', slug: '' }));
           }
         } else if (!cancelled) setProductLabels([]);
-      } catch {
-        if (!cancelled) setError('Сеть или сервер недоступны');
+      } catch (e) {
+        if (!cancelled) {
+          setError(
+            adminDetailErrorFromBackend(e, {
+              fallback: 'Сеть или сервер недоступны',
+              errStatus: (status) => `Ошибка ${status}`,
+            }),
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -90,28 +93,28 @@ export function AdminCaseDetailClient({
   const rooms = useMemo(() => stringArrayFromUnknown(row?.roomTypes, 20), [row?.roomTypes]);
 
   return (
-    <div className={clientsStyles.tabPanel}>
-      <div style={{ marginBottom: 20 }}>
+    <main>
+      <p className={catalogStyles.backRow}>
         <Link href={`/admin/clients/${encodeURIComponent(clientId)}`} className={catalogStyles.backLink}>
-          ← К списку кейсов клиента
+          ← К карточке клиента
         </Link>
-      </div>
+      </p>
 
       {loading ? <p className={catalogStyles.muted}>Загрузка…</p> : null}
       {error ? (
-        <p className={clientsStyles.error} role="alert">
+        <p className={catalogStyles.error} role="alert">
           {error}
         </p>
       ) : null}
 
       {!loading && !error && row ? (
         <>
-          <h1 style={{ marginTop: 0, fontSize: '1.35rem', fontWeight: 600 }}>{row.title}</h1>
-          <p className={catalogStyles.muted} style={{ marginTop: 4 }}>
+          <h1 className={catalogStyles.title}>{row.title}</h1>
+          <p className={catalogStyles.muted}>
             Создан: {formatRuDate(row.createdAt)} · Обновлён: {formatRuDate(row.updatedAt)}
           </p>
 
-          <dl className={clientsStyles.detailList} style={{ marginTop: 24 }}>
+          <dl className={clientsStyles.detailList}>
             <div>
               <dt>Короткое описание</dt>
               <dd>{row.shortDescription?.trim() ? row.shortDescription : '—'}</dd>
@@ -140,7 +143,7 @@ export function AdminCaseDetailClient({
               <dt>Товары в кейсе</dt>
               <dd>
                 {productLabels.length ? (
-                  <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
+                  <ul className={clientsStyles.caseProductList}>
                     {productLabels.map((p) => (
                       <li key={p.id}>
                         {p.slug ? (
@@ -150,7 +153,7 @@ export function AdminCaseDetailClient({
                         ) : (
                           p.name
                         )}{' '}
-                        <span className={catalogStyles.muted}>({p.id})</span>
+                        <span className={catalogStyles.mutedInline}>({p.id})</span>
                       </li>
                     ))}
                   </ul>
@@ -162,16 +165,12 @@ export function AdminCaseDetailClient({
           </dl>
 
           {covers.length ? (
-            <section style={{ marginTop: 24 }}>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: 12 }}>Обложки</h2>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <section>
+              <h2 className={catalogStyles.groupHeading}>Обложки</h2>
+              <div className={clientsStyles.caseCoverGrid}>
                 {covers.map((url) => (
                   <a key={url} href={url} target="_blank" rel="noreferrer">
-                    <img
-                      src={url}
-                      alt=""
-                      style={{ width: 200, maxHeight: 200, objectFit: 'cover', borderRadius: 8 }}
-                    />
+                    <img src={url} alt="" className={clientsStyles.caseCoverThumb} />
                   </a>
                 ))}
               </div>
@@ -179,14 +178,16 @@ export function AdminCaseDetailClient({
           ) : null}
 
           {row.descriptionHtml?.trim() ? (
-            <section style={{ marginTop: 28 }}>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: 12 }}>Описание</h2>
-              {/* HTML санитизируется на бэкенде при сохранении кейса */}
-              <div className="rich-content" dangerouslySetInnerHTML={{ __html: row.descriptionHtml }} />
+            <section>
+              <h2 className={catalogStyles.groupHeading}>Описание</h2>
+              <div
+                className={`rich-content ${clientsStyles.aboutHtml}`}
+                dangerouslySetInnerHTML={{ __html: row.descriptionHtml }}
+              />
             </section>
           ) : null}
         </>
       ) : null}
-    </div>
+    </main>
   );
 }

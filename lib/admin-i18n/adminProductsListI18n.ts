@@ -18,7 +18,11 @@ export function adminProductsListStrings(locale: AdminLocale) {
         `有 ${skipped} 个商品因订单等原因未删。已删：${deleted}。`,
       ),
     errDelete: pick(locale, 'Ошибка удаления', '删除失败'),
-    searchPh: pick(locale, 'Поиск по названию или slug…', '按名称或 slug 搜索…'),
+    searchPh: pick(
+      locale,
+      'Поиск по названию, slug или артикулу…',
+      '按名称、slug 或 SKU 搜索…',
+    ),
     searchAria: pick(locale, 'Поиск товаров', '搜索商品'),
     add: pick(locale, 'Добавить товар', '添加商品'),
     bulkAria: pick(locale, 'Массовые операции', '批量操作'),

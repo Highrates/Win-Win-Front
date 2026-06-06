@@ -36,7 +36,7 @@ export function adminBlogListStrings(locale: AdminLocale) {
       pick(locale, `Удалить выбранные статьи (${n})?`, `删除所选 ${n} 篇文章？`),
     errDelete: pick(locale, 'Ошибка удаления', '删除失败'),
     thOrder: pick(locale, 'Порядок', '顺序'),
-    selectAllPage: pick(locale, 'Выбрать все на странице', '全选本页'),
+    selectAllPage: pick(locale, 'Выбрать все', '全选'),
     thTitle: pick(locale, 'Название', '标题'),
     thCategory: pick(locale, 'Категория', '分类'),
     thVisibility: pick(locale, 'Доступность', '可见性'),
@@ -47,9 +47,12 @@ export function adminBlogListStrings(locale: AdminLocale) {
     allCategories: pick(locale, 'Все категории', '全部分类'),
     newPost: pick(locale, 'Новая статья', '新文章'),
     bulkAria: pick(locale, 'Массовые операции', '批量操作'),
-    selectAllOnPage: pick(locale, 'Выбрать все на странице', '全选本页'),
+    selectAllOnPage: pick(locale, 'Выбрать все', '全选'),
     clearSelection: pick(locale, 'Снять выбор', '取消选择'),
-    deleteBulk: (n: number) => pick(locale, `Удалить (${n})`, `删除 (${n})`),
+    deleteBulk: (n: number) =>
+      n > 0
+        ? pick(locale, `Удалить (${n})`, `删除 (${n})`)
+        : pick(locale, 'Удалить', '删除'),
     bulkBusy: pick(locale, '…', '…'),
     reorderLimit: (limit: number) =>
       pick(

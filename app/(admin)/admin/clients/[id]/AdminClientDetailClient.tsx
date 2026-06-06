@@ -5,8 +5,12 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { adminClientDetailStrings } from '@/lib/admin-i18n/adminClientDetailI18n';
 import { adminDesignerProjectsPage } from '@/lib/admin-i18n/adminMiscPagesI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
+import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
+import { adminDetailErrorFromBackend } from '@/lib/adminQuery';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
-import objTabStyles from '../../objects/objectsLibrary.module.css';
 import styles from '../clients.module.css';
 import { DesignerProjectsAdminClient } from '../../designer-projects/DesignerProjectsAdminClient';
 import { OrdersAdminClient } from '../../orders/OrdersAdminClient';
@@ -86,6 +90,14 @@ function formatConsentAt(iso: string | null | undefined, no: string, locale: 'ru
   }
 }
 
+type InviterPayload = {
+  referrerId: string;
+  email: string | null;
+  name: string;
+  winWinReferralCode: string | null;
+  joinedAt: string;
+};
+
 export function AdminClientDetailClient({ id }: { id: string }) {
   const { locale: adminLoc } = useAdminLocale();
   const s = useMemo(() => adminClientDetailStrings(adminLoc), [adminLoc]);
@@ -98,36 +110,28 @@ export function AdminClientDetailClient({ id }: { id: string }) {
   const [structure, setStructure] = useState<StructureL1[] | null>(null);
   const [structureLoading, setStructureLoading] = useState(false);
   const [structureError, setStructureError] = useState<string | null>(null);
-  const [inviter, setInviter] = useState<null | {
-    referrerId: string;
-    email: string | null;
-    name: string;
-    winWinReferralCode: string | null;
-    joinedAt: string;
-  }>(null);
+  const [inviter, setInviter] = useState<InviterPayload | null>(null);
   const [expandedL1, setExpandedL1] = useState<Record<string, boolean>>({});
 
   const [cases, setCases] = useState<ApiCase[] | null>(null);
   const [casesLoading, setCasesLoading] = useState(false);
   const [casesError, setCasesError] = useState<string | null>(null);
   const [deletingCaseId, setDeletingCaseId] = useState<string | null>(null);
+  const { confirm } = useAdminConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/backend/users/admin/${encodeURIComponent(id)}`, {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      if (!res.ok) {
-        setError(res.status === 404 ? s.userNotFound : s.errStatus(res.status));
-        setData(null);
-        return;
-      }
-      setData((await res.json()) as UserDetail);
-    } catch {
-      setError(s.errLoad);
+      setData(await adminBackendJson<UserDetail>(`users/admin/${encodeURIComponent(id)}`));
+    } catch (e) {
+      setError(
+        adminDetailErrorFromBackend(e, {
+          fallback: s.errLoad,
+          notFound: s.userNotFound,
+          errStatus: s.errStatus,
+        }),
+      );
       setData(null);
     } finally {
       setLoading(false);
@@ -155,32 +159,19 @@ export function AdminClientDetailClient({ id }: { id: string }) {
     setStructureError(null);
     void (async () => {
       try {
-        const invRes = await fetch(
-          `/api/admin/backend/users/admin/${encodeURIComponent(id)}/winwin-inviter`,
-          { credentials: 'same-origin', cache: 'no-store' },
-        );
-        if (!cancelled) {
-          const inv = (await invRes.json().catch(() => null)) as null | {
-            referrerId: string;
-            email: string | null;
-            name: string;
-            winWinReferralCode: string | null;
-            joinedAt: string;
-          };
-          setInviter(invRes.ok ? inv : null);
+        let inv: InviterPayload | null = null;
+        try {
+          inv = await adminBackendJson<InviterPayload>(
+            `users/admin/${encodeURIComponent(id)}/winwin-inviter`,
+          );
+        } catch {
+          inv = null;
         }
-        const res = await fetch(
-          `/api/admin/backend/users/admin/${encodeURIComponent(id)}/referral-structure`,
-          { credentials: 'same-origin', cache: 'no-store' },
+        if (!cancelled) setInviter(inv);
+
+        const j = await adminBackendJson<{ l1?: StructureL1[] }>(
+          `users/admin/${encodeURIComponent(id)}/referral-structure`,
         );
-        if (!res.ok) {
-          if (!cancelled) {
-            setStructureError(s.errStatus(res.status));
-            setStructure(null);
-          }
-          return;
-        }
-        const j = (await res.json()) as { l1?: StructureL1[] };
         if (!cancelled) {
           const next = Array.isArray(j.l1) ? j.l1 : [];
           setStructure(next);
@@ -192,9 +183,14 @@ export function AdminClientDetailClient({ id }: { id: string }) {
             return out;
           });
         }
-      } catch {
+      } catch (e) {
         if (!cancelled) {
-          setStructureError(s.errLoad);
+          setStructureError(
+            adminDetailErrorFromBackend(e, {
+              fallback: s.errLoad,
+              errStatus: s.errStatus,
+            }),
+          );
           setStructure(null);
         }
       } finally {
@@ -213,22 +209,17 @@ export function AdminClientDetailClient({ id }: { id: string }) {
     setCasesError(null);
     void (async () => {
       try {
-        const res = await fetch(`/api/admin/backend/cases/admin/users/${encodeURIComponent(id)}`, {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!res.ok) {
-          if (!cancelled) {
-            setCasesError(res.status === 404 ? s.userNotFound : s.errStatus(res.status));
-            setCases(null);
-          }
-          return;
-        }
-        const j = (await res.json()) as unknown;
+        const j = await adminBackendJson<unknown>(`cases/admin/users/${encodeURIComponent(id)}`);
         if (!cancelled) setCases(parseApiCaseList(j));
-      } catch {
+      } catch (e) {
         if (!cancelled) {
-          setCasesError(s.errLoad);
+          setCasesError(
+            adminDetailErrorFromBackend(e, {
+              fallback: s.errLoad,
+              notFound: s.userNotFound,
+              errStatus: s.errStatus,
+            }),
+          );
           setCases(null);
         }
       } finally {
@@ -268,8 +259,22 @@ export function AdminClientDetailClient({ id }: { id: string }) {
     return s.titleWithContacts(phone, email);
   }, [data, s]);
 
+  const clientTabItems = useMemo(() => {
+    const items: { id: number; label: string }[] = [
+      { id: TAB_ORDERS, label: s.tabOrders },
+      { id: TAB_INFO, label: s.tabInfo },
+      { id: TAB_CONSENTS, label: s.tabConsents },
+      { id: TAB_CASES, label: s.tabCases },
+      { id: TAB_PROJECTS, label: s.tabProjects },
+    ];
+    if (isPartner) {
+      items.push({ id: TAB_STRUCTURE, label: s.tabStructure });
+    }
+    return items;
+  }, [isPartner, s]);
+
   return (
-    <main>
+      <main>
       <p className={catalogStyles.backRow}>
         <Link href="/admin/clients" className={catalogStyles.backLink}>
           {s.backList}
@@ -278,70 +283,19 @@ export function AdminClientDetailClient({ id }: { id: string }) {
       <h1 className={catalogStyles.title}>{!loading && !error && data ? titleText : s.clientTitle}</h1>
       {loading ? <p className={catalogStyles.lead}>{s.loading}</p> : null}
       {error ? (
-        <p className={styles.error} role="alert">
+        <p className={catalogStyles.error} role="alert">
           {error}
         </p>
       ) : null}
       {!loading && !error && data ? (
         <>
-          <div className={objTabStyles.mainScopeTabs} role="tablist" aria-label={s.tabsAria}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === TAB_ORDERS}
-              className={`${objTabStyles.mainScopeTab} ${tab === TAB_ORDERS ? objTabStyles.mainScopeTabActive : ''}`}
-              onClick={() => setTab(TAB_ORDERS)}
-            >
-              {s.tabOrders}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === TAB_INFO}
-              className={`${objTabStyles.mainScopeTab} ${tab === TAB_INFO ? objTabStyles.mainScopeTabActive : ''}`}
-              onClick={() => setTab(TAB_INFO)}
-            >
-              {s.tabInfo}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === TAB_CONSENTS}
-              className={`${objTabStyles.mainScopeTab} ${tab === TAB_CONSENTS ? objTabStyles.mainScopeTabActive : ''}`}
-              onClick={() => setTab(TAB_CONSENTS)}
-            >
-              {s.tabConsents}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === TAB_CASES}
-              className={`${objTabStyles.mainScopeTab} ${tab === TAB_CASES ? objTabStyles.mainScopeTabActive : ''}`}
-              onClick={() => setTab(TAB_CASES)}
-            >
-              {s.tabCases}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === TAB_PROJECTS}
-              className={`${objTabStyles.mainScopeTab} ${tab === TAB_PROJECTS ? objTabStyles.mainScopeTabActive : ''}`}
-              onClick={() => setTab(TAB_PROJECTS)}
-            >
-              {s.tabProjects}
-            </button>
-            {isPartner ? (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === TAB_STRUCTURE}
-                className={`${objTabStyles.mainScopeTab} ${tab === TAB_STRUCTURE ? objTabStyles.mainScopeTabActive : ''}`}
-                onClick={() => setTab(TAB_STRUCTURE)}
-              >
-                {s.tabStructure}
-              </button>
-            ) : null}
-          </div>
+          <AdminTabs
+            compact
+            ariaLabel={s.tabsAria}
+            items={clientTabItems}
+            activeId={tab}
+            onChange={setTab}
+          />
           {tab === TAB_ORDERS ? (
             <section className={styles.tabPanel} aria-label={s.tabOrders}>
               <OrdersAdminClient key={id} embedded filterUserId={id} />
@@ -470,7 +424,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
           {tab === TAB_CASES ? (
             <section className={`${styles.tabPanel} ${styles.tabPanelWide}`} aria-label={s.tabCases}>
               {casesError ? (
-                <p className={styles.error} role="alert">
+                <p className={catalogStyles.error} role="alert">
                   {casesError}
                 </p>
               ) : null}
@@ -479,14 +433,14 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                 <p className={catalogStyles.muted}>Пока нет кейсов</p>
               ) : null}
               {!casesLoading && !casesError && cases && cases.length > 0 ? (
-                <div style={{ overflowX: 'auto' }}>
+                <div className={catalogStyles.tableWrap}>
                   <table className={catalogStyles.table}>
                     <thead>
                       <tr>
                         <th>Название</th>
                         <th>Помещения</th>
                         <th>Создан</th>
-                        <th style={{ width: 120 }}>Действие</th>
+                        <th className={catalogStyles.tableCellActions}>Действие</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -503,28 +457,29 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                             </td>
                             <td>{roomTypesCommaSeparated(c.roomTypes) || '—'}</td>
                             <td>{formatConsentAt(c.createdAt, '—', consLocale)}</td>
-                            <td>
-                              <button
+                            <td className={catalogStyles.tableCellActions}>
+                              <AdminCompactBtn
                                 type="button"
-                                className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+                                variant="danger"
                                 disabled={deletingCaseId === c.id}
                                 onClick={() => {
-                                  if (!confirm('Удалить кейс?')) return;
-                                  setDeletingCaseId(c.id);
-                                  setCasesError(null);
                                   void (async () => {
+                                    if (!(await confirm({ title: 'Удалить кейс?' }))) return;
+                                    setDeletingCaseId(c.id);
+                                    setCasesError(null);
                                     try {
-                                      const res = await fetch(
-                                        `/api/admin/backend/cases/admin/${encodeURIComponent(c.id)}`,
-                                        { method: 'DELETE', credentials: 'same-origin' },
+                                      await adminBackendJson(
+                                        `cases/admin/${encodeURIComponent(c.id)}`,
+                                        { method: 'DELETE' },
                                       );
-                                      if (!res.ok) {
-                                        setCasesError(s.errStatus(res.status));
-                                        return;
-                                      }
                                       setCases((prev) => (prev ? prev.filter((x) => x.id !== c.id) : prev));
-                                    } catch {
-                                      setCasesError(s.errLoad);
+                                    } catch (e) {
+                                      setCasesError(
+                                        adminDetailErrorFromBackend(e, {
+                                          fallback: s.errLoad,
+                                          errStatus: s.errStatus,
+                                        }),
+                                      );
                                     } finally {
                                       setDeletingCaseId(null);
                                     }
@@ -532,7 +487,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                                 }}
                               >
                                 {deletingCaseId === c.id ? 'Удаление…' : 'Удалить'}
-                              </button>
+                              </AdminCompactBtn>
                             </td>
                           </tr>
                         );
@@ -579,7 +534,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                 </p>
               ) : null}
               {structureError ? (
-                <p className={styles.error} role="alert">
+                <p className={catalogStyles.error} role="alert">
                   {structureError}
                 </p>
               ) : null}
@@ -588,7 +543,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                 <p className={catalogStyles.muted}>{s.structureEmpty}</p>
               ) : null}
               {!structureLoading && structure && structure.length > 0 ? (
-                <div style={{ overflowX: 'auto' }}>
+                <div className={catalogStyles.tableWrap}>
                   <table className={catalogStyles.table}>
                     <thead>
                       <tr>
@@ -607,15 +562,18 @@ export function AdminClientDetailClient({ id }: { id: string }) {
                               {l1.l2.length ? (
                                 <button
                                   type="button"
-                                  className={catalogStyles.backLink}
+                                  className={styles.structureExpandBtn}
                                   onClick={() =>
                                     setExpandedL1((p) => ({ ...p, [l1.id]: !(p[l1.id] ?? true) }))
                                   }
                                   aria-expanded={expandedL1[l1.id] ?? true}
                                   title="Показать/скрыть L2"
                                 >
-                                  {(expandedL1[l1.id] ?? true) ? '▾ ' : '▸ '}
+                                  <span className={styles.structureExpandIcon} aria-hidden>
+                                    {(expandedL1[l1.id] ?? true) ? '▾' : '▸'}
+                                  </span>
                                   {s.levelL1}
+                                  <span className={catalogStyles.mutedInline}> ({l1.l2.length})</span>
                                 </button>
                               ) : (
                                 s.levelL1

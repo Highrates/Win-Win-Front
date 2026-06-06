@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import { adminCategoryNewStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
@@ -92,91 +94,78 @@ function NewCategoryForm() {
 
       {error ? <p className={styles.error}>{error}</p> : null}
 
-      <form className={styles.form} onSubmit={submit}>
-        <label className={styles.label}>
-          {s.name}
-          <input
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            minLength={1}
+      <form className={styles.form} onSubmit={submit} style={{ maxWidth: 560 }}>
+        <AdminTextField
+          label={s.name}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          minLength={1}
+        />
+        <AdminTextField
+          label={s.slugOpt}
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          placeholder={s.slugPh}
+        />
+        <AdminTextField
+          label={s.seoTitle}
+          value={seoTitle}
+          onChange={(e) => setSeoTitle(e.target.value)}
+        />
+        <AdminTextArea
+          label={s.seoDesc}
+          value={seoDescription}
+          onChange={(e) => setSeoDescription(e.target.value)}
+          rows={4}
+        />
+        <div className={styles.labelCheckboxRow}>
+          <AccountCheckbox
+            id="new-category-active"
+            className={styles.adminCheckboxForm}
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            aria-label={s.activeAria}
           />
-        </label>
-        <label className={styles.label}>
-          {s.slugOpt}
-          <input
-            className={styles.input}
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder={s.slugPh}
-          />
-        </label>
-        <div className={styles.label}>
-          <div className={styles.labelCheckboxRow}>
-            <AccountCheckbox
-              id="new-category-active"
-              className={styles.adminCheckboxForm}
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              aria-label={s.activeAria}
-            />
-            <label htmlFor="new-category-active">{s.activeLabel}</label>
-          </div>
+          <label htmlFor="new-category-active">{s.activeLabel}</label>
         </div>
-        <label className={styles.label}>
-          {s.seoTitle}
-          <input
-            className={styles.input}
-            value={seoTitle}
-            onChange={(e) => setSeoTitle(e.target.value)}
-          />
-        </label>
-        <label className={styles.label}>
-          {s.seoDesc}
-          <textarea
-            className={styles.textarea}
-            value={seoDescription}
-            onChange={(e) => setSeoDescription(e.target.value)}
-            rows={4}
-          />
-        </label>
-        <div className={styles.label}>
-          {s.coverLabel} <span className={styles.muted}>{s.coverOptional}</span>
-          <div className={styles.fileRow}>
-            <button
+
+        <div className={styles.fieldBlock}>
+          <span className={styles.adminFieldLabel}>
+            {s.coverLabel}{' '}
+            <span className={styles.mutedInline}>{s.coverOptional}</span>
+          </span>
+          {backgroundImageUrl ? (
+            <div className={styles.bgPreview}>
+              <img src={backgroundImageUrl} alt="" />
+            </div>
+          ) : null}
+          <div className={styles.coverActions} style={{ marginTop: backgroundImageUrl ? 0 : undefined }}>
+            <AdminCompactBtn
               type="button"
-              className={`${styles.btn} ${styles.btnPrimary}`}
+              disabled={saving}
               onClick={() => {
                 setError(null);
                 setPickerOpen(true);
               }}
             >
               {s.pickLibrary}
-            </button>
+            </AdminCompactBtn>
             {backgroundImageUrl.trim() ? (
-              <button type="button" className={styles.btn} onClick={clearCover}>
+              <AdminCompactBtn type="button" variant="outline" disabled={saving} onClick={clearCover}>
                 {s.removeCover}
-              </button>
+              </AdminCompactBtn>
             ) : null}
           </div>
-          {backgroundImageUrl ? (
-            <div className={styles.bgPreview} style={{ marginTop: 10 }}>
-              <img src={backgroundImageUrl} alt="" />
-            </div>
-          ) : null}
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button
-            type="submit"
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            disabled={saving}
-          >
+
+        <div className={styles.formActions}>
+          <AdminCompactBtn type="submit" disabled={saving}>
             {saving ? s.saveBusy : s.create}
-          </button>
-          <Link href="/admin/catalog/categories" className={styles.btn}>
+          </AdminCompactBtn>
+          <AdminCompactBtnLink href="/admin/catalog/categories" variant="outline">
             {s.cancel}
-          </Link>
+          </AdminCompactBtnLink>
         </div>
       </form>
     </main>

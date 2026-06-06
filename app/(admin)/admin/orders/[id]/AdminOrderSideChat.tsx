@@ -2,9 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
+import { AdminTextArea } from '@/components/AdminTextField/AdminTextField';
 import { useOrderChat } from '@/hooks/useOrderChat';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
+import catalogStyles from '../../catalog/catalogAdmin.module.css';
 import od from './orderAdminDetail.module.css';
 
 type Tab = 'chat' | 'notes';
@@ -45,26 +48,17 @@ export function AdminOrderSideChat({ orderId }: { orderId: string }) {
 
   return (
     <div className={od.sideRoot}>
-      <div className={od.tabs} role="tablist" aria-label={d.chatAsideAria}>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'chat'}
-          className={`${od.tab} ${tab === 'chat' ? od.tabActive : ''}`}
-          onClick={() => setTab('chat')}
-        >
-          {d.tabChat}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'notes'}
-          className={`${od.tab} ${tab === 'notes' ? od.tabActive : ''}`}
-          onClick={() => setTab('notes')}
-        >
-          {d.tabNotes}
-        </button>
-      </div>
+      <AdminTabs
+        variant="pill"
+        ariaLabel={d.chatAsideAria}
+        items={[
+          { id: 'chat' as const, label: d.tabChat },
+          { id: 'notes' as const, label: d.tabNotes },
+        ]}
+        activeId={tab}
+        onChange={setTab}
+        className={od.sideTabs}
+      />
       <div className={od.tabPanels}>
         {tab === 'chat' ? (
           <div className={od.chatWrap}>
@@ -97,14 +91,15 @@ export function AdminOrderSideChat({ orderId }: { orderId: string }) {
           </div>
         ) : (
           <>
-            <textarea
-              className={od.notesArea}
+            <AdminTextArea
+              className={od.notesField}
+              controlClassName={od.notesControl}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={d.notesPlaceholder}
               aria-label={d.notesPlaceholder}
             />
-            <p className={od.notesHint}>{d.notesHint}</p>
+            <p className={catalogStyles.muted}>{d.notesHint}</p>
           </>
         )}
       </div>

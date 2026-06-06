@@ -1,24 +1,12 @@
 'use client';
 
-import {
-  DndContext,
-  DragEndEvent,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminPillBadge } from '@/components/AdminPillChip/AdminPillChip';
+import { ProductGalleryEditor } from '@/components/admin/ProductGalleryEditor/ProductGalleryEditor';
+import { AdminSelect, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import type {
   AdminProductVariantSummary,
   ProductAdminDetail,
@@ -30,12 +18,14 @@ import {
   adminBackendJson,
   revalidatePublicCatalogCache,
 } from '@/lib/adminBackendFetch';
-import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminProductGalleryEditorStrings } from '@/lib/admin-i18n/adminProductGalleryEditorI18n';
 import { adminVariantEditStrings } from '@/lib/admin-i18n/adminVariantEditI18n';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import { slugifyVariantLabel } from '@/lib/slugifyVariantLabel';
 import catalogStyles from '../../../../catalogAdmin.module.css';
 import pn from '../../../new/productNew.module.css';
+import ve from './variantEdit.module.css';
 import vt from './variantTabs.module.css';
 
 function parseCmInputToMm(s: string): number | null {
@@ -59,47 +49,6 @@ function mmToCmInput(mm: number | null | undefined): string {
   return String(mm / 10);
 }
 
-function SortableProductFrameRow({
-  frameId,
-  url,
-  strings: str,
-  onRemove,
-}: {
-  frameId: string;
-  url: string;
-  strings: ReturnType<typeof adminVariantEditStrings>;
-  onRemove: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: frameId,
-  });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.7 : 1,
-  };
-  return (
-    <div ref={setNodeRef} style={style} className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
-      <button
-        type="button"
-        className={pn.dragHandle}
-        {...attributes}
-        {...listeners}
-        title={str.dndTitle}
-        aria-label={str.dndAria}
-      >
-        ⋮⋮
-      </button>
-      <img className={pn.galleryThumbLg} src={url} alt="" />
-      <div className={pn.rowActions}>
-        <button type="button" className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`} onClick={onRemove}>
-          {str.removeFromVariant}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 type PricePreviewState =
   | { kind: 'loading' }
   | { kind: 'incomplete' }
@@ -116,9 +65,9 @@ export function VariantEditClient({
   const router = useRouter();
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminVariantEditStrings(locale), [locale]);
-  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const galleryStr = useMemo(() => adminProductGalleryEditorStrings(locale), [locale]);
+  const { confirm } = useAdminConfirm();
   const priceLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
-  const gallerySensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -167,10 +116,6 @@ export function VariantEditClient({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [siblingVariants, setSiblingVariants] = useState<AdminProductVariantSummary[]>([]);
-  const [picker, setPicker] = useState<
-    null | { filter: 'image' | 'video' | 'all'; title: string }
-  >(null);
-  const pickTarget = useRef<null | { kind: 'model3d' } | { kind: 'drawing' }>(null);
   const variantSlugManuallyEditedRef = useRef(false);
 
   const applyVariant = useCallback((v: ProductVariantAdminDetail) => {
@@ -328,40 +273,6 @@ export function VariantEditClient({
     [modificationId],
   );
 
-  function openModel3dPicker() {
-    pickTarget.current = { kind: 'model3d' };
-    setPicker({ filter: 'all', title: s.picker3d });
-  }
-
-  function openDrawingPicker() {
-    pickTarget.current = { kind: 'drawing' };
-    setPicker({ filter: 'all', title: s.pickerDrawing });
-  }
-
-  function handlePickerPick(sel: { url: string; id: string }) {
-    const t = pickTarget.current;
-    pickTarget.current = null;
-    setPicker(null);
-    if (!t) return;
-    if (t.kind === 'model3d') setModel3dUrl(sel.url);
-    else if (t.kind === 'drawing') setDrawingUrl(sel.url);
-  }
-
-  function onProductFrameDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const oldIndex = selectedFrameIds.findIndex((id) => id === active.id);
-    const newIndex = selectedFrameIds.findIndex((id) => id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    setSelectedFrameIds((ids) => arrayMove(ids, oldIndex, newIndex));
-  }
-
-  function toggleProductFrame(id: string) {
-    setSelectedFrameIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  }
-
   const autoVariantLabelPreview = useMemo(() => {
     const mod = modificationsForProduct.find((m) => m.id === modificationId);
     if (!mod) return '';
@@ -497,11 +408,7 @@ export function VariantEditClient({
   }
 
   async function handleDeleteVariant() {
-    if (
-      !window.confirm(
-        s.confirmDelete,
-      )
-    ) {
+    if (!(await confirm({ title: s.confirmDelete }))) {
       return;
     }
     setSaveError(null);
@@ -535,112 +442,110 @@ export function VariantEditClient({
         <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
           {s.productLabel} <strong>{productName}</strong>
           {isDefaultVariant ? (
-            <span className={catalogStyles.muted}>{s.defaultSuffix}</span>
+            <AdminPillBadge className={ve.badgeGap}>{s.badgeDefault}</AdminPillBadge>
           ) : null}
         </p>
 
-        {siblingVariants.length > 1 ? (
-          <nav className={vt.nav} aria-label={s.navAria}>
-            <h2 className={vt.title}>{s.navTitle}</h2>
-            <ul className={vt.tabList} role="tablist">
-              {siblingVariants.map((v, index) => {
-                const isCurrent = v.id === variantId;
-                const priceLabel = `${Number(v.price).toLocaleString(priceLocale, { maximumFractionDigits: 0 })} ${v.currency}`;
-                const tabId = `variant-tab-${v.id}`;
-                return (
-                  <li key={v.id} className={vt.tab} role="presentation">
-                    {isCurrent ? (
-                      <span
-                        id={tabId}
-                        className={vt.tabCurrent}
-                        role="tab"
-                        aria-selected
-                        aria-current="page"
-                      >
-                        <span className={vt.tabTitleRow}>
-                          {s.variantN(index + 1)}
-                          {v.isDefault ? <span className={vt.badge}>{s.badgeDefault}</span> : null}
-                          {!v.isActive ? <span className={vt.badgeInactive}>{s.badgeHidden}</span> : null}
+        <div className={ve.formIntro}>
+          {siblingVariants.length > 1 ? (
+            <nav className={vt.nav} aria-label={s.navAria}>
+              <h2 className={`${catalogStyles.groupHeading} ${vt.navHeading}`}>{s.navTitle}</h2>
+              <ul className={vt.tabList} role="tablist">
+                {siblingVariants.map((v, index) => {
+                  const isCurrent = v.id === variantId;
+                  const priceLabel = `${Number(v.price).toLocaleString(priceLocale, { maximumFractionDigits: 0 })} ${v.currency}`;
+                  const tabId = `variant-tab-${v.id}`;
+                  return (
+                    <li key={v.id} className={vt.tab} role="presentation">
+                      {isCurrent ? (
+                        <span
+                          id={tabId}
+                          className={vt.tabCurrent}
+                          role="tab"
+                          aria-selected
+                          aria-current="page"
+                        >
+                          <span className={vt.tabTitleRow}>
+                            {s.variantN(index + 1)}
+                            {v.isDefault ? (
+                              <AdminPillBadge className={ve.badgeGap}>{s.badgeDefault}</AdminPillBadge>
+                            ) : null}
+                            {!v.isActive ? (
+                              <AdminPillBadge variant="conflict" className={ve.badgeGap}>
+                                {s.badgeHidden}
+                              </AdminPillBadge>
+                            ) : null}
+                          </span>
+                          <span className={vt.meta}>{priceLabel}</span>
                         </span>
-                        <span className={vt.meta}>{priceLabel}</span>
-                      </span>
-                    ) : (
-                      <Link
-                        id={tabId}
-                        href={`/admin/catalog/products/${productId}/variants/${v.id}`}
-                        className={vt.tabLink}
-                        role="tab"
-                        aria-selected={false}
-                      >
-                        <span className={vt.tabTitleRow}>
-                          {s.variantN(index + 1)}
-                          {v.isDefault ? <span className={vt.badge}>{s.badgeDefault}</span> : null}
-                          {!v.isActive ? <span className={vt.badgeInactive}>{s.badgeHidden}</span> : null}
-                        </span>
-                        <span className={vt.meta}>{priceLabel}</span>
-                      </Link>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        ) : null}
+                      ) : (
+                        <Link
+                          id={tabId}
+                          href={`/admin/catalog/products/${productId}/variants/${v.id}`}
+                          className={vt.tabLink}
+                          role="tab"
+                          aria-selected={false}
+                        >
+                          <span className={vt.tabTitleRow}>
+                            {s.variantN(index + 1)}
+                            {v.isDefault ? (
+                              <AdminPillBadge className={ve.badgeGap}>{s.badgeDefault}</AdminPillBadge>
+                            ) : null}
+                            {!v.isActive ? (
+                              <AdminPillBadge variant="conflict" className={ve.badgeGap}>
+                                {s.badgeHidden}
+                              </AdminPillBadge>
+                            ) : null}
+                          </span>
+                          <span className={vt.meta}>{priceLabel}</span>
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          ) : null}
 
-        <div className={pn.section}>
-          <div className={catalogStyles.label}>
-            <div className={catalogStyles.labelCheckboxRow}>
-              <AccountCheckbox
-                id="variant-active"
-                className={catalogStyles.adminCheckboxForm}
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                aria-label={s.publishedAria}
-              />
-              <label htmlFor="variant-active">{s.publishedLabel}</label>
-            </div>
+          <div className={`${catalogStyles.labelCheckboxRow} ${ve.publishedRow}`}>
+            <AccountCheckbox
+              id="variant-active"
+              className={catalogStyles.adminCheckboxForm}
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              aria-label={s.publishedAria}
+            />
+            <label htmlFor="variant-active">{s.publishedLabel}</label>
           </div>
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>{s.configTitle}</h2>
-          <label className={catalogStyles.label} style={{ maxWidth: 480 }}>
-            {s.modification}
-            <select
-              className={catalogStyles.input}
-              value={modificationId}
-              onChange={(e) => {
-                void onChangeModification(e.target.value);
-              }}
-            >
-              {modificationsForProduct.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <h2 className={`${catalogStyles.groupHeading} ${ve.sectionHeading}`}>{s.configTitle}</h2>
+          <AdminSelect
+            label={s.modification}
+            className={ve.fieldNarrow}
+            value={modificationId}
+            onChange={(e) => {
+              void onChangeModification(e.target.value);
+            }}
+          >
+            {modificationsForProduct.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </AdminSelect>
           {elements.length === 0 ? (
             <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
               {s.noConfigurableElements}
             </p>
           ) : (
-            <div style={{ display: 'grid', gap: 14, marginTop: 12 }}>
+            <div className={ve.elementsStack}>
               {elements.map((el) => {
                 const currentId = selections[el.id] ?? '';
                 return (
-                  <div
-                    key={el.id}
-                    style={{
-                      border: '1px solid #e2e6e8',
-                      borderRadius: 10,
-                      padding: 12,
-                      background: '#fff',
-                    }}
-                  >
-                    <h3 className={pn.sectionTitle} style={{ margin: '0 0 10px' }}>
-                      {el.name}
-                    </h3>
+                  <div key={el.id} className={ve.elementCard}>
+                    <h3 className={`${catalogStyles.groupHeading} ${ve.elementTitle}`}>{el.name}</h3>
                     {el.availableMaterialColors.length === 0 ? (
                       <p className={catalogStyles.muted} style={{ margin: 0 }}>
                         {s.poolMissingPrefix}
@@ -648,19 +553,14 @@ export function VariantEditClient({
                         {s.poolMissingSuffix}
                       </p>
                     ) : (
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                          gap: 10,
-                        }}
-                      >
+                      <div className={ve.colorsGrid}>
                         {el.availableMaterialColors.map((a) => {
                           const selected = a.brandMaterialColorId === currentId;
                           return (
                             <button
                               key={a.brandMaterialColorId}
                               type="button"
+                              className={`${ve.colorTile} ${selected ? ve.colorTileSelected : ''}`}
                               onClick={() =>
                                 setSelections((prev) => ({
                                   ...prev,
@@ -668,47 +568,16 @@ export function VariantEditClient({
                                 }))
                               }
                               aria-pressed={selected}
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 6,
-                                padding: 0,
-                                border: `2px solid ${selected ? '#3d83f6' : '#e2e6e8'}`,
-                                borderRadius: 10,
-                                background: '#fff',
-                                cursor: 'pointer',
-                                overflow: 'hidden',
-                                textAlign: 'left',
-                                boxShadow: selected ? '0 0 0 2px rgba(61,131,246,.2)' : 'none',
-                              }}
                             >
+                              {selected ? <span className={ve.selectedBadge} aria-hidden>✓</span> : null}
                               {a.imageUrl ? (
-                                <img
-                                  src={a.imageUrl}
-                                  alt=""
-                                  style={{
-                                    width: '100%',
-                                    aspectRatio: '1',
-                                    objectFit: 'cover',
-                                    background: '#f5f7f8',
-                                    display: 'block',
-                                  }}
-                                />
+                                <img className={ve.colorTileThumb} src={a.imageUrl} alt="" loading="lazy" />
                               ) : (
-                                <div
-                                  aria-hidden
-                                  style={{
-                                    width: '100%',
-                                    aspectRatio: '1',
-                                    background: '#f5f7f8',
-                                  }}
-                                />
+                                <div className={ve.colorTileThumbPh} aria-hidden />
                               )}
-                              <div style={{ padding: '6px 10px 10px' }}>
-                                <div style={{ fontWeight: 600, fontSize: 13 }}>{a.colorName}</div>
-                                <div style={{ color: '#9d9d9d', fontSize: 12 }}>
-                                  {a.materialName}
-                                </div>
+                              <div className={ve.colorTileLabel}>
+                                <span className={ve.colorTileName}>{a.colorName}</span>
+                                <span className={ve.colorTileSub}>{a.materialName}</span>
                               </div>
                             </button>
                           );
@@ -723,192 +592,93 @@ export function VariantEditClient({
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>{s.nameSlugTitle}</h2>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              maxWidth: 480,
-              marginTop: 8,
-            }}
-          >
-            <label className={catalogStyles.label}>
-              {s.variantName}
-              <input
-                type="text"
-                className={catalogStyles.input}
-                value={variantLabel}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setVariantLabel(next);
-                  if (!variantSlugManuallyEditedRef.current) {
-                    setVariantSlug(slugifyVariantLabel(next));
-                  }
-                }}
-                placeholder={s.slugPh}
-                autoComplete="off"
-              />
-              {!variantLabel.trim() && autoVariantLabelPreview ? (
-                <span
-                  className={catalogStyles.muted}
-                  style={{ display: 'block', marginTop: 6, fontSize: 13 }}
-                >
-                  {s.willShowAs} <strong>{autoVariantLabelPreview}</strong>
-                </span>
-              ) : null}
-            </label>
-            <label className={catalogStyles.label}>
-              Slug
-              <input
-                type="text"
-                className={catalogStyles.input}
-                value={variantSlug}
-                onChange={(e) => {
-                  variantSlugManuallyEditedRef.current = true;
-                  setVariantSlug(e.target.value);
-                }}
-                placeholder={s.slugInputPh}
-                autoComplete="off"
-              />
-              <span
-                className={catalogStyles.muted}
-                style={{ display: 'block', marginTop: 6, fontSize: 13 }}
-              >
-                {s.slugHint}
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>{s.galleryTitle}</h2>
-          {productGalleryImages.length > 0 ? (
-            <>
-              <p className={catalogStyles.muted} style={{ marginTop: 0 }}>
-                {s.galleryHint}
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                {productGalleryImages.map((pi) => {
-                  const selected = selectedFrameIds.includes(pi.id);
-                  return (
-                    <button
-                      key={pi.id}
-                      type="button"
-                      onClick={() => toggleProductFrame(pi.id)}
-                      title={selected ? s.removeFromVariantShort : s.addToVariant}
-                      style={{
-                        padding: 0,
-                        border: selected ? '2px solid #2563eb' : '1px solid #ccc',
-                        borderRadius: 4,
-                        opacity: selected ? 1 : 0.55,
-                        cursor: 'pointer',
-                        background: 'transparent',
-                      }}
-                    >
-                      <img
-                        src={pi.url}
-                        alt=""
-                        style={{ width: 88, height: 88, objectFit: 'cover', display: 'block' }}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-              {selectedFrameIds.length > 0 ? (
-                <DndContext
-                  sensors={gallerySensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={onProductFrameDragEnd}
-                >
-                  <SortableContext items={selectedFrameIds} strategy={verticalListSortingStrategy}>
-                    <div className={pn.repeatList}>
-                      {selectedFrameIds.map((fid) => {
-                        const img = productGalleryImages.find((x) => x.id === fid);
-                        if (!img) return null;
-                        return (
-                          <SortableProductFrameRow
-                            key={fid}
-                            frameId={fid}
-                            url={img.url}
-                            strings={s}
-                            onRemove={() =>
-                              setSelectedFrameIds((prev) => prev.filter((x) => x !== fid))
-                            }
-                          />
-                        );
-                      })}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <p className={catalogStyles.muted}>{s.noFramesSelected}</p>
-              )}
-            </>
-          ) : (
-            <p className={catalogStyles.muted} style={{ marginTop: 0 }}>{s.noProductGallery}</p>
-          )}
-        </div>
-
-        <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>{s.grossDimsTitle}</h2>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              gap: 12,
-            }}
-          >
-            <label className={catalogStyles.label}>
-              {s.lenCm}
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={lengthCm}
-                onChange={(e) => setLengthCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label className={catalogStyles.label}>
-              {s.widthCm}
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={widthCm}
-                onChange={(e) => setWidthCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-            <label className={catalogStyles.label}>
-              {s.heightCm}
-              <input
-                className={catalogStyles.input}
-                inputMode="decimal"
-                value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value)}
-                placeholder="0"
-              />
-            </label>
-          </div>
-          <label className={catalogStyles.label} style={{ marginTop: 12 }}>
-            {s.volGross}
-            <input
-              className={catalogStyles.input}
-              inputMode="decimal"
-              value={volumeM3}
-              onChange={(e) => setVolumeM3(e.target.value)}
-              placeholder={s.manualPh}
-              />
-            </label>
-          <label className={catalogStyles.label} style={{ maxWidth: 280 }}>
-            {s.weightGross}
-            <input
-              className={catalogStyles.input}
-              inputMode="decimal"
-              value={weightKg}
-              onChange={(e) => setWeightKg(e.target.value)}
+          <h2 className={`${catalogStyles.groupHeading} ${ve.sectionHeading}`}>{s.nameSlugTitle}</h2>
+          <div className={ve.stackFields}>
+            <AdminTextField
+              label={s.variantName}
+              value={variantLabel}
+              onChange={(e) => {
+                const next = e.target.value;
+                setVariantLabel(next);
+                if (!variantSlugManuallyEditedRef.current) {
+                  setVariantSlug(slugifyVariantLabel(next));
+                }
+              }}
+              placeholder={s.slugPh}
+              autoComplete="off"
             />
-          </label>
+            {!variantLabel.trim() && autoVariantLabelPreview ? (
+              <p className={`${catalogStyles.muted} ${ve.hintBlock}`} style={{ margin: 0 }}>
+                {s.willShowAs} <strong>{autoVariantLabelPreview}</strong>
+              </p>
+            ) : null}
+            <AdminTextField
+              label="Slug"
+              value={variantSlug}
+              onChange={(e) => {
+                variantSlugManuallyEditedRef.current = true;
+                setVariantSlug(e.target.value);
+              }}
+              placeholder={s.slugInputPh}
+              autoComplete="off"
+            />
+            <p className={`${catalogStyles.muted} ${ve.hintBlock}`} style={{ margin: 0 }}>
+              {s.slugHint}
+            </p>
+          </div>
+        </div>
+
+        <div className={pn.section}>
+          <h2 className={`${catalogStyles.groupHeading} ${ve.sectionHeading}`}>{s.galleryTitle}</h2>
+          <ProductGalleryEditor
+            mode="subset"
+            pool={productGalleryImages.map((pi) => ({ id: pi.id, url: pi.url }))}
+            selectedIds={selectedFrameIds}
+            onSelectedIdsChange={setSelectedFrameIds}
+            strings={galleryStr}
+          />
+        </div>
+
+        <div className={pn.section}>
+          <h2 className={`${catalogStyles.groupHeading} ${ve.sectionHeading}`}>{s.grossDimsTitle}</h2>
+          <div className={ve.dimsGrid}>
+            <AdminTextField
+              label={s.lenCm}
+              inputMode="decimal"
+              value={lengthCm}
+              onChange={(e) => setLengthCm(e.target.value)}
+              placeholder="0"
+            />
+            <AdminTextField
+              label={s.widthCm}
+              inputMode="decimal"
+              value={widthCm}
+              onChange={(e) => setWidthCm(e.target.value)}
+              placeholder="0"
+            />
+            <AdminTextField
+              label={s.heightCm}
+              inputMode="decimal"
+              value={heightCm}
+              onChange={(e) => setHeightCm(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <AdminTextField
+            className={`${ve.fieldMedium} ${ve.fieldSpaced}`}
+            label={s.volGross}
+            inputMode="decimal"
+            value={volumeM3}
+            onChange={(e) => setVolumeM3(e.target.value)}
+            placeholder={s.manualPh}
+          />
+          <AdminTextField
+            className={`${ve.fieldMedium} ${ve.fieldSpaced}`}
+            label={s.weightGross}
+            inputMode="decimal"
+            value={weightKg}
+            onChange={(e) => setWeightKg(e.target.value)}
+          />
         </div>
 
         <div className={pn.section}>
@@ -922,85 +692,69 @@ export function VariantEditClient({
           </label>
           {fillNetDimensions ? (
             <>
-              <h2 className={pn.sectionTitle} style={{ marginTop: 16 }}>
+              <h2 className={`${catalogStyles.groupHeading} ${ve.sectionHeading}`} style={{ marginTop: 16 }}>
                 {s.netDimsTitle}
               </h2>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                  gap: 12,
-                }}
-              >
-                <label className={catalogStyles.label}>
-                  {s.lenCm}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={netLengthCm}
-                    onChange={(e) => setNetLengthCm(e.target.value)}
-                    placeholder="0"
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.widthCm}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={netWidthCm}
-                    onChange={(e) => setNetWidthCm(e.target.value)}
-                    placeholder="0"
-                  />
-                </label>
-                <label className={catalogStyles.label}>
-                  {s.heightCm}
-                  <input
-                    className={catalogStyles.input}
-                    inputMode="decimal"
-                    value={netHeightCm}
-                    onChange={(e) => setNetHeightCm(e.target.value)}
-                    placeholder="0"
-                  />
-                </label>
+              <div className={ve.dimsGrid}>
+                <AdminTextField
+                  label={s.lenCm}
+                  inputMode="decimal"
+                  value={netLengthCm}
+                  onChange={(e) => setNetLengthCm(e.target.value)}
+                  placeholder="0"
+                />
+                <AdminTextField
+                  label={s.widthCm}
+                  inputMode="decimal"
+                  value={netWidthCm}
+                  onChange={(e) => setNetWidthCm(e.target.value)}
+                  placeholder="0"
+                />
+                <AdminTextField
+                  label={s.heightCm}
+                  inputMode="decimal"
+                  value={netHeightCm}
+                  onChange={(e) => setNetHeightCm(e.target.value)}
+                  placeholder="0"
+                />
               </div>
-              <label className={catalogStyles.label} style={{ marginTop: 12 }}>
-                {s.volNet}
-                <input
-                  className={catalogStyles.input}
-                  inputMode="decimal"
-                  value={netVolumeM3}
-                  onChange={(e) => setNetVolumeM3(e.target.value)}
-                  placeholder={s.manualPh}
-                />
-              </label>
-              <label className={catalogStyles.label} style={{ maxWidth: 280 }}>
-                {s.weightNet}
-                <input
-                  className={catalogStyles.input}
-                  inputMode="decimal"
-                  value={netWeightKg}
-                  onChange={(e) => setNetWeightKg(e.target.value)}
-                />
-              </label>
+              <AdminTextField
+                className={`${ve.fieldMedium} ${ve.fieldSpaced}`}
+                label={s.volNet}
+                inputMode="decimal"
+                value={netVolumeM3}
+                onChange={(e) => setNetVolumeM3(e.target.value)}
+                placeholder={s.manualPh}
+              />
+              <AdminTextField
+                className={`${ve.fieldMedium} ${ve.fieldSpaced}`}
+                label={s.weightNet}
+                inputMode="decimal"
+                value={netWeightKg}
+                onChange={(e) => setNetWeightKg(e.target.value)}
+              />
             </>
           ) : null}
         </div>
 
         <div className={pn.section}>
-          <div className={pn.priceModeRow} role="radiogroup" aria-label={s.priceModeAria}>
-            <label className={pn.radioLabel}>
+          <h2 className={`${catalogStyles.groupHeading} ${ve.sectionHeading}`}>{s.priceModeAria}</h2>
+          <div className={ve.radioRow} role="radiogroup" aria-label={s.priceModeAria}>
+            <label className={ve.radioOption}>
               <input
                 type="radio"
                 name="variant-price-mode"
+                className={ve.adminRadio}
                 checked={priceMode === 'formula'}
                 onChange={() => setPriceMode('formula')}
               />
               {s.byFormula}
             </label>
-            <label className={pn.radioLabel}>
+            <label className={ve.radioOption}>
               <input
                 type="radio"
                 name="variant-price-mode"
+                className={ve.adminRadio}
                 checked={priceMode === 'manual'}
                 onChange={() => setPriceMode('manual')}
               />
@@ -1009,17 +763,14 @@ export function VariantEditClient({
           </div>
           {priceMode === 'formula' ? (
             <>
-              <label className={catalogStyles.label}>
-                {s.purchaseCny}
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className={catalogStyles.input}
-                  value={costPriceCny}
-                  onChange={(e) => setCostPriceCny(e.target.value)}
-                  placeholder={s.cnyPh}
-                />
-              </label>
+              <AdminTextField
+                label={s.purchaseCny}
+                type="text"
+                inputMode="decimal"
+                value={costPriceCny}
+                onChange={(e) => setCostPriceCny(e.target.value)}
+                placeholder={s.cnyPh}
+              />
               <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
                 {s.pricingCatsHint}
               </p>
@@ -1060,142 +811,72 @@ export function VariantEditClient({
               </div>
             </>
           ) : (
-            <label className={catalogStyles.label}>
-              {s.priceRub}
-              <input
-                type="text"
-                inputMode="decimal"
-                className={catalogStyles.input}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                required
-              />
-            </label>
+            <AdminTextField
+              label={s.priceRub}
+              type="text"
+              inputMode="decimal"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              required
+            />
           )}
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>{s.files3dTitle}</h2>
-          <p className={catalogStyles.muted} style={{ marginTop: 0, marginBottom: 12 }}>
-            {s.files3dHint}
-          </p>
-          <div className={pn.repeatList} style={{ marginBottom: 0 }}>
-            <div className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.model3d}</div>
-                {model3dUrl.trim() ? (
-                  <a
-                    href={model3dUrl.trim()}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={catalogStyles.muted}
-                    style={{ wordBreak: 'break-all' }}
-                  >
-                    {model3dUrl.trim()}
-                  </a>
-                ) : (
-                  <span className={catalogStyles.muted}>{s.fileNotSelected}</span>
-                )}
-              </div>
-              <div className={pn.rowActions}>
-                <button type="button" className={catalogStyles.btn} onClick={openModel3dPicker}>
-                  {c.mediaLibrary}
-                </button>
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setModel3dUrl('')}
-                  disabled={!model3dUrl.trim()}
-                >
-                  {s.clear}
-                </button>
-              </div>
-            </div>
-            <div className={`${pn.repeatRow} ${pn.galleryRowLayout}`}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.drawing}</div>
-                {drawingUrl.trim() ? (
-                  <a
-                    href={drawingUrl.trim()}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={catalogStyles.muted}
-                    style={{ wordBreak: 'break-all' }}
-                  >
-                    {drawingUrl.trim()}
-                  </a>
-                ) : (
-                  <span className={catalogStyles.muted}>{s.fileNotSelected}</span>
-                )}
-              </div>
-              <div className={pn.rowActions}>
-                <button type="button" className={catalogStyles.btn} onClick={openDrawingPicker}>
-                  {c.mediaLibrary}
-                </button>
-                <button
-                  type="button"
-                  className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                  onClick={() => setDrawingUrl('')}
-                  disabled={!drawingUrl.trim()}
-                >
-                  {s.clear}
-                </button>
-              </div>
-            </div>
+          <h2 className={`${catalogStyles.groupHeading} ${ve.sectionHeading}`}>{s.files3dTitle}</h2>
+          <div className={ve.fileFields}>
+            <AdminTextField
+              label={s.model3d}
+              type="url"
+              value={model3dUrl}
+              onChange={(e) => setModel3dUrl(e.target.value)}
+              placeholder="https://"
+              autoComplete="off"
+            />
+            <AdminTextField
+              label={s.drawing}
+              type="url"
+              value={drawingUrl}
+              onChange={(e) => setDrawingUrl(e.target.value)}
+              placeholder="https://"
+              autoComplete="off"
+            />
           </div>
         </div>
 
         <div className={pn.section}>
-          <h2 className={pn.sectionTitle}>{s.skuSection}</h2>
-          <label className={catalogStyles.label}>
-            SKU
-            <input
-              className={catalogStyles.input}
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              autoComplete="off"
-            />
-          </label>
+          <h2 className={`${catalogStyles.groupHeading} ${ve.sectionHeading}`}>{s.skuSection}</h2>
+          <AdminTextField
+            label="SKU"
+            value={sku}
+            onChange={(e) => setSku(e.target.value)}
+            autoComplete="off"
+            className={ve.fieldMedium}
+          />
         </div>
 
         {saveError ? <p className={catalogStyles.error}>{saveError}</p> : null}
 
-        <div className={pn.actionsBar}>
-          <button
-            type="submit"
-            className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
-            disabled={saving || !loaded}
-          >
+        <div className={catalogStyles.formActions}>
+          <AdminCompactBtn type="submit" variant="accent" disabled={saving || !loaded}>
             {saving ? s.saving : s.saveVariant}
-          </button>
-          <Link href={backHref} className={catalogStyles.btn}>
+          </AdminCompactBtn>
+          <AdminCompactBtnLink href={backHref} variant="outline">
             {s.backProduct}
-          </Link>
-          <button
+          </AdminCompactBtnLink>
+          <AdminCompactBtn
             type="button"
-            className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+            variant="danger"
             disabled={deleting || !loaded}
             onClick={() => {
               void handleDeleteVariant();
             }}
           >
             {deleting ? s.deleting : s.deleteVariant}
-          </button>
+          </AdminCompactBtn>
         </div>
       </form>
 
-      {picker ? (
-        <MediaLibraryPickerModal
-          open
-          title={picker.title}
-          mediaFilter={picker.filter}
-          onClose={() => {
-            pickTarget.current = null;
-            setPicker(null);
-          }}
-          onPick={handlePickerPick}
-        />
-      ) : null}
     </>
   );
 }

@@ -16,6 +16,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminPillChip, AdminPillChipList } from '@/components/AdminPillChip/AdminPillChip';
+import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { BrandMaterialColorPickerModal } from '@/components/admin/BrandMaterialColorPickerModal/BrandMaterialColorPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
@@ -89,16 +92,7 @@ function SortableElementCard({
     opacity: isDragging ? 0.8 : 1,
   };
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        ...style,
-        border: '1px solid #e2e6e8',
-        borderRadius: 8,
-        padding: 10,
-        background: '#fff',
-      }}
-    >
+    <div ref={setNodeRef} style={style} className={pn.elementCard}>
       <div className={pn.repeatRow}>
         <button
           type="button"
@@ -110,99 +104,40 @@ function SortableElementCard({
         >
           ⋮⋮
         </button>
-        <input
-          type="text"
-          className={catalogStyles.input}
-          style={{ flex: 1, minWidth: 180 }}
+        <AdminTextField
+          className={pn.modFieldGrow}
           placeholder={es.namePh}
           value={el.name}
           onChange={(e) => onChange({ name: e.target.value })}
+          aria-label={es.namePh}
         />
-        <button
-          type="button"
-          className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-          onClick={onRemove}
-        >
+        <AdminCompactBtn type="button" variant="danger" onClick={onRemove}>
           {es.delete}
-        </button>
+        </AdminCompactBtn>
       </div>
       <div style={{ marginTop: 10 }}>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 8,
-            alignItems: 'center',
-            marginBottom: 8,
-          }}
-        >
+        <div className={pn.poolToolbar}>
           <span className={catalogStyles.muted}>{es.poolLabel}</span>
-          <button type="button" className={catalogStyles.btn} onClick={onOpenPicker}>
+          <AdminCompactBtn type="button" onClick={onOpenPicker}>
             {es.pickFromBrand}
-          </button>
+          </AdminCompactBtn>
         </div>
         {el.availabilities.length === 0 ? (
           <p className={catalogStyles.muted} style={{ marginTop: 4 }}>
             {es.poolEmpty}
           </p>
         ) : (
-          <ul
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              listStyle: 'none',
-              padding: 0,
-              margin: 0,
-            }}
-          >
+          <AdminPillChipList>
             {el.availabilities.map((a) => (
-              <li
+              <AdminPillChip
                 key={a.brandMaterialColorId}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '4px 8px 4px 4px',
-                  border: '1px solid #c5d4e0',
-                  borderRadius: 999,
-                  background: '#fff',
-                }}
+                onRemove={() => onRemoveAvailability(a.brandMaterialColorId)}
+                removeAriaLabel={es.removeFromElAria}
               >
-                {a.imageUrl ? (
-                  <img
-                    src={a.imageUrl}
-                    alt=""
-                    style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <span
-                    aria-hidden
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      background: '#f5f7f8',
-                      display: 'inline-block',
-                    }}
-                  />
-                )}
-                <span style={{ fontSize: 13 }}>
-                  <strong>{a.materialName}</strong> / {a.colorName}
-                </span>
-                <button
-                  type="button"
-                  className={catalogStyles.btn}
-                  style={{ padding: '2px 8px', minHeight: 0 }}
-                  onClick={() => onRemoveAvailability(a.brandMaterialColorId)}
-                  aria-label={es.removeFromElAria}
-                  title={es.removeFromElTitle}
-                >
-                  ×
-                </button>
-              </li>
+                <strong>{a.materialName}</strong> / {a.colorName}
+              </AdminPillChip>
             ))}
-          </ul>
+          </AdminPillChipList>
         )}
       </div>
     </div>
@@ -353,28 +288,18 @@ export function ProductElementsSection({
         }}
       />
 
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-        }}
-      >
-        <h2 className={pn.sectionTitle} style={{ margin: 0 }}>
-          {elStr.sectionTitle}
-        </h2>
-        <button
+      <div className={catalogStyles.sectionHead}>
+        <h2 className={catalogStyles.groupHeading}>{elStr.sectionTitle}</h2>
+        <AdminCompactBtn
           type="button"
-          className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
+          variant="accent"
           onClick={() => {
             void saveElements();
           }}
           disabled={saving}
         >
           {saving ? elStr.saveBusy : elStr.save}
-        </button>
+        </AdminCompactBtn>
       </div>
 
       {elements.length === 0 ? (
@@ -404,10 +329,10 @@ export function ProductElementsSection({
         </DndContext>
       )}
 
-      <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button type="button" className={catalogStyles.btn} onClick={addElement}>
+      <div className={catalogStyles.formActions}>
+        <AdminCompactBtn type="button" onClick={addElement}>
           {elStr.addElement}
-        </button>
+        </AdminCompactBtn>
       </div>
 
       {msg ? (

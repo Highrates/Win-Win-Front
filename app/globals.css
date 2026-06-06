@@ -40,6 +40,17 @@
   --text-caption: 14px;
   --text-caption-weight: 300;
 
+  --font-size-sm: 14px;
+  --line-height-sm: 18px;
+  --cursor-radius-full: 9999px;
+  --text-secondary: #9d9d9d;
+
+  /* Admin form (AdminTextField) */
+  --admin-text-primary: var(--color-black);
+  --admin-text-tertiary: var(--text-secondary);
+  --admin-border-secondary: var(--account-hairline-color);
+  --admin-bg-quaternary: var(--color-bright-snow);
+
   --text-card-20-400: 20px;
   --text-card-20-500: 20px;
   --text-card-20-300: 20px;

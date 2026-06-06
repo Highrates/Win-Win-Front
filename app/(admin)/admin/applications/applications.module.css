@@ -6,15 +6,13 @@
   padding-right: 0;
 }
 
-.tableWrap {
+.listTableWrap {
   width: 100%;
   max-width: none;
   margin-top: 12px;
-  overflow-x: auto;
 }
 
-.table {
-  width: 100%;
+.tableMin {
   min-width: 800px;
 }
 
@@ -22,43 +20,17 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
-/* Отклонить — та же высота, что .btn в catalogAdmin (см. btn + btnDanger в разметке) */
 .clickableRow {
   cursor: pointer;
-}
-
-.clickableRow:hover {
-  background: rgba(5, 24, 38, 0.04);
-}
-
-/* detail page */
-.detailActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin: 12px 0 0;
 }
 
 .detailRoot {
   width: 100%;
   max-width: 720px;
-}
-
-.detailBlock {
-  margin-top: 20px;
-}
-
-.detailBlockTitle {
-  margin: 0 0 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-gray, #9d9d9d);
 }
 
 .detailText {
@@ -67,44 +39,4 @@
   line-height: 1.5;
   font-size: 0.9375rem;
   color: var(--color-ink-black, #051826);
-}
-
-.detailList {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 0.9375rem;
-}
-
-.detailList dt {
-  font-weight: 600;
-  color: var(--color-gray, #9d9d9d);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.detailList dd {
-  margin: 0;
-}
-
-.detailDl {
-  display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: 8px 16px;
-  align-items: start;
-  margin: 0;
-}
-
-.detailDl > div {
-  display: contents;
-}
-
-@media (max-width: 600px) {
-  .detailDl {
-    grid-template-columns: 1fr;
-  }
 }

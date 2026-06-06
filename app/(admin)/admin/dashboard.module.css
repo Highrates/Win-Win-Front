@@ -1,8 +1,8 @@
 .title {
   margin: 0 0 8px;
   font-family: var(--font-commissioner, system-ui);
-  font-size: var(--h2-size, 1.5rem);
-  font-weight: var(--h2-weight, 600);
+  font-size: var(--text-card-20-400, 20px);
+  font-weight: 400;
   text-transform: uppercase;
   color: var(--color-ink-black, #051826);
 }

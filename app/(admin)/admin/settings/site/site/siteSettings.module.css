@@ -1,28 +1,9 @@
-.tabs {
-  display: flex;
-  gap: 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  margin: 16px 0 16px;
-}
-
-.tabBtn {
-  border: none;
-  background: transparent;
-  padding: 10px 12px;
-  cursor: pointer;
-  font: inherit;
-  color: var(--color-ink-black);
-  opacity: 0.7;
-  border-bottom: 2px solid transparent;
-}
-
-.tabBtnActive {
-  opacity: 1;
-  border-bottom-color: var(--color-ink-black);
-}
-
 .panel {
   max-width: 980px;
+}
+
+.tableAfterActions {
+  margin-top: 12px;
 }
 
 .thumbGrid {
@@ -30,13 +11,17 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 10px;
+  list-style: none;
+  padding: 0;
 }
 
 .thumbCard {
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
+  border-width: var(--account-hairline-width, 0.7px);
+  border-style: solid;
+  border-color: var(--account-hairline-color, rgba(0, 0, 0, 0.2));
+  border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-white, #fff);
 }
 
 .thumbImg {
@@ -44,7 +29,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  background: #f3f3f3;
+  background: var(--color-bright-snow, #f5f7f8);
 }
 
 .thumbActions {
@@ -58,34 +43,3 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
-.serviceTable {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-  font: inherit;
-}
-
-.serviceTable th,
-.serviceTable td {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  padding: 8px 10px;
-  text-align: left;
-  vertical-align: middle;
-}
-
-.serviceTable th {
-  background: rgba(0, 0, 0, 0.03);
-  font-weight: 600;
-}
-
-.serviceInput {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 8px 10px;
-  font: inherit;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 6px;
-}
-

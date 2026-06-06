@@ -70,6 +70,14 @@ export type ObjectsLibraryStrings = {
   uploadPartialFail: (errCount: number, total: number, lines: string) => string;
   uploadAllOk: (n: number) => string;
   uploadPartialOk: (ok: number, total: number) => string;
+  uploadProgressTitle: string;
+  uploadProgressCount: (done: number, total: number) => string;
+  uploadStatusPending: string;
+  uploadStatusUploading: string;
+  uploadStatusDone: string;
+  uploadStatusError: string;
+  uploadStatusCancelled: string;
+  uploadCancelledNotice: (uploaded: number) => string;
 };
 
 const ru: ObjectsLibraryStrings = {
@@ -145,6 +153,15 @@ const ru: ObjectsLibraryStrings = {
     `Не удалось загрузить ${errCount} из ${total}:\n${lines}`,
   uploadAllOk: (n) => `Загружено файлов: ${n}`,
   uploadPartialOk: (ok, total) => `Загружено: ${ok} из ${total}`,
+  uploadProgressTitle: 'Загрузка файлов',
+  uploadProgressCount: (done, total) => `${done} из ${total}`,
+  uploadStatusPending: 'В очереди',
+  uploadStatusUploading: 'Загрузка…',
+  uploadStatusDone: 'Готово',
+  uploadStatusError: 'Ошибка',
+  uploadStatusCancelled: 'Отменено',
+  uploadCancelledNotice: (uploaded) =>
+    uploaded > 0 ? `Загрузка отменена. Загружено файлов: ${uploaded}` : 'Загрузка отменена',
 };
 
 const zh: ObjectsLibraryStrings = {
@@ -219,6 +236,15 @@ const zh: ObjectsLibraryStrings = {
     `有 ${errCount} / ${total} 个文件上传失败：\n${lines}`,
   uploadAllOk: (n) => `已上传 ${n} 个文件`,
   uploadPartialOk: (ok, total) => `已上传 ${ok} / ${total} 个文件`,
+  uploadProgressTitle: '上传文件',
+  uploadProgressCount: (done, total) => `${done} / ${total}`,
+  uploadStatusPending: '排队中',
+  uploadStatusUploading: '上传中…',
+  uploadStatusDone: '完成',
+  uploadStatusError: '失败',
+  uploadStatusCancelled: '已取消',
+  uploadCancelledNotice: (uploaded) =>
+    uploaded > 0 ? `上传已取消。已上传 ${uploaded} 个文件` : '上传已取消',
 };
 
 export function objectsLibraryStrings(locale: AdminLocale): ObjectsLibraryStrings {

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminSelect, AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { RichBlock } from '@/components/RichBlock/RichBlock';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import {
@@ -13,6 +15,7 @@ import {
 import { adminBlogPostEditorStrings } from '@/lib/admin-i18n/adminBlogI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import pn from '../catalog/products/new/productNew.module.css';
 import catalogStyles from '../catalog/catalogAdmin.module.css';
 import type { AdminBlogCategoryRow, AdminBlogPostDetail } from './blogAdminTypes';
 import { dateInputToIso, dateToDateInputValue, isoOrNowToDateInputValue } from './blogDateInput';
@@ -113,6 +116,11 @@ export function BlogPostEditorClient({ postId }: Props) {
     setPicker(null);
   }
 
+  function openCoverPicker() {
+    richPickResolver.current = null;
+    setPicker({ filter: 'image', title: s.coverPicker });
+  }
+
   async function save() {
     const titleTrim = title.trim();
     if (!titleTrim) {
@@ -186,25 +194,17 @@ export function BlogPostEditorClient({ postId }: Props) {
         </Link>
       </div>
 
-      <div className={blogStyles.editorField}>
-        <label className={blogStyles.editorLabel} htmlFor="blog-title">
-          {s.titleLabel}
-        </label>
-        <input
+      <div className={`${catalogStyles.form} ${pn.formWide}`}>
+        <AdminTextField
           id="blog-title"
-          className={blogStyles.editorInput}
+          label={s.titleLabel}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-      </div>
 
-      <div className={blogStyles.editorField}>
-        <label className={blogStyles.editorLabel} htmlFor="blog-category">
-          {s.category}
-        </label>
-        <select
+        <AdminSelect
           id="blog-category"
-          className={blogStyles.editorSelect}
+          label={s.category}
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
         >
@@ -214,72 +214,48 @@ export function BlogPostEditorClient({ postId }: Props) {
               {cat.name}
             </option>
           ))}
-        </select>
-      </div>
+        </AdminSelect>
 
-      <div className={blogStyles.editorField}>
-        <label className={blogStyles.editorLabel} htmlFor="blog-date">
-          {s.dateLabel}
-        </label>
-        <input
+        <AdminTextField
           id="blog-date"
+          label={s.dateLabel}
           type="date"
-          className={blogStyles.editorInput}
-          style={{ maxWidth: 280 }}
+          className={blogStyles.fieldNarrow}
           value={dateYmd}
           onChange={(e) => setDateYmd(e.target.value)}
         />
-      </div>
 
-      <div className={blogStyles.editorField}>
-        <label className={blogStyles.editorLabel} htmlFor="blog-excerpt">
-          {s.excerpt}
-        </label>
-        <textarea
+        <AdminTextArea
           id="blog-excerpt"
-          className={blogStyles.editorTextarea}
+          label={s.excerpt}
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
           rows={4}
         />
-      </div>
 
-      <div className={blogStyles.editorField}>
-        <span className={blogStyles.editorLabel}>{s.cover}</span>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', maxWidth: 720 }}>
+        <div>
+          <h2 className={catalogStyles.groupHeading}>{s.cover}</h2>
           {coverUrl ? <img src={coverUrl} alt="" className={blogStyles.coverPreview} /> : null}
-          <button
-            type="button"
-            className={catalogStyles.btn}
-            onClick={() => {
-              richPickResolver.current = null;
-              setPicker({ filter: 'image', title: s.coverPicker });
-            }}
-          >
-            {coverUrl ? s.coverChange : s.coverPick}
-          </button>
-          {coverUrl ? (
-            <button type="button" className={catalogStyles.btn} onClick={() => setCoverUrl('')}>
-              {s.removeCover}
-            </button>
-          ) : null}
+          <div className={catalogStyles.coverActions}>
+            <AdminCompactBtn type="button" onClick={openCoverPicker}>
+              {coverUrl ? s.coverChange : s.coverPick}
+            </AdminCompactBtn>
+            {coverUrl ? (
+              <AdminCompactBtn type="button" variant="danger" onClick={() => setCoverUrl('')}>
+                {s.removeCover}
+              </AdminCompactBtn>
+            ) : null}
+          </div>
         </div>
-      </div>
 
-      <div className={blogStyles.editorField}>
-        <label className={blogStyles.editorLabel} htmlFor="blog-slug">
-          {s.slugOptional}
-        </label>
-        <input
+        <AdminTextField
           id="blog-slug"
-          className={blogStyles.editorInput}
+          label={s.slugOptional}
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
           placeholder={s.slugPh}
         />
-      </div>
 
-      <div className={blogStyles.editorField}>
         <div className={catalogStyles.labelCheckboxRow}>
           <AccountCheckbox
             id="blog-published"
@@ -290,31 +266,26 @@ export function BlogPostEditorClient({ postId }: Props) {
           />
           <label htmlFor="blog-published">{s.publishedLabel}</label>
         </div>
-      </div>
 
-      <div className={blogStyles.editorField}>
-        <span className={blogStyles.editorLabel}>{s.body}</span>
-        <RichBlock
-          value={body}
-          onChange={setBody}
-          uploadMedia={(file, type) => adminUploadRichMedia(file, type)}
-          pickMediaFromLibrary={pickMediaFromLibrary}
-        />
-      </div>
+        <div className={pn.section}>
+          <h2 className={catalogStyles.groupHeading}>{s.body}</h2>
+          <RichBlock
+            value={body}
+            onChange={setBody}
+            uploadMedia={(file, type) => adminUploadRichMedia(file, type)}
+            pickMediaFromLibrary={pickMediaFromLibrary}
+          />
+        </div>
 
-      {saveMsg ? (
-        <p className={saveMsg === s.saved ? catalogStyles.muted : catalogStyles.error}>{saveMsg}</p>
-      ) : null}
+        {saveMsg ? (
+          <p className={saveMsg === s.saved ? catalogStyles.muted : catalogStyles.error}>{saveMsg}</p>
+        ) : null}
 
-      <div className={blogStyles.editorActions}>
-        <button
-          type="button"
-          className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
-          disabled={saving}
-          onClick={() => void save()}
-        >
-          {saving ? s.saveBusy : s.save}
-        </button>
+        <div className={catalogStyles.formActions}>
+          <AdminCompactBtn type="button" variant="accent" disabled={saving} onClick={() => void save()}>
+            {saving ? s.saveBusy : s.save}
+          </AdminCompactBtn>
+        </div>
       </div>
 
       <MediaLibraryPickerModal

@@ -19,15 +19,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
 import { adminCollectionEditorStrings } from '@/lib/admin-i18n/adminCollectionsI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import type { AdminProductRow } from '../catalog/products/adminProductTypes';
 import styles from '../catalog/catalogAdmin.module.css';
 import objStyles from '../objects/objectsLibrary.module.css';
 import type { CuratedCollectionDetail } from './collectionsAdminTypes';
+
+const COLLECTION_FORM_ID = 'curated-collection-editor-form';
 
 function rowKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -67,10 +75,10 @@ function SortableItemRow({
       <td>
         <strong>{label}</strong>
       </td>
-      <td>
-        <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={onRemove}>
+      <td className={styles.tableCellActions}>
+        <AdminCompactBtn type="button" variant="danger" onClick={onRemove}>
           {removeLabel}
-        </button>
+        </AdminCompactBtn>
       </td>
     </tr>
   );
@@ -102,6 +110,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
   const { locale } = useAdminLocale();
   const str = useMemo(() => adminCollectionEditorStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const { confirm } = useAdminConfirm();
   const isEdit = !!collectionId;
 
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -205,16 +214,19 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
     if (!addPickerOpen) return;
     setAddLoading(true);
     try {
-      const q = addDebouncedQ ? `?q=${encodeURIComponent(addDebouncedQ)}` : '';
       if (kind === 'PRODUCT') {
-        const data = await adminBackendJson<AdminProductRow[]>(`catalog/admin/products${q}`);
-        setAddProductHits(data);
+        const res = await adminBackendList<AdminProductRow>(
+          'catalog/admin/products',
+          adminListParams({ page: 1, limit: 100, q: addDebouncedQ }),
+        );
+        setAddProductHits(res.items);
         setAddBrandHits([]);
       } else {
-        const data = await adminBackendJson<
-          { id: string; name: string; slug: string }[]
-        >(`catalog/admin/brands${q}`);
-        setAddBrandHits(data.map((b) => ({ id: b.id, name: b.name, slug: b.slug })));
+        const res = await adminBackendList<{ id: string; name: string; slug: string }>(
+          'catalog/admin/brands',
+          adminListParams({ page: 1, limit: 100, q: addDebouncedQ }),
+        );
+        setAddBrandHits(res.items.map((b) => ({ id: b.id, name: b.name, slug: b.slug })));
         setAddProductHits([]);
       }
     } catch {
@@ -282,10 +294,10 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
     setAddQ('');
   }
 
-  function changeKind(next: 'PRODUCT' | 'BRAND') {
+  async function changeKind(next: 'PRODUCT' | 'BRAND') {
     if (next === kind) return;
     const has = productRows.length > 0 || brandRows.length > 0;
-    if (has && !window.confirm(str.changeKindConfirm)) {
+    if (has && !(await confirm({ title: str.changeKindConfirm }))) {
       return;
     }
     setKind(next);
@@ -406,30 +418,20 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
             onClick={(ev) => ev.stopPropagation()}
             style={{ maxWidth: 640, width: '100%' }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 12,
-                marginBottom: 12,
-              }}
-            >
-              <h2 className={objStyles.modalTitle} style={{ margin: 0, paddingRight: 8 }}>
+            <div className={styles.modalHeaderRow}>
+              <h2 className={objStyles.dialogTitle} style={{ margin: 0, paddingRight: 8 }}>
                 {kind === 'PRODUCT' ? str.addProduct : str.addBrand}
               </h2>
               <ModalCloseButton onClick={() => setAddPickerOpen(false)} label={str.close} />
             </div>
-            <input
-              type="search"
-              className={styles.search}
-              style={{ width: '100%', maxWidth: 'none', marginBottom: 12 }}
+            <AdminSearchBox
+              className={styles.searchBoxFull}
               placeholder={str.searchPh}
+              ariaLabel={str.searchAria}
               value={addQ}
               onChange={(e) => setAddQ(e.target.value)}
-              aria-label={str.searchAria}
             />
-            <div className={styles.tableWrap} style={{ maxHeight: 320, overflow: 'auto' }}>
+            <div className={`${styles.tableWrap} ${styles.tableScroll}`}>
               {addLoading ? (
                 <p className={styles.muted}>{c.loading}</p>
               ) : kind === 'PRODUCT' ? (
@@ -530,174 +532,150 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                 </table>
               )}
             </div>
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 10,
-                marginTop: 14,
-                alignItems: 'center',
-              }}
-            >
-              <button
+            <div className={styles.formActions} style={{ marginTop: 14 }}>
+              <AdminCompactBtn
                 type="button"
-                className={styles.btn}
+                variant="outline"
                 onClick={() => setAddModalSelected(new Set())}
                 disabled={!addModalSelected.size}
               >
                 {str.clearSel}
-              </button>
-              <button
+              </AdminCompactBtn>
+              <AdminCompactBtn
                 type="button"
-                className={`${styles.btn} ${styles.btnPrimary}`}
                 disabled={!addModalSelected.size}
                 onClick={commitAddModalSelection}
               >
-                {str.addSelected}
-                {addModalSelected.size ? ` (${addModalSelected.size})` : ''}
-              </button>
+                {addModalSelected.size ? `${str.addSelected} (${addModalSelected.size})` : str.addSelected}
+              </AdminCompactBtn>
             </div>
           </div>
         </div>
       ) : null}
 
-      <form className={`${styles.form} ${styles.formWide}`} onSubmit={submit}>
+      <div className={styles.detailTitleRow}>
         <h1 className={styles.title}>{isEdit ? str.titleEdit : str.titleNew}</h1>
+        <AdminCompactBtn
+          type="submit"
+          form={COLLECTION_FORM_ID}
+          variant="accent"
+          disabled={saving || !!loadError || (isEdit && !loaded)}
+        >
+          {saving ? str.saveBusy : isEdit ? str.saveEdit : str.create}
+        </AdminCompactBtn>
+      </div>
 
-        <label className={styles.label}>
-          {str.nameLabel}
-          <input
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
+      <form
+        id={COLLECTION_FORM_ID}
+        className={`${styles.form} ${styles.formWide}`}
+        onSubmit={submit}
+      >
+        <AdminTextField
+          label={str.nameLabel}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+
+        <AdminTextField
+          label={str.slugLabel}
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          placeholder={str.slugPh}
+        />
+
+        <AdminTextArea
+          label={str.desc}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={5}
+        />
+
+        <div className={styles.fieldBlock}>
+          <span className={styles.adminFieldLabel}>{str.contentTitle}</span>
+          <AdminTabs
+            variant="pill"
+            ariaLabel={str.contentTitle}
+            items={[
+              { id: 'PRODUCT' as const, label: str.tabProducts },
+              { id: 'BRAND' as const, label: str.tabBrands },
+            ]}
+            activeId={kind}
+            onChange={changeKind}
           />
-        </label>
+        </div>
 
-        <label className={styles.label}>
-          {str.slugLabel}
-          <input
-            className={styles.input}
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder={str.slugPh}
-          />
-        </label>
-
-        <label className={styles.label}>
-          {str.desc}
-          <textarea
-            className={styles.textarea}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={5}
-          />
-        </label>
-
-        <fieldset className={styles.label} style={{ border: 'none', padding: 0, margin: 0 }}>
-          <legend className={styles.label} style={{ marginBottom: 8 }}>
-            {str.contentTitle}
-          </legend>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="col-kind"
-                checked={kind === 'PRODUCT'}
-                onChange={() => changeKind('PRODUCT')}
-              />
-              {str.tabProducts}
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="col-kind"
-                checked={kind === 'BRAND'}
-                onChange={() => changeKind('BRAND')}
-              />
-              {str.tabBrands}
-            </label>
-          </div>
-        </fieldset>
-
-        <div className={styles.label}>
-          {str.coverBlock}
-          <div className={styles.fileRow}>
-            <button
+        <div className={styles.fieldBlock}>
+          <span className={styles.adminFieldLabel}>{str.coverBlock}</span>
+          {coverUrl.trim() ? (
+            <div className={styles.bgPreview} style={{ maxWidth: 360 }}>
+              <img src={coverUrl.trim()} alt="" />
+            </div>
+          ) : null}
+          <div className={styles.coverActions}>
+            <AdminCompactBtn
               type="button"
-              className={`${styles.btn} ${styles.btnPrimary}`}
               onClick={() => {
                 setSaveError(null);
                 setCoverPickerOpen(true);
               }}
             >
               {str.pickLibrary}
-            </button>
+            </AdminCompactBtn>
             {coverUrl.trim() ? (
-              <button
+              <AdminCompactBtn
                 type="button"
-                className={styles.btn}
+                variant="outline"
                 onClick={() => {
                   setCoverUrl('');
                   setCoverMediaObjectId(null);
                 }}
               >
                 {str.removeCover}
-              </button>
+              </AdminCompactBtn>
             ) : null}
           </div>
-          {coverUrl.trim() ? (
-            <div className={styles.bgPreview} style={{ marginTop: 10, maxWidth: 360 }}>
-              <img src={coverUrl.trim()} alt="" />
-            </div>
-          ) : null}
         </div>
 
-        <div className={styles.label}>
-          <div className={styles.labelCheckboxRow}>
-            <AccountCheckbox
-              id="curated-collection-active"
-              className={styles.adminCheckboxForm}
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              aria-label={str.activeAria}
-            />
-            <label htmlFor="curated-collection-active">{str.activeLabel}</label>
-          </div>
-        </div>
+        <h2 className={styles.groupHeading}>{str.seoHeading}</h2>
+        <AdminTextField
+          label={str.seoTitle}
+          value={seoTitle}
+          onChange={(e) => setSeoTitle(e.target.value)}
+        />
+        <AdminTextArea
+          label={str.seoDesc}
+          value={seoDescription}
+          onChange={(e) => setSeoDescription(e.target.value)}
+          rows={3}
+        />
 
-        <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>
-          SEO
-        </h2>
-        <label className={styles.label}>
-          Meta title
-          <input className={styles.input} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
-        </label>
-        <label className={styles.label}>
-          Meta description
-          <textarea
-            className={styles.textarea}
-            value={seoDescription}
-            onChange={(e) => setSeoDescription(e.target.value)}
-            rows={3}
+        <div className={styles.labelCheckboxRow}>
+          <AccountCheckbox
+            id="curated-collection-active"
+            className={styles.adminCheckboxForm}
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            aria-label={str.activeAria}
           />
-        </label>
+          <label htmlFor="curated-collection-active">{str.activeLabel}</label>
+        </div>
 
-        <h2 className={styles.sectionTitle} style={{ marginTop: 24 }}>
-          {kind === 'PRODUCT' ? str.listProducts : str.listBrands}
-        </h2>
-        <button
-          type="button"
-          className={`${styles.btn} ${styles.btnPrimary} ${styles.btnAlignStart}`}
-          style={{ marginBottom: 12 }}
-          onClick={() => {
-            setAddQ('');
-            setAddModalSelected(new Set());
-            setAddPickerOpen(true);
-          }}
-        >
-          {kind === 'PRODUCT' ? str.addProductBtn : str.addBrandBtn}
-        </button>
+        <div className={styles.sectionHead} style={{ marginTop: 8 }}>
+          <h2 className={styles.groupHeading}>
+            {kind === 'PRODUCT' ? str.listProducts : str.listBrands}
+          </h2>
+          <AdminCompactBtn
+            type="button"
+            onClick={() => {
+              setAddQ('');
+              setAddModalSelected(new Set());
+              setAddPickerOpen(true);
+            }}
+          >
+            {kind === 'PRODUCT' ? str.addProductBtn : str.addBrandBtn}
+          </AdminCompactBtn>
+        </div>
 
         {kind === 'PRODUCT' ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onProductDragEnd}>
@@ -707,7 +685,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                   <tr>
                     <th style={{ width: 36 }} aria-label={str.thOrder} />
                     <th>{str.thName}</th>
-                    <th />
+                    <th className={styles.tableCellActions} />
                   </tr>
                 </thead>
                 <tbody>
@@ -748,7 +726,7 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
                   <tr>
                     <th style={{ width: 36 }} aria-label={str.thOrder} />
                     <th>{str.thName}</th>
-                    <th />
+                    <th className={styles.tableCellActions} />
                   </tr>
                 </thead>
                 <tbody>
@@ -785,17 +763,10 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
 
         {saveError ? <p className={styles.error}>{saveError}</p> : null}
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
-          <button
-            type="submit"
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            disabled={saving || !!loadError || (isEdit && !loaded)}
-          >
-            {saving ? str.saveBusy : isEdit ? str.saveEdit : str.create}
-          </button>
-          <Link href="/admin/collections" className={styles.btn}>
+        <div className={styles.formActions}>
+          <AdminCompactBtnLink href="/admin/collections" variant="outline">
             {str.cancel}
-          </Link>
+          </AdminCompactBtnLink>
         </div>
       </form>
     </>

@@ -1,5 +1,6 @@
 'use client';
 
+import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import {
   type KpGrossDimensions,
   mmToCmInput,
@@ -9,7 +10,7 @@ import {
   readKpGrossFromSnapshot,
   writeKpGrossToSnapshot,
 } from '@/lib/commercialProposal/kpGrossDimensions';
-import styles from '../../../catalog/catalogAdmin.module.css';
+import kpStyles from './kpEditor.module.css';
 
 type Props = {
   snapshot: Record<string, unknown> | null;
@@ -26,68 +27,62 @@ function patchGross(
   return writeKpGrossToSnapshot(snap, { ...cur, ...patch });
 }
 
-const fullInputStyle = { width: '100%', boxSizing: 'border-box' as const };
-
 export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = false }: Props) {
   const g = readKpGrossFromSnapshot(snapshot);
 
   if (fullWidth) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
-        <input
-          className={styles.input}
+      <div className={kpStyles.grossFieldsStack}>
+        <AdminTextField
+          className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
           placeholder="Длина, см"
-          style={fullInputStyle}
+          aria-label="Длина брутто, см"
           value={mmToCmInput(g.lengthMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { lengthMm: parseCmInputToMm(e.target.value) }))
           }
-          aria-label="Длина брутто, см"
         />
-        <input
-          className={styles.input}
+        <AdminTextField
+          className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
           placeholder="Ширина, см"
-          style={fullInputStyle}
+          aria-label="Ширина брутто, см"
           value={mmToCmInput(g.widthMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { widthMm: parseCmInputToMm(e.target.value) }))
           }
-          aria-label="Ширина брутто, см"
         />
-        <input
-          className={styles.input}
+        <AdminTextField
+          className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
           placeholder="Высота, см"
-          style={fullInputStyle}
+          aria-label="Высота брутто, см"
           value={mmToCmInput(g.heightMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { heightMm: parseCmInputToMm(e.target.value) }))
           }
-          aria-label="Высота брутто, см"
         />
-        <input
-          className={styles.input}
+        <AdminTextField
+          className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
           placeholder="Объём, м³"
-          style={fullInputStyle}
+          aria-label="Объём брутто, м³"
           value={m3InputFromVolumeLiters(g.volumeLiters)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { volumeLiters: parseOptionalM3(e.target.value) }))
           }
-          aria-label="Объём брутто, м³"
         />
-        <input
-          className={styles.input}
+        <AdminTextField
+          className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
           placeholder="Вес, кг"
-          style={fullInputStyle}
+          aria-label="Вес брутто, кг"
           value={g.weightKg != null ? String(g.weightKg).replace('.', ',') : ''}
           onChange={(e) => {
             const t = e.target.value.trim().replace(',', '.');
@@ -98,7 +93,6 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
               }),
             );
           }}
-          aria-label="Вес брутто, кг"
         />
       </div>
     );
@@ -106,63 +100,64 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 168 }}>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        <input
-          className={styles.input}
+      <div className={kpStyles.grossFieldsRow}>
+        <AdminTextField
+          controlClassName={kpStyles.fieldTiny52}
+          className={kpStyles.fieldTiny52}
           type="text"
           inputMode="decimal"
           placeholder="Д, см"
-          style={{ width: 52 }}
+          aria-label="Длина брутто, см"
           value={mmToCmInput(g.lengthMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { lengthMm: parseCmInputToMm(e.target.value) }))
           }
-          aria-label="Длина брутто, см"
         />
-        <input
-          className={styles.input}
+        <AdminTextField
+          controlClassName={kpStyles.fieldTiny52}
+          className={kpStyles.fieldTiny52}
           type="text"
           inputMode="decimal"
           placeholder="Ш, см"
-          style={{ width: 52 }}
+          aria-label="Ширина брутто, см"
           value={mmToCmInput(g.widthMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { widthMm: parseCmInputToMm(e.target.value) }))
           }
-          aria-label="Ширина брутто, см"
         />
-        <input
-          className={styles.input}
+        <AdminTextField
+          controlClassName={kpStyles.fieldTiny52}
+          className={kpStyles.fieldTiny52}
           type="text"
           inputMode="decimal"
           placeholder="В, см"
-          style={{ width: 52 }}
+          aria-label="Высота брутто, см"
           value={mmToCmInput(g.heightMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { heightMm: parseCmInputToMm(e.target.value) }))
           }
-          aria-label="Высота брутто, см"
         />
       </div>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        <input
-          className={styles.input}
+      <div className={kpStyles.grossFieldsRowGap}>
+        <AdminTextField
+          controlClassName={kpStyles.fieldTiny72}
+          className={kpStyles.fieldTiny72}
           type="text"
           inputMode="decimal"
           placeholder="м³"
-          style={{ width: 72 }}
+          aria-label="Объём брутто, м³"
           value={m3InputFromVolumeLiters(g.volumeLiters)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { volumeLiters: parseOptionalM3(e.target.value) }))
           }
-          aria-label="Объём брутто, м³"
         />
-        <input
-          className={styles.input}
+        <AdminTextField
+          controlClassName={kpStyles.fieldTiny72}
+          className={kpStyles.fieldTiny72}
           type="text"
           inputMode="decimal"
           placeholder="кг"
-          style={{ width: 72 }}
+          aria-label="Вес брутто, кг"
           value={g.weightKg != null ? String(g.weightKg).replace('.', ',') : ''}
           onChange={(e) => {
             const t = e.target.value.trim().replace(',', '.');
@@ -173,7 +168,6 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
               }),
             );
           }}
-          aria-label="Вес брутто, кг"
         />
       </div>
     </div>

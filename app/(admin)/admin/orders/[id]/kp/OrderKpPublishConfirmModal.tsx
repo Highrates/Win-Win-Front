@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import modalStyles from '@/app/(account)/account/projects/components/CreateEditProjectModal.module.css';
+import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
 import { AdminOrderSideChat } from '../AdminOrderSideChat';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
@@ -10,6 +10,8 @@ import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import { KP_PUBLISH_NEXT_STATUSES } from '@/lib/orders/orderStatus';
 import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
 import type { KpOfferTotals } from '@/lib/commercialProposal/kpOfferTotals';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
 import catalogStyles from '../../../catalog/catalogAdmin.module.css';
 import own from './OrderKpPublishConfirmModal.module.css';
 
@@ -127,8 +129,7 @@ export function OrderKpPublishConfirmModal({
           </h2>
           <button
             type="button"
-            className={modalStyles.closeBtn}
-            style={{ fontSize: 28, lineHeight: 1, fontWeight: 300 }}
+            className={catalogStyles.modalCloseIconBtn}
             aria-label="Закрыть"
             disabled={publishing}
             onClick={onClose}
@@ -160,23 +161,20 @@ export function OrderKpPublishConfirmModal({
 
             {showNextStatus ? (
               <div className={own.statusBlock}>
-                <label className={own.statusLabel} htmlFor="kp-publish-next-status">
-                  {d.kpPublishNextStatus}
-                </label>
-                <select
+                <AdminSelect
+                  label={d.kpPublishNextStatus}
                   id="kp-publish-next-status"
-                  className={catalogStyles.input}
+                  className={own.statusSelect}
                   value={nextOrderStatus}
                   disabled={publishing}
                   onChange={(e) => onNextOrderStatus(e.target.value as NextOrderStatusChoice)}
-                  style={{ width: '100%', marginTop: 8 }}
                 >
                   {NEXT_STATUS_OPTIONS.map((v) => (
                     <option key={v} value={v}>
                       {statusLabels[v] ?? v}
                     </option>
                   ))}
-                </select>
+                </AdminSelect>
               </div>
             ) : null}
 
@@ -197,17 +195,17 @@ export function OrderKpPublishConfirmModal({
             ) : null}
 
             <div className={own.footerRow}>
-              <button type="button" className={catalogStyles.btn} disabled={publishing} onClick={onClose}>
+              <AdminCompactBtn type="button" variant="outline" disabled={publishing} onClick={onClose}>
                 {labels.cancel}
-              </button>
-              <button
+              </AdminCompactBtn>
+              <AdminCompactBtn
                 type="button"
-                className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
+                variant="accent"
                 disabled={publishing}
                 onClick={() => void onConfirm()}
               >
                 {publishing ? labels.submitting : labels.submit}
-              </button>
+              </AdminCompactBtn>
             </div>
           </div>
           <div className={own.chatCol}>

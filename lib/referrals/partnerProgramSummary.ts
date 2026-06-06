@@ -16,6 +16,7 @@ export type PartnerProgramBonusLineApi = {
 
 export type PartnerProgramSummaryApi = {
   program: {
+    enabled: boolean;
     level1Percent: number;
     level2Percent: number;
     minimumOrderSiteTotalRub: number;

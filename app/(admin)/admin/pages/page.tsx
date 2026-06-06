@@ -1,3 +1,4 @@
+import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import { adminPagesScreen } from '@/lib/admin-i18n/adminMiscPagesI18n';
 import { getAdminLocale } from '@/lib/admin-i18n/getAdminLocale';
 
@@ -7,7 +8,7 @@ export default function AdminPagesPage() {
   const t = adminPagesScreen(locale);
   return (
     <main>
-      <h1>{t.title}</h1>
+      <h1 className={catalogStyles.title}>{t.title}</h1>
     </main>
   );
 }

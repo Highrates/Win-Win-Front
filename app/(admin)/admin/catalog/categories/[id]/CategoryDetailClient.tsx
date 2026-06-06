@@ -4,11 +4,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import { adminCategoryDetailStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import styles from '../../catalogAdmin.module.css';
 import { SubcategoriesDnD, type SubcatRow } from './SubcategoriesDnD';
 
@@ -54,6 +57,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminCategoryDetailStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const { confirm } = useAdminConfirm();
   const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
   const [data, setData] = useState<CategoryDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +73,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -99,6 +104,33 @@ export function CategoryDetailClient({ id }: { id: string }) {
     setBackgroundImageUrl('');
     setBackgroundMediaObjectId(null);
     setSaveMsg(null);
+  }
+
+  async function removeCategory() {
+    if (!data) return;
+    if (!(await confirm({ title: s.confirmDelete(name.trim() || data.name) }))) return;
+    setDeleting(true);
+    setSaveMsg(null);
+    try {
+      const res = await adminBackendJson<{ deleted: string[]; skipped: string[] }>(
+        'catalog/admin/categories/bulk-delete',
+        {
+          method: 'POST',
+          body: JSON.stringify({ ids: [id] }),
+        },
+      );
+      if (res.deleted.includes(id)) {
+        await revalidatePublicCatalogCache();
+        router.push('/admin/catalog/categories');
+        router.refresh();
+        return;
+      }
+      setSaveMsg(s.deleteBlocked);
+    } catch (err) {
+      setSaveMsg(err instanceof Error ? err.message : s.errDelete);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function saveMeta(e: React.FormEvent) {
@@ -136,17 +168,17 @@ export function CategoryDetailClient({ id }: { id: string }) {
 
   if (error || !data) {
     return (
-      <main>
-        <p className={styles.error}>{error ?? s.notFound}</p>
-        <Link href="/admin/catalog/categories" className={styles.btn}>
-          {c.backToList}
-        </Link>
-      </main>
+        <main>
+          <p className={styles.error}>{error ?? s.notFound}</p>
+          <AdminCompactBtnLink href="/admin/catalog/categories" variant="outline">
+            {c.backToList}
+          </AdminCompactBtnLink>
+        </main>
     );
   }
 
   return (
-    <main>
+      <main>
       <MediaLibraryPickerModal
         open={pickerOpen}
         title={s.coverTitle}
@@ -175,15 +207,25 @@ export function CategoryDetailClient({ id }: { id: string }) {
 
       <div className={styles.detailHero}>
         <div className={styles.detailTitleRow}>
-          <h1 className={styles.detailTitle}>{name}</h1>
-          <button
-            type="submit"
-            form={CATEGORY_FORM_ID}
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            disabled={saving}
-          >
-            {saving ? s.saveBusy : s.save}
-          </button>
+          <h1 className={styles.title}>{name}</h1>
+          <div className={styles.detailTitleActions}>
+            <AdminCompactBtn
+              type="submit"
+              form={CATEGORY_FORM_ID}
+              variant="accent"
+              disabled={saving || deleting}
+            >
+              {saving ? s.saveBusy : s.save}
+            </AdminCompactBtn>
+            <AdminCompactBtn
+              type="button"
+              variant="danger"
+              disabled={saving || deleting}
+              onClick={() => void removeCategory()}
+            >
+              {deleting ? s.deleteBusy : s.delete}
+            </AdminCompactBtn>
+          </div>
         </div>
         {saveMsg ? <p className={styles.error}>{saveMsg}</p> : null}
         <p className={styles.muted} style={{ margin: '0 0 12px' }}>
@@ -195,86 +237,80 @@ export function CategoryDetailClient({ id }: { id: string }) {
             <img src={backgroundImageUrl} alt="" />
           </div>
         ) : (
-          <p className={styles.muted}>
+          <p className={styles.muted} style={{ margin: 0 }}>
             {s.coverMissing}
           </p>
         )}
+        <div className={styles.coverActions}>
+          <AdminCompactBtn
+            type="button"
+            disabled={saving || deleting}
+            onClick={() => {
+              setSaveMsg(null);
+              setPickerOpen(true);
+            }}
+          >
+            {s.pickLibrary}
+          </AdminCompactBtn>
+          {backgroundImageUrl.trim() ? (
+            <AdminCompactBtn
+              type="button"
+              variant="outline"
+              disabled={saving || deleting}
+              onClick={clearCover}
+            >
+              {s.removeCover}
+            </AdminCompactBtn>
+          ) : null}
+        </div>
       </div>
 
       <form id={CATEGORY_FORM_ID} className={styles.form} onSubmit={saveMeta} style={{ maxWidth: 560 }}>
-        <label className={styles.label}>
-          {s.name}
-          <input
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            minLength={1}
+        <AdminTextField
+          label={s.name}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          minLength={1}
+        />
+        <AdminTextField
+          label={c.slug}
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          required
+        />
+        <AdminTextField
+          label={s.seoTitle}
+          value={seoTitle}
+          onChange={(e) => setSeoTitle(e.target.value)}
+        />
+        <AdminTextArea
+          label={s.seoDesc}
+          value={seoDescription}
+          onChange={(e) => setSeoDescription(e.target.value)}
+          rows={4}
+        />
+        <div className={styles.labelCheckboxRow}>
+          <AccountCheckbox
+            id="edit-category-active"
+            className={styles.adminCheckboxForm}
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            aria-label={s.activeAria}
           />
-        </label>
-        <label className={styles.label}>
-          {c.slug}
-          <input className={styles.input} value={slug} onChange={(e) => setSlug(e.target.value)} required />
-        </label>
-        <div className={styles.label}>
-          <div className={styles.labelCheckboxRow}>
-            <AccountCheckbox
-              id="edit-category-active"
-              className={styles.adminCheckboxForm}
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              aria-label={s.activeAria}
-            />
-            <label htmlFor="edit-category-active">{s.activeLabel}</label>
-          </div>
-        </div>
-        <label className={styles.label}>
-          {s.seoTitle}
-          <input className={styles.input} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
-        </label>
-        <label className={styles.label}>
-          {s.seoDesc}
-          <textarea
-            className={styles.textarea}
-            value={seoDescription}
-            onChange={(e) => setSeoDescription(e.target.value)}
-            rows={4}
-          />
-        </label>
-        <div className={styles.label}>
-          {s.cover}
-          <div className={styles.fileRow}>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.btnPrimary}`}
-              onClick={() => {
-                setSaveMsg(null);
-                setPickerOpen(true);
-              }}
-            >
-              {s.pickLibrary}
-            </button>
-            {backgroundImageUrl.trim() ? (
-              <button type="button" className={styles.btn} onClick={clearCover}>
-                {s.removeCover}
-              </button>
-            ) : null}
-          </div>
+          <label htmlFor="edit-category-active">{s.activeLabel}</label>
         </div>
       </form>
 
       <section className={styles.section} aria-labelledby="subcat-heading">
         <div className={styles.sectionHead}>
-          <h2 id="subcat-heading" className={styles.sectionTitle}>
+          <h2 id="subcat-heading" className={styles.groupHeading}>
             {s.subcats}
           </h2>
           {(data.depthFromRoot ?? 0) < 2 ? (
-            <Link
-              href={`/admin/catalog/categories/new?parentId=${data.id}`}
-              className={`${styles.btn} ${styles.btnPrimary}`}
-            >
+            <AdminCompactBtnLink href={`/admin/catalog/categories/new?parentId=${data.id}`}>
               {s.createSub}
-            </Link>
+            </AdminCompactBtnLink>
           ) : (
             <span className={styles.muted} title={s.maxDepthTitle}>
               {s.maxDepth}
@@ -289,7 +325,7 @@ export function CategoryDetailClient({ id }: { id: string }) {
       </section>
 
       <section className={styles.section} aria-labelledby="products-heading">
-        <h2 id="products-heading" className={styles.sectionTitle}>
+        <h2 id="products-heading" className={styles.groupHeading}>
           {s.products}
         </h2>
         {data.products.length === 0 ? (

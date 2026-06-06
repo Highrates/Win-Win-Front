@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { adminDetailErrorFromBackend } from '@/lib/adminQuery';
 import type { DesignerProjectDetailApi, DesignerProjectLineApi } from '@/lib/designerProjects/apiTypes';
+import catalogStyles from '../../catalog/catalogAdmin.module.css';
+import clientsStyles from '../../clients/clients.module.css';
 import styles from '../designer-projects.module.css';
 
 type AdminDetail = DesignerProjectDetailApi & { userId: string; userEmail: string | null };
@@ -54,19 +58,13 @@ export function DesignerProjectAdminDetailClient({
       setLoading(true);
       setErr(null);
       try {
-        const res = await fetch(`/api/admin/backend/designer-projects/admin/${encodeURIComponent(projectId)}`, {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!res.ok) {
-          const j = (await res.json().catch(() => ({}))) as { message?: string };
-          throw new Error(j.message || `HTTP ${res.status}`);
-        }
-        const j = (await res.json()) as AdminDetail;
+        const j = await adminBackendJson<AdminDetail>(
+          `designer-projects/admin/${encodeURIComponent(projectId)}`,
+        );
         if (!cancelled) setDetail(j);
       } catch (e) {
         if (!cancelled) {
-          setErr(e instanceof Error ? e.message : t.errLoad);
+          setErr(adminDetailErrorFromBackend(e, { fallback: t.errLoad }));
           setDetail(null);
         }
       } finally {
@@ -84,37 +82,63 @@ export function DesignerProjectAdminDetailClient({
     return line.productSlug?.trim() || line.productId;
   };
 
+  const userLabel = detail?.userEmail?.trim() || detail?.userId;
+
   return (
-    <main className={styles.panel}>
-      <p>
-        <Link href="/admin/designer-projects" className={styles.rowLink}>
+    <main>
+      <p className={catalogStyles.backRow}>
+        <Link href="/admin/designer-projects" className={catalogStyles.backLink}>
           {t.detailBack}
         </Link>
       </p>
 
-      {loading ? <p>{t.loading}</p> : null}
-      {err ? <p className={styles.err}>{err}</p> : null}
+      {loading ? <p className={catalogStyles.muted}>{t.loading}</p> : null}
+      {err ? (
+        <p className={catalogStyles.error} role="alert">
+          {err}
+        </p>
+      ) : null}
 
       {!loading && detail ? (
         <>
-          <h1 style={{ marginTop: 16 }}>{detail.name.trim() || '—'}</h1>
-          <div className={styles.metaGrid}>
-            <span className={styles.metaLabel}>{t.detailUser}</span>
-            <span>{detail.userEmail?.trim() || <span className={styles.mono}>{detail.userId}</span>}</span>
-            <span className={styles.metaLabel}>{t.detailAddress}</span>
-            <span>{detail.address?.trim() || '—'}</span>
-            <span className={styles.metaLabel}>{t.detailUpdated}</span>
-            <span>{formatWhen(detail.updatedAt)}</span>
-            <span className={styles.metaLabel}>{t.detailTotal}</span>
-            <span>{formatRub(detail.totalRub)}</span>
-          </div>
+          <h1 className={catalogStyles.title}>{detail.name.trim() || '—'}</h1>
 
-          <h2 className={styles.subTitle}>{t.linesTitle}</h2>
+          <dl className={clientsStyles.detailList}>
+            <div>
+              <dt>{t.detailUser}</dt>
+              <dd>
+                {userLabel ? (
+                  <Link
+                    href={`/admin/clients/${encodeURIComponent(detail.userId)}`}
+                    className={catalogStyles.backLink}
+                  >
+                    {userLabel}
+                  </Link>
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>{t.detailAddress}</dt>
+              <dd>{detail.address?.trim() || '—'}</dd>
+            </div>
+            <div>
+              <dt>{t.detailUpdated}</dt>
+              <dd>{formatWhen(detail.updatedAt)}</dd>
+            </div>
+            <div>
+              <dt>{t.detailTotal}</dt>
+              <dd>{formatRub(detail.totalRub)}</dd>
+            </div>
+          </dl>
+
+          <h2 className={catalogStyles.groupHeading}>{t.linesTitle}</h2>
           {detail.lines.length === 0 ? (
-            <p>—</p>
+            <p className={catalogStyles.muted}>—</p>
           ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
+            <div className={catalogStyles.tableWrap}>
+              <table className={catalogStyles.table}>
                 <thead>
                   <tr>
                     <th>{t.lineProduct}</th>

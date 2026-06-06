@@ -2,12 +2,23 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
+import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import { adminCollectionsListStrings } from '@/lib/admin-i18n/adminCollectionsI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
+import {
+  adminQueryKeys,
+  useAdminList,
+  useAdminListSearch,
+  useInvalidateAdminQueries,
+} from '@/lib/adminQuery';
 import styles from '../catalog/catalogAdmin.module.css';
 import type { AdminCuratedCollectionRow } from './collectionsAdminTypes';
 
@@ -16,41 +27,27 @@ export function CollectionsListClient() {
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminCollectionsListStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const invalidate = useInvalidateAdminQueries();
+  const { confirm } = useAdminConfirm();
 
-  const [q, setQ] = useState('');
-  const [debouncedQ, setDebouncedQ] = useState('');
-  const [rows, setRows] = useState<AdminCuratedCollectionRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { q, setQ, debouncedQ, page, setPage } = useAdminListSearch();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const { rows, total, limit, loading, isFetching, error: listError, refetch } = useAdminList<AdminCuratedCollectionRow>({
+    queryKey: adminQueryKeys.collections.list({ q: debouncedQ, page }),
+    path: 'catalog/admin/curated-collections',
+    page,
+    q: debouncedQ,
+    errorFallback: c.errLoad,
+  });
+
+  const error = mutationError ?? listError;
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q.trim()), 300);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = debouncedQ ? `?q=${encodeURIComponent(debouncedQ)}` : '';
-      const data = await adminBackendJson<AdminCuratedCollectionRow[]>(
-        `catalog/admin/curated-collections${params}`,
-      );
-      setRows(data);
-      setSelected(new Set());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : s.errLoad);
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedQ, s]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+    setSelected(new Set());
+  }, [debouncedQ]);
 
   function kindLabel(k: AdminCuratedCollectionRow['kind']): string {
     return k === 'PRODUCT' ? s.kindProduct : s.kindBrand;
@@ -72,10 +69,9 @@ export function CollectionsListClient() {
 
   async function removeSelected() {
     if (!selected.size) return;
-    const ok = window.confirm(s.confirmDelete(selected.size));
-    if (!ok) return;
+    if (!(await confirm({ title: s.confirmDelete(selected.size) }))) return;
     setDeleting(true);
-    setError(null);
+    setMutationError(null);
     try {
       await adminBackendJson<{ deleted: string[] }>('catalog/admin/curated-collections/bulk-delete', {
         method: 'POST',
@@ -83,9 +79,10 @@ export function CollectionsListClient() {
       });
       await revalidatePublicCatalogCache();
       router.refresh();
-      await load();
+      setSelected(new Set());
+      await invalidate(adminQueryKeys.collections.all);
     } catch (e) {
-      setError(e instanceof Error ? e.message : s.errDelete);
+      setMutationError(e instanceof Error ? e.message : s.errDelete);
     } finally {
       setDeleting(false);
     }
@@ -94,99 +91,104 @@ export function CollectionsListClient() {
   const allSelected = rows.length > 0 && selected.size === rows.length;
 
   return (
-    <>
-      <div className={styles.toolbar}>
-        <input
-          type="search"
-          className={styles.search}
-          placeholder={s.searchPh}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          aria-label={s.searchAria}
+      <AdminListShell
+      loading={loading}
+      error={error}
+      onRetry={() => void refetch()}
+      loadingLabel={c.loading}
+      empty={s.empty}
+      isEmpty={!loading && !error && rows.length === 0}
+      isFetching={isFetching}
+      toolbar={
+        <div className={styles.toolbar}>
+          <AdminSearchBox
+            className={styles.searchBoxToolbar}
+            placeholder={s.searchPh}
+            ariaLabel={s.searchAria}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <AdminCompactBtnLink href="/admin/collections/new">{s.add}</AdminCompactBtnLink>
+          <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
+            {!debouncedQ && rows.length > 0 ? (
+              <>
+                <AdminCompactBtn
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
+                >
+                  {s.selectAll}
+                </AdminCompactBtn>
+                <AdminCompactBtn type="button" variant="outline" onClick={() => setSelected(new Set())}>
+                  {s.clear}
+                </AdminCompactBtn>
+              </>
+            ) : null}
+            <AdminCompactBtn
+              type="button"
+              variant="danger"
+              disabled={!selected.size || deleting}
+              onClick={removeSelected}
+            >
+              {deleting ? s.deleting : s.delete(selected.size)}
+            </AdminCompactBtn>
+          </div>
+        </div>
+      }
+      pagination={
+        <AdminListPagination
+          page={page}
+          total={total}
+          limit={limit}
+          onPageChange={setPage}
+          disabled={isFetching}
         />
-        <Link href="/admin/collections/new" className={`${styles.btn} ${styles.btnPrimary}`}>
-          {s.add}
-        </Link>
-        <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
-          {!debouncedQ && rows.length > 0 ? (
-            <>
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
-              >
-                {s.selectAll}
-              </button>
-              <button type="button" className={styles.btn} onClick={() => setSelected(new Set())}>
-                {s.clear}
-              </button>
-            </>
-          ) : null}
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnDanger}`}
-            disabled={!selected.size || deleting}
-            onClick={removeSelected}
-          >
-            {deleting ? s.deleting : s.delete(selected.size)}
-          </button>
-        </div>
-      </div>
-
-      {error ? <p className={styles.error}>{error}</p> : null}
-
-      {loading ? (
-        <p className={styles.muted}>{c.loading}</p>
-      ) : rows.length === 0 ? (
-        <p className={styles.muted}>{s.empty}</p>
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: 44 }}>
-                  <AccountCheckbox
-                    id="collections-select-all"
-                    className={styles.adminCheckboxInTable}
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    aria-label={s.selectAllAria}
-                  />
-                </th>
-                <th>{s.thName}</th>
-                <th>{s.thType}</th>
-                <th>{s.thCount}</th>
-                <th>{s.thVis}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <AccountCheckbox
-                      id={`col-${r.id}`}
-                      className={styles.adminCheckboxInTable}
-                      checked={selected.has(r.id)}
-                      onChange={() => toggle(r.id)}
-                      aria-label={s.selectOne(r.name)}
-                    />
-                  </td>
-                  <td>
-                    <Link href={`/admin/collections/${r.id}`}>{r.name}</Link>
-                  </td>
-                  <td>{kindLabel(r.kind)}</td>
-                  <td>{r.itemCount}</td>
-                  <td>
-                    <span className={`${styles.badge} ${r.isActive ? styles.badgeOn : styles.badgeOff}`}>
-                      {r.isActive ? s.inCatalog : s.hidden}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
+      }
+    >
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th style={{ width: 44 }}>
+              <AccountCheckbox
+                id="collections-select-all"
+                className={styles.adminCheckboxInTable}
+                checked={allSelected}
+                onChange={toggleAll}
+                aria-label={s.selectAllAria}
+              />
+            </th>
+            <th>{s.thName}</th>
+            <th>{s.thType}</th>
+            <th>{s.thCount}</th>
+            <th>{s.thVis}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id}>
+              <td>
+                <AccountCheckbox
+                  id={`col-${r.id}`}
+                  className={styles.adminCheckboxInTable}
+                  checked={selected.has(r.id)}
+                  onChange={() => toggle(r.id)}
+                  aria-label={s.selectOne(r.name)}
+                />
+              </td>
+              <td>
+                <Link href={`/admin/collections/${r.id}`}>{r.name}</Link>
+              </td>
+              <td>{kindLabel(r.kind)}</td>
+              <td>{r.itemCount}</td>
+              <td>
+                <span className={`${styles.badge} ${r.isActive ? styles.badgeOn : styles.badgeOff}`}>
+                  {r.isActive ? s.inCatalog : s.hidden}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </AdminListShell>
   );
 }

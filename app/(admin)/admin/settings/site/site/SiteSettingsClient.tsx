@@ -1,10 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
+import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendFetch, adminBackendJson } from '@/lib/adminBackendFetch';
-import { TextField } from '@/components/TextField';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { DesignerBonusProfilesPanel } from './DesignerBonusProfilesPanel';
 import styles from './siteSettings.module.css';
 
 type SiteSettingsAdminPayload = {
@@ -13,17 +17,10 @@ type SiteSettingsAdminPayload = {
   caseRoomTypeOptions: string[];
 };
 
-type OrderSettingsAdminPayload = {
-  designerOwnCatalogBonusPercent: number;
-  designerOwnMinimumCatalogSiteTotalRub: number;
-  kpMaxLineDiscountPercent: number;
-  catalogBasisNote: string;
-  referralPayoutRulesNote: string;
-};
-
-type TabKey = 'hero' | 'other' | 'orders';
+type TabKey = 'hero' | 'other' | 'designerBonusProfiles';
 
 export function SiteSettingsClient() {
+  const { confirm } = useAdminConfirm();
   const [tab, setTab] = useState<TabKey>('hero');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -34,11 +31,6 @@ export function SiteSettingsClient() {
   const [designerServiceOptions, setDesignerServiceOptions] = useState<string[]>([]);
   const [caseRoomTypeOptions, setCaseRoomTypeOptions] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
-
-  const [orderDesignerPct, setOrderDesignerPct] = useState('');
-  const [orderMinCatalogRub, setOrderMinCatalogRub] = useState('');
-  const [orderKpMaxDisc, setOrderKpMaxDisc] = useState('');
-  const [orderSettingsError, setOrderSettingsError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,28 +55,6 @@ export function SiteSettingsClient() {
     }
   }, []);
 
-  const loadOrderSettings = useCallback(async () => {
-    setOrderSettingsError(null);
-    try {
-      const res = await adminBackendFetch('settings/admin/orders', { method: 'GET', cache: 'no-store' });
-      if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as { message?: string };
-        setOrderSettingsError(typeof j?.message === 'string' ? j.message : 'Не удалось загрузить настройки заказов');
-        return;
-      }
-      const data = (await res.json()) as OrderSettingsAdminPayload;
-      setOrderDesignerPct(String(data.designerOwnCatalogBonusPercent ?? 0));
-      setOrderMinCatalogRub(String(data.designerOwnMinimumCatalogSiteTotalRub ?? 0));
-      setOrderKpMaxDisc(String(data.kpMaxLineDiscountPercent ?? 100));
-    } catch {
-      setOrderSettingsError('Не удалось загрузить настройки заказов');
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadOrderSettings();
-  }, [loadOrderSettings]);
-
   useEffect(() => {
     void load();
   }, [load]);
@@ -102,8 +72,8 @@ export function SiteSettingsClient() {
     setHeroImageUrls((prev) => prev.filter((x) => x !== url));
   }
 
-  function clearHero() {
-    if (!confirm('Очистить все изображения Hero?')) return;
+  async function clearHero() {
+    if (!(await confirm({ title: 'Очистить все изображения Hero?' }))) return;
     setHeroImageUrls([]);
   }
 
@@ -189,81 +159,18 @@ export function SiteSettingsClient() {
     }
   }
 
-  async function saveOrderSettings() {
-    setSaving(true);
-    setSaveError(null);
-    setOrderSettingsError(null);
-    const pct = Number(String(orderDesignerPct).replace(',', '.'));
-    const minRub = Number(String(orderMinCatalogRub).replace(/\s+/g, '').replace(',', '.'));
-    const kp = Number(String(orderKpMaxDisc).replace(',', '.'));
-    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
-      setSaveError('Процент дизайнера: число от 0 до 100.');
-      setSaving(false);
-      return;
-    }
-    if (!Number.isFinite(minRub) || minRub < 0) {
-      setSaveError('Порог каталога: неотрицательное число.');
-      setSaving(false);
-      return;
-    }
-    if (!Number.isFinite(kp) || kp < 0 || kp > 100) {
-      setSaveError('Лимит скидки КП: число от 0 до 100.');
-      setSaving(false);
-      return;
-    }
-    try {
-      const res = await adminBackendFetch('settings/admin/orders', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          designerOwnCatalogBonusPercent: pct,
-          designerOwnMinimumCatalogSiteTotalRub: minRub,
-          kpMaxLineDiscountPercent: kp,
-        }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { message?: string };
-      if (!res.ok) {
-        setSaveError(typeof j?.message === 'string' ? j.message : 'Не удалось сохранить настройки заказов');
-        return;
-      }
-      await loadOrderSettings();
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Не удалось сохранить настройки заказов');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
-    <div className={styles.panel}>
-      <div className={styles.tabs} role="tablist" aria-label="Настройки сайта">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'hero'}
-          className={`${styles.tabBtn} ${tab === 'hero' ? styles.tabBtnActive : ''}`}
-          onClick={() => setTab('hero')}
-        >
-          Настройка Hero блока
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'other'}
-          className={`${styles.tabBtn} ${tab === 'other' ? styles.tabBtnActive : ''}`}
-          onClick={() => setTab('other')}
-        >
-          Прочие настройки
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'orders'}
-          className={`${styles.tabBtn} ${tab === 'orders' ? styles.tabBtnActive : ''}`}
-          onClick={() => setTab('orders')}
-        >
-          Заказы
-        </button>
-      </div>
+      <div className={styles.panel}>
+      <AdminTabs
+        ariaLabel="Настройки сайта"
+        items={[
+          { id: 'hero' as const, label: 'Настройка Hero блока' },
+          { id: 'designerBonusProfiles' as const, label: 'Бонусы дизайнера' },
+          { id: 'other' as const, label: 'Прочие настройки' },
+        ]}
+        activeId={tab}
+        onChange={setTab}
+      />
 
       {loadError ? <p className={catalogStyles.error}>{loadError}</p> : null}
       {saveError ? <p className={catalogStyles.error}>{saveError}</p> : null}
@@ -273,26 +180,21 @@ export function SiteSettingsClient() {
         <section aria-label="Настройка Hero блока">
           <p className={catalogStyles.muted}>{heroHint}</p>
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className={catalogStyles.btn}
-              disabled={!canAddMore}
-              onClick={() => setPickerOpen(true)}
-            >
+          <div className={catalogStyles.formActions}>
+            <AdminCompactBtn type="button" disabled={!canAddMore} onClick={() => setPickerOpen(true)}>
               Добавить изображения
-            </button>
-            <button
+            </AdminCompactBtn>
+            <AdminCompactBtn
               type="button"
-              className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
+              variant="danger"
               disabled={heroCount === 0}
               onClick={clearHero}
             >
               Очистить
-            </button>
-            <button type="button" className={catalogStyles.btn} disabled={saving} onClick={saveHero}>
+            </AdminCompactBtn>
+            <AdminCompactBtn type="button" variant="accent" disabled={saving} onClick={saveHero}>
               {saving ? 'Сохранение…' : 'Сохранить'}
-            </button>
+            </AdminCompactBtn>
           </div>
 
           {heroCount > 0 ? (
@@ -301,13 +203,9 @@ export function SiteSettingsClient() {
                 <li key={url} className={styles.thumbCard}>
                   <img className={styles.thumbImg} src={url} alt="" loading="lazy" />
                   <div className={styles.thumbActions}>
-                    <button
-                      type="button"
-                      className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                      onClick={() => removeHeroUrl(url)}
-                    >
+                    <AdminCompactBtn type="button" variant="danger" onClick={() => removeHeroUrl(url)}>
                       Удалить
-                    </button>
+                    </AdminCompactBtn>
                   </div>
                 </li>
               ))}
@@ -336,143 +234,101 @@ export function SiteSettingsClient() {
 
       {tab === 'other' ? (
         <section aria-label="Прочие настройки">
+          <h2 className={catalogStyles.groupHeading}>Услуги дизайнера</h2>
           <p className={catalogStyles.muted}>
             Список услуг отображается в поле «Услуги» в редактировании профиля дизайнера.
           </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            <button type="button" className={catalogStyles.btn} onClick={addServiceRow} disabled={saving}>
+          <div className={catalogStyles.formActions}>
+            <AdminCompactBtn type="button" onClick={addServiceRow} disabled={saving}>
               Добавить строку
-            </button>
-            <button type="button" className={catalogStyles.btn} disabled={saving} onClick={saveOther}>
+            </AdminCompactBtn>
+            <AdminCompactBtn type="button" variant="accent" disabled={saving} onClick={saveOther}>
               {saving ? 'Сохранение…' : 'Сохранить'}
-            </button>
+            </AdminCompactBtn>
           </div>
-          <table className={styles.serviceTable}>
-            <thead>
-              <tr>
-                <th scope="col">Услуга</th>
-                <th scope="col" style={{ width: 100 }}>
-                  Действие
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {designerServiceOptions.map((row, index) => (
-                <tr key={index}>
-                  <td>
-                    <input
-                      type="text"
-                      className={styles.serviceInput}
-                      value={row}
-                      onChange={(e) => setServiceAt(index, e.target.value)}
-                      placeholder="Название услуги"
-                      aria-label={`Услуга ${index + 1}`}
-                    />
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                      onClick={() => removeServiceAt(index)}
-                    >
-                      Удалить
-                    </button>
-                  </td>
+          <div className={`${catalogStyles.tableWrap} ${styles.tableAfterActions}`}>
+            <table className={catalogStyles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Услуга</th>
+                  <th className={catalogStyles.tableCellActions} scope="col" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {designerServiceOptions.map((row, index) => (
+                  <tr key={index}>
+                    <td>
+                      <AdminTextField
+                        value={row}
+                        onChange={(e) => setServiceAt(index, e.target.value)}
+                        placeholder="Название услуги"
+                        aria-label={`Услуга ${index + 1}`}
+                      />
+                    </td>
+                    <td className={catalogStyles.tableCellActions}>
+                      <AdminCompactBtn
+                        type="button"
+                        variant="danger"
+                        onClick={() => removeServiceAt(index)}
+                      >
+                        Удалить
+                      </AdminCompactBtn>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          <p className={catalogStyles.muted} style={{ marginTop: 18 }}>
-            Список типов помещений отображается в поле «Выберите типы помещений» при создании кейса дизайнера.
+          <h2 className={catalogStyles.groupHeading} style={{ marginTop: 24 }}>
+            Типы помещений
+          </h2>
+          <p className={catalogStyles.muted}>
+            Список типов помещений отображается в поле «Выберите типы помещений» при создании кейса
+            дизайнера.
           </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            <button type="button" className={catalogStyles.btn} onClick={addRoomTypeRow} disabled={saving}>
+          <div className={catalogStyles.formActions}>
+            <AdminCompactBtn type="button" onClick={addRoomTypeRow} disabled={saving}>
               Добавить строку
-            </button>
+            </AdminCompactBtn>
           </div>
-          <table className={styles.serviceTable} style={{ marginTop: 8 }}>
-            <thead>
-              <tr>
-                <th scope="col">Тип помещения</th>
-                <th scope="col" style={{ width: 100 }}>
-                  Действие
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {caseRoomTypeOptions.map((row, index) => (
-                <tr key={index}>
-                  <td>
-                    <input
-                      type="text"
-                      className={styles.serviceInput}
-                      value={row}
-                      onChange={(e) => setRoomTypeAt(index, e.target.value)}
-                      placeholder="Название помещения"
-                      aria-label={`Тип помещения ${index + 1}`}
-                    />
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className={`${catalogStyles.btn} ${catalogStyles.btnDanger}`}
-                      onClick={() => removeRoomTypeAt(index)}
-                    >
-                      Удалить
-                    </button>
-                  </td>
+          <div className={`${catalogStyles.tableWrap} ${styles.tableAfterActions}`}>
+            <table className={catalogStyles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Тип помещения</th>
+                  <th className={catalogStyles.tableCellActions} scope="col" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {caseRoomTypeOptions.map((row, index) => (
+                  <tr key={index}>
+                    <td>
+                      <AdminTextField
+                        value={row}
+                        onChange={(e) => setRoomTypeAt(index, e.target.value)}
+                        placeholder="Название помещения"
+                        aria-label={`Тип помещения ${index + 1}`}
+                      />
+                    </td>
+                    <td className={catalogStyles.tableCellActions}>
+                      <AdminCompactBtn
+                        type="button"
+                        variant="danger"
+                        onClick={() => removeRoomTypeAt(index)}
+                      >
+                        Удалить
+                      </AdminCompactBtn>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ) : null}
 
-      {tab === 'orders' ? (
-        <section aria-label="Заказы">
-          {orderSettingsError ? <p className={catalogStyles.error}>{orderSettingsError}</p> : null}
-          <div style={{ maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 14, marginTop: 8 }}>
-            <TextField
-              label="Бонус дизайнера со своего заказа, %"
-              type="number"
-              min={0}
-              max={100}
-              step="0.5"
-              name="designerOwnCatalogBonusPercent"
-              value={orderDesignerPct}
-              onChange={(e) => setOrderDesignerPct(e.target.value)}
-              autoComplete="off"
-            />
-            <TextField
-              label="Мин. сумма заказа для бонуса, ₽"
-              type="number"
-              min={0}
-              step={1}
-              name="designerOwnMinimumCatalogSiteTotalRub"
-              value={orderMinCatalogRub}
-              onChange={(e) => setOrderMinCatalogRub(e.target.value)}
-              autoComplete="off"
-            />
-            <TextField
-              label="Макс. скидка по строке коммерческого предложения, %"
-              type="number"
-              min={0}
-              max={100}
-              step={1}
-              name="kpMaxLineDiscountPercent"
-              value={orderKpMaxDisc}
-              onChange={(e) => setOrderKpMaxDisc(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-            <button type="button" className={catalogStyles.btn} disabled={saving} onClick={() => void saveOrderSettings()}>
-              {saving ? 'Сохранение…' : 'Сохранить'}
-            </button>
-          </div>
-        </section>
-      ) : null}
+      {tab === 'designerBonusProfiles' ? <DesignerBonusProfilesPanel /> : null}
     </div>
   );
 }

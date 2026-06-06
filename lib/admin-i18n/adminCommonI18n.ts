@@ -25,5 +25,9 @@ export function adminCommonI18n(locale: AdminLocale) {
     mediaLibrary: pick(locale, 'Медиатека', '媒体库'),
     remove: pick(locale, 'Убрать', '移除'),
     notFound: pick(locale, 'Не найдено', '未找到'),
+    paginationBack: pick(locale, 'Назад', '上一页'),
+    paginationForward: pick(locale, 'Вперёд', '下一页'),
+    paginationPageOf: (page: number, totalPages: number, total: number) =>
+      pick(locale, `Стр. ${page} из ${totalPages} (${total})`, `第 ${page}/${totalPages} 页（共 ${total}）`),
   };
 }

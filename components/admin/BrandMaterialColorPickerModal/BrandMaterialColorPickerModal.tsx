@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import type {
   AdminBrandMaterial,
@@ -26,6 +27,27 @@ type Props = {
   /** Подтверждение выбора — массив «материал-цветов», в порядке клика/из библиотеки. */
   onConfirm: (picked: BrandMaterialColorPick[]) => void;
 };
+
+function ModalCloseButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      className={catalogStyles.modalCloseIconBtn}
+      onClick={onClick}
+      aria-label={label}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M18 6L6 18M6 6l12 12"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+}
 
 export function BrandMaterialColorPickerModal({
   open,
@@ -122,28 +144,23 @@ export function BrandMaterialColorPickerModal({
     >
       <div className={styles.shell} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2 className={styles.title}>{title ?? 'Выберите «материал-цвет»'}</h2>
-          <button
-            type="button"
-            className={catalogStyles.modalCloseIconBtn}
-            onClick={onClose}
-            aria-label="Закрыть"
-          >
-            ×
-          </button>
+          <h2 className={`${catalogStyles.groupHeading} ${styles.title}`}>
+            {title ?? 'Выберите «материал-цвет»'}
+          </h2>
+          <ModalCloseButton onClick={onClose} label="Закрыть" />
         </div>
         <div className={styles.body}>
           {!brandId ? (
-            <p className={styles.empty}>
+            <p className={catalogStyles.muted}>
               У товара не выбран бренд. Выберите бренд в карточке товара, чтобы использовать его
               библиотеку «материал-цветов».
             </p>
           ) : loading ? (
-            <p className={styles.empty}>Загрузка библиотеки бренда…</p>
+            <p className={catalogStyles.muted}>Загрузка библиотеки бренда…</p>
           ) : loadError ? (
             <p className={catalogStyles.error}>{loadError}</p>
           ) : !materials || materials.length === 0 ? (
-            <p className={styles.empty}>
+            <p className={catalogStyles.muted}>
               В бренде ещё не заведены материалы и цвета — добавьте их на странице бренда.
             </p>
           ) : (
@@ -151,7 +168,7 @@ export function BrandMaterialColorPickerModal({
               if (m.colors.length === 0) return null;
               return (
                 <div key={m.id} className={styles.materialGroup}>
-                  <h3 className={styles.materialTitle}>{m.name}</h3>
+                  <h3 className={`${catalogStyles.groupHeading} ${styles.materialTitle}`}>{m.name}</h3>
                   <div className={styles.colorsGrid}>
                     {m.colors.map((c) => {
                       const isSelected = selected.has(c.id);
@@ -188,22 +205,17 @@ export function BrandMaterialColorPickerModal({
           )}
         </div>
         <div className={styles.footer}>
-          <span className={styles.footerCounter}>
+          <span className={catalogStyles.muted}>
             Выбрано: {selected.size}
             {materials ? ` из ${allColors.size}` : ''}
           </span>
-          <div className={styles.footerActions}>
-            <button type="button" className={catalogStyles.btn} onClick={onClose}>
+          <div className={catalogStyles.formActions}>
+            <AdminCompactBtn type="button" variant="outline" onClick={onClose}>
               Отмена
-            </button>
-            <button
-              type="button"
-              className={`${catalogStyles.btn} ${catalogStyles.btnPrimary}`}
-              onClick={confirm}
-              disabled={!materials}
-            >
+            </AdminCompactBtn>
+            <AdminCompactBtn type="button" variant="accent" onClick={confirm} disabled={!materials}>
               Применить
-            </button>
+            </AdminCompactBtn>
           </div>
         </div>
       </div>

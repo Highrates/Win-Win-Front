@@ -16,7 +16,10 @@ import type {
   CommercialProposalApi,
   CommercialProposalSummaryApi,
 } from '@/lib/commercialProposal/types';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
 import styles from '../../catalog/catalogAdmin.module.css';
+import clientsStyles from '../../clients/clients.module.css';
 import pn from '../../catalog/products/new/productNew.module.css';
 import od from './orderAdminDetail.module.css';
 import { AdminOrderSideChat } from './AdminOrderSideChat';
@@ -313,95 +316,72 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
 
       <div className={`${pn.productFormGrid} ${od.orderDetailGrid}`}>
         <div className={pn.productFormMain}>
-          <div className={styles.detailHero}>
-            <div className={styles.detailTitleRow} style={{ marginTop: 0 }}>
-              <div className={styles.formWide}>
-                <label className={styles.label}>
-                  <span>{d.labelStatus}</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                    <>
-                        <select
-                          className={styles.input}
-                          style={{ maxWidth: 280 }}
-                          value={selectValue}
-                          onChange={(e) => setSelectedStatus(e.target.value)}
-                        >
-                          {statusOpts.map((st) => (
-                            <option key={st} value={st}>
-                              {statusLabels[st] ?? st}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          className={styles.btn}
-                          disabled={!statusDirty || saving}
-                          onClick={() => void saveStatus()}
-                        >
-                          {saving ? d.saving : d.save}
-                        </button>
-                    </>
-                  </div>
-                </label>
-              </div>
+          <div className={od.statusRow}>
+            <AdminSelect
+              label={d.labelStatus}
+              className={od.statusSelect}
+              value={selectValue}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+            >
+              {statusOpts.map((st) => (
+                <option key={st} value={st}>
+                  {statusLabels[st] ?? st}
+                </option>
+              ))}
+            </AdminSelect>
+            <AdminCompactBtn
+              type="button"
+              variant="accent"
+              disabled={!statusDirty || saving}
+              onClick={() => void saveStatus()}
+            >
+              {saving ? d.saving : d.save}
+            </AdminCompactBtn>
+          </div>
+
+          <dl className={clientsStyles.detailList}>
+            <div>
+              <dt>{d.labelCreated}</dt>
+              <dd>{formatAdminOrderDateTime(order.createdAt, locale)}</dd>
             </div>
+            <div>
+              <dt>{d.labelUpdated}</dt>
+              <dd>{formatAdminOrderDateTime(order.updatedAt, locale)}</dd>
+            </div>
+            <div>
+              <dt>{d.labelAccount}</dt>
+              <dd>
+                <Link href={`/admin/clients/${encodeURIComponent(order.user.id)}`} className={styles.backLink}>
+                  {accountDisplayName(order.user)}
+                </Link>
+              </dd>
+            </div>
+            <div>
+              <dt>{d.labelEmail}</dt>
+              <dd>{order.user.email || '—'}</dd>
+            </div>
+            <div>
+              <dt>{d.labelPhone}</dt>
+              <dd>{order.user.phone || '—'}</dd>
+            </div>
+          </dl>
+
+          <div className={styles.section}>
+            <h2 className={styles.groupHeading}>{d.sectionClient}</h2>
+            <dl className={clientsStyles.detailList}>
+              <div>
+                <dt>{d.labelFio}</dt>
+                <dd>{order.customerName?.trim() || '—'}</dd>
+              </div>
+              <div>
+                <dt>{d.labelAddress}</dt>
+                <dd className={od.preWrap}>{order.deliveryAddress?.trim() || '—'}</dd>
+              </div>
+            </dl>
           </div>
 
           <div className={styles.section}>
-            <div className={styles.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-              <div>
-                <div className={styles.cardNote}>{d.labelCreated}</div>
-                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-                  {formatAdminOrderDateTime(order.createdAt, locale)}
-                </div>
-              </div>
-              <div>
-                <div className={styles.cardNote}>{d.labelUpdated}</div>
-                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-                  {formatAdminOrderDateTime(order.updatedAt, locale)}
-                </div>
-              </div>
-              <div>
-                <div className={styles.cardNote}>{d.labelAccount}</div>
-                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-                  <Link href={`/admin/clients/${encodeURIComponent(order.user.id)}`} className={styles.backLink}>
-                    {accountDisplayName(order.user)}
-                  </Link>
-                </div>
-              </div>
-              <div>
-                <div className={styles.cardNote}>{d.labelEmail}</div>
-                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-                  {order.user.email || '—'}
-                </div>
-              </div>
-              <div>
-                <div className={styles.cardNote}>{d.labelPhone}</div>
-                <div className={styles.cardTitle} style={{ margin: '4px 0 0' }}>
-                  {order.user.phone || '—'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>{d.sectionClient}</h2>
-            <div className={styles.formWide} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p>
-                <span className={styles.cardNote}>{d.labelFio}</span>
-                <br />
-                <span className={styles.cardTitle}>{order.customerName?.trim() || '—'}</span>
-              </p>
-              <p>
-                <span className={styles.cardNote}>{d.labelAddress}</span>
-                <br />
-                <span style={{ whiteSpace: 'pre-wrap' }}>{order.deliveryAddress?.trim() || '—'}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>{d.sectionItems}</h2>
+            <h2 className={styles.groupHeading}>{d.sectionItems}</h2>
             {order.items.length === 0 ? (
               <p className={styles.muted}>{d.noItems}</p>
             ) : (
@@ -452,7 +432,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                               <div className={styles.cardNote}>{row.product.brand.name}</div>
                             ) : null}
                             {meta.length > 0 ? (
-                              <ul className={styles.cardNote} style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                              <ul className={`${styles.cardNote} ${od.itemMetaList}`}>
                                 {meta.map((m, i) => (
                                   <li key={i}>
                                     {m.label}: {m.value}
@@ -488,7 +468,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
 
           {showPublishedKpBlock ? (
             <div className={styles.section}>
-              <h2 className={styles.sectionTitle}>{d.kpSectionPublished}</h2>
+              <h2 className={styles.groupHeading}>{d.kpSectionPublished}</h2>
               {kpSummaryLoading ? (
                 <p className={styles.muted}>{d.kpPublishedLoading}</p>
               ) : kpSummary && kpSummary.published.length === 0 ? (
@@ -498,7 +478,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
               ) : kpSummary!.published.length > 0 && publishedKpFull.length === 0 ? (
                 <p className={styles.error}>{d.kpPublishedDetailError}</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+                <div className={od.kpPublishedStack}>
                   {publishedKpFull.map((proposal) => {
                     const kpTotalRub = proposal.lines.reduce((acc, ln) => acc + kpLineTotalRub(ln), 0);
                     const kpTotalRounded = Math.round(kpTotalRub * 100) / 100;
@@ -507,7 +487,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                       : '—';
                     return (
                       <div key={proposal.id}>
-                        <p className={styles.cardNote} style={{ margin: '0 0 12px' }}>
+                        <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
                           {d.kpPublishedVersionCaption(
                             proposal.versionNumber,
                             dateStr,
@@ -574,10 +554,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                                           </div>
                                         ) : null}
                                         {meta.length > 0 ? (
-                                          <ul
-                                            className={styles.cardNote}
-                                            style={{ margin: '8px 0 0', paddingLeft: 18 }}
-                                          >
+                                          <ul className={`${styles.cardNote} ${od.itemMetaList}`}>
                                             {meta.map((m, mi) => (
                                               <li key={mi}>
                                                 {m.label}: {m.value}
@@ -615,43 +592,37 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
 
           <div className={styles.section}>
             {d.actionsHintPrepareCp.trim() ? (
-              <p className={styles.cardNote} style={{ marginBottom: 12 }}>
-                {d.actionsHintPrepareCp}
-              </p>
+              <p className={`${styles.cardNote} ${od.actionsHint}`}>{d.actionsHintPrepareCp}</p>
             ) : null}
             {kpSummary?.draft ? (
-              <p className={styles.cardNote} style={{ marginBottom: 8 }}>
+              <p className={`${styles.cardNote} ${od.draftHint}`}>
                 {locale === 'zh'
                   ? `草稿：${kpSummary.draft.lineCount} 项`
                   : `Черновик КП: ${kpSummary.draft.lineCount} поз.`}
               </p>
             ) : null}
-            <div className={styles.toolbar} style={{ marginBottom: 0 }}>
+            <div className={styles.formActions}>
               {order.status !== ORDER_STATUS_DRAFT && order.status !== 'COMPLETED' ? (
-                <Link
+                <AdminCompactBtnLink
                   href={`/admin/orders/${encodeURIComponent(order.id)}/kp`}
-                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  variant="accent"
                 >
                   {d.actionPrepareCp}
-                </Link>
+                </AdminCompactBtnLink>
               ) : order.status === ORDER_STATUS_DRAFT ? (
-                <button
+                <AdminCompactBtn
                   type="button"
-                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  variant="accent"
                   disabled
                   title="КП доступно после отправки заказа на согласование"
                 >
                   {d.actionPrepareCp}
-                </button>
+                </AdminCompactBtn>
               ) : null}
               {order.status === 'PENDING_APPROVAL' ? (
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.btnDanger}`}
-                  onClick={() => setCancelOpen(true)}
-                >
+                <AdminCompactBtn type="button" variant="danger" onClick={() => setCancelOpen(true)}>
                   {d.actionCancelOrder}
-                </button>
+                </AdminCompactBtn>
               ) : null}
             </div>
           </div>
