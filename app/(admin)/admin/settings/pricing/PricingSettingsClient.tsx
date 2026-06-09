@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AdminCategoryRow } from '../../catalog/categories/adminCategoryTypes';
 import type { PricingProfileRow } from '../pricingAdminTypes';
+import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
-import { AdminPillChip, AdminPillChipList } from '@/components/AdminPillChip/AdminPillChip';
+import { AdminPillBadge, AdminPillChip, AdminPillChipList } from '@/components/AdminPillChip/AdminPillChip';
 import { AdminSelect, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendFetch, adminBackendJson } from '@/lib/adminBackendFetch';
 import { adminPricingStrings } from '@/lib/admin-i18n/adminPricingI18n';
+import { ADMIN_PROFILE_PRIMARY_LABEL } from '@/lib/adminProfilePrimary';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import catalogStyles from '../../catalog/catalogAdmin.module.css';
@@ -103,7 +105,6 @@ export function PricingSettingsClient() {
   const [categories, setCategories] = useState<AdminCategoryRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [conflictCategoryIds, setConflictCategoryIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(() => emptyForm());
@@ -154,7 +155,6 @@ export function PricingSettingsClient() {
     setEditingId(null);
     setForm(emptyForm());
     setSaveError(null);
-    setConflictCategoryIds([]);
     setCatPick('');
   }
 
@@ -162,9 +162,13 @@ export function PricingSettingsClient() {
     setEditingId(p.id);
     setForm(profileToForm(p));
     setSaveError(null);
-    setConflictCategoryIds([]);
     setCatPick('');
   }
+
+  const editingProfile = useMemo(
+    () => (editingId ? profiles.find((p) => p.id === editingId) ?? null : null),
+    [editingId, profiles],
+  );
 
   function addCategoryFromDropdown(raw: string) {
     if (!raw) return;
@@ -230,7 +234,6 @@ export function PricingSettingsClient() {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaveError(null);
-    setConflictCategoryIds([]);
     const categoryIds = Array.from(form.categoryIds);
     if (!categoryIds.length) {
       setSaveError(s.pickCategory);
@@ -305,14 +308,8 @@ export function PricingSettingsClient() {
         method: editingId != null ? 'PATCH' : 'POST',
         body: JSON.stringify(body),
       });
-      const j = (await res.json().catch(() => ({}))) as {
-        message?: string;
-        conflictingCategoryIds?: string[];
-      };
+      const j = (await res.json().catch(() => ({}))) as { message?: string };
       if (!res.ok) {
-        if (Array.isArray(j.conflictingCategoryIds) && j.conflictingCategoryIds.length) {
-          setConflictCategoryIds(j.conflictingCategoryIds);
-        }
         setSaveError(typeof j.message === 'string' ? j.message : s.saveErr);
         return;
       }
@@ -325,7 +322,26 @@ export function PricingSettingsClient() {
     }
   }
 
+  async function makePrimary() {
+    if (!editingId || editingProfile?.isDefault) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await adminBackendJson(`catalog/admin/pricing-profiles/${editingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ setAsPrimary: true }),
+      });
+      await load();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : s.saveErr);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function remove(id: string) {
+    const row = profiles.find((p) => p.id === id);
+    if (row?.isDefault) return;
     if (!(await confirm({ title: s.confirmDeleteProfile }))) return;
     setSaveError(null);
     try {
@@ -409,19 +425,29 @@ export function PricingSettingsClient() {
                   className={`${styles.profileItem} ${editingId === p.id ? styles.profileItemActive : ''}`}
                   onClick={() => startEdit(p)}
                 >
-                  <span className={styles.profileName}>{p.name.trim() || s.unnamed}</span>
+                  <span className={styles.profileName}>
+                    {p.name.trim() || s.unnamed}
+                    {p.isDefault ? (
+                      <>
+                        {' '}
+                        <AdminPillBadge>{ADMIN_PROFILE_PRIMARY_LABEL}</AdminPillBadge>
+                      </>
+                    ) : null}
+                  </span>
                   <span className={styles.profileMeta}>
                     {s.containerBit(p.containerType, p.categoryIds.length)}
                   </span>
                 </button>
-                <AdminCompactBtn
-                  type="button"
-                  variant="danger"
-                  className={styles.btnDelete}
-                  onClick={() => remove(p.id)}
-                >
-                  {s.delete}
-                </AdminCompactBtn>
+                {!p.isDefault ? (
+                  <AdminCompactBtn
+                    type="button"
+                    variant="danger"
+                    className={styles.btnDelete}
+                    onClick={() => remove(p.id)}
+                  >
+                    {s.delete}
+                  </AdminCompactBtn>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -471,11 +497,9 @@ export function PricingSettingsClient() {
                       const c = categories.find((x) => x.id === id);
                       if (!c) return null;
                       const label = categoryLabel(c);
-                      const conflict = conflictCategoryIds.includes(id);
                       return (
                         <AdminPillChip
                           key={id}
-                          variant={conflict ? 'conflict' : 'default'}
                           onRemove={() => removeCategoryChip(id)}
                           removeAriaLabel={s.removeAria(label)}
                         >
@@ -614,6 +638,21 @@ export function PricingSettingsClient() {
               value={form.markupPct}
               onChange={(e) => setForm((f) => ({ ...f, markupPct: e.target.value }))}
             />
+
+            {editingProfile ? (
+              <div className={catalogStyles.labelCheckboxRow}>
+                <AccountCheckbox
+                  id="pricing-profile-primary"
+                  className={catalogStyles.adminCheckboxForm}
+                  checked={editingProfile.isDefault}
+                  disabled={editingProfile.isDefault || saving}
+                  onChange={() => void makePrimary()}
+                />
+                <label htmlFor="pricing-profile-primary">
+                  {ADMIN_PROFILE_PRIMARY_LABEL} — для пользователей без группы
+                </label>
+              </div>
+            ) : null}
 
             <div className={catalogStyles.formActions}>
               <AdminCompactBtn type="submit" variant="accent" disabled={saving}>

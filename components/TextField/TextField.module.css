@@ -17,7 +17,12 @@
   align-items: flex-start;
   gap: 8px;
   width: 100%;
-  cursor: text;
+}
+
+.inputWrap {
+  position: relative;
+  align-self: stretch;
+  width: 100%;
 }
 
 .fieldDisabled .label {
@@ -100,6 +105,38 @@
 .input[aria-invalid='true']:focus-visible {
   outline-color: var(--color-red);
   border-color: var(--color-red);
+}
+
+.inputWithToggle {
+  padding-right: 44px;
+}
+
+.passwordToggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-gray);
+  cursor: pointer;
+}
+
+.passwordToggle:hover {
+  color: var(--color-ink-black);
+  background: rgba(5, 24, 38, 0.06);
+}
+
+.passwordToggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-blue) 50%, transparent);
+  outline-offset: 1px;
 }
 
 .errorMessage {

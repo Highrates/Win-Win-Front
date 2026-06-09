@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import { publicFetchInitWithOptionalUserAuth } from '@/lib/server/publicFetchInit';
 
 const fallback = {
   designerOwnCatalogBonusPercent: 0,
@@ -9,9 +10,7 @@ const fallback = {
 export async function GET() {
   const base = getServerApiBase();
   try {
-    const res = await fetch(`${base}/settings/public/order-program`, {
-      next: { revalidate: 60 },
-    });
+    const res = await fetch(`${base}/settings/public/order-program`, await publicFetchInitWithOptionalUserAuth());
     if (!res.ok) {
       return NextResponse.json(fallback);
     }
@@ -21,10 +20,14 @@ export async function GET() {
         ? Math.min(100, Math.max(0, j.designerOwnCatalogBonusPercent))
         : 0;
     const designerOwnMinimumCatalogSiteTotalRub =
-      typeof j.designerOwnMinimumCatalogSiteTotalRub === 'number' && Number.isFinite(j.designerOwnMinimumCatalogSiteTotalRub)
+      typeof j.designerOwnMinimumCatalogSiteTotalRub === 'number' &&
+      Number.isFinite(j.designerOwnMinimumCatalogSiteTotalRub)
         ? Math.max(0, Math.floor(j.designerOwnMinimumCatalogSiteTotalRub))
         : 0;
-    return NextResponse.json({ designerOwnCatalogBonusPercent, designerOwnMinimumCatalogSiteTotalRub });
+    return NextResponse.json(
+      { designerOwnCatalogBonusPercent, designerOwnMinimumCatalogSiteTotalRub },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   } catch {
     return NextResponse.json(fallback);
   }

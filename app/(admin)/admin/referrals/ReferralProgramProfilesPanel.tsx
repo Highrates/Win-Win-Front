@@ -5,6 +5,7 @@ import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
 import { AdminPillBadge } from '@/components/AdminPillChip/AdminPillChip';
+import { AdminRubMoneyField, parseRubMoneyInput, formatRubMoneyInputDisplay } from '@/components/AdminRubMoneyField';
 import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { ADMIN_PROFILE_PRIMARY_LABEL } from '@/lib/adminProfilePrimary';
@@ -67,7 +68,7 @@ export function ReferralProgramProfilesPanel() {
     setName(selected.name);
     setLvl1(String(selected.level1Percent));
     setLvl2(String(selected.level2Percent));
-    setMinRub(String(selected.minimumOrderSiteTotalRub));
+    setMinRub(formatRubMoneyInputDisplay(selected.minimumOrderSiteTotalRub));
   }, [selected]);
 
   async function refreshProfiles() {
@@ -96,7 +97,7 @@ export function ReferralProgramProfilesPanel() {
     if (!selected) return;
     const a = Number(String(lvl1).replace(',', '.'));
     const b = Number(String(lvl2).replace(',', '.'));
-    const min = Number(String(minRub).replace(/\s+/g, '').replace(',', '.'));
+    const min = parseRubMoneyInput(minRub);
     if (!Number.isFinite(a) || a < 0 || a > 100) {
       setMutationError('Процент L1: число от 0 до 100.');
       return;
@@ -243,16 +244,11 @@ export function ReferralProgramProfilesPanel() {
                     onChange={(e) => setLvl2(e.target.value)}
                     autoComplete="off"
                   />
-                  <AdminTextField
+                  <AdminRubMoneyField
                     label="Минимальная сумма «цена на сайте» по заказу (₽), ниже — бонус 0"
-                    type="number"
-                    min={0}
-                    step={1}
-                    inputMode="decimal"
                     name="minimumOrderSiteTotalRub"
                     value={minRub}
-                    onChange={(e) => setMinRub(e.target.value)}
-                    autoComplete="off"
+                    onChange={setMinRub}
                   />
                   <div className={catalogStyles.labelCheckboxRow}>
                     <AccountCheckbox

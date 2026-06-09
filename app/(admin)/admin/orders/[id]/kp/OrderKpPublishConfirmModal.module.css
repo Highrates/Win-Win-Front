@@ -1,5 +1,5 @@
-.panelWide {
-  width: min(1180px, 100%);
+.publishPanel {
+  --admin-modal-max-width: 1180px;
   max-height: min(96vh, 980px);
 }
 

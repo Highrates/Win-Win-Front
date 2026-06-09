@@ -7,8 +7,11 @@ import type { TeamBranchCard } from '@/lib/account/teamTeammateLeadMock';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import {
   filterCompletedPartnerLines,
+  filterReferralL1Lines,
   formatPartnerRubWhole,
   formatPartnerTableDate,
+  partnerLineOrderLabel,
+  sumPartnerLinesBonusRub,
   type PartnerProgramBonusLineApi,
   type PartnerProgramSummaryApi,
 } from '@/lib/referrals/partnerProgramSummary';
@@ -92,10 +95,22 @@ export function TeamSheetSection({
 }) {
   const [rangeIndex, setRangeIndex] = useState(0);
 
+  const l1Rows = useMemo(
+    () => filterReferralL1Lines(partnerSummary?.personalLines ?? []),
+    [partnerSummary?.personalLines],
+  );
+
   const teamRows = useMemo(
     () => filterCompletedPartnerLines(partnerSummary?.teamLines ?? []),
     [partnerSummary?.teamLines],
   );
+
+  const l1IncomeTotalLabel =
+    partnerIncomeLoading && !partnerSummary
+      ? '…'
+      : partnerSummary
+        ? formatPartnerRubWhole(sumPartnerLinesBonusRub(l1Rows))
+        : DASH;
 
   const teamIncomeTotalLabel =
     partnerIncomeLoading && !partnerSummary
@@ -126,7 +141,57 @@ export function TeamSheetSection({
       <div className={styles.tableFrame}>
         <div className={styles.tableSummary}>
           <div className={styles.tableSummaryLeft}>
-            <span className={styles.tableSummaryLabel}>Доход от команды:</span>
+            <span className={styles.tableSummaryLabel}>Доход от прямых рефералов (L1):</span>
+            <span className={styles.tableSummaryAmount}>{l1IncomeTotalLabel}</span>
+          </div>
+        </div>
+
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th scope="col" className={styles.thLeftTight}>
+                Дата
+              </th>
+              <th scope="col" className={styles.thDesigner}>
+                № заказа
+              </th>
+              <th scope="col" className={styles.thRightTightFirst}>
+                Оборот
+              </th>
+              <th scope="col" className={styles.thCenterPercent}>
+                %
+              </th>
+              <th scope="col" className={styles.thRightTight}>
+                Вознаграждение
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {l1Rows.length === 0 ? (
+              <tr>
+                <td className={styles.tdLeftTight} colSpan={5}>
+                  {partnerIncomeLoading ? 'Загрузка…' : 'Нет начислений по прямым рефералам (L1)'}
+                </td>
+              </tr>
+            ) : (
+              l1Rows.map((row) => (
+                <tr key={teamLineKey(row)}>
+                  <td className={styles.tdLeftTight}>{formatPartnerTableDate(row.orderUpdatedAt)}</td>
+                  <td className={styles.tdDesigner}>{partnerLineOrderLabel(row)}</td>
+                  <td className={styles.tdRightTightFirst}>{formatPartnerRubWhole(row.catalogTotalRub)}</td>
+                  <td className={styles.tdCenterPercent}>{row.percentApplied}%</td>
+                  <td className={styles.tdRightTight}>{formatPartnerRubWhole(row.bonusRub)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className={styles.tableFrame}>
+        <div className={styles.tableSummary}>
+          <div className={styles.tableSummaryLeft}>
+            <span className={styles.tableSummaryLabel}>Доход от команды (L2):</span>
             <span className={styles.tableSummaryAmount}>{teamIncomeTotalLabel}</span>
           </div>
           <div className={styles.tableSummaryRight}>
@@ -166,7 +231,7 @@ export function TeamSheetSection({
             {teamRows.length === 0 ? (
               <tr>
                 <td className={styles.tdLeftTight} colSpan={6}>
-                  {partnerIncomeLoading ? 'Загрузка…' : 'Нет начислений по завершённым заказам команды'}
+                  {partnerIncomeLoading ? 'Загрузка…' : 'Нет начислений по завершённым заказам команды (L2)'}
                 </td>
               </tr>
             ) : (

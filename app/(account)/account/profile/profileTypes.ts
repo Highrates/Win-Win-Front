@@ -21,4 +21,5 @@ export type ProfileDto = {
   designerSiteVisible?: boolean;
   designerLikesUserCount?: number | null;
   designerCasesCount?: number | null;
+  designerOwnCatalogBonusPercent?: number;
 };

@@ -2,6 +2,7 @@ export type PricingProfileRow = {
   id: string;
   name: string;
   sortOrder: number;
+  isDefault: boolean;
   containerType: string;
   containerMaxWeightKg: string | null;
   containerMaxVolumeM3: string | null;

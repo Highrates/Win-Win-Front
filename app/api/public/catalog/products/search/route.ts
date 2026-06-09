@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import { publicFetchInitWithOptionalUserAuth } from '@/lib/server/publicFetchInit';
 
 export const runtime = 'nodejs';
 
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     const v = url.searchParams.get(key);
     if (v != null && v !== '') upstream.searchParams.set(key, v);
   }
-  const res = await fetch(upstream.toString(), { cache: 'no-store' });
+  const res = await fetch(upstream.toString(), await publicFetchInitWithOptionalUserAuth());
   const ct = res.headers.get('content-type') ?? 'application/json';
   return new NextResponse(res.body, { status: res.status, headers: { 'content-type': ct } });
 }

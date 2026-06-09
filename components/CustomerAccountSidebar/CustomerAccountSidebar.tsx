@@ -183,12 +183,13 @@ export function CustomerAccountSidebar({
                 <img src="/icons/account-sidebar/edit.svg" alt="" width={16} height={16} />
               </Link>
             </div>
-            {showDesignerNav ? <p className={styles.partnerStatus}>Партнер Win-Win</p> : null}
             {userGroupLabel ? (
-              <p className={styles.partnerStatus}>{userGroupLabel}</p>
-            ) : !showDesignerNav ? (
+              <span className={styles.groupBadge}>{userGroupLabel}</span>
+            ) : showDesignerNav ? (
+              <p className={styles.partnerStatus}>Партнер Win-Win</p>
+            ) : (
               <p className={styles.partnerStatus} aria-hidden />
-            ) : null}
+            )}
           </div>
         )}
 

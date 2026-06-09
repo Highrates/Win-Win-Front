@@ -15,6 +15,11 @@ export type PartnerProgramBonusLineApi = {
 };
 
 export type PartnerProgramSummaryApi = {
+  isWinWinPartner: boolean;
+  designerBonus: {
+    bonusPercent: number;
+    minCatalogSiteTotalRub: number;
+  };
   program: {
     enabled: boolean;
     level1Percent: number;
@@ -63,6 +68,20 @@ export function formatPartnerTableDate(iso: string): string {
 /** Заказы с реферальным доходом: только после «Завершен» сумма попадает в completed totals; строки в таблице — завершённые. */
 export function filterCompletedPartnerLines(lines: PartnerProgramBonusLineApi[]): PartnerProgramBonusLineApi[] {
   return lines.filter((l) => !l.pipeline);
+}
+
+/** Бонус дизайнера со своих завершённых заказов (вкладка «Доход»). */
+export function filterDesignerOwnOrderLines(lines: PartnerProgramBonusLineApi[]): PartnerProgramBonusLineApi[] {
+  return filterCompletedPartnerLines(lines).filter((l) => l.source === 'OWN_ORDER');
+}
+
+/** Прямые рефералы (L1) — таблица на `/account/team`. */
+export function filterReferralL1Lines(lines: PartnerProgramBonusLineApi[]): PartnerProgramBonusLineApi[] {
+  return filterCompletedPartnerLines(lines).filter((l) => l.source === 'REFERRAL' && l.tier === 1);
+}
+
+export function sumPartnerLinesBonusRub(lines: PartnerProgramBonusLineApi[]): number {
+  return lines.reduce((sum, line) => sum + parseMoneyToNumber(line.bonusRub), 0);
 }
 
 export function partnerLineOrderLabel(line: PartnerProgramBonusLineApi): string {

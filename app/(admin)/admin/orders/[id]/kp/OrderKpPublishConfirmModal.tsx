@@ -121,7 +121,7 @@ export function OrderKpPublishConfirmModal({
     >
       <div
         ref={panelRef}
-        className={`${modalStyles.panel} ${own.panelWide}`}
+        className={`${modalStyles.panel} ${own.publishPanel}`}
         tabIndex={-1}
       >
         <div className={modalStyles.panelHead}>

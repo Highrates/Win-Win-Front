@@ -3,8 +3,10 @@ import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Recommendations } from '@/sections/home';
-import { fetchPublicProductBySlug } from '@/lib/catalogPublic';
-import { fetchProductSetSiblingsBySlug } from '@/lib/server/catalogAuthFetch';
+import {
+  fetchPublicProductBySlug,
+  fetchProductSetSiblingsBySlug,
+} from '@/lib/server/catalogAuthFetch';
 import { parsePublicProduct, pickPublicProductVariant } from '@/lib/publicProductFromApi';
 import { parseProductPriceFromApi } from '@/lib/productSpecsFromApi';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';

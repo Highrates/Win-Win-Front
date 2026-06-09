@@ -11,7 +11,8 @@
 }
 
 .panel {
-  width: min(560px, 100%);
+  width: 100%;
+  max-width: min(var(--admin-modal-max-width, 560px), 100%);
   max-height: min(92vh, 880px);
   display: flex;
   flex-direction: column;
@@ -25,7 +26,7 @@
 }
 
 .panelWide {
-  width: min(960px, 100%);
+  --admin-modal-max-width: 960px;
 }
 
 .panelHead {

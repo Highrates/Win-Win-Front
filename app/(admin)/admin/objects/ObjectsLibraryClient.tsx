@@ -1048,7 +1048,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
           aria-labelledby="objects-upload-progress-title"
           aria-busy={uploadInProgress}
         >
-          <div className={`${modalStyles.panel} ${modalStyles.panelWide} ${styles.uploadProgressPanel}`}>
+          <div className={`${modalStyles.panel} ${styles.uploadProgressPanel}`}>
             <div className={modalStyles.panelHead}>
               <h2 id="objects-upload-progress-title" className={modalStyles.panelTitle}>
                 {s.uploadProgressTitle}

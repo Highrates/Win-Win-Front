@@ -176,9 +176,11 @@ function ProfilePageContent() {
 
   type ProfileTabKey = 'info' | 'income' | 'settings';
   const winWinPartnerApproved = Boolean(profile?.winWinPartnerApproved);
+  const designerBonusPercent = profile?.designerOwnCatalogBonusPercent ?? 0;
+  const showIncomeTab = winWinPartnerApproved || designerBonusPercent > 0;
   const availableTabKeys = useMemo<readonly ProfileTabKey[]>(
-    () => (winWinPartnerApproved ? (['info', 'income', 'settings'] as const) : (['info', 'settings'] as const)),
-    [winWinPartnerApproved],
+    () => (showIncomeTab ? (['info', 'income', 'settings'] as const) : (['info', 'settings'] as const)),
+    [showIncomeTab],
   );
   const availableTabLabels = useMemo(
     () =>

@@ -330,7 +330,7 @@
 }
 
 .uploadProgressPanel {
-  max-width: min(520px, 100%);
+  --admin-modal-max-width: 520px;
 }
 
 /**

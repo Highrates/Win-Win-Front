@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminPillBadge } from '@/components/AdminPillChip/AdminPillChip';
+import { AdminRubMoneyField, parseRubMoneyInput, formatRubMoneyInputDisplay } from '@/components/AdminRubMoneyField';
 import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendFetch, adminBackendJson } from '@/lib/adminBackendFetch';
 import { ADMIN_PROFILE_PRIMARY_LABEL } from '@/lib/adminProfilePrimary';
@@ -68,7 +69,7 @@ export function DesignerBonusProfilesPanel() {
     }
     setName(selected.name);
     setPct(String(selected.designerOwnCatalogBonusPercent));
-    setMinRub(String(selected.designerOwnMinimumCatalogSiteTotalRub));
+    setMinRub(formatRubMoneyInputDisplay(selected.designerOwnMinimumCatalogSiteTotalRub));
   }, [selected]);
 
   async function createProfile() {
@@ -98,7 +99,7 @@ export function DesignerBonusProfilesPanel() {
   async function saveProfile() {
     if (!selected) return;
     const bonusPct = Number(String(pct).replace(',', '.'));
-    const bonusMin = Number(String(minRub).replace(/\s+/g, '').replace(',', '.'));
+    const bonusMin = parseRubMoneyInput(minRub);
     if (!Number.isFinite(bonusPct) || bonusPct < 0 || bonusPct > 100) {
       setError('Процент: число от 0 до 100.');
       return;
@@ -115,7 +116,7 @@ export function DesignerBonusProfilesPanel() {
         body: JSON.stringify({
           name: name.trim() || selected.name,
           designerOwnCatalogBonusPercent: bonusPct,
-          designerOwnMinimumCatalogSiteTotalRub: bonusMin,
+          designerOwnMinimumCatalogSiteTotalRub: Math.max(0, Math.round(bonusMin)),
         }),
       });
       await load();
@@ -224,7 +225,8 @@ export function DesignerBonusProfilesPanel() {
                     ) : null}
                   </span>
                   <span className={panelStyles.profileMeta}>
-                    {p.designerOwnCatalogBonusPercent}% · от {p.designerOwnMinimumCatalogSiteTotalRub} ₽
+                    {p.designerOwnCatalogBonusPercent}% · от{' '}
+                    {formatRubMoneyInputDisplay(p.designerOwnMinimumCatalogSiteTotalRub)}
                   </span>
                 </button>
               </li>
@@ -256,16 +258,11 @@ export function DesignerBonusProfilesPanel() {
                   onChange={(e) => setPct(e.target.value)}
                   autoComplete="off"
                 />
-                <AdminTextField
+                <AdminRubMoneyField
                   label="Мин. сумма заказа для бонуса, ₽"
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="decimal"
                   name="designerOwnMinimumCatalogSiteTotalRub"
                   value={minRub}
-                  onChange={(e) => setMinRub(e.target.value)}
-                  autoComplete="off"
+                  onChange={setMinRub}
                 />
                 <div className={catalogStyles.labelCheckboxRow}>
                   <AccountCheckbox

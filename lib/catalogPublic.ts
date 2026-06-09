@@ -190,27 +190,3 @@ export type PublicSetSiblingProduct = {
   likedByMe?: boolean;
 };
 
-/** Query `vs` / `v` — выбранный SKU; `sz` — размер без SKU. */
-export async function fetchPublicProductBySlug(
-  slug: string,
-  options?: { vs?: string; v?: string; sz?: string },
-): Promise<unknown | null> {
-  const base = getServerApiBase();
-  const sp = new URLSearchParams();
-  if (options?.vs?.trim()) sp.set('vs', options.vs.trim());
-  if (options?.v?.trim()) sp.set('v', options.v.trim());
-  if (options?.sz?.trim()) sp.set('sz', options.sz.trim());
-  const qs = sp.toString();
-  const url = `${base}/catalog/products/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`;
-  try {
-    const res = await fetch(url, {
-      /* PDP: свежие варианты/опции после правок в админке (тег всё ещё инвалидируется). */
-      next: { revalidate: 0, tags: [CATALOG_PUBLIC_TAG] },
-    });
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
