@@ -260,8 +260,8 @@
   text-align: center;
   color: var(--color-ink-black, #051826);
   display: -webkit-box;
-  -webkit-line-clamp: 6;
-  line-clamp: 6;
+  -webkit-line-clamp: 12;
+  line-clamp: 12;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -357,8 +357,16 @@
     max-height: 180px;
   }
 
+  .brandDetailsFooter {
+    align-self: stretch;
+    width: 100%;
+  }
+
   .brandDescription {
-    -webkit-line-clamp: 5;
-    line-clamp: 5;
+    max-width: none;
+    width: 100%;
+    align-self: stretch;
+    -webkit-line-clamp: 10;
+    line-clamp: 10;
   }
 }
