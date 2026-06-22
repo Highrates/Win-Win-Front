@@ -6,6 +6,13 @@ import newsStyles from '../News/News.module.css';
 import scrollStyles from '../ScrollCatalog/ScrollCatalog.module.css';
 import styles from './BestBrands.module.css';
 
+const brandPanelClasses = {
+  brandPanelActive: styles.brandPanelActive,
+  brandPanelHidden: styles.brandPanelHidden,
+  brandPanelHiddenAfter: styles.brandPanelHiddenAfter,
+  brandPanelHiddenBefore: styles.brandPanelHiddenBefore,
+};
+
 export type BestBrandsBrandItem = {
   slug: string;
   name: string;
@@ -217,7 +224,7 @@ export function BestBrands({ sectionTitle, brands, activeBrandSlug }: BestBrands
                         index,
                         activeIndex,
                         brands.length,
-                        styles,
+                        brandPanelClasses,
                       )}`}
                       ariaHidden={index !== activeIndex}
                     />
@@ -229,7 +236,7 @@ export function BestBrands({ sectionTitle, brands, activeBrandSlug }: BestBrands
                       index,
                       activeIndex,
                       brands.length,
-                      styles,
+                      brandPanelClasses,
                     );
                     return (
                       <div
