@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import compactStyles from '@/components/AdminCompactBtn/AdminCompactBtn.module.css';
 import { AdminTextField, AdminSelect } from '@/components/AdminTextField/AdminTextField';
@@ -153,6 +154,9 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   const [detailDeleting, setDetailDeleting] = useState(false);
 
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const { data: folders = [], error: foldersQueryError } = useAdminQuery(
     adminQueryKeys.mediaFolders.list(libraryScope),
@@ -349,6 +353,10 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   }, [debouncedQ, tab, folderFilter]);
 
   useEffect(() => {
+    setSelectedIds(new Set());
+  }, [debouncedQ, tab, folderFilter, objectsPage, libraryScope]);
+
+  useEffect(() => {
     if (folders.length === 0) return;
     setCollapsedFolderIds((prev) => {
       const folderIdSet = new Set(folders.map((f) => f.id));
@@ -445,11 +453,60 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
         method: 'DELETE',
       });
       closeDetail();
+      setSelectedIds((prev) => {
+        if (!prev.has(detail.id)) return prev;
+        const next = new Set(prev);
+        next.delete(detail.id);
+        return next;
+      });
       await refreshMediaLibrary();
     } catch (e) {
       setMutationError(e instanceof Error ? e.message : s.errDeleteObject);
     } finally {
       setDetailDeleting(false);
+    }
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllOnPage() {
+    setSelectedIds(new Set(objects.map((row) => row.id)));
+  }
+
+  async function deleteSelected() {
+    if (!selectedIds.size) return;
+    if (!(await confirm({ title: s.deleteBulkConfirm(selectedIds.size) }))) return;
+    setBulkDeleting(true);
+    setMutationError(null);
+    try {
+      const res = await adminBackendJson<{ deleted: string[]; skipped: string[] }>(
+        'catalog/admin/media/objects/bulk-delete',
+        {
+          method: 'POST',
+          body: JSON.stringify({ ids: Array.from(selectedIds) }),
+        },
+      );
+      if (res.skipped.length) {
+        setMutationError(s.bulkDeletePartial(res.skipped.length, res.deleted.length));
+      }
+      if (detail && res.deleted.includes(detail.id)) {
+        closeDetail();
+      }
+      setSelectedIds(new Set());
+      if (res.deleted.length > 0) {
+        await refreshMediaLibrary();
+      }
+    } catch (e) {
+      setMutationError(e instanceof Error ? e.message : s.errDeleteObject);
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -623,6 +680,36 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
     return <div className={styles.thumbPlaceholder}>{s.fileGeneric}</div>;
   }
 
+  function renderDetailPreview(row: MediaObjectRow) {
+    if (row.category === 'IMAGE') {
+      return (
+        <img
+          className={styles.detailPreviewMedia}
+          src={row.publicUrl}
+          alt={row.originalName}
+        />
+      );
+    }
+    if (row.category === 'VIDEO') {
+      return (
+        <video
+          className={styles.detailPreviewVideo}
+          src={row.publicUrl}
+          controls
+          playsInline
+          preload="metadata"
+        />
+      );
+    }
+    if (row.category === 'DOCUMENT') {
+      return <div className={styles.thumbPlaceholder}>{s.thumbPdfDoc}</div>;
+    }
+    if (row.category === 'MODEL') {
+      return <div className={styles.thumbPlaceholder}>{s.thumbModel3d}</div>;
+    }
+    return <div className={styles.thumbPlaceholder}>{s.fileGeneric}</div>;
+  }
+
   const tabs: { key: MediaLibraryTab; label: string }[] = useMemo(
     () => [
       { key: 'all', label: s.tabAll },
@@ -736,6 +823,34 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
                 title={s.uploadTitle}
               />
             </div>
+            {objects.length > 0 ? (
+              <div className={catalogStyles.bulkGroup} role="group" aria-label={s.bulkAria}>
+                <AdminCompactBtn
+                  type="button"
+                  variant="outline"
+                  disabled={bulkDeleting || uploading}
+                  onClick={selectAllOnPage}
+                >
+                  {s.selectAllOnPage}
+                </AdminCompactBtn>
+                <AdminCompactBtn
+                  type="button"
+                  variant="outline"
+                  disabled={!selectedIds.size || bulkDeleting || uploading}
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  {s.clearSelection}
+                </AdminCompactBtn>
+                <AdminCompactBtn
+                  type="button"
+                  variant="danger"
+                  disabled={!selectedIds.size || bulkDeleting || uploading}
+                  onClick={deleteSelected}
+                >
+                  {bulkDeleting ? s.deleting : s.deleteBulk(selectedIds.size)}
+                </AdminCompactBtn>
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.tabsSpacer}>
@@ -757,31 +872,41 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
               {objects.map((row) => (
                 <li
                   key={row.id}
-                  className={`${styles.objectCard} ${isHeavyMediaObject(row) ? styles.objectCardHeavy : ''}`.trim()}
+                  className={`${styles.objectCard} ${isHeavyMediaObject(row) ? styles.objectCardHeavy : ''} ${selectedIds.has(row.id) ? styles.objectCardSelected : ''}`.trim()}
                 >
-                  <div className={styles.thumbWrap}>
-                    {renderThumb(row)}
-                    <button
-                      type="button"
-                      className={styles.cardMenuBtn}
-                      title={s.propertiesTitle}
-                      aria-label={s.propertiesAria}
-                      onClick={() => openDetail(row.id)}
-                    >
-                      ⋮
-                    </button>
-                  </div>
-                  <div className={styles.cardBody}>
-                    <p className={styles.cardTitle} title={row.originalName}>
-                      {row.originalName}
-                    </p>
-                    <p className={styles.cardMeta}>
-                      {formatKindLabel(row.mimeType, row.originalName, s.fileGeneric)}
-                      {row.width && row.height
-                        ? ` · ${row.width}×${row.height}`
-                        : ''}
-                    </p>
-                  </div>
+                  <label
+                    className={styles.cardSelectWrap}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <AccountCheckbox
+                      id={`object-select-${row.id}`}
+                      className={styles.cardSelectCheckbox}
+                      checked={selectedIds.has(row.id)}
+                      onChange={() => toggleSelected(row.id)}
+                      aria-label={s.selectObjectAria(row.originalName)}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className={styles.cardOpenArea}
+                    onClick={() => openDetail(row.id)}
+                    aria-label={s.propertiesAria}
+                    title={row.originalName}
+                  >
+                    <div className={styles.thumbWrap}>{renderThumb(row)}</div>
+                    <div className={styles.cardBody}>
+                      <p className={styles.cardTitle} title={row.originalName}>
+                        {row.originalName}
+                      </p>
+                      <p className={styles.cardMeta}>
+                        {formatKindLabel(row.mimeType, row.originalName, s.fileGeneric)}
+                        {row.width && row.height
+                          ? ` · ${row.width}×${row.height}`
+                          : ''}
+                      </p>
+                    </div>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -936,23 +1061,11 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
       ) : null}
 
       {detail || detailLoading ? (
-        <div
-          className={modalStyles.overlay}
-          role="presentation"
-          onMouseDown={(e) =>
-            e.target === e.currentTarget && !detailSaving && !detailDeleting && closeDetail()
-          }
-        >
-          <div
-            className={modalStyles.panel}
-            role="dialog"
-            aria-modal
-            aria-labelledby="objects-detail-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
+        <div className={styles.detailOverlay} role="dialog" aria-modal aria-labelledby="objects-detail-title">
+          <div className={styles.detailPanel}>
             <div className={modalStyles.panelHead}>
               <h2 id="objects-detail-title" className={modalStyles.panelTitle}>
-                {s.detailPropertiesTitle}
+                {detail?.originalName ?? s.detailPropertiesTitle}
               </h2>
               <AdminModalCloseButton
                 label={s.close}
@@ -966,45 +1079,48 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
               </div>
             ) : detail ? (
               <>
-                <div className={modalStyles.body}>
-                  <AdminTextField
-                    label={s.fileNameLabel}
-                    value={detailOriginalName}
-                    onChange={(e) => setDetailOriginalName(e.target.value)}
-                    autoComplete="off"
-                  />
-                  <div className={styles.detailMeta}>
-                    <div>
-                      {formatKindLabel(
-                        detail.mimeType,
-                        detailOriginalName || detail.originalName,
-                        s.fileGeneric
-                      )}
-                      {detail.width && detail.height
-                        ? `, ${detail.width} × ${detail.height}px`
-                        : ''}
-                      {`, ${formatBytes(detail.byteSize)}`}
+                <div className={styles.detailLayout}>
+                  <div className={styles.detailPreview}>{renderDetailPreview(detail)}</div>
+                  <div className={styles.detailForm}>
+                    <AdminTextField
+                      label={s.fileNameLabel}
+                      value={detailOriginalName}
+                      onChange={(e) => setDetailOriginalName(e.target.value)}
+                      autoComplete="off"
+                    />
+                    <div className={styles.detailMeta}>
+                      <div>
+                        {formatKindLabel(
+                          detail.mimeType,
+                          detailOriginalName || detail.originalName,
+                          s.fileGeneric
+                        )}
+                        {detail.width && detail.height
+                          ? `, ${detail.width} × ${detail.height}px`
+                          : ''}
+                        {`, ${formatBytes(detail.byteSize)}`}
+                      </div>
                     </div>
+                    <AdminSelect
+                      label={s.folderLabel}
+                      value={detailFolderId}
+                      onChange={(e) => setDetailFolderId(e.target.value)}
+                    >
+                      <option value="">{s.rootOptionDetail}</option>
+                      {folderList.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {'\u00A0'.repeat(folderDepth(f.pathKey) * 2)}
+                          {f.name}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                    <AdminTextField
+                      label="Alt text"
+                      value={detailAlt}
+                      onChange={(e) => setDetailAlt(e.target.value)}
+                      placeholder={s.altDescriptionPlaceholder}
+                    />
                   </div>
-                  <AdminSelect
-                    label={s.folderLabel}
-                    value={detailFolderId}
-                    onChange={(e) => setDetailFolderId(e.target.value)}
-                  >
-                    <option value="">{s.rootOptionDetail}</option>
-                    {folderList.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {'\u00A0'.repeat(folderDepth(f.pathKey) * 2)}
-                        {f.name}
-                      </option>
-                    ))}
-                  </AdminSelect>
-                  <AdminTextField
-                    label="Alt text"
-                    value={detailAlt}
-                    onChange={(e) => setDetailAlt(e.target.value)}
-                    placeholder={s.altDescriptionPlaceholder}
-                  />
                 </div>
                 <div className={`${modalStyles.panelFooter} ${styles.detailFooter}`}>
                   <AdminCompactBtn

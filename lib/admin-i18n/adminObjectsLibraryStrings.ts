@@ -78,6 +78,13 @@ export type ObjectsLibraryStrings = {
   uploadStatusError: string;
   uploadStatusCancelled: string;
   uploadCancelledNotice: (uploaded: number) => string;
+  bulkAria: string;
+  selectAllOnPage: string;
+  clearSelection: string;
+  selectObjectAria: (name: string) => string;
+  deleteBulk: (count: number) => string;
+  deleteBulkConfirm: (count: number) => string;
+  bulkDeletePartial: (skipped: number, deleted: number) => string;
 };
 
 const ru: ObjectsLibraryStrings = {
@@ -162,6 +169,15 @@ const ru: ObjectsLibraryStrings = {
   uploadStatusCancelled: 'Отменено',
   uploadCancelledNotice: (uploaded) =>
     uploaded > 0 ? `Загрузка отменена. Загружено файлов: ${uploaded}` : 'Загрузка отменена',
+  bulkAria: 'Массовые операции',
+  selectAllOnPage: 'Выбрать все на странице',
+  clearSelection: 'Снять выбор',
+  selectObjectAria: (name) => `Выбрать «${name}»`,
+  deleteBulk: (count) => (count > 0 ? `Удалить (${count})` : 'Удалить'),
+  deleteBulkConfirm: (count) =>
+    `Удалить ${count} медиафайл(ов) из хранилища? Ссылки перестанут работать. Действие необратимо.`,
+  bulkDeletePartial: (skipped, deleted) =>
+    `Удалено: ${deleted}. Не удалено (используются в каталоге или не найдены): ${skipped}.`,
 };
 
 const zh: ObjectsLibraryStrings = {
@@ -245,6 +261,15 @@ const zh: ObjectsLibraryStrings = {
   uploadStatusCancelled: '已取消',
   uploadCancelledNotice: (uploaded) =>
     uploaded > 0 ? `上传已取消。已上传 ${uploaded} 个文件` : '上传已取消',
+  bulkAria: '批量操作',
+  selectAllOnPage: '选择本页全部',
+  clearSelection: '取消选择',
+  selectObjectAria: (name) => `选择「${name}」`,
+  deleteBulk: (count) => (count > 0 ? `删除 (${count})` : '删除'),
+  deleteBulkConfirm: (count) =>
+    `从存储中删除 ${count} 个媒体文件？链接将失效。此操作不可撤销。`,
+  bulkDeletePartial: (skipped, deleted) =>
+    `已删除 ${deleted} 个。未删除（被引用或未找到）：${skipped} 个。`,
 };
 
 export function objectsLibraryStrings(locale: AdminLocale): ObjectsLibraryStrings {
