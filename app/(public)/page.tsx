@@ -87,11 +87,19 @@ export default async function HomePage() {
       <ScrollCatalog roots={catalogRoots} />
       <ProjectSourcing />
       {collection1?.items.length ? (
-        <Recommendations title={collection1.title} items={collection1.items} />
+        <Recommendations
+          title={collection1.title}
+          items={collection1.items}
+          advanceGalleryOnScroll
+        />
       ) : null}
       {bestBrands ? <BestBrands sectionTitle={bestBrands.sectionTitle} brands={bestBrands.brands} /> : null}
       {collection2?.items.length ? (
-        <Recommendations title={collection2.title} items={collection2.items} />
+        <Recommendations
+          title={collection2.title}
+          items={collection2.items}
+          advanceGalleryOnScroll
+        />
       ) : null}
       <News />
       {recommendationItems?.length ? (

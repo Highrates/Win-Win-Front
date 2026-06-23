@@ -15,9 +15,10 @@ import gridStyles from './ProductGridWithLikes.module.css';
 type Props = {
   items: ProductGridItem[];
   gridClassName: string;
+  galleryAdvanceSignal?: number;
 };
 
-export function ProductGridWithLikes({ items, gridClassName }: Props) {
+export function ProductGridWithLikes({ items, gridClassName, galleryAdvanceSignal }: Props) {
   const ssrLikes = useMemo(() => productGridItemsHaveSsrLikes(items), [items]);
 
   useLayoutEffect(() => {
@@ -75,6 +76,7 @@ export function ProductGridWithLikes({ items, gridClassName }: Props) {
               likes={item.likes ?? 0}
               heartActive={heartActive}
               productLikesBulk={productLikesBulk}
+              galleryAdvanceSignal={galleryAdvanceSignal}
             />
           );
         })}

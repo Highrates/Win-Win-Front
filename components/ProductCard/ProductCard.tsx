@@ -40,6 +40,8 @@ export interface ProductCardProps {
   onLikedChange?: (state: { liked: boolean; likesDisplayCount: number; productId: string }) => void;
   /** Лайки с сетки каталога (CatalogProductGrid). */
   productLikesBulk?: ProductCardLikesBulkState;
+  /** Инкремент — листнуть галерею на следующий кадр (для scroll-trigger на главной). */
+  galleryAdvanceSignal?: number;
 }
 
 function formatCardPrice(value: number, priceMin?: number, priceMax?: number): string {
@@ -75,6 +77,7 @@ export function ProductCard({
   likesInteractive = true,
   onLikedChange,
   productLikesBulk,
+  galleryAdvanceSignal,
 }: ProductCardProps) {
   const urls = useMemo(() => normalizeProductCardImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
   const urlsKey = urls.join('\0');
@@ -178,6 +181,14 @@ export function ProductCard({
     },
     [slide],
   );
+
+  const startSlideRef = useRef(startSlide);
+  startSlideRef.current = startSlide;
+
+  useEffect(() => {
+    if (galleryAdvanceSignal == null || galleryAdvanceSignal <= 0) return;
+    startSlideRef.current(1);
+  }, [galleryAdvanceSignal]);
 
   const handleArrowClick = useCallback(
     (e: React.MouseEvent, delta: number) => {
