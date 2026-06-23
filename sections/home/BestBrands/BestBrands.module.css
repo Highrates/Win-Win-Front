@@ -256,7 +256,7 @@
   font-family: var(--font-commissioner, system-ui);
   font-size: var(--text-card-20-300);
   font-weight: 300;
-  line-height: var(--text-body-long-height, 1.5);
+  line-height: var(--text-card-20-300-line-height);
   text-align: center;
   color: var(--color-ink-black, #051826);
   display: -webkit-box;

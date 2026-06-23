@@ -7,6 +7,7 @@ import { fetchPublicSiteSettings } from '@/lib/siteSettingsPublic';
 import {
   Hero,
   ScrollCatalog,
+  ProjectSourcing,
   BestBrands,
   News,
   Recommendations,
@@ -15,16 +16,41 @@ import {
 import { cookies } from 'next/headers';
 
 const HOME_BRAND_COLLECTION_SLUG = 'luchshie-brendy-mesyatsa';
+const HOME_COLLECTION_1_SLUG = 'kollektsiya-1';
+const HOME_COLLECTION_2_SLUG = 'kollektsiya-2';
 const HOME_RECOMMENDATIONS_COLLECTION_SLUG = 'rekomendatsii';
 const HERO_ROTATION_COOKIE = 'winwin-hero-idx';
 
+function productCollectionSection(
+  collection: Awaited<ReturnType<typeof fetchCuratedProductCollectionBySlug>>,
+  fallbackTitle: string,
+) {
+  if (!collection?.products?.length) return null;
+  return {
+    title: collection.name?.trim() || fallbackTitle,
+    items: mapBrandProductRowsToRecommendationItems(collection.products),
+  };
+}
+
 export default async function HomePage() {
-  const [catalogRoots, brandCollection, siteSettings, recommendationsCollection] = await Promise.all([
+  const [
+    catalogRoots,
+    brandCollection,
+    siteSettings,
+    collection1Raw,
+    collection2Raw,
+    recommendationsCollection,
+  ] = await Promise.all([
     fetchHomeCatalogRoots(),
     fetchCuratedBrandCollectionBySlug(HOME_BRAND_COLLECTION_SLUG),
     fetchPublicSiteSettings(),
+    fetchCuratedProductCollectionBySlug(HOME_COLLECTION_1_SLUG),
+    fetchCuratedProductCollectionBySlug(HOME_COLLECTION_2_SLUG),
     fetchCuratedProductCollectionBySlug(HOME_RECOMMENDATIONS_COLLECTION_SLUG),
   ]);
+
+  const collection1 = productCollectionSection(collection1Raw, 'Коллекция 1');
+  const collection2 = productCollectionSection(collection2Raw, 'Коллекция 2');
 
   let bestBrands: { sectionTitle: string; brands: BestBrandsBrandItem[] } | null = null;
   if (brandCollection?.brands?.length) {
@@ -59,7 +85,14 @@ export default async function HomePage() {
     <main>
       <Hero imageUrl={heroImageUrl} />
       <ScrollCatalog roots={catalogRoots} />
+      <ProjectSourcing />
+      {collection1?.items.length ? (
+        <Recommendations title={collection1.title} items={collection1.items} />
+      ) : null}
       {bestBrands ? <BestBrands sectionTitle={bestBrands.sectionTitle} brands={bestBrands.brands} /> : null}
+      {collection2?.items.length ? (
+        <Recommendations title={collection2.title} items={collection2.items} />
+      ) : null}
       <News />
       {recommendationItems?.length ? (
         <Recommendations title={recommendationsTitle} items={recommendationItems} />

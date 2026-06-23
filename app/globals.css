@@ -54,6 +54,7 @@
   --text-card-20-400: 20px;
   --text-card-20-500: 20px;
   --text-card-20-300: 20px;
+  --text-card-20-300-line-height: 24px;
   --text-card-16-500: 16px;
   --text-card-16-400: 16px;
   --text-card-16-300: 16px;
@@ -72,6 +73,7 @@
     --text-card-20-400: 18px;
     --text-card-20-500: 18px;
     --text-card-20-300: 18px;
+    --text-card-20-300-line-height: 22px;
     --text-card-16-500: 15px;
     --text-card-16-400: 15px;
     --text-card-16-300: 15px;
@@ -178,7 +180,7 @@ body.account-mobile-dock-open {
 }
 
 .text-card-20-400 { font-size: var(--text-card-20-400); font-weight: 400; }
-.text-card-20-300 { font-size: var(--text-card-20-300); font-weight: 300; }
+.text-card-20-300 { font-size: var(--text-card-20-300); font-weight: 300; line-height: var(--text-card-20-300-line-height); }
 .text-card-20-500 { font-size: var(--text-card-20-500); font-weight: 500; }
 .text-card-16-500 { font-size: var(--text-card-16-500); font-weight: 500; }
 .text-card-16-400 { font-size: var(--text-card-16-400); font-weight: 400; }

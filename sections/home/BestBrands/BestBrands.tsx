@@ -215,21 +215,6 @@ export function BestBrands({ sectionTitle, brands, activeBrandSlug }: BestBrands
           <div className={styles.previewBlock}>
             <div className={styles.previewHost}>
               <div className={styles.previewGrid}>
-                <div className={styles.infoStackDesktop}>
-                  {brands.map((brand, index) => (
-                    <BrandInfoPanel
-                      key={brand.slug}
-                      brand={brand}
-                      panelClassName={`${styles.infoPanel} ${panelVisibilityClass(
-                        index,
-                        activeIndex,
-                        brands.length,
-                        brandPanelClasses,
-                      )}`}
-                      ariaHidden={index !== activeIndex}
-                    />
-                  ))}
-                </div>
                 <div className={styles.imageStack}>
                   {brands.map((brand, index) => {
                     const panelClass = panelVisibilityClass(
@@ -260,6 +245,21 @@ export function BestBrands({ sectionTitle, brands, activeBrandSlug }: BestBrands
                       </div>
                     );
                   })}
+                </div>
+                <div className={styles.infoStackDesktop}>
+                  {brands.map((brand, index) => (
+                    <BrandInfoPanel
+                      key={brand.slug}
+                      brand={brand}
+                      panelClassName={`${styles.infoPanel} ${panelVisibilityClass(
+                        index,
+                        activeIndex,
+                        brands.length,
+                        brandPanelClasses,
+                      )}`}
+                      ariaHidden={index !== activeIndex}
+                    />
+                  ))}
                 </div>
               </div>
 
