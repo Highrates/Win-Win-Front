@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CustomerAccountSidebar } from './CustomerAccountSidebar';
-import { ACCOUNT_WORK_NOTIFICATIONS_EVENT } from '@/lib/account/orders';
+import { ACCOUNT_WORK_NOTIFICATIONS_EVENT, dispatchAccountWorkFeedRefreshEvent } from '@/lib/account/orders';
 
 type ProfileMe = {
   firstName?: string | null;
@@ -25,6 +25,7 @@ export function CustomerAccountSidebarContainer() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [orderChatNotify, setOrderChatNotify] = useState(false);
   const [workTabNotify, setWorkTabNotify] = useState(false);
+  const prevWorkUnreadRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +70,14 @@ export function CustomerAccountSidebarContainer() {
         } else if (!cancelled) setOrderChatNotify(false);
         if (workRes.ok) {
           const j = (await workRes.json()) as { count?: number };
-          if (!cancelled) setWorkTabNotify((j.count ?? 0) > 0);
+          const next = j.count ?? 0;
+          if (!cancelled) {
+            if (next > prevWorkUnreadRef.current) {
+              dispatchAccountWorkFeedRefreshEvent();
+            }
+            prevWorkUnreadRef.current = next;
+            setWorkTabNotify(next > 0);
+          }
         } else if (!cancelled) setWorkTabNotify(false);
       } catch {
         if (!cancelled) {

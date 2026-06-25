@@ -1,0 +1,80 @@
+import type { AdminLocale } from '@/lib/admin-i18n/adminChromeI18n';
+
+const pick = <T,>(locale: AdminLocale, ru: T, zh: T): T => (locale === 'zh' ? zh : ru);
+
+export function adminSourcingKpStrings(locale: AdminLocale) {
+  return {
+    backToRequest: pick(locale, '← К заявке', '← 返回申请'),
+    errLoad: pick(locale, 'Ошибка загрузки', '加载失败'),
+    errInitDraft: pick(locale, 'Не удалось создать черновик', '无法创建草稿'),
+    errSaveDraft: pick(locale, 'Не удалось сохранить', '保存失败'),
+    errPublish: pick(locale, 'Не удалось опубликовать', '发布失败'),
+    loading: pick(locale, 'Загрузка…', '加载中…'),
+    publishedHint: (version: number, lineCount: number) =>
+      pick(locale, `Опубликовано: v${version} (${lineCount} поз.)`, `已发布：v${version}（${lineCount} 项）`),
+    draftHint: (lineCount: number, updatedAt: string) =>
+      pick(locale, `Черновик: ${lineCount} поз. · обновлён ${updatedAt}`, `草稿：${lineCount} 项 · 更新于 ${updatedAt}`),
+    draftLineCount: (n: number) => pick(locale, `Черновик КП: ${n} поз.`, `报价草稿：${n} 项`),
+    initDraftHeading: pick(locale, 'Создать пустой черновик КП', '创建空白报价草稿'),
+    initDraftBtn: pick(locale, 'Создать черновик', '创建草稿'),
+    initCopyHint: pick(locale, 'Или скопировать опубликованную версию:', '或复制已发布版本：'),
+    initCopyBtn: (version: number, lineCount: number) =>
+      pick(locale, `Копия КП v${version} (${lineCount} поз.)`, `复制报价 v${version}（${lineCount} 项）`),
+    saveDraft: pick(locale, 'Сохранить черновик', '保存草稿'),
+    savingDraft: pick(locale, 'Сохранение…', '保存中…'),
+    addLine: pick(locale, 'Добавить товар', '添加商品'),
+    thProductName: pick(locale, 'Название товара', '商品名称'),
+    imagesLabel: pick(locale, 'Фото', '图片'),
+    thDescription: pick(locale, 'Описание', '描述'),
+    thQty: pick(locale, 'Кол-во', '数量'),
+    thPrice: pick(locale, 'Цена', '单价'),
+    thDelivery: pick(locale, 'Срок поставки', '交货期'),
+    thLineTotal: pick(locale, 'Сумма', '小计'),
+    thRemove: pick(locale, 'Удалить', '删除'),
+    ariaProductName: pick(locale, 'Название товара', '商品名称'),
+    ariaImage: pick(locale, 'Изображение товара', '商品图片'),
+    imagePick: pick(locale, 'Добавить фото', '添加图片'),
+    imageAdd: pick(locale, 'Добавить', '添加'),
+    imageRemove: pick(locale, 'Удалить изображение', '删除图片'),
+    imagePickerTitle: pick(locale, 'Изображение для строки КП', '报价行图片'),
+    ariaDescription: pick(locale, 'Описание', '描述'),
+    ariaQty: pick(locale, 'Количество', '数量'),
+    ariaUnit: pick(locale, 'Ед. изм.', '单位'),
+    ariaPrice: pick(locale, 'Цена', '单价'),
+    ariaDelivery: pick(locale, 'Срок поставки', '交货期'),
+    ariaRemoveLine: pick(locale, 'Удалить строку', '删除行'),
+    deliveryPlaceholder: pick(locale, '65–80 дн.', '65–80 天'),
+    footerSumLabel: pick(locale, 'Сумма', '合计'),
+    kpPublishConfirmTitle: pick(locale, 'Отправить предложение клиенту?', '向客户发送此报价？'),
+    kpPublishConfirmCancel: pick(locale, 'Отмена', '取消'),
+    kpPublishConfirmSubmit: pick(locale, 'Отправить', '发送'),
+    kpPublishConfirmSending: pick(locale, 'Отправка…', '发送中…'),
+    kpPublishSummaryHeading: pick(locale, 'Итог', '摘要'),
+    kpPublishPositions: (n: number) => pick(locale, `Позиций: ${n}`, `${n} 项`),
+    kpPublishTotalLabel: pick(locale, 'Сумма предложения', '报价合计'),
+    kpPublishLinesAria: pick(locale, 'Позиции в предложении', '报价明细'),
+    modalClose: pick(locale, 'Закрыть', '关闭'),
+    sectionPublished: pick(locale, 'Опубликованное КП', '已发布报价'),
+    kpPublishedLoading: pick(locale, 'Загрузка КП…', '加载报价中…'),
+    kpPublishedNone: pick(locale, 'Опубликованных коммерческих предложений пока нет.', '暂无已发布的报价单。'),
+    kpPublishedDetailError: pick(
+      locale,
+      'Не удалось загрузить строки опубликованного КП. Обновите страницу.',
+      '报价明细加载失败，请刷新页面。',
+    ),
+    kpPublishedVersionCaption: (
+      versionNumber: number,
+      publishedAtFormatted: string,
+      positionsLabel: string,
+    ) =>
+      pick(
+        locale,
+        `Версия ${versionNumber} · опубликовано ${publishedAtFormatted} · ${positionsLabel}`,
+        `第 ${versionNumber} 版 · ${publishedAtFormatted} · ${positionsLabel}`,
+      ),
+    thProduct: pick(locale, 'Товар', '商品'),
+    thQtyUnit: pick(locale, 'Кол-во', '数量'),
+    noItems: pick(locale, 'Нет позиций', '无明细'),
+    itemsCount: (n: number) => pick(locale, `${n} поз.`, `${n} 项`),
+  };
+}

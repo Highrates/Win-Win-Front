@@ -4,6 +4,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountOrderDetailModal } from '@/components/AccountOrders/AccountOrderDetailModal';
 import { AccountOrderWorkCard } from '@/components/AccountOrders/AccountOrderWorkCard';
+import { AccountSourcingRequestDetailModal } from '@/components/AccountOrders/AccountSourcingRequestDetailModal';
+import { SourcingRequestModal } from '@/components/SourcingRequest/SourcingRequestModal';
+import { SourcingDraftBanner } from '@/components/SourcingRequest/SourcingDraftBanner';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { AccountDetailedProductRow } from '@/components/AccountProductList/AccountDetailedProductRow';
 import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
@@ -20,13 +23,25 @@ import {
 import { mapOrderLineToAccountProduct } from '@/lib/orderPreparation/mapLineToAccountProduct';
 import { takeSelectOnlyPreparationLineIds } from '@/lib/orderPreparation/selectOnlyFromProjectSession';
 import type { OrderPreparationDraftApi, OrderPreparationLineApi } from '@/lib/orderPreparation/types';
-import { ORDER_TABS, orderTabQueryParamForUrl, ACCOUNT_WORK_NOTIFICATIONS_EVENT } from '@/lib/account/orders';
+import { ORDER_TABS, orderTabQueryParamForUrl, ACCOUNT_WORK_NOTIFICATIONS_EVENT, ACCOUNT_WORK_FEED_REFRESH_EVENT, type AccountWorkNotificationsDetail } from '@/lib/account/orders';
+import {
+  dismissSourcingWorkPrompt,
+  isSourcingWorkPromptDismissed,
+} from '@/lib/account/sourcingPromptDismiss';
 import { fetchUserOrdersList } from '@/lib/userOrders/clientApi';
 import {
   mapUserOrderToWorkCard,
   sortUserOrdersByUpdatedDesc,
 } from '@/lib/userOrders/mapOrderToWorkCard';
+import {
+  fetchUserSourcingRequestsList,
+} from '@/lib/userSourcingRequests/clientApi';
+import {
+  mapSourcingRequestToWorkCard,
+  sortSourcingRequestsByUpdatedDesc,
+} from '@/lib/userSourcingRequests/mapSourcingToWorkCard';
 import type { UserOrderListItemApi } from '@/lib/userOrders/types';
+import type { UserSourcingRequestListItemApi } from '@/lib/userSourcingRequests/types';
 import {
   fetchPublicOrderProgram,
   formatDesignerOwnExpectedBonusLabel,
@@ -91,6 +106,36 @@ function selectedIdsForDraftLines(lines: OrderPreparationLineApi[]): Set<string>
   return new Set(lines.map((l) => l.id));
 }
 
+type WorkFeedItem =
+  | { kind: 'order'; order: UserOrderListItemApi }
+  | { kind: 'sourcing'; sourcing: UserSourcingRequestListItemApi };
+
+/** Дата активности для сортировки: последнее КП или дата заявки/заказа. */
+function workFeedActivityIso(entry: WorkFeedItem): string {
+  if (entry.kind === 'order') {
+    const kpAt = entry.order.commercialProposalPublishedAt?.trim();
+    return kpAt || entry.order.createdAt;
+  }
+  const kpAt = entry.sourcing.commercialProposalPublishedAt?.trim();
+  return kpAt || entry.sourcing.createdAt;
+}
+
+function workFeedTimestamp(entry: WorkFeedItem): number {
+  const ts = Date.parse(workFeedActivityIso(entry));
+  return Number.isFinite(ts) ? ts : 0;
+}
+
+function buildWorkFeed(
+  orders: UserOrderListItemApi[],
+  sourcing: UserSourcingRequestListItemApi[],
+): WorkFeedItem[] {
+  const items: WorkFeedItem[] = [
+    ...orders.map((order) => ({ kind: 'order' as const, order })),
+    ...sourcing.map((request) => ({ kind: 'sourcing' as const, sourcing: request })),
+  ];
+  return items.sort((a, b) => workFeedTimestamp(b) - workFeedTimestamp(a));
+}
+
 export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabIndex?: number } = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -128,12 +173,19 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
     address: false,
   });
   const [inWorkOrders, setInWorkOrders] = useState<UserOrderListItemApi[]>([]);
+  const [inWorkSourcing, setInWorkSourcing] = useState<UserSourcingRequestListItemApi[]>([]);
   const [inWorkLoading, setInWorkLoading] = useState(false);
   const [inWorkError, setInWorkError] = useState<string | null>(null);
   const [completedOrders, setCompletedOrders] = useState<UserOrderListItemApi[]>([]);
+  const [completedSourcing, setCompletedSourcing] = useState<UserSourcingRequestListItemApi[]>([]);
   const [completedLoading, setCompletedLoading] = useState(false);
   const [completedError, setCompletedError] = useState<string | null>(null);
   const [workOrderDetailId, setWorkOrderDetailId] = useState<string | null>(null);
+  const [workSourcingDetailId, setWorkSourcingDetailId] = useState<string | null>(null);
+  const [sourcingModalOpen, setSourcingModalOpen] = useState(false);
+  const [sourcingResumeDraft, setSourcingResumeDraft] = useState(false);
+  const [sourcingDraftRefreshKey, setSourcingDraftRefreshKey] = useState(0);
+  const [sourcingPromptVisible, setSourcingPromptVisible] = useState<boolean | null>(null);
   const [workTabUnread, setWorkTabUnread] = useState(0);
   const [orderProgram, setOrderProgram] = useState<OrderProgramPublic | null>(null);
 
@@ -145,29 +197,49 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
     setInWorkLoading(true);
     setInWorkError(null);
     try {
-      const res = await fetchUserOrdersList(1, 50, { scope: 'work' });
-      setInWorkOrders(sortUserOrdersByUpdatedDesc(res.items));
+      const [ordersRes, sourcingRes] = await Promise.all([
+        fetchUserOrdersList(1, 50, { scope: 'work' }),
+        fetchUserSourcingRequestsList(1, 50, { scope: 'work' }),
+      ]);
+      setInWorkOrders(sortUserOrdersByUpdatedDesc(ordersRes.items));
+      setInWorkSourcing(sortSourcingRequestsByUpdatedDesc(sourcingRes.items));
     } catch (e) {
       setInWorkError(e instanceof Error ? e.message : 'Не удалось загрузить заказы');
       setInWorkOrders([]);
+      setInWorkSourcing([]);
     } finally {
       setInWorkLoading(false);
     }
   }, []);
 
+  const workFeed = useMemo(
+    () => buildWorkFeed(inWorkOrders, inWorkSourcing),
+    [inWorkOrders, inWorkSourcing],
+  );
+
   const loadCompletedOrders = useCallback(async () => {
     setCompletedLoading(true);
     setCompletedError(null);
     try {
-      const res = await fetchUserOrdersList(1, 50, { scope: 'completed' });
-      setCompletedOrders(sortUserOrdersByUpdatedDesc(res.items));
+      const [ordersRes, sourcingRes] = await Promise.all([
+        fetchUserOrdersList(1, 50, { scope: 'completed' }),
+        fetchUserSourcingRequestsList(1, 50, { scope: 'completed' }),
+      ]);
+      setCompletedOrders(sortUserOrdersByUpdatedDesc(ordersRes.items));
+      setCompletedSourcing(sortSourcingRequestsByUpdatedDesc(sourcingRes.items));
     } catch (e) {
       setCompletedError(e instanceof Error ? e.message : 'Не удалось загрузить заказы');
       setCompletedOrders([]);
+      setCompletedSourcing([]);
     } finally {
       setCompletedLoading(false);
     }
   }, []);
+
+  const completedFeed = useMemo(
+    () => buildWorkFeed(completedOrders, completedSourcing),
+    [completedOrders, completedSourcing],
+  );
 
   const refreshDraft = useCallback(async () => {
     setDraftError(null);
@@ -182,6 +254,10 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
       setDraftError(e instanceof Error ? e.message : 'Не удалось загрузить заказ');
       setDraft(null);
     }
+  }, []);
+
+  useEffect(() => {
+    setSourcingPromptVisible(!isSourcingWorkPromptDismissed());
   }, []);
 
   useEffect(() => {
@@ -223,10 +299,56 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   }, []);
 
   useEffect(() => {
-    const onWorkNotifications = () => void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
+    const onWorkNotifications = (ev: Event) => {
+      void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
+      const detail = (ev as CustomEvent<AccountWorkNotificationsDetail>).detail;
+      if (!detail?.entityId) return;
+      if (detail.chatSubject === 'sourcing') {
+        setInWorkSourcing((prev) =>
+          prev.map((r) =>
+            r.id === detail.entityId
+              ? { ...r, unreadStaffChatCount: 0, hasUnseenCommercialProposal: false }
+              : r,
+          ),
+        );
+      } else {
+        setInWorkOrders((prev) =>
+          prev.map((o) =>
+            o.id === detail.entityId
+              ? { ...o, unreadStaffChatCount: 0, hasUnseenCommercialProposal: false }
+              : o,
+          ),
+        );
+      }
+    };
     window.addEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
     return () => window.removeEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
   }, []);
+
+  useEffect(() => {
+    const refreshWorkFeed = () => {
+      if (isInWorkTab) void loadInWorkOrders();
+      if (isCompletedTab) void loadCompletedOrders();
+      void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
+    };
+    window.addEventListener(ACCOUNT_WORK_FEED_REFRESH_EVENT, refreshWorkFeed);
+    return () => window.removeEventListener(ACCOUNT_WORK_FEED_REFRESH_EVENT, refreshWorkFeed);
+  }, [isInWorkTab, isCompletedTab, loadInWorkOrders, loadCompletedOrders]);
+
+  useEffect(() => {
+    if (!isInWorkTab) return;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      void loadInWorkOrders();
+      void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [isInWorkTab, loadInWorkOrders]);
 
   useEffect(() => {
     if (!isInWorkTab) return;
@@ -423,6 +545,41 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
           tabHasNotification={[false, workTabUnread > 0, false]}
         />
       </div>
+
+      <SourcingDraftBanner
+        refreshKey={sourcingDraftRefreshKey}
+        onContinue={() => {
+          setSourcingResumeDraft(true);
+          setSourcingModalOpen(true);
+        }}
+      />
+
+      {isPreparationTab && sourcingPromptVisible ? (
+        <div className={styles.ordersToolbarOuter}>
+          <div className={styles.sourcingWorkPrompt}>
+            <button
+              type="button"
+              className={styles.sourcingWorkPromptClose}
+              onClick={() => {
+                dismissSourcingWorkPrompt();
+                setSourcingPromptVisible(false);
+              }}
+              aria-label="Скрыть подсказку"
+            >
+              ×
+            </button>
+            <p className={styles.sourcingWorkPromptText}>
+              Не нашли нужную модель в каталоге? Опишите задачу — подберём по вашему ТЗ.
+            </p>
+            <Button type="button" variant="primary" onClick={() => {
+              setSourcingResumeDraft(false);
+              setSourcingModalOpen(true);
+            }}>
+              Заказать подбор
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {isPreparationTab && hasOrderLines ? (
         <div className={styles.ordersToolbarOuter}>
@@ -718,19 +875,29 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
               ))}
             </div>
           ) : null}
-          {!inWorkLoading && !inWorkError && inWorkOrders.length === 0 ? (
-            <p className={styles.inWorkEmpty}>Нет заказов в работе.</p>
+          {!inWorkLoading && !inWorkError && workFeed.length === 0 ? (
+            <p className={styles.inWorkEmpty}>Нет заказов и заявок в работе.</p>
           ) : null}
           {!inWorkLoading
-            ? inWorkOrders.map((order) => (
-                <AccountOrderWorkCard
-                  key={order.id}
-                  {...mapUserOrderToWorkCard(order, {
-                    onOpenDetails: () => setWorkOrderDetailId(order.id),
-                    orderProgram,
-                  })}
-                />
-              ))
+            ? workFeed.map((entry) =>
+                entry.kind === 'order' ? (
+                  <AccountOrderWorkCard
+                    key={`order-${entry.order.id}`}
+                    {...mapUserOrderToWorkCard(entry.order, {
+                      onOpenDetails: () => setWorkOrderDetailId(entry.order.id),
+                      orderProgram,
+                    })}
+                  />
+                ) : (
+                  <AccountOrderWorkCard
+                    key={`sourcing-${entry.sourcing.id}`}
+                    {...mapSourcingRequestToWorkCard(entry.sourcing, {
+                      onOpenDetails: () => setWorkSourcingDetailId(entry.sourcing.id),
+                      orderProgram,
+                    })}
+                  />
+                ),
+              )
             : null}
         </div>
       ) : null}
@@ -772,24 +939,57 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
               ))}
             </div>
           ) : null}
-          {!completedLoading && !completedError && completedOrders.length === 0 ? (
-            <p className={styles.inWorkEmpty}>Нет завершённых заказов.</p>
+          {!completedLoading && !completedError && completedFeed.length === 0 ? (
+            <p className={styles.inWorkEmpty}>Нет завершённых заказов и заявок.</p>
           ) : null}
           {!completedLoading
-            ? completedOrders.map((order) => (
-                <AccountOrderWorkCard
-                  key={order.id}
-                  {...mapUserOrderToWorkCard(order, {
-                    onOpenDetails: () => setWorkOrderDetailId(order.id),
-                    orderProgram,
-                  })}
-                />
-              ))
+            ? completedFeed.map((entry) =>
+                entry.kind === 'order' ? (
+                  <AccountOrderWorkCard
+                    key={`order-${entry.order.id}`}
+                    {...mapUserOrderToWorkCard(entry.order, {
+                      onOpenDetails: () => setWorkOrderDetailId(entry.order.id),
+                      orderProgram,
+                    })}
+                  />
+                ) : (
+                  <AccountOrderWorkCard
+                    key={`sourcing-${entry.sourcing.id}`}
+                    {...mapSourcingRequestToWorkCard(entry.sourcing, {
+                      onOpenDetails: () => setWorkSourcingDetailId(entry.sourcing.id),
+                      orderProgram,
+                    })}
+                  />
+                ),
+              )
             : null}
         </div>
       ) : null}
 
       <AccountOrderDetailModal orderId={workOrderDetailId} onClose={() => setWorkOrderDetailId(null)} />
+      <AccountSourcingRequestDetailModal
+        requestId={workSourcingDetailId}
+        onClose={() => {
+          setWorkSourcingDetailId(null);
+          if (isInWorkTab) void loadInWorkOrders();
+        }}
+      />
+      <SourcingRequestModal
+        open={sourcingModalOpen}
+        resumeDraft={sourcingResumeDraft}
+        onClose={() => {
+          setSourcingModalOpen(false);
+          setSourcingResumeDraft(false);
+          setSourcingDraftRefreshKey((key) => key + 1);
+        }}
+        onSubmitted={() => {
+          setSourcingModalOpen(false);
+          setSourcingResumeDraft(false);
+          setSourcingDraftRefreshKey((key) => key + 1);
+          void loadInWorkOrders();
+          onSelectOrderTab(1);
+        }}
+      />
 
       {isPreparationTab ? null : !isInWorkTab && !isCompletedTab ? (
         <p className={styles.inWorkEmpty}>Раздел в разработке.</p>

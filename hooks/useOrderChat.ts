@@ -24,6 +24,7 @@ import {
   describeOrderChatUploadFailure,
   orderChatFileTooLargeUserMessage,
 } from '@/lib/orderChat/orderChatUploadError';
+import { dispatchAccountWorkFeedRefreshEvent } from '@/lib/account/orders';
 import { readUpstreamJsonErrorMessage } from '@/lib/readUpstreamJsonError';
 import type {
   OrderChatApiMessage,
@@ -32,7 +33,14 @@ import type {
   PendingAttachmentRef,
 } from '@/lib/orderChat/types';
 
-export type { OrderChatVariant } from '@/lib/orderChat/constants';
+export type OrderChatSubject = 'order' | 'sourcing';
+
+function dispatchAdminChatUnreadRefresh(subject: OrderChatSubject): void {
+  if (typeof document === 'undefined') return;
+  const eventName =
+    subject === 'sourcing' ? 'admin-sourcing-chat-unread-refresh' : 'admin-orders-chat-unread-refresh';
+  document.dispatchEvent(new Event(eventName));
+}
 
 const PROFILE_AVATAR_PLACEHOLDER = '/images/placeholder.svg';
 /** В ЛК сообщения сотрудника показываем с фирменным аватаром менеджера. */
@@ -75,18 +83,30 @@ async function parseOrderChatUploadResponse(res: Response): Promise<{
   return { url, filename, mimeType, kind };
 }
 
-function orderChatMessagesPath(variant: OrderChatVariant, orderId: string): string {
+export type { OrderChatVariant } from '@/lib/orderChat/constants';
+
+function orderChatMessagesPath(
+  variant: OrderChatVariant,
+  entityId: string,
+  subject: OrderChatSubject = 'order',
+): string {
+  if (subject === 'sourcing') {
+    return variant === 'account'
+      ? `/api/user/sourcing-requests/${encodeURIComponent(entityId)}/chat/messages`
+      : adminBackendPath(`sourcing-requests/admin/${encodeURIComponent(entityId)}/chat/messages`);
+  }
   return variant === 'account'
-    ? `/api/user/orders/${encodeURIComponent(orderId)}/chat/messages`
-    : adminBackendPath(`orders/admin/${encodeURIComponent(orderId)}/chat/messages`);
+    ? `/api/user/orders/${encodeURIComponent(entityId)}/chat/messages`
+    : adminBackendPath(`orders/admin/${encodeURIComponent(entityId)}/chat/messages`);
 }
 
 function orderChatMessagesListUrl(
   variant: OrderChatVariant,
-  orderId: string,
+  entityId: string,
   opts?: { limit?: number; before?: string },
+  subject: OrderChatSubject = 'order',
 ): string {
-  const base = orderChatMessagesPath(variant, orderId);
+  const base = orderChatMessagesPath(variant, entityId, subject);
   const params = new URLSearchParams();
   if (opts?.limit != null) params.set('limit', String(opts.limit));
   const beforeTrim = opts?.before?.trim();
@@ -95,23 +115,65 @@ function orderChatMessagesListUrl(
   return qs ? `${base}?${qs}` : base;
 }
 
-function readUrl(variant: OrderChatVariant, orderId: string): string {
+function readUrl(variant: OrderChatVariant, entityId: string, subject: OrderChatSubject = 'order'): string {
+  if (subject === 'sourcing') {
+    return variant === 'account'
+      ? `/api/user/sourcing-requests/${encodeURIComponent(entityId)}/chat/read`
+      : adminBackendPath(`sourcing-requests/admin/${encodeURIComponent(entityId)}/chat/read`);
+  }
   return variant === 'account'
-    ? `/api/user/orders/${encodeURIComponent(orderId)}/chat/read`
-    : adminBackendPath(`orders/admin/${encodeURIComponent(orderId)}/chat/read`);
+    ? `/api/user/orders/${encodeURIComponent(entityId)}/chat/read`
+    : adminBackendPath(`orders/admin/${encodeURIComponent(entityId)}/chat/read`);
 }
 
-function uploadUrl(variant: OrderChatVariant, orderId: string): string {
+function uploadUrl(variant: OrderChatVariant, entityId: string, subject: OrderChatSubject = 'order'): string {
+  if (subject === 'sourcing') {
+    return variant === 'account'
+      ? `/api/user/sourcing-requests/${encodeURIComponent(entityId)}/chat/upload`
+      : adminBackendPath(`sourcing-requests/admin/${encodeURIComponent(entityId)}/chat/upload`);
+  }
   return variant === 'account'
-    ? `/api/user/orders/${encodeURIComponent(orderId)}/chat/upload`
-    : adminBackendPath(`orders/admin/${encodeURIComponent(orderId)}/chat/upload`);
+    ? `/api/user/orders/${encodeURIComponent(entityId)}/chat/upload`
+    : adminBackendPath(`orders/admin/${encodeURIComponent(entityId)}/chat/upload`);
 }
 
-function deleteUrl(variant: OrderChatVariant, orderId: string, messageId: string): string {
+async function markAccountChatRead(
+  variant: OrderChatVariant,
+  entityId: string,
+  subject: OrderChatSubject,
+): Promise<void> {
+  if (variant !== 'account') return;
+  try {
+    const res = await fetch(readUrl(variant, entityId, subject), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!res.ok) return;
+    dispatchAccountWorkNotificationsEvent({ entityId, chatSubject: subject });
+  } catch {
+    /* read ack не блокирует чат */
+  }
+}
+
+function deleteUrl(
+  variant: OrderChatVariant,
+  entityId: string,
+  messageId: string,
+  subject: OrderChatSubject = 'order',
+): string {
+  if (subject === 'sourcing') {
+    return variant === 'account'
+      ? `/api/user/sourcing-requests/${encodeURIComponent(entityId)}/chat/messages/${encodeURIComponent(messageId)}`
+      : adminBackendPath(
+          `sourcing-requests/admin/${encodeURIComponent(entityId)}/chat/messages/${encodeURIComponent(messageId)}`,
+        );
+  }
   return variant === 'account'
-    ? `/api/user/orders/${encodeURIComponent(orderId)}/chat/messages/${encodeURIComponent(messageId)}`
+    ? `/api/user/orders/${encodeURIComponent(entityId)}/chat/messages/${encodeURIComponent(messageId)}`
     : adminBackendPath(
-        `orders/admin/${encodeURIComponent(orderId)}/chat/messages/${encodeURIComponent(messageId)}`,
+        `orders/admin/${encodeURIComponent(entityId)}/chat/messages/${encodeURIComponent(messageId)}`,
       );
 }
 
@@ -186,10 +248,11 @@ export function useOrderChat(opts: {
   orderId: string | null;
   enabled: boolean;
   variant: OrderChatVariant;
+  chatSubject?: OrderChatSubject;
   /** ru-RU | zh-CN и т.п. — время в списке сообщений */
   timeLocale?: string;
 }) {
-  const { orderId, enabled, variant, timeLocale = 'ru-RU' } = opts;
+  const { orderId, enabled, variant, chatSubject = 'order', timeLocale = 'ru-RU' } = opts;
 
   const [messages, setMessages] = useState<ChatWindowMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -257,7 +320,9 @@ export function useOrderChat(opts: {
 
   const reloadMessages = useCallback(async () => {
     if (!orderId) return;
-    const res = await fetch(orderChatMessagesListUrl(variant, orderId, { limit: CHAT_MESSAGES_PAGE_DEFAULT }), {
+    const res = await fetch(
+      orderChatMessagesListUrl(variant, orderId, { limit: CHAT_MESSAGES_PAGE_DEFAULT }, chatSubject),
+      {
       credentials: 'same-origin',
       cache: 'no-store',
     });
@@ -267,7 +332,7 @@ export function useOrderChat(opts: {
     conversationIdRef.current = data.conversationId ?? null;
     setMessages((data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale)));
     setHasOlderHistory(Boolean(data.hasOlder));
-  }, [orderId, variant, timeLocale]);
+  }, [orderId, variant, timeLocale, chatSubject]);
 
   const loadOlderChatMessages = useCallback(async () => {
     if (!orderId || !hasOlderHistory || loadingOlderHistory) return;
@@ -281,7 +346,7 @@ export function useOrderChat(opts: {
         orderChatMessagesListUrl(variant, orderId, {
           limit: CHAT_MESSAGES_PAGE_DEFAULT,
           before: oldestId,
-        }),
+        }, chatSubject),
         { credentials: 'same-origin', cache: 'no-store' },
       );
       if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
@@ -341,8 +406,11 @@ export function useOrderChat(opts: {
         if (prev.some((x) => x.id === payload.id)) return prev;
         return [...prev, mapApiToUi(payload, viewer, variant, timeLocale)];
       });
+      if (variant === 'account' && payload.authorRole === 'STAFF') {
+        dispatchAccountWorkFeedRefreshEvent();
+      }
       if (variant === 'admin' && payload.authorRole === 'CUSTOMER' && typeof document !== 'undefined') {
-        document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
+        dispatchAdminChatUnreadRefresh(chatSubject);
       }
     };
 
@@ -375,7 +443,11 @@ export function useOrderChat(opts: {
       activeSocket = socket;
       socket.on('message_created', onCreated);
       socket.on('message_deleted', onDeleted);
-      socket.emit('join_order_chat', { orderId });
+      if (chatSubject === 'sourcing') {
+        socket.emit('join_sourcing_chat', { sourcingRequestId: orderId });
+      } else {
+        socket.emit('join_order_chat', { orderId });
+      }
     };
 
     const onSocketLayerUpdated = ((ev: Event) => {
@@ -396,7 +468,7 @@ export function useOrderChat(opts: {
         viewerRef.current = wsAuth.sub;
 
         const res = await fetch(
-          orderChatMessagesListUrl(variant, orderId, { limit: CHAT_MESSAGES_PAGE_DEFAULT }),
+          orderChatMessagesListUrl(variant, orderId, { limit: CHAT_MESSAGES_PAGE_DEFAULT }, chatSubject),
           {
             credentials: 'same-origin',
             cache: 'no-store',
@@ -411,14 +483,18 @@ export function useOrderChat(opts: {
         setMessages(rows);
         setHasOlderHistory(Boolean(data.hasOlder));
 
-        await fetch(readUrl(variant, orderId), {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: '{}',
-        }).catch(() => undefined);
-        if (variant === 'admin' && typeof document !== 'undefined') {
-          document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
+        if (variant === 'account') {
+          await markAccountChatRead(variant, orderId, chatSubject);
+        } else {
+          await fetch(readUrl(variant, orderId, chatSubject), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+          }).catch(() => undefined);
+          if (typeof document !== 'undefined') {
+            dispatchAdminChatUnreadRefresh(chatSubject);
+          }
         }
 
         unregisterSession = registerOrderChatWsSession(variant, wsAuth);
@@ -445,10 +521,14 @@ export function useOrderChat(opts: {
         window.removeEventListener(ORDER_CHAT_SOCKET_UPDATED_EVENT, onSocketLayerUpdated);
       }
       detachSocketHandlers();
-      activeSocket?.emit('leave_order_chat', { orderId });
+      if (chatSubject === 'sourcing') {
+        activeSocket?.emit('leave_sourcing_chat', { sourcingRequestId: orderId });
+      } else {
+        activeSocket?.emit('leave_order_chat', { orderId });
+      }
       unregisterSession?.();
     };
-  }, [enabled, orderId, variant, timeLocale]);
+  }, [enabled, orderId, variant, timeLocale, chatSubject]);
 
   const sendText = useCallback(
     async (text: string) => {
@@ -478,7 +558,7 @@ export function useOrderChat(opts: {
       setSending(true);
       setError(null);
       try {
-        const res = await fetch(orderChatMessagesPath(variant, orderId), {
+        const res = await fetch(orderChatMessagesPath(variant, orderId, chatSubject), {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
@@ -503,25 +583,29 @@ export function useOrderChat(opts: {
           return [...prev, mapApiToUi(created, viewer, variant, timeLocale)];
         });
         setPendingRefs([]);
-        void fetch(readUrl(variant, orderId), {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: '{}',
-        })
-          .then(() => {
-            if (variant === 'admin' && typeof document !== 'undefined') {
-              document.dispatchEvent(new Event('admin-orders-chat-unread-refresh'));
-            }
+        if (variant === 'account') {
+          void markAccountChatRead(variant, orderId, chatSubject);
+        } else {
+          void fetch(readUrl(variant, orderId, chatSubject), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
           })
-          .catch(() => undefined);
+            .then(() => {
+              if (typeof document !== 'undefined') {
+                dispatchAdminChatUnreadRefresh(chatSubject);
+              }
+            })
+            .catch(() => undefined);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Не удалось отправить');
       } finally {
         setSending(false);
       }
     },
-    [orderId, variant, pendingRefs, timeLocale],
+    [orderId, variant, pendingRefs, timeLocale, chatSubject],
   );
 
   const attachFiles = useCallback(
@@ -566,7 +650,7 @@ export function useOrderChat(opts: {
         try {
           const fd = new FormData();
           fd.append('file', file);
-          const res = await fetch(uploadUrl(variant, orderId), {
+          const res = await fetch(uploadUrl(variant, orderId, chatSubject), {
             method: 'POST',
             credentials: 'same-origin',
             body: fd,
@@ -600,7 +684,7 @@ export function useOrderChat(opts: {
         }
       }
     },
-    [orderId, variant, pendingRefs],
+    [orderId, variant, pendingRefs, chatSubject],
   );
 
   const removePendingAttachment = useCallback((clientToken: string) => {
@@ -616,7 +700,7 @@ export function useOrderChat(opts: {
       if (!orderId) return;
       setError(null);
       try {
-        const res = await fetch(deleteUrl(variant, orderId, messageId), {
+        const res = await fetch(deleteUrl(variant, orderId, messageId, chatSubject), {
           method: 'DELETE',
           credentials: 'same-origin',
         });
@@ -639,7 +723,7 @@ export function useOrderChat(opts: {
         setError(e instanceof Error ? e.message : 'Не удалось удалить сообщение');
       }
     },
-    [orderId, variant],
+    [orderId, variant, chatSubject],
   );
 
   const composerDisabled = loading || sending || uploadBusy;

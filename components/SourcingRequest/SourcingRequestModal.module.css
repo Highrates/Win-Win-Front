@@ -1,0 +1,455 @@
+.innerTightTop {
+  padding-top: 0;
+}
+
+.panelRoot {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.formFields :is(input, textarea) {
+  background-color: var(--color-white);
+}
+
+.formFields :is(input, textarea):focus,
+.formFields :is(input, textarea):focus-visible {
+  background-color: var(--color-white);
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.fieldRowThree {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: var(--text-body-long-height, 1.5);
+}
+
+.productsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.productsHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.productsTitle {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  text-transform: uppercase;
+  color: var(--color-black);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.productsCount {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  text-transform: none;
+  color: var(--color-gray);
+}
+
+.labelMuted {
+  color: var(--color-gray);
+  font-weight: var(--text-caption-weight);
+}
+
+.productsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formErrorBanner {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-red) 35%, transparent);
+  background: color-mix(in srgb, var(--color-red) 6%, var(--color-white));
+  color: var(--color-red);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.45;
+}
+
+.accordionFullWidth {
+  width: 100% !important;
+  max-width: 100% !important;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.accordionPanel {
+  color: var(--color-black);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.subsectionTitle {
+  margin: 8px 0 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-body-weight);
+  text-transform: uppercase;
+  color: var(--color-black);
+}
+
+.referenceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.referenceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 10px;
+}
+
+.referenceAddTile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px dashed var(--account-hairline-color, #e2e6e8);
+  background: var(--color-bright-snow);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.referenceAddIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray);
+  pointer-events: none;
+}
+
+.referenceAddTile:hover {
+  border-color: var(--color-black);
+}
+
+.referenceAddTile:hover .referenceAddIcon {
+  color: var(--color-black);
+}
+
+.referenceUploadInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.referenceThumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  background: var(--color-bright-snow);
+}
+
+.referenceThumbLink {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.referenceThumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.referenceThumbDelete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.referenceThumbDelete:hover {
+  background: var(--color-white);
+}
+
+.unitSelect {
+  align-self: stretch;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 40px 12px 16px;
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  background-color: var(--color-white);
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239D9D9D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  appearance: none;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.unitSelect:hover:not(:disabled) {
+  border-color: rgba(5, 24, 38, 0.28);
+}
+
+.unitSelect:focus {
+  outline: none;
+  border-color: var(--color-blue);
+  background-color: var(--color-white);
+}
+
+.unitSelect:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--color-blue) 50%, transparent);
+  outline-offset: 1px;
+  border-color: var(--color-blue);
+  background-color: var(--color-white);
+}
+
+.deleteIconBtn {
+  color: #9d9d9d;
+  transition: color 0.15s ease;
+}
+
+.deleteIconBtn:hover {
+  color: var(--color-red);
+}
+
+.attachmentsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.attachmentsHint,
+.referenceHint {
+  margin: 0;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-family: var(--font-commissioner);
+  line-height: 1.4;
+}
+
+.attachmentsUpload {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px dashed var(--account-hairline-color, #e2e6e8);
+  background: var(--color-bright-snow);
+  cursor: pointer;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+}
+
+.attachmentsUploadInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.attachmentsList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attachmentItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  background: var(--color-white);
+}
+
+.attachmentName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-caption);
+  color: var(--color-black);
+}
+
+.attachmentDelete {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attachmentDelete:hover {
+  background: var(--color-bright-snow);
+}
+
+.deleteProductBtn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deleteProductBtn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.discardOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.discardDialog {
+  width: min(100%, 400px);
+  padding: 24px;
+  border-radius: 8px;
+  background: var(--color-white);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.discardTitle {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+.discardText {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  line-height: 1.45;
+}
+
+.discardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.authGate {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.authGateTitle {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-black);
+}
+
+.authGateText {
+  margin: 0;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.45;
+}
+
+.successMessage {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--color-bright-snow);
+  color: var(--color-black);
+  font-size: var(--text-body);
+}
+
+.submitError {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #fff0f0;
+  color: #b00020;
+  font-size: var(--text-body);
+}
+
+@media (max-width: 768px) {
+  .fieldRow,
+  .fieldRowThree {
+    grid-template-columns: 1fr;
+  }
+}

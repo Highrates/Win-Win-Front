@@ -1,0 +1,44 @@
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.text {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+  color: var(--color-black);
+  font-size: var(--text-body);
+  font-family: var(--font-commissioner);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.dismissBtn {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-family: var(--font-commissioner);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dismissBtn:hover {
+  color: var(--color-black);
+}

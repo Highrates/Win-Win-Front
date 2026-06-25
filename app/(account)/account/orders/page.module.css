@@ -9,6 +9,54 @@
   box-sizing: border-box;
 }
 
+.sourcingWorkPrompt {
+  position: relative;
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 44px 16px 18px;
+  background: var(--color-bright-snow);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.sourcingWorkPromptClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-gray);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.sourcingWorkPromptClose:hover {
+  color: var(--color-black);
+  background: color-mix(in srgb, var(--color-black) 6%, transparent);
+}
+
+.sourcingWorkPromptText {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+  color: var(--color-black);
+  font-size: var(--text-body);
+  font-family: var(--font-commissioner);
+}
+
 .inWorkList {
   align-self: stretch;
   width: 100%;
@@ -74,11 +122,39 @@
   padding: 0;
   display: inline-flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   background: none;
   border: none;
   cursor: pointer;
   text-align: left;
+}
+
+.accordionBigHeader {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.accordionBigTriggerWithAction {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.accordionBigHeaderAction {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.accordionBigTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
 .accordionBigTitle {

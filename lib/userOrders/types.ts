@@ -18,6 +18,10 @@ export type UserOrderListItemApi = {
   } | null;
   /** Сроки из строк опубликованного КП (для карточки «В работе»). */
   commercialProposalDeliveryEta?: string | null;
+  /** Дата публикации последнего КП (для сортировки ленты). */
+  commercialProposalPublishedAt?: string | null;
+  /** Есть непросмотренная версия опубликованного КП. */
+  hasUnseenCommercialProposal?: boolean;
   items: {
     quantity: number;
     snapshot?: unknown;

@@ -84,7 +84,8 @@ function AdminSidebar({
   pathname: string;
   setAdminLocale: (next: AdminLocale) => void;
 }) {
-  const { pendingPartnerApps, pendingOrdersApproval, ordersChatUnread } = useAdminSidebarBadges();
+  const { pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread } =
+    useAdminSidebarBadges();
   const t = adminChromeStrings(locale);
 
   const inCatalog =
@@ -109,6 +110,8 @@ function AdminSidebar({
       href === '/admin/applications' && pendingPartnerApps != null && pendingPartnerApps > 0;
     const showOrdersPendingBadge =
       href === '/admin/orders' && pendingOrdersApproval != null && pendingOrdersApproval > 0;
+    const showSourcingPendingBadge =
+      href === '/admin/orders' && pendingSourcingReview != null && pendingSourcingReview > 0;
     const showOrdersChatUnreadBadge =
       href === '/admin/orders' && ordersChatUnread != null && ordersChatUnread > 0;
     return (
@@ -124,7 +127,16 @@ function AdminSidebar({
             <span className={styles.navLinkCount}> ({pendingPartnerApps})</span>
           ) : null}
           {showOrdersPendingBadge ? (
-            <span className={styles.navLinkCount}> ({pendingOrdersApproval})</span>
+            <span className={styles.navLinkCount} title="Заказы на согласование">
+              {' '}
+              ({pendingOrdersApproval})
+            </span>
+          ) : null}
+          {showSourcingPendingBadge ? (
+            <span className={styles.navLinkCount} title="Новые заявки на подбор">
+              {' '}
+              [{pendingSourcingReview}]
+            </span>
           ) : null}
           {showOrdersChatUnreadBadge ? (
             <span className={styles.navLinkCount} title="Непрочитанные сообщения от клиента">
@@ -334,15 +346,9 @@ export function AdminChrome({
       <AdminDeployRecovery buildId={buildId} />
       <AdminQueryProvider>
         <AdminConfirmProvider>
-          <AdminShellBody
-            sidebar={
-              <AdminSidebarBadgesProvider enabled>
-                <AdminSidebar {...sidebarProps} />
-              </AdminSidebarBadgesProvider>
-            }
-          >
-            {children}
-          </AdminShellBody>
+          <AdminSidebarBadgesProvider enabled>
+            <AdminShellBody sidebar={<AdminSidebar {...sidebarProps} />}>{children}</AdminShellBody>
+          </AdminSidebarBadgesProvider>
         </AdminConfirmProvider>
       </AdminQueryProvider>
     </AdminLocaleProvider>

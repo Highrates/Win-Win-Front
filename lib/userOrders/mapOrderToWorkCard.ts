@@ -6,6 +6,8 @@ import type { UserOrderListItemApi } from './types';
 
 const PLACEHOLDER = '/images/placeholder.svg';
 
+const COMPLETED_ORDER_CHAT_NOTICE = 'Переписка доступна 90 дней после завершения заказа';
+
 function orderItemThumb(item: UserOrderListItemApi['items'][number]): string {
   const s = item.snapshot && typeof item.snapshot === 'object' ? (item.snapshot as Record<string, unknown>) : null;
   if (s && typeof s.imageUrl === 'string' && s.imageUrl.trim()) return s.imageUrl.trim();
@@ -105,9 +107,11 @@ export function mapUserOrderToWorkCard(
     productThumbSrcs: thumbs.length ? thumbs : [PLACEHOLDER],
     hideMoreMenu: order.status === 'PENDING_APPROVAL',
     statusRejected: false,
+    statusNotice: order.status === 'COMPLETED' ? COMPLETED_ORDER_CHAT_NOTICE : undefined,
     onOpenDetails: opts?.onOpenDetails,
     detailHref: opts?.onOpenDetails ? undefined : `/account/orders/${order.id}`,
     offer,
     staffUnreadCount: order.unreadStaffChatCount ?? 0,
+    hasUnseenCommercialProposal: order.hasUnseenCommercialProposal ?? false,
   };
 }

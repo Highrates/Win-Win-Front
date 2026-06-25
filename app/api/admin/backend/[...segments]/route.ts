@@ -52,6 +52,7 @@ function isAllowed(segments: string[]): boolean {
   if (segments[0] === 'catalog' && segments[1] === 'admin') return true;
   if (segments[0] === 'audit' && segments[1] === 'admin') return true;
   if (segments[0] === 'orders' && segments[1] === 'admin') return true;
+  if (segments[0] === 'sourcing-requests' && segments[1] === 'admin') return true;
   if (segments[0] === 'blog' && segments[1] === 'admin') return true;
   if (segments[0] === 'users' && segments[1] === 'admin') return true;
   if (segments[0] === 'settings' && segments[1] === 'admin') return true;

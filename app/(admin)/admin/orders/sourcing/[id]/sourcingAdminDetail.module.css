@@ -1,0 +1,73 @@
+.productAccordionList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.productAccordion {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-black);
+  box-sizing: border-box;
+}
+
+.productAccordion:first-of-type {
+  margin-top: 0;
+}
+
+.productBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--color-black);
+}
+
+.productRow {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.productRowFull {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.productLabel {
+  margin: 0;
+  color: var(--color-gray, #6b6b6b);
+  font-size: var(--text-caption, 0.8125rem);
+}
+
+.productValue {
+  margin: 0;
+  color: var(--color-black);
+  word-break: break-word;
+}
+
+.productDescription {
+  margin: 0;
+  color: var(--color-black);
+  white-space: pre-wrap;
+}
+
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.thumb {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.accordionTitle {
+  color: var(--color-black);
+}

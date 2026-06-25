@@ -259,7 +259,7 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   function onSelectTab(index: number) {
     setBucketIndex(index);
     setPage(1);
-    if (!filterUserId?.trim() && !embedded) {
+    if (!filterUserId?.trim()) {
       const b = BUCKETS[index] ?? 'new';
       router.replace(`/admin/orders?bucket=${encodeURIComponent(b)}`, { scroll: false });
     }

@@ -14,6 +14,44 @@ export function adminOrderStatusLabels(locale: AdminLocale): Record<string, stri
   return out;
 }
 
+export function adminOrdersSectionStrings(locale: AdminLocale) {
+  return {
+    tabOrders: pick(locale, 'Заказы', '订单'),
+    tabSourcing: pick(locale, 'Заявки на подбор', '选品申请'),
+    sectionsAria: pick(locale, 'Раздел заказов и заявок на подбор', '订单与选品申请'),
+  };
+}
+
+export function adminSourcingStrings(locale: AdminLocale) {
+  const orders = adminOrdersStrings(locale);
+  return {
+    ...orders,
+    tabNew: pick(locale, 'Новые', '新申请'),
+    tabsAria: pick(locale, 'Заявки на подбор', '选品申请'),
+    emptyBucket: pick(locale, 'Нет заявок в этой вкладке', '此分区暂无申请'),
+    searchPh: pick(locale, 'Поиск по теме, клиенту, номеру', '按主题、客户或编号搜索'),
+    searchAria: pick(locale, 'Поиск заявок', '搜索申请'),
+    thRequest: pick(locale, 'Заявка', '申请'),
+    thCity: pick(locale, 'Город', '城市'),
+    takeInWork: pick(locale, 'Взять в работу', '接手处理'),
+    backList: pick(locale, '← К заявкам на подбор', '← 返回选品申请'),
+    errLoadDetail: pick(locale, 'Не удалось загрузить заявку', '无法加载申请详情'),
+    statusLine: (label: string) => pick(locale, `Статус: ${label}`, `状态：${label}`),
+    sectionClient: pick(locale, 'Клиент', '客户'),
+    deliveryCityLine: (city: string) => pick(locale, `Город доставки: ${city}`, `配送城市：${city}`),
+    sectionProducts: (n: number) => pick(locale, `Товары (${n})`, `商品（${n}）`),
+    sectionAttachments: pick(locale, 'Вложения', '附件'),
+    linkLabel: pick(locale, 'Ссылка', '链接'),
+    materialLabel: pick(locale, 'Материал', '材质'),
+    colorLabel: pick(locale, 'Цвет', '颜色'),
+    sizeLabel: pick(locale, 'Размер', '尺寸'),
+    quantityLine: (qty: number, unit: string) =>
+      pick(locale, `Количество: ${qty} ${unit}`, `数量：${qty} ${unit}`),
+    budgetPerUnit: pick(locale, 'Бюджет за ед.', '单价预算'),
+    chatAsideAria: pick(locale, 'Чат по заявке', '申请沟通'),
+  };
+}
+
 export function adminOrdersStrings(locale: AdminLocale) {
   return {
     errLoad: pick(locale, 'Ошибка загрузки', '加载失败'),

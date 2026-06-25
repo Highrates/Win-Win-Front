@@ -10,7 +10,8 @@ import {
   waitOrderChatSocketConnect,
 } from '@/lib/orderChat/orderChatWsShared';
 
-const DOM_REFRESH = 'admin-orders-chat-unread-refresh';
+const DOM_REFRESH_ORDERS = 'admin-orders-chat-unread-refresh';
+const DOM_REFRESH_SOURCING = 'admin-sourcing-chat-unread-refresh';
 /** Событие `order_chat_updated` может лететь часто; суммируем в один refresh суммаризации. */
 const DEBOUNCE_MS = 500;
 
@@ -21,7 +22,8 @@ function dispatchUnreadRefreshDebounced(ref: {
   if (ref.bounce != null) clearTimeout(ref.bounce);
   ref.bounce = setTimeout(() => {
     ref.bounce = undefined;
-    document.dispatchEvent(new Event(DOM_REFRESH));
+    document.dispatchEvent(new Event(DOM_REFRESH_ORDERS));
+    document.dispatchEvent(new Event(DOM_REFRESH_SOURCING));
   }, DEBOUNCE_MS);
 }
 

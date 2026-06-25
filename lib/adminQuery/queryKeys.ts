@@ -36,6 +36,11 @@ export const adminQueryKeys = {
     list: (params: { page: number; q: string; bucket: string; userId?: string }) =>
       ['admin', 'orders', 'list', params] as const,
   },
+  sourcingRequests: {
+    all: ['admin', 'sourcing-requests'] as const,
+    list: (params: { page: number; q: string; bucket: string }) =>
+      ['admin', 'sourcing-requests', 'list', params] as const,
+  },
   blog: {
     all: ['admin', 'blog'] as const,
     categories: ['admin', 'blog', 'categories'] as const,

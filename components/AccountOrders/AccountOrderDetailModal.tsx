@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import { AccordionBig } from '@/app/(account)/account/orders/AccordionBig';
-import { ACCOUNT_WORK_NOTIFICATIONS_EVENT } from '@/lib/account/orders';
+import { dispatchAccountWorkNotificationsEvent, ACCOUNT_WORK_NOTIFICATIONS_EVENT, type AccountWorkNotificationsDetail } from '@/lib/account/orders';
 import teamPageStyles from '@/app/(account)/account/team/page.module.css';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
@@ -18,6 +18,7 @@ import { fetchUserOrder, ackUserOrderCommercialProposalSeen } from '@/lib/userOr
 import type { UserOrderDetailApi } from '@/lib/userOrders/types';
 import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
 import workCardStyles from '@/components/AccountOrders/AccountOrderWorkCard.module.css';
+import { AccountGalleryThumb } from '@/components/AccountOrders/AccountGalleryThumb';
 import styles from './AccountOrderDetailModal.module.css';
 
 function CloseIcon() {
@@ -137,6 +138,11 @@ function AccountOrderItemsTable({
   /** При наличии КП — исходная сумма заявки вторична */
   footerMuted?: boolean;
 }) {
+  const galleryUrls = useMemo(
+    () => order.items.map((row) => itemImageUrl(row)).filter((url): url is string => Boolean(url)),
+    [order.items],
+  );
+
   if (order.items.length === 0) {
     return <p className={styles.muted}>Нет позиций</p>;
   }
@@ -172,7 +178,13 @@ function AccountOrderItemsTable({
                 <td className={`${teamPageStyles.tdLeftTight} ${styles.tdTopAlign}`}>
                   <div className={styles.thumbWrap}>
                     {img ? (
-                      <img className={styles.thumb} src={img} alt="" width={100} height={100} />
+                      <AccountGalleryThumb
+                        src={img}
+                        galleryUrls={galleryUrls}
+                        className={styles.thumb}
+                        width={100}
+                        height={100}
+                      />
                     ) : (
                       <div className={styles.thumbPh} aria-hidden />
                     )}
@@ -223,6 +235,10 @@ function AccountOrderItemsTable({
 function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; lines: CommercialProposalLineApi[] }) {
   const totals = useMemo(() => kpOfferAggregates(lines), [lines]);
   const grossTotals = useMemo(() => kpGrossTotals(lines), [lines]);
+  const galleryUrls = useMemo(
+    () => lines.map((line) => kpLineImageUrl(line)).filter((url): url is string => Boolean(url)),
+    [lines],
+  );
   const avgDiscountPctLabel = `${Math.round(totals.avgDiscountPercent * 10) / 10}%`;
   const hasDiscount = totals.oldTotalRub !== totals.newTotalRub || totals.avgDiscountPercent > 0;
 
@@ -266,7 +282,13 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
                 <td className={`${teamPageStyles.tdLeftTight} ${styles.tdTopAlign}`}>
                   <div className={styles.thumbWrap}>
                     {img ? (
-                      <img className={styles.thumb} src={img} alt="" width={100} height={100} />
+                      <AccountGalleryThumb
+                        src={img}
+                        galleryUrls={galleryUrls}
+                        className={styles.thumb}
+                        width={100}
+                        height={100}
+                      />
                     ) : (
                       <div className={styles.thumbPh} aria-hidden />
                     )}
@@ -389,12 +411,24 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
     void (async () => {
       try {
         await ackUserOrderCommercialProposalSeen(order.id);
-        window.dispatchEvent(new CustomEvent(ACCOUNT_WORK_NOTIFICATIONS_EVENT));
+        dispatchAccountWorkNotificationsEvent({ entityId: order.id, chatSubject: 'order' });
       } catch {
         /* просмотр заказа не зависит от ack */
       }
     })();
   }, [order?.id, order?.latestCommercialProposal?.versionNumber, loading]);
+
+  useEffect(() => {
+    if (!order?.id) return;
+    const onWorkNotifications = (ev: Event) => {
+      const detail = (ev as CustomEvent<AccountWorkNotificationsDetail>).detail;
+      if (detail?.entityId !== order.id) return;
+      if ((detail.chatSubject ?? 'order') !== 'order') return;
+      setOrder((prev) => (prev ? { ...prev, unreadStaffChatCount: 0 } : prev));
+    };
+    window.addEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
+    return () => window.removeEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
+  }, [order?.id]);
 
   useEffect(() => {
     if (!orderId) return;

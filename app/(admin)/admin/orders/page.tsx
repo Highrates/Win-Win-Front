@@ -1,7 +1,7 @@
 import { adminOrdersPage } from '@/lib/admin-i18n/adminMiscPagesI18n';
 import { getAdminLocale } from '@/lib/admin-i18n/getAdminLocale';
 import styles from '../catalog/catalogAdmin.module.css';
-import { OrdersAdminClient } from './OrdersAdminClient';
+import { AdminOrdersSectionClient } from './AdminOrdersSectionClient';
 
 export default function AdminOrdersPage() {
   const locale = getAdminLocale();
@@ -9,7 +9,7 @@ export default function AdminOrdersPage() {
   return (
     <main>
       <h1 className={styles.title}>{t.title}</h1>
-      <OrdersAdminClient />
+      <AdminOrdersSectionClient />
     </main>
   );
 }

@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
-import { useOrderChat } from '@/hooks/useOrderChat';
+import { useOrderChat, type OrderChatSubject } from '@/hooks/useOrderChat';
+import { ACCOUNT_WORK_NOTIFICATIONS_EVENT, type AccountWorkNotificationsDetail } from '@/lib/account/orders';
+import { openOrderChatPhotoSwipe } from '@/lib/orderChat/openOrderChatPhotoSwipe';
 import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
 import styles from './AccountOrderWorkCard.module.css';
 
@@ -41,9 +43,23 @@ export type AccountOrderWorkCardProps = {
   statusRejected?: boolean;
   /** Непрочитанные входящие сообщения от сотрудника (по данным списка заказов). */
   staffUnreadCount?: number;
+  /** Есть непросмотренная версия опубликованного КП. */
+  hasUnseenCommercialProposal?: boolean;
+  /** Показывать чат справа (по умолчанию — да). */
+  chatEnabled?: boolean;
+  /** Тип сущности для API чата (заказ или заявка на подбор). */
+  chatSubject?: OrderChatSubject;
+  /** Текст ссылки на детали (по умолчанию — «Подробнее о заказе»). */
+  detailLinkLabel?: string;
+  /** Чип в правом верхнем углу (например «Подбор»). */
+  cornerChipLabel?: string;
 };
 
 const PLACEHOLDER = '/images/placeholder.svg';
+
+function isZoomableThumb(src: string): boolean {
+  return Boolean(src?.trim()) && src !== PLACEHOLDER && !src.includes('placeholder.svg');
+}
 
 function MessageCtaButton({
   staffUnreadCount,
@@ -118,9 +134,16 @@ export function AccountOrderWorkCard({
   hideMoreMenu = false,
   statusRejected = false,
   staffUnreadCount = 0,
+  hasUnseenCommercialProposal = false,
+  chatEnabled = true,
+  chatSubject = 'order',
+  detailLinkLabel = 'Подробнее о заказе',
+  cornerChipLabel,
 }: AccountOrderWorkCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [displayUnread, setDisplayUnread] = useState(staffUnreadCount);
+  const [displayKpUnseen, setDisplayKpUnseen] = useState(hasUnseenCommercialProposal);
   const menuWrapRef = useRef<HTMLDivElement>(null);
   const {
     chatMessages,
@@ -142,8 +165,29 @@ export function AccountOrderWorkCard({
     orderId,
     enabled: chatOpen,
     variant: 'account',
+    chatSubject,
     timeLocale: 'ru-RU',
   });
+
+  useEffect(() => {
+    setDisplayUnread(staffUnreadCount);
+  }, [staffUnreadCount, orderId]);
+
+  useEffect(() => {
+    setDisplayKpUnseen(hasUnseenCommercialProposal);
+  }, [hasUnseenCommercialProposal, orderId]);
+
+  useEffect(() => {
+    const onWorkNotifications = (ev: Event) => {
+      const detail = (ev as CustomEvent<AccountWorkNotificationsDetail>).detail;
+      if (detail?.entityId !== orderId) return;
+      if ((detail.chatSubject ?? 'order') !== chatSubject) return;
+      setDisplayUnread(0);
+      setDisplayKpUnseen(false);
+    };
+    window.addEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
+    return () => window.removeEventListener(ACCOUNT_WORK_NOTIFICATIONS_EVENT, onWorkNotifications);
+  }, [orderId, chatSubject]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -163,6 +207,13 @@ export function AccountOrderWorkCard({
   }, [menuOpen]);
 
   const thumbs = productThumbSrcs.length > 0 ? productThumbSrcs : [PLACEHOLDER];
+  const galleryUrls = thumbs.filter(isZoomableThumb);
+
+  function openThumbGallery(startSrc: string) {
+    const idx = galleryUrls.indexOf(startSrc);
+    if (idx < 0) return;
+    void openOrderChatPhotoSwipe(galleryUrls, idx);
+  }
 
   const metaBlock = offer ? (
     <div className={styles.metaOfferRow}>
@@ -202,8 +253,9 @@ export function AccountOrderWorkCard({
   const openChat = () => setChatOpen(true);
 
   return (
-    <div className={styles.orderWrapper}>
-      <ChatWindow
+    <div className={chatEnabled ? styles.orderWrapper : `${styles.orderWrapper} ${styles.orderWrapperNoChat}`}>
+      {chatEnabled ? (
+        <ChatWindow
         open={chatOpen}
         onClose={() => setChatOpen(false)}
         title={chatTitle}
@@ -223,7 +275,8 @@ export function AccountOrderWorkCard({
         hasOlderHistory={chatHasOlderHistory}
         loadingOlderHistory={chatLoadingOlderHistory}
         onLoadOlderHistory={loadOlderChatMessages}
-      />
+        />
+      ) : null}
       <div className={styles.orderCard}>
         <div className={styles.orderCardTop}>
           <div className={styles.orderCardTopLeft}>
@@ -233,23 +286,30 @@ export function AccountOrderWorkCard({
             <span className={styles.orderDate}>{dateLine}</span>
             {statusNotice ? <p className={styles.orderStatusNotice}>{statusNotice}</p> : null}
           </div>
-          {!hideMoreMenu ? (
-            <div className={productListStyles.productCardDetailedMoreWrap} ref={menuWrapRef}>
-              <button
-                type="button"
-                className={`${productListStyles.iconButton} ${productListStyles.productCardDetailedMoreTrigger}`}
-                aria-expanded={menuOpen}
-                aria-haspopup="menu"
-                aria-label="Действия по заказу"
-                onClick={() => setMenuOpen((o) => !o)}
-              >
-                <img src="/icons/more.svg" alt="" width={20} height={20} className={productListStyles.iconBlack} />
-              </button>
-              {menuOpen ? (
-                <div className={productListStyles.productCardDetailedMoreMenu} role="menu">
-                  <button type="button" className={productListStyles.productCardDetailedMoreItem} role="menuitem">
-                    Архивировать
+          {!hideMoreMenu || cornerChipLabel ? (
+            <div className={styles.orderCardTopActions}>
+              {cornerChipLabel ? (
+                <span className={styles.orderCardCornerChip}>{cornerChipLabel}</span>
+              ) : null}
+              {!hideMoreMenu ? (
+                <div className={productListStyles.productCardDetailedMoreWrap} ref={menuWrapRef}>
+                  <button
+                    type="button"
+                    className={`${productListStyles.iconButton} ${productListStyles.productCardDetailedMoreTrigger}`}
+                    aria-expanded={menuOpen}
+                    aria-haspopup="menu"
+                    aria-label={chatSubject === 'sourcing' ? 'Действия по заявке' : 'Действия по заказу'}
+                    onClick={() => setMenuOpen((o) => !o)}
+                  >
+                    <img src="/icons/more.svg" alt="" width={20} height={20} className={productListStyles.iconBlack} />
                   </button>
+                  {menuOpen ? (
+                    <div className={productListStyles.productCardDetailedMoreMenu} role="menu">
+                      <button type="button" className={productListStyles.productCardDetailedMoreItem} role="menuitem">
+                        Архивировать
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -259,34 +319,60 @@ export function AccountOrderWorkCard({
         {metaBlock}
 
         <div className={styles.orderProductImgs}>
-          {thumbs.map((src, i) => (
-            <div key={`${src}-${i}`} className={styles.orderProductImg}>
-              <img src={src} alt="" width={68} height={73} loading="lazy" />
-            </div>
-          ))}
+          {thumbs.map((src, i) => {
+            const zoomable = isZoomableThumb(src);
+            return (
+              <div key={`${src}-${i}`} className={styles.orderProductImg}>
+                {zoomable ? (
+                  <button
+                    type="button"
+                    className={styles.orderProductImgBtn}
+                    aria-label="Открыть фото"
+                    onClick={() => openThumbGallery(src)}
+                  >
+                    <img src={src} alt="" width={68} height={73} loading="lazy" />
+                  </button>
+                ) : (
+                  <img src={src} alt="" width={68} height={73} loading="lazy" />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className={styles.orderDetailLinkRow}>
           {onOpenDetails ? (
             <button type="button" className={styles.orderDetailLink} onClick={onOpenDetails}>
-              Подробнее о заказе
+              <span className={styles.orderDetailLinkText}>{detailLinkLabel}</span>
+              {displayKpUnseen ? (
+                <span className={styles.kpUnseenBadge} aria-label="Новое коммерческое предложение">
+                  КП
+                </span>
+              ) : null}
             </button>
           ) : detailHref ? (
             <Link href={detailHref} className={styles.orderDetailLink}>
-              Подробнее о заказе
+              <span className={styles.orderDetailLinkText}>{detailLinkLabel}</span>
+              {displayKpUnseen ? (
+                <span className={styles.kpUnseenBadge} aria-label="Новое коммерческое предложение">
+                  КП
+                </span>
+              ) : null}
             </Link>
           ) : null}
           <img src="/icons/arrow-right.svg" alt="" width={10} height={5} className={styles.orderDetailArrow} aria-hidden />
         </div>
       </div>
 
-      <div className={styles.orderCTA}>
-        <MessageCtaButton
-          staffUnreadCount={staffUnreadCount}
-          onClick={openChat}
-          ariaLabel="Написать по заказу"
-        />
-      </div>
+      {chatEnabled ? (
+        <div className={styles.orderCTA}>
+          <MessageCtaButton
+            staffUnreadCount={displayUnread}
+            onClick={openChat}
+            ariaLabel={chatSubject === 'sourcing' ? 'Написать по заявке' : 'Написать по заказу'}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

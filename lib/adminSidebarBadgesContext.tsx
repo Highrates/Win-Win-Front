@@ -8,6 +8,7 @@ const ADMIN_SIDEBAR_BADGE_POLL_MS = 30_000;
 export type AdminSidebarBadgesValue = {
   pendingPartnerApps: number | null;
   pendingOrdersApproval: number | null;
+  pendingSourcingReview: number | null;
   ordersChatUnread: number | null;
 };
 
@@ -22,6 +23,7 @@ export function AdminSidebarBadgesProvider({
 }) {
   const [pendingPartnerApps, setPendingPartnerApps] = useState<number | null>(null);
   const [pendingOrdersApproval, setPendingOrdersApproval] = useState<number | null>(null);
+  const [pendingSourcingReview, setPendingSourcingReview] = useState<number | null>(null);
   const [ordersChatUnread, setOrdersChatUnread] = useState<number | null>(null);
 
   const loadPendingPartnerApps = useCallback(async () => {
@@ -44,6 +46,15 @@ export function AdminSidebarBadgesProvider({
     }
   }, []);
 
+  const loadPendingSourcingReview = useCallback(async () => {
+    try {
+      const j = await adminBackendJson<{ total?: number }>('sourcing-requests/admin/pending-review-count');
+      setPendingSourcingReview(typeof j.total === 'number' ? j.total : 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const loadOrdersChatUnread = useCallback(async () => {
     try {
       const j = await adminBackendJson<{ total?: number }>('orders/admin/chat-unread-summary');
@@ -56,8 +67,9 @@ export function AdminSidebarBadgesProvider({
   const refreshAll = useCallback(() => {
     void loadPendingPartnerApps();
     void loadPendingOrdersApproval();
+    void loadPendingSourcingReview();
     void loadOrdersChatUnread();
-  }, [loadPendingPartnerApps, loadPendingOrdersApproval, loadOrdersChatUnread]);
+  }, [loadPendingPartnerApps, loadPendingOrdersApproval, loadPendingSourcingReview, loadOrdersChatUnread]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -77,22 +89,27 @@ export function AdminSidebarBadgesProvider({
     const onRefreshOrders = () => {
       void loadPendingOrdersApproval();
     };
+    const onRefreshSourcingPending = () => {
+      void loadPendingSourcingReview();
+    };
     const onRefreshOrdersChatUnread = () => {
       void loadOrdersChatUnread();
     };
     document.addEventListener('admin-partner-pending-refresh', onRefreshPartner);
     document.addEventListener('admin-orders-pending-refresh', onRefreshOrders);
+    document.addEventListener('admin-sourcing-pending-refresh', onRefreshSourcingPending);
     document.addEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
     return () => {
       document.removeEventListener('admin-partner-pending-refresh', onRefreshPartner);
       document.removeEventListener('admin-orders-pending-refresh', onRefreshOrders);
+      document.removeEventListener('admin-sourcing-pending-refresh', onRefreshSourcingPending);
       document.removeEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
     };
-  }, [enabled, loadPendingPartnerApps, loadPendingOrdersApproval, loadOrdersChatUnread]);
+  }, [enabled, loadPendingPartnerApps, loadPendingOrdersApproval, loadPendingSourcingReview, loadOrdersChatUnread]);
 
   const value = useMemo(
-    () => ({ pendingPartnerApps, pendingOrdersApproval, ordersChatUnread }),
-    [pendingPartnerApps, pendingOrdersApproval, ordersChatUnread],
+    () => ({ pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread }),
+    [pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread],
   );
 
   return (

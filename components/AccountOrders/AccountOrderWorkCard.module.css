@@ -8,6 +8,10 @@
   box-sizing: border-box;
 }
 
+.orderWrapperNoChat {
+  justify-content: stretch;
+}
+
 .orderCard {
   flex: 1;
   min-width: 0;
@@ -38,6 +42,30 @@
   align-items: flex-start;
   gap: 6px;
   min-width: 0;
+}
+
+.orderCardTopActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.orderCardCornerChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  background: var(--color-white);
+  color: var(--color-ink-black);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  font-family: var(--font-commissioner);
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .orderStatus {
@@ -180,10 +208,32 @@
   padding: 0;
   cursor: pointer;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.orderDetailLink:hover {
+.orderDetailLinkText {
+  text-decoration: none;
+}
+
+.orderDetailLink:hover .orderDetailLinkText {
   text-decoration: underline;
+}
+
+.kpUnseenBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--color-red, #c53029);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
 }
 
 .orderDetailLink:focus-visible {
@@ -229,6 +279,22 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.orderProductImgBtn {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.orderProductImgBtn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
 }
 
 .orderCTA {

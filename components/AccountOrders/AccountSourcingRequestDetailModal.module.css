@@ -1,0 +1,214 @@
+.accordionList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.accordionFullWidth {
+  width: 100% !important;
+  max-width: 100% !important;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.inner {
+  padding-bottom: 24px;
+}
+
+.muted,
+.error {
+  margin: 0;
+  font-size: var(--text-body);
+}
+
+.error {
+  color: #b00020;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.summaryRow,
+.itemRow {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: var(--text-body);
+}
+
+.itemRowFull {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.itemGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.label {
+  color: var(--color-gray-600, #666);
+  font-size: 0.875rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.description {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.link {
+  color: var(--color-primary, #1a5cff);
+  word-break: break-all;
+}
+
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.attachments {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kpTableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.kpTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+  color: var(--color-black);
+}
+
+.kpTable th,
+.kpTable td {
+  padding: 10px 12px;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+  text-align: left;
+  vertical-align: top;
+}
+
+.kpTable th {
+  font-weight: 600;
+  color: var(--color-gray-600, #666);
+  font-size: 0.875rem;
+}
+
+.kpLineName {
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+.kpLineDesc {
+  margin: 16px 0;
+  white-space: pre-wrap;
+  color: var(--color-black);
+  font-size: var(--text-body);
+}
+
+.kpLineDetailsRow td {
+  padding-top: 0;
+  padding-bottom: 16px;
+  border-bottom: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+
+.kpLineMainRow:has(+ .kpLineDetailsRow) td {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.kpPublishedStack {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.kpVersionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kpVersionCaption {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-gray-600, #666);
+}
+
+.kpLineImageCell {
+  width: 72px;
+  padding-right: 8px;
+}
+
+.kpLineImages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.kpLineThumb {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.kpLineThumbPh {
+  width: 96px;
+  height: 96px;
+  border-radius: 6px;
+  background: var(--color-gray-100, #f0f0f0);
+}
+
+.kpTotalLabel {
+  text-align: right;
+  font-weight: 600;
+}
+
+.kpTotalValue {
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .summaryRow,
+  .itemRow {
+    grid-template-columns: 1fr;
+  }
+}
