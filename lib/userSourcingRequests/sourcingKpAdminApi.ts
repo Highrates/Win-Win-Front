@@ -1,6 +1,7 @@
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import type {
   SourcingCommercialProposalApi,
+  SourcingCommercialProposalLineDraft,
   SourcingCommercialProposalSummaryApi,
 } from '@/lib/sourcingCommercialProposal/types';
 
@@ -29,7 +30,7 @@ export async function initSourcingKpDraft(
 
 export async function saveSourcingKpDraft(
   id: string,
-  lines: SourcingCommercialProposalApi['lines'],
+  lines: SourcingCommercialProposalLineDraft[],
 ): Promise<SourcingCommercialProposalApi> {
   return adminBackendJson<SourcingCommercialProposalApi>(`${kpBasePath(id)}/draft`, {
     method: 'PUT',

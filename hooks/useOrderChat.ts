@@ -24,7 +24,7 @@ import {
   describeOrderChatUploadFailure,
   orderChatFileTooLargeUserMessage,
 } from '@/lib/orderChat/orderChatUploadError';
-import { dispatchAccountWorkFeedRefreshEvent } from '@/lib/account/orders';
+import { dispatchAccountWorkFeedRefreshEvent, dispatchAccountWorkNotificationsEvent } from '@/lib/account/orders';
 import { readUpstreamJsonErrorMessage } from '@/lib/readUpstreamJsonError';
 import type {
   OrderChatApiMessage,
