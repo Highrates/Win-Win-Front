@@ -16,7 +16,8 @@ function orderItemThumbSrcs(item: UserOrderListItemApi['items'][number]): string
   for (const img of item.product?.images ?? []) {
     if (typeof img.url === 'string' && img.url.trim()) urls.push(img.url.trim());
   }
-  return [...new Set(urls)].map((url) => resolveMediaUrlForClient(url));
+  const unique = Array.from(new Set(urls));
+  return unique.map((url) => resolveMediaUrlForClient(url));
 }
 
 function formatOrderDate(iso: string): string {
