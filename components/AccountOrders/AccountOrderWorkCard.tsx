@@ -206,8 +206,8 @@ export function AccountOrderWorkCard({
     };
   }, [menuOpen]);
 
-  const thumbs = productThumbSrcs.length > 0 ? productThumbSrcs : [PLACEHOLDER];
-  const galleryUrls = thumbs.filter(isZoomableThumb);
+  const thumbs = productThumbSrcs.filter(isZoomableThumb);
+  const galleryUrls = thumbs;
 
   function openThumbGallery(startSrc: string) {
     const idx = galleryUrls.indexOf(startSrc);
@@ -318,27 +318,22 @@ export function AccountOrderWorkCard({
 
         {metaBlock}
 
-        <div className={styles.orderProductImgs}>
-          {thumbs.map((src, i) => {
-            const zoomable = isZoomableThumb(src);
-            return (
+        {thumbs.length > 0 ? (
+          <div className={styles.orderProductImgs}>
+            {thumbs.map((src, i) => (
               <div key={`${src}-${i}`} className={styles.orderProductImg}>
-                {zoomable ? (
-                  <button
-                    type="button"
-                    className={styles.orderProductImgBtn}
-                    aria-label="Открыть фото"
-                    onClick={() => openThumbGallery(src)}
-                  >
-                    <img src={src} alt="" width={68} height={73} loading="lazy" />
-                  </button>
-                ) : (
+                <button
+                  type="button"
+                  className={styles.orderProductImgBtn}
+                  aria-label="Открыть фото"
+                  onClick={() => openThumbGallery(src)}
+                >
                   <img src={src} alt="" width={68} height={73} loading="lazy" />
-                )}
+                </button>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : null}
 
         <div className={styles.orderDetailLinkRow}>
           {onOpenDetails ? (

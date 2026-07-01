@@ -2,18 +2,21 @@ import type { AccountOrderWorkCardProps } from '@/components/AccountOrders/Accou
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { CUSTOMER_IN_WORK_STATUSES, orderStatusLabel } from '@/lib/orders/orderStatus';
 import { formatDesignerOwnExpectedBonusLabel, type OrderProgramPublic } from '@/lib/orderProgram/publicOrderProgram';
+import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import type { UserOrderListItemApi } from './types';
-
-const PLACEHOLDER = '/images/placeholder.svg';
 
 const COMPLETED_ORDER_CHAT_NOTICE = 'Переписка доступна 90 дней после завершения заказа';
 
-function orderItemThumb(item: UserOrderListItemApi['items'][number]): string {
+function orderItemThumbSrcs(item: UserOrderListItemApi['items'][number]): string[] {
   const s = item.snapshot && typeof item.snapshot === 'object' ? (item.snapshot as Record<string, unknown>) : null;
-  if (s && typeof s.imageUrl === 'string' && s.imageUrl.trim()) return s.imageUrl.trim();
-  const u = item.product?.images?.[0]?.url;
-  if (typeof u === 'string' && u.trim()) return u.trim();
-  return PLACEHOLDER;
+  const urls: string[] = [];
+  if (s && typeof s.imageUrl === 'string' && s.imageUrl.trim()) {
+    urls.push(s.imageUrl.trim());
+  }
+  for (const img of item.product?.images ?? []) {
+    if (typeof img.url === 'string' && img.url.trim()) urls.push(img.url.trim());
+  }
+  return [...new Set(urls)].map((url) => resolveMediaUrlForClient(url));
 }
 
 function formatOrderDate(iso: string): string {
@@ -58,7 +61,7 @@ export function mapUserOrderToWorkCard(
   order: UserOrderListItemApi,
   opts?: { onOpenDetails?: () => void; orderProgram?: OrderProgramPublic | null },
 ): AccountOrderWorkCardProps {
-  const thumbs = order.items.map(orderItemThumb).filter(Boolean);
+  const thumbs = order.items.flatMap(orderItemThumbSrcs);
   const skuCount = order.items.length;
   const shortNo = formatOrderDisplayId(order.id);
 
@@ -104,7 +107,7 @@ export function mapUserOrderToWorkCard(
     dateLine: formatOrderDate(order.createdAt),
     chatTitle: `Чат · ${shortNo}`,
     metaRows,
-    productThumbSrcs: thumbs.length ? thumbs : [PLACEHOLDER],
+    productThumbSrcs: thumbs,
     hideMoreMenu: order.status === 'PENDING_APPROVAL',
     statusRejected: false,
     statusNotice: order.status === 'COMPLETED' ? COMPLETED_ORDER_CHAT_NOTICE : undefined,

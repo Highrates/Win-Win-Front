@@ -45,6 +45,7 @@ const userListItemSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
   referenceImageUrl: z.string().nullable().optional(),
+  referenceImageUrls: z.array(z.string()).optional(),
 });
 
 const commercialProposalOfferSchema = z
@@ -142,6 +143,7 @@ export function parseUserSourcingRequestsList(raw: unknown): UserSourcingRequest
       items: item.items.map((summary) => ({
         ...summary,
         referenceImageUrl: summary.referenceImageUrl ?? null,
+        referenceImageUrls: summary.referenceImageUrls ?? [],
       })),
     })),
   };

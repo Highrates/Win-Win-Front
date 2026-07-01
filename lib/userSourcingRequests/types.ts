@@ -57,6 +57,7 @@ export type UserSourcingRequestListItemSummaryApi = {
   id: string;
   name: string;
   referenceImageUrl: string | null;
+  referenceImageUrls?: string[];
 };
 
 export type UserSourcingRequestListItemApi = SourcingRequestCoreApi & {

@@ -11,7 +11,15 @@ import type { UserSourcingRequestListItemApi } from './types';
 const COMPLETED_CHAT_NOTICE = 'Переписка доступна 90 дней после завершения заявки';
 const CANCELLED_CHAT_NOTICE = 'Чат закрыт — заявка отменена';
 
-const PLACEHOLDER = '/images/placeholder.svg';
+function itemReferenceThumbSrcs(item: UserSourcingRequestListItemApi['items'][number]): string[] {
+  const raw =
+    item.referenceImageUrls?.length
+      ? item.referenceImageUrls
+      : item.referenceImageUrl?.trim()
+        ? [item.referenceImageUrl.trim()]
+        : [];
+  return raw.map((url) => url.trim()).filter(Boolean).map((url) => resolveMediaUrlForClient(url));
+}
 
 function formatSourcingDate(iso: string): string {
   try {
@@ -52,9 +60,7 @@ export function mapSourcingRequestToWorkCard(
     .map((url) => url?.trim())
     .filter(Boolean)
     .map((url) => resolveMediaUrlForClient(url));
-  const requestThumbs = request.items
-    .map((item) => item.referenceImageUrl)
-    .filter((url): url is string => Boolean(url?.trim()));
+  const requestThumbs = request.items.flatMap((item) => itemReferenceThumbSrcs(item));
   const shortNo = formatOrderDisplayId(request.id);
 
   const etaRaw = request.commercialProposalDeliveryEta?.trim();
@@ -106,13 +112,7 @@ export function mapSourcingRequestToWorkCard(
     chatTitle: `Чат · ${shortNo}`,
     chatSubject: 'sourcing' as const,
     metaRows,
-    productThumbSrcs: hasPublishedKp
-      ? kpThumbs.length
-        ? kpThumbs
-        : [PLACEHOLDER]
-      : requestThumbs.length
-        ? requestThumbs
-        : [PLACEHOLDER],
+    productThumbSrcs: hasPublishedKp ? kpThumbs : requestThumbs,
     hideMoreMenu: false,
     cornerChipLabel: 'Подбор',
     staffUnreadCount: request.unreadStaffChatCount ?? 0,
