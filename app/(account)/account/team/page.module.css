@@ -179,6 +179,12 @@
   min-width: 0;
 }
 
+@media (max-width: 768px) {
+  .topBar {
+    flex-wrap: wrap;
+  }
+}
+
 .summaryColumn {
   align-self: stretch;
   display: inline-flex;

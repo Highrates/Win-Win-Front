@@ -5,28 +5,17 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { SearchBox } from '@/components/SearchBox/SearchBox';
-import { TextField } from '@/components/TextField';
-import btnStyles from '@/components/Button/Button.module.css';
+import { InviteDesignerModal } from '@/components/InviteDesignerModal/InviteDesignerModal';
+import { ActiveDesignerInvites } from '@/components/ActiveDesignerInvites/ActiveDesignerInvites';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
-import { copyTextToClipboard } from '@/lib/copyToClipboard';
-import { useModalBodyLock } from '@/hooks/useModalBodyLock';
+import { useActiveDesignerInvites } from '@/hooks/useActiveDesignerInvites';
 import { mapWinWinL1ToBranchCards, type WinWinTeamOverviewDto } from '@/lib/winWinTeam';
 import { fetchPartnerProgramSummary, type PartnerProgramSummaryApi } from '@/lib/referrals/partnerProgramSummary';
-import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
-import profileSheetStyles from '../profile/page.module.css';
 import { TeamSheetSection } from './TeamSheetSection';
 import styles from './page.module.css';
 
 function normalizeSearch(q: string): string {
   return q.trim().toLowerCase();
-}
-
-function CloseIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 function russianPluralChelovek(count: number): string {
@@ -53,36 +42,9 @@ export function TeamPageClient() {
   const [myWinWinReferral, setMyWinWinReferral] = useState<string | null>(null);
   const [partnerSummary, setPartnerSummary] = useState<PartnerProgramSummaryApi | null>(null);
   const [partnerIncomeLoading, setPartnerIncomeLoading] = useState(false);
-
   const [inviteDesignerModalOpen, setInviteDesignerModalOpen] = useState(false);
-  const [inviteDesignerEmail, setInviteDesignerEmail] = useState('');
-  const [inviteDesignerSending, setInviteDesignerSending] = useState(false);
-  const [inviteDesignerError, setInviteDesignerError] = useState<string | null>(null);
-  const [inviteDesignerDone, setInviteDesignerDone] = useState(false);
-  const [inviteDesignerInviteLink, setInviteDesignerInviteLink] = useState<string | null>(null);
-  const [inviteDesignerCopied, setInviteDesignerCopied] = useState(false);
-
-  const closeInviteDesignerModal = useCallback(() => {
-    setInviteDesignerModalOpen(false);
-    setInviteDesignerEmail('');
-    setInviteDesignerError(null);
-    setInviteDesignerDone(false);
-    setInviteDesignerInviteLink(null);
-    setInviteDesignerCopied(false);
-  }, []);
-
-  useModalBodyLock(inviteDesignerModalOpen, closeInviteDesignerModal);
-
-  const copyDesignerInviteLink = useCallback(async () => {
-    if (!inviteDesignerInviteLink) return;
-    try {
-      await copyTextToClipboard(inviteDesignerInviteLink);
-      setInviteDesignerCopied(true);
-      window.setTimeout(() => setInviteDesignerCopied(false), 3000);
-    } catch {
-      setInviteDesignerCopied(false);
-    }
-  }, [inviteDesignerInviteLink]);
+  const teamLoaded = !loading && !error && Boolean(data);
+  const { items: activeInvites, reload: reloadActiveInvites } = useActiveDesignerInvites(teamLoaded);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,9 +88,6 @@ export function TeamPageClient() {
 
   useEffect(() => {
     if (searchParams.get('inviteDesigner') !== '1') return;
-    setInviteDesignerError(null);
-    setInviteDesignerDone(false);
-    setInviteDesignerEmail('');
     setInviteDesignerModalOpen(true);
     router.replace(pathname || '/account/team', { scroll: false });
   }, [pathname, router, searchParams]);
@@ -147,38 +106,6 @@ export function TeamPageClient() {
     })();
   }, [data]);
 
-  const submitInviteDesigner = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setInviteDesignerError(null);
-    const em = inviteDesignerEmail.trim().toLowerCase();
-    if (!em.includes('@')) {
-      setInviteDesignerError('Введите корректный email');
-      return;
-    }
-    setInviteDesignerSending(true);
-    try {
-      const res = await fetch('/api/user/designer-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: em }),
-        credentials: 'same-origin',
-      });
-      if (!res.ok) {
-        setInviteDesignerError(await readApiErrorMessage(res));
-        return;
-      }
-      const j = (await res.json()) as { inviteLink?: string };
-      setInviteDesignerInviteLink(
-        typeof j.inviteLink === 'string' && j.inviteLink.length > 0 ? j.inviteLink : null,
-      );
-      setInviteDesignerDone(true);
-    } catch {
-      setInviteDesignerError('Не удалось отправить. Повторите позже.');
-    } finally {
-      setInviteDesignerSending(false);
-    }
-  };
-
   const branchCards = useMemo(() => (data?.l1 ? mapWinWinL1ToBranchCards(data.l1) : []), [data]);
 
   const filteredBranchCards = useMemo(() => {
@@ -194,15 +121,6 @@ export function TeamPageClient() {
     data?.inviter?.designerSlug && data.inviter.designerSlug.length > 0
       ? `/designers/${encodeURIComponent(data.inviter.designerSlug)}`
       : null;
-
-  const openInviteDesignerModal = useCallback(() => {
-    setInviteDesignerError(null);
-    setInviteDesignerDone(false);
-    setInviteDesignerEmail('');
-    setInviteDesignerInviteLink(null);
-    setInviteDesignerCopied(false);
-    setInviteDesignerModalOpen(true);
-  }, []);
 
   if (loading) {
     return <p className={styles.pageLeadMuted}>Загрузка…</p>;
@@ -244,10 +162,12 @@ export function TeamPageClient() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Button type="button" variant="primary" onClick={openInviteDesignerModal}>
+        <Button type="button" variant="primary" onClick={() => setInviteDesignerModalOpen(true)}>
           Пригласить дизайнера
         </Button>
       </div>
+
+      <ActiveDesignerInvites items={activeInvites} />
 
       <div className={styles.summaryColumn}>
         <div className={styles.summaryRowTop}>
@@ -293,95 +213,12 @@ export function TeamPageClient() {
         partnerIncomeLoading={partnerIncomeLoading}
       />
 
-      {inviteDesignerModalOpen ? (
-        <>
-          <button
-            type="button"
-            className={panelModal.backdrop}
-            aria-label="Закрыть"
-            onClick={closeInviteDesignerModal}
-          />
-          <section
-            className={panelModal.panel}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Пригласить дизайнера"
-          >
-            <header className={panelModal.header}>
-              <button
-                type="button"
-                className={panelModal.iconBtn}
-                onClick={closeInviteDesignerModal}
-                aria-label="Закрыть"
-              >
-                <CloseIcon />
-              </button>
-            </header>
-            <div className={panelModal.inner}>
-              {inviteDesignerDone ? (
-                <>
-                  <h3 className={panelModal.title}>Письмо с приглашением отправлено</h3>
-                  <p className={profileSheetStyles.partnerSuccessText}>
-                    Ссылку с приглашением можно скопировать и отправить напрямую! Срок действия — 14 дней, одно
-                    использование.
-                  </p>
-                  <div className={panelModal.actions}>
-                    {inviteDesignerInviteLink ? (
-                      <button
-                        type="button"
-                        className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${profileSheetStyles.inviteLinkCopyBtn} ${inviteDesignerCopied ? profileSheetStyles.inviteLinkCopyBtnDone : ''}`}
-                        onClick={() => {
-                          void copyDesignerInviteLink();
-                        }}
-                      >
-                        {inviteDesignerCopied ? 'Скопировано!' : 'Скопировать ссылку с приглашением'}
-                      </button>
-                    ) : null}
-                    <Button type="button" variant="primary" onClick={closeInviteDesignerModal}>
-                      Понятно
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3 className={panelModal.title}>Пригласить дизайнера</h3>
-                  <form onSubmit={submitInviteDesigner} noValidate>
-                    <div className={profileSheetStyles.partnerFormField}>
-                      <TextField
-                        label="Email"
-                        type="email"
-                        name="email"
-                        autoComplete="email"
-                        value={inviteDesignerEmail}
-                        onChange={(e) => {
-                          setInviteDesignerEmail(e.target.value);
-                          setInviteDesignerError(null);
-                        }}
-                        error={inviteDesignerError || undefined}
-                      />
-                    </div>
-                    <div className={profileSheetStyles.partnerFormField}>
-                      <TextField
-                        label="Реферальный номер"
-                        type="text"
-                        name="referralCode"
-                        autoComplete="off"
-                        value={myWinWinReferral ?? ''}
-                        disabled
-                      />
-                    </div>
-                    <div className={panelModal.actions}>
-                      <Button type="submit" variant="primary" disabled={inviteDesignerSending}>
-                        {inviteDesignerSending ? 'Отправка…' : 'Отправить приглашение'}
-                      </Button>
-                    </div>
-                  </form>
-                </>
-              )}
-            </div>
-          </section>
-        </>
-      ) : null}
+      <InviteDesignerModal
+        open={inviteDesignerModalOpen}
+        onClose={() => setInviteDesignerModalOpen(false)}
+        referralCode={myWinWinReferral}
+        onSent={() => void reloadActiveInvites()}
+      />
     </div>
   );
 }

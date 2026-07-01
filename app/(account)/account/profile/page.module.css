@@ -205,7 +205,7 @@
 }
 
 .partnerReferralExemptNote {
-  margin: 0;
+  margin: 16px 0 0;
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   line-height: 1.45;

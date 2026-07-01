@@ -31,6 +31,20 @@ function appendReferralWarningParam(url: string, warning?: string): string {
   return `${url}${sep}referralWarning=${encodeURIComponent(w)}`;
 }
 
+function buildRegisterAltHref(
+  targetChannel: RegisterChannel,
+  params: { ref?: string; callbackUrl?: string | null },
+): string {
+  const q = new URLSearchParams();
+  const ref = params.ref?.trim();
+  if (ref) q.set('ref', ref);
+  const callbackUrl = params.callbackUrl?.trim();
+  if (callbackUrl) q.set('callbackUrl', callbackUrl);
+  const base = targetChannel === 'phone' ? '/register/phone' : '/register/email';
+  const s = q.toString();
+  return s ? `${base}?${s}` : base;
+}
+
 export type RegisterChannel = 'phone' | 'email';
 
 type Step = 1 | 2 | 3;
@@ -73,7 +87,20 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     if (channel === 'email' && prefillEmail) setEmail(prefillEmail);
   }, [channel, prefillEmail]);
 
-  const altRegisterHref = channel === 'phone' ? '/register/email' : '/register/phone';
+  useEffect(() => {
+    if (!designerInviteToken || channel !== 'phone') return;
+    const q = new URLSearchParams();
+    q.set('designerInvite', designerInviteToken);
+    if (refFromUrl) q.set('ref', refFromUrl);
+    if (prefillEmail) q.set('prefillEmail', prefillEmail);
+    router.replace(`/register/email?${q.toString()}`);
+  }, [designerInviteToken, channel, refFromUrl, prefillEmail, router]);
+
+  const inviteEmailLocked = Boolean(designerInviteToken);
+  const altRegisterHref = buildRegisterAltHref(channel === 'phone' ? 'email' : 'phone', {
+    ref: refFromUrl,
+    callbackUrl,
+  });
   const altRegisterLabel = channel === 'phone' ? 'Регистрация по email' : 'Регистрация по номеру телефона';
 
   async function onStep1Submit(e: React.FormEvent<HTMLFormElement>) {
@@ -298,19 +325,26 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
                 }}
               />
             ) : (
-              <TextField
-                label="Email"
-                type="email"
-                name="email"
-                autoComplete="email"
-                value={email}
-                onChange={(ev) => {
-                  setEmail(ev.target.value);
-                  setEmailError(null);
-                  setFormError(null);
-                }}
-                error={emailError ?? undefined}
-              />
+              <>
+                {inviteEmailLocked ? (
+                  <p className={styles.authOtpHint}>Регистрация только на адрес из приглашения.</p>
+                ) : null}
+                <TextField
+                  label="Email"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  value={email}
+                  readOnly={inviteEmailLocked}
+                  onChange={(ev) => {
+                    if (inviteEmailLocked) return;
+                    setEmail(ev.target.value);
+                    setEmailError(null);
+                    setFormError(null);
+                  }}
+                  error={emailError ?? undefined}
+                />
+              </>
             )}
             <div className={flowStyles.labelRow}>
               <AccountCheckbox
@@ -347,9 +381,11 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
           </Button>
         </form>
 
-        <Link href={altRegisterHref} className={styles.authAltMethod}>
-          {altRegisterLabel}
-        </Link>
+        {!designerInviteToken ? (
+          <Link href={altRegisterHref} className={styles.authAltMethod}>
+            {altRegisterLabel}
+          </Link>
+        ) : null}
       </AuthPageShell>
     );
   }
