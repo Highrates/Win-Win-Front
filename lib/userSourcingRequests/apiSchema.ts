@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import {
+  sourcingCommercialProposalSchema,
+} from '@/lib/sourcingCommercialProposal/schemas';
 import type { UserSourcingRequestDetailApi, UserSourcingRequestsListResponse } from './types';
 
 export const sourcingRequestStatusSchema = z.enum([
@@ -52,31 +55,6 @@ const commercialProposalOfferSchema = z
   })
   .nullable()
   .optional();
-
-const sourcingCommercialProposalLineSchema = z.object({
-  id: z.string(),
-  sourceSourcingRequestItemId: z.string().nullable(),
-  sortOrder: z.number(),
-  productName: z.string(),
-  description: z.string().nullable(),
-  imageUrls: z.array(z.string()),
-  quantity: z.number(),
-  unit: z.string(),
-  offerUnitPrice: z.number(),
-  deliveryEta: z.string().nullable(),
-});
-
-const sourcingCommercialProposalSchema = z.object({
-  id: z.string(),
-  sourcingRequestId: z.string(),
-  versionNumber: z.number(),
-  status: z.enum(['DRAFT', 'PUBLISHED']),
-  publishedAt: z.string().nullable(),
-  publishedByUserId: z.string().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  lines: z.array(sourcingCommercialProposalLineSchema),
-});
 
 export const userSourcingRequestDetailSchema = sourcingRequestCoreSchema.extend({
   items: z.array(sourcingRequestItemSchema),
@@ -152,7 +130,7 @@ function parseOrThrow<T>(schema: z.ZodType<T>, raw: unknown, label: string): T {
 }
 
 export function parseUserSourcingRequestDetail(raw: unknown): UserSourcingRequestDetailApi {
-  return parseOrThrow(userSourcingRequestDetailSchema, raw, 'заявка');
+  return parseOrThrow(userSourcingRequestDetailSchema, raw, 'заявка') as UserSourcingRequestDetailApi;
 }
 
 export function parseUserSourcingRequestsList(raw: unknown): UserSourcingRequestsListResponse {

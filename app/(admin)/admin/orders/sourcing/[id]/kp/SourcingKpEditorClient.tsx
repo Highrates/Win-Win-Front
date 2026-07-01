@@ -1,15 +1,21 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { AdminTextField, AdminTextArea } from '@/components/AdminTextField/AdminTextField';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { adminSourcingKpStrings } from '@/lib/admin-i18n/adminSourcingKpI18n';
+import {
+  fetchPricingForwardDefaultPreviewBatch,
+  TYPICAL_SOURCING_VOLUME_M3,
+  TYPICAL_SOURCING_WEIGHT_KG,
+} from '@/lib/pricing/sourcingPricingPreview';
+import { resolveSourcingTypicalDims } from '@win-win/sourcing-request';
 import { sourcingKpLineTotalRub, sourcingKpOrderTotalRub } from '@/lib/sourcingCommercialProposal/kpLineTotals';
-import type { SourcingCommercialProposalLineApi, SourcingCommercialProposalSummaryApi } from '@/lib/sourcingCommercialProposal/types';
+import type { SourcingCommercialProposalLineApi } from '@/lib/sourcingCommercialProposal/types';
 import {
   fetchSourcingKpDraft,
   fetchSourcingKpSummary,
@@ -22,26 +28,32 @@ import kpStyles from '../../../[id]/kp/kpEditor.module.css';
 import skStyles from './sourcingKpEditor.module.css';
 import { SourcingKpPublishConfirmModal } from './SourcingKpPublishConfirmModal';
 
-function parseOfferPriceInput(raw: string): number {
+function parseCnyInput(raw: string): number {
   const t = raw
     .replace(/\u00a0/g, ' ')
     .replace(/\s/g, '')
-    .replace(/₽/g, '')
-    .replace(/руб\.?/gi, '')
+    .replace(/[¥￥]/g, '')
     .replace(',', '.');
   if (t === '' || t === '.') return 0;
   const n = parseFloat(t);
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
-function formatOfferPriceInput(n: number, numberLocale: string): string {
-  if (!Number.isFinite(n)) return '';
+function formatCnyInput(n: number, numberLocale: string): string {
+  if (!Number.isFinite(n) || n <= 0) return '';
   const s = new Intl.NumberFormat(numberLocale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
     useGrouping: true,
   }).format(n);
-  return `${s}\u00a0₽`;
+  return `¥\u00a0${s}`;
+}
+
+function parseDimInput(raw: string): number | null {
+  const t = raw.replace(',', '.').trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function formatMoney(n: number, numberLocale: string): string {
@@ -52,7 +64,7 @@ function formatMoney(n: number, numberLocale: string): string {
   }).format(n);
 }
 
-function OfferUnitPriceField({
+function OfferCnyPriceField({
   value,
   numberLocale,
   ariaLabel,
@@ -63,24 +75,131 @@ function OfferUnitPriceField({
   ariaLabel: string;
   onChange: (n: number) => void;
 }) {
-  const formatted = useMemo(() => formatOfferPriceInput(value, numberLocale), [value, numberLocale]);
+  const formatted = useMemo(() => formatCnyInput(value, numberLocale), [value, numberLocale]);
   return (
     <AdminTextField
-      className={kpStyles.fieldPrice}
-      controlClassName={kpStyles.fieldPrice}
+      className={skStyles.fieldCompactWrap}
+      controlClassName={skStyles.fieldCny}
       type="text"
       inputMode="decimal"
       autoComplete="off"
       value={formatted}
-      onChange={(e) => onChange(parseOfferPriceInput(e.target.value))}
+      onChange={(e) => onChange(parseCnyInput(e.target.value))}
       aria-label={ariaLabel}
     />
   );
 }
 
+function SourcingKpLineRubCell({
+  retailRub,
+  loading,
+  costPriceCny,
+  offerUnitPrice,
+  numberLocale,
+  labels,
+}: {
+  retailRub: number | null;
+  loading: boolean;
+  costPriceCny: number;
+  offerUnitPrice: number;
+  numberLocale: string;
+  labels: { loading: string; empty: string };
+}) {
+  const displayRub = retailRub ?? (costPriceCny > 0 ? offerUnitPrice : 0);
+
+  return (
+    <span className={skStyles.priceRubCell}>
+      {loading ? (
+        <span className={skStyles.priceRubMuted}>{labels.loading}</span>
+      ) : costPriceCny > 0 && displayRub > 0 ? (
+        formatMoney(displayRub, numberLocale)
+      ) : (
+        <span className={skStyles.priceRubMuted}>{labels.empty}</span>
+      )}
+    </span>
+  );
+}
+
+function useSourcingKpRubPreviews(
+  lines: SourcingCommercialProposalLineApi[],
+  onRetailRub: (index: number, rub: number) => void,
+) {
+  const [retailByIndex, setRetailByIndex] = useState<(number | null)[]>(() => lines.map(() => null));
+  const [loading, setLoading] = useState(false);
+  const seqRef = useRef(0);
+  const onRetailRubRef = useRef(onRetailRub);
+  onRetailRubRef.current = onRetailRub;
+
+  const pricingSignature = useMemo(
+    () =>
+      lines
+        .map((l) => {
+          const dims = resolveSourcingTypicalDims(l.grossWeightKg, l.volumeM3);
+          return `${l.costPriceCny}|${dims.weightKg}|${dims.volumeM3}`;
+        })
+        .join(';'),
+    [lines],
+  );
+
+  useEffect(() => {
+    const seq = ++seqRef.current;
+    const rows = lines.map((l, i) => {
+      const dims = resolveSourcingTypicalDims(l.grossWeightKg, l.volumeM3);
+      return { i, costPriceCny: l.costPriceCny, weightKg: dims.weightKg, volumeM3: dims.volumeM3 };
+    });
+    const toFetch = rows.filter((r) => r.costPriceCny > 0);
+
+    if (toFetch.length === 0) {
+      setRetailByIndex(lines.map(() => null));
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const r = await fetchPricingForwardDefaultPreviewBatch({
+            lines: toFetch.map(({ costPriceCny, weightKg, volumeM3 }) => ({
+              costPriceCny,
+              weightKg,
+              volumeM3,
+            })),
+          });
+          if (seq !== seqRef.current) return;
+          const next = lines.map(() => null as number | null);
+          if (r.ok) {
+            toFetch.forEach((row, j) => {
+              const result = r.results[j];
+              if (result?.ok) {
+                next[row.i] = result.retailRub;
+                onRetailRubRef.current(row.i, result.retailRub);
+              }
+            });
+          }
+          setRetailByIndex(next);
+        } catch {
+          if (seq !== seqRef.current) return;
+          setRetailByIndex(lines.map(() => null));
+        } finally {
+          if (seq === seqRef.current) setLoading(false);
+        }
+      })();
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [pricingSignature, lines.length]);
+
+  return { retailByIndex, rubPreviewLoading: loading };
+}
+
 function normalizeDraftLine(line: SourcingCommercialProposalLineApi): SourcingCommercialProposalLineApi {
+  const dims = resolveSourcingTypicalDims(line.grossWeightKg, line.volumeM3);
   return {
     ...line,
+    costPriceCny: Number.isFinite(line.costPriceCny) ? line.costPriceCny : 0,
+    grossWeightKg: dims.weightKg,
+    volumeM3: dims.volumeM3,
     imageUrls: Array.isArray(line.imageUrls) ? line.imageUrls.filter((u) => u?.trim()) : [],
   };
 }
@@ -150,6 +269,9 @@ function newDraftLine(sortOrder: number): SourcingCommercialProposalLineApi {
     imageUrls: [],
     quantity: 1,
     unit: 'шт',
+    costPriceCny: 0,
+    grossWeightKg: TYPICAL_SOURCING_WEIGHT_KG,
+    volumeM3: TYPICAL_SOURCING_VOLUME_M3,
     offerUnitPrice: 0,
     deliveryEta: null,
   };
@@ -162,7 +284,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
   const t = useMemo(() => adminSourcingKpStrings(locale), [locale]);
   const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
 
-  const [summary, setSummary] = useState<SourcingCommercialProposalSummaryApi | null>(null);
+  const [summary, setSummary] = useState<Awaited<ReturnType<typeof fetchSourcingKpSummary>> | null>(null);
   const [lines, setLines] = useState<SourcingCommercialProposalLineApi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,7 +355,9 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
           imageUrls: l.imageUrls,
           quantity: l.quantity,
           unit: l.unit,
-          offerUnitPrice: l.offerUnitPrice,
+          costPriceCny: l.costPriceCny,
+          grossWeightKg: l.grossWeightKg,
+          volumeM3: l.volumeM3,
           deliveryEta: l.deliveryEta,
         })),
       );
@@ -265,9 +389,15 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
     }
   }
 
-  function updateLine(i: number, patch: Partial<SourcingCommercialProposalLineApi>) {
+  const updateLine = useCallback((i: number, patch: Partial<SourcingCommercialProposalLineApi>) => {
     setLines((prev) => prev.map((l, j) => (j === i ? { ...l, ...patch } : l)));
-  }
+  }, []);
+
+  const setLineRetailRub = useCallback((i: number, rub: number) => {
+    setLines((prev) => prev.map((l, j) => (j === i ? { ...l, offerUnitPrice: rub } : l)));
+  }, []);
+
+  const { retailByIndex, rubPreviewLoading } = useSourcingKpRubPreviews(lines, setLineRetailRub);
 
   function removeLine(i: number) {
     setLines((prev) => prev.filter((_, j) => j !== i));
@@ -335,6 +465,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
       {needsInit && !loading ? (
         <div className={styles.section}>
           <h2 className={styles.groupHeading}>{t.initDraftHeading}</h2>
+          <p className={styles.muted}>{t.initDraftHint}</p>
           <div className={styles.formActions}>
             <AdminCompactBtn type="button" variant="accent" onClick={() => void initDraft()}>
               {t.initDraftBtn}
@@ -375,20 +506,26 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
               <AdminCompactBtn type="button" variant="outline" onClick={addLine}>
                 {t.addLine}
               </AdminCompactBtn>
+              {lines.length === 0 ? (
+                <AdminCompactBtn type="button" variant="outline" onClick={() => void initDraft()}>
+                  {t.fillFromRequest}
+                </AdminCompactBtn>
+              ) : null}
             </div>
 
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <colgroup>
                   <col className={skStyles.colProductName} />
-                  <col className={skStyles.colDescription} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th>{t.thProductName}</th>
-                    <th>{t.thDescription}</th>
                     <th>{t.thQty}</th>
-                    <th>{t.thPrice}</th>
+                    <th>{t.thPriceCny}</th>
+                    <th>{t.thWeight}</th>
+                    <th>{t.thVolume}</th>
+                    <th>{t.thPriceRub}</th>
                     <th>{t.thDelivery}</th>
                     <th>{t.thLineTotal}</th>
                     <th scope="col" style={{ width: 48 }} aria-label={t.thRemove} />
@@ -400,21 +537,11 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
                       <tr>
                         <td>
                           <AdminTextField
-                            className={kpStyles.fieldFull}
-                            controlClassName={kpStyles.fieldFull}
+                            className={skStyles.fieldProductName}
+                            controlClassName={skStyles.fieldProductName}
                             value={line.productName}
                             onChange={(e) => updateLine(i, { productName: e.target.value })}
                             aria-label={t.ariaProductName}
-                          />
-                        </td>
-                        <td>
-                          <AdminTextArea
-                            className={skStyles.fieldDescription}
-                            controlClassName={skStyles.fieldDescription}
-                            value={line.description ?? ''}
-                            rows={3}
-                            onChange={(e) => updateLine(i, { description: e.target.value || null })}
-                            aria-label={t.ariaDescription}
                           />
                         </td>
                         <td>
@@ -440,11 +567,49 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
                           </div>
                         </td>
                         <td>
-                          <OfferUnitPriceField
-                            value={line.offerUnitPrice}
+                          <OfferCnyPriceField
+                            value={line.costPriceCny}
                             numberLocale={numberLocale}
-                            ariaLabel={t.ariaPrice}
-                            onChange={(n) => updateLine(i, { offerUnitPrice: n })}
+                            ariaLabel={t.ariaPriceCny}
+                            onChange={(n) => updateLine(i, { costPriceCny: n })}
+                          />
+                        </td>
+                        <td>
+                          <AdminTextField
+                            className={skStyles.fieldCompactWrap}
+                            controlClassName={skStyles.fieldDim}
+                            type="text"
+                            inputMode="decimal"
+                            value={line.grossWeightKg != null ? String(line.grossWeightKg) : ''}
+                            onChange={(e) => {
+                              const n = parseDimInput(e.target.value);
+                              updateLine(i, { grossWeightKg: n ?? TYPICAL_SOURCING_WEIGHT_KG });
+                            }}
+                            aria-label={t.ariaWeight}
+                          />
+                        </td>
+                        <td>
+                          <AdminTextField
+                            className={skStyles.fieldCompactWrap}
+                            controlClassName={skStyles.fieldDim}
+                            type="text"
+                            inputMode="decimal"
+                            value={line.volumeM3 != null ? String(line.volumeM3) : ''}
+                            onChange={(e) => {
+                              const n = parseDimInput(e.target.value);
+                              updateLine(i, { volumeM3: n ?? TYPICAL_SOURCING_VOLUME_M3 });
+                            }}
+                            aria-label={t.ariaVolume}
+                          />
+                        </td>
+                        <td>
+                          <SourcingKpLineRubCell
+                            retailRub={retailByIndex[i] ?? null}
+                            loading={rubPreviewLoading}
+                            costPriceCny={line.costPriceCny}
+                            offerUnitPrice={line.offerUnitPrice}
+                            numberLocale={numberLocale}
+                            labels={{ loading: t.priceRubLoading, empty: t.priceRubEmpty }}
                           />
                         </td>
                         <td>
@@ -470,7 +635,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
                         </td>
                       </tr>
                       <tr className={skStyles.lineImagesRow}>
-                        <td colSpan={7}>
+                        <td colSpan={9}>
                           <SourcingKpLineImagesBlock
                             urls={line.imageUrls ?? []}
                             labels={{
@@ -483,10 +648,24 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
                           />
                         </td>
                       </tr>
+                      <tr className={skStyles.lineDescriptionRow}>
+                        <td colSpan={9}>
+                          <div className={skStyles.lineDescriptionBlock}>
+                            <AdminTextArea
+                              className={skStyles.fieldDescription}
+                              controlClassName={skStyles.fieldDescription}
+                              value={line.description ?? ''}
+                              rows={3}
+                              onChange={(e) => updateLine(i, { description: e.target.value || null })}
+                              aria-label={t.ariaDescription}
+                            />
+                          </div>
+                        </td>
+                      </tr>
                     </Fragment>
                   ))}
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'right', fontWeight: 600 }}>
+                    <td colSpan={7} style={{ textAlign: 'right', fontWeight: 600 }}>
                       {t.footerSumLabel}
                     </td>
                     <td style={{ fontWeight: 600 }}>{formatMoney(orderTotal, numberLocale)}</td>

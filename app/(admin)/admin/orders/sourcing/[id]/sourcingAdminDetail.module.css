@@ -68,6 +68,41 @@
   border-radius: 6px;
 }
 
+.impliedCnyBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: var(--account-hairline-width, 0.7px) solid var(--account-hairline-color, rgba(0, 0, 0, 0.12));
+}
+
+.impliedCnyDims {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.impliedCnyField {
+  min-width: 0;
+}
+
+.impliedCnyHint {
+  margin: 0;
+  font-size: var(--text-caption, 0.8125rem);
+  line-height: 1.45;
+  color: var(--color-gray, #6b6b6b);
+}
+
+.impliedCnyProfileHint {
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid var(--account-hairline-color, rgba(0, 0, 0, 0.12));
+}
+
+.impliedCnyWarn {
+  color: var(--color-red, #c62828);
+}
+
 .accordionTitle {
   color: var(--color-black);
 }

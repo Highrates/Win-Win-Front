@@ -297,15 +297,13 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
           </dl>
 
           <div className={styles.section}>
-            <h2 className={styles.groupHeading}>
-              Товары ({detail.items.length})
-            </h2>
+            <h2 className={styles.groupHeading}>{s.sectionProducts(detail.items.length)}</h2>
             <AdminSourcingProductAccordion items={detail.items} requestTitle={detail.title} />
           </div>
 
           {detail.attachments.length > 0 ? (
             <div className={styles.section}>
-              <h2 className={styles.groupHeading}>Вложения</h2>
+              <h2 className={styles.groupHeading}>{s.sectionAttachments}</h2>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {detail.attachments.map((a) => (
                   <li key={a.id}>
@@ -354,7 +352,7 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
                                 <tr>
                                   <th>{kp.thProduct}</th>
                                   <th>{kp.thQtyUnit}</th>
-                                  <th>{kp.thPrice}</th>
+                                  <th>{kp.thPriceRub}</th>
                                   <th>{kp.thDelivery}</th>
                                   <th>{kp.thLineTotal}</th>
                                 </tr>
