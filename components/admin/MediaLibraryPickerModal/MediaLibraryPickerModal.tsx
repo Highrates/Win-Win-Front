@@ -75,13 +75,12 @@ function formatKindLabel(mimeType: string, originalName: string): string {
   return part ? part.replace(/[-+]/g, ' ').toUpperCase() : 'Файл';
 }
 
-function folderDepth(pathKey: string): number {
-  return Math.max(0, pathKey.split('/').length - 1);
-}
-
-function sortedFolders(rows: MediaFolderRow[]): MediaFolderRow[] {
-  return [...rows].sort((a, b) => a.pathKey.localeCompare(b.pathKey));
-}
+import {
+  collectFolderAncestorIds,
+  folderMatchesQuery,
+  folderPathLabel,
+  sortedMediaFolders,
+} from '@/lib/adminMediaLibrary/folderSearch';
 
 function tabForFilter(f: MediaLibraryPickerModalProps['mediaFilter']): MediaLibraryTab {
   if (f === 'image') return 'images';
@@ -117,6 +116,8 @@ export function MediaLibraryPickerModal({
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [folderFilter, setFolderFilter] = useState<string | null>(null);
+  const [folderQ, setFolderQ] = useState('');
+  const folderSearchQuery = folderQ.trim();
 
   const [folders, setFolders] = useState<MediaFolderRow[]>([]);
   const [objects, setObjects] = useState<MediaObjectRow[]>([]);
@@ -147,6 +148,15 @@ export function MediaLibraryPickerModal({
     [folders],
   );
 
+  const folderSearchActive = folderSearchQuery.length > 0;
+
+  const folderSearchResults = useMemo(() => {
+    if (!folderSearchActive) return [];
+    return sortedMediaFolders(folders.filter((f) => folderMatchesQuery(f, folderSearchQuery)));
+  }, [folders, folderSearchActive, folderSearchQuery]);
+
+  const foldersById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders]);
+
   const allFoldersCollapsed = useMemo(() => {
     if (folderIdsWithChildren.size === 0) return false;
     return Array.from(folderIdsWithChildren).every((id) => collapsedFolderIds.has(id));
@@ -171,6 +181,7 @@ export function MediaLibraryPickerModal({
     setQ('');
     setDebouncedQ('');
     setFolderFilter(null);
+    setFolderQ('');
     setSelectedId(null);
     setSelectedIds([]);
     setError(null);
@@ -260,6 +271,43 @@ export function MediaLibraryPickerModal({
     });
   }
 
+  function selectFolder(id: string) {
+    setFolderFilter(id);
+    const ancestorIds = collectFolderAncestorIds(id, foldersById);
+    if (ancestorIds.length === 0) return;
+    setCollapsedFolderIds((prev) => {
+      const next = new Set(prev);
+      for (const aid of ancestorIds) next.delete(aid);
+      persistCollapsedFolderIds(next);
+      return next;
+    });
+  }
+
+  function selectFolderFromSearch(id: string) {
+    selectFolder(id);
+    setFolderQ('');
+  }
+
+  function renderFolderSearchResults(): ReactNode {
+    if (folderSearchResults.length === 0) {
+      return <p className={libStyles.folderSearchEmpty}>Папки не найдены</p>;
+    }
+    return folderSearchResults.map((f) => (
+      <button
+        key={f.id}
+        type="button"
+        className={`${libStyles.folderSearchBtn} ${folderFilter === f.id ? libStyles.folderBtnActive : ''}`}
+        onClick={() => selectFolderFromSearch(f.id)}
+        title={f.pathKey}
+      >
+        <span className={libStyles.folderSearchName}>{f.name}</span>
+        {f.pathKey !== f.name ? (
+          <span className={libStyles.folderSearchPath}>{folderPathLabel(f.pathKey)}</span>
+        ) : null}
+      </button>
+    ));
+  }
+
   function renderFolderBranch(parentId: string | null, depth: number): ReactNode {
     const list = childrenByParentId.get(parentId) ?? [];
     return list.map((f) => {
@@ -291,7 +339,7 @@ export function MediaLibraryPickerModal({
             <button
               type="button"
               className={`${libStyles.folderBtn} ${folderFilter === f.id ? libStyles.folderBtnActive : ''}`}
-              onClick={() => setFolderFilter(f.id)}
+              onClick={() => selectFolder(f.id)}
             >
               {f.name}
             </button>
@@ -471,7 +519,7 @@ export function MediaLibraryPickerModal({
             >
               <div className={libStyles.folderSidebarTitleRow}>
                 <p className={libStyles.folderSidebarTitle}>Папки</p>
-                {folderIdsWithChildren.size > 0 ? (
+                {!folderSearchActive && folderIdsWithChildren.size > 0 ? (
                   <button
                     type="button"
                     className={libStyles.folderCollapseAllBtn}
@@ -492,14 +540,27 @@ export function MediaLibraryPickerModal({
                   </button>
                 ) : null}
               </div>
-              <button
-                type="button"
-                className={`${libStyles.folderBtn} ${folderFilter === null ? libStyles.folderBtnActive : ''}`}
-                onClick={() => setFolderFilter(null)}
-              >
-                Все расположения
-              </button>
-              {renderFolderBranch(null, 0)}
+              <AdminSearchBox
+                className={libStyles.folderSearchBox}
+                placeholder="Поиск папки…"
+                ariaLabel="Поиск папок"
+                value={folderQ}
+                onChange={(e) => setFolderQ(e.target.value)}
+              />
+              {!folderSearchActive ? (
+                <>
+                  <button
+                    type="button"
+                    className={`${libStyles.folderBtn} ${folderFilter === null ? libStyles.folderBtnActive : ''}`}
+                    onClick={() => setFolderFilter(null)}
+                  >
+                    Все расположения
+                  </button>
+                  {renderFolderBranch(null, 0)}
+                </>
+              ) : (
+                <div className={libStyles.folderSearchResults}>{renderFolderSearchResults()}</div>
+              )}
             </aside>
 
             <div className={`${libStyles.main} ${pickStyles.pickerMainColumn}`}>

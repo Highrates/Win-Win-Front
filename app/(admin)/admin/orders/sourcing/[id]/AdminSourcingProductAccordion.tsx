@@ -7,7 +7,6 @@ import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminSourcingStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { formatBudgetDigitsGrouped } from '@/lib/formatBudgetRub';
 import type { SourcingRequestItemApi } from '@/lib/userSourcingRequests/types';
-import { AdminSourcingImpliedCny } from './AdminSourcingImpliedCny';
 import sd from './sourcingAdminDetail.module.css';
 
 function formatBudget(value: string | null): string {
@@ -80,13 +79,10 @@ export function AdminSourcingProductAccordion({ items, requestTitle }: Props) {
               <p className={sd.productValue}>{item.unit}</p>
             </div>
             {item.expectedBudget ? (
-              <>
-                <div className={sd.productRow}>
-                  <p className={sd.productLabel}>{t.expectedBudgetLabel}</p>
-                  <p className={sd.productValue}>{formatBudget(item.expectedBudget)}</p>
-                </div>
-                <AdminSourcingImpliedCny expectedBudget={item.expectedBudget} />
-              </>
+              <div className={sd.productRow}>
+                <p className={sd.productLabel}>{t.expectedBudgetLabel}</p>
+                <p className={sd.productValue}>{formatBudget(item.expectedBudget)}</p>
+              </div>
             ) : null}
             {item.description?.trim() ? (
               <div className={sd.productRowFull}>

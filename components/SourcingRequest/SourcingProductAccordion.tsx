@@ -1,4 +1,5 @@
 import { AccordionBig } from '@/app/(account)/account/orders/AccordionBig';
+import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { TextField } from '@/components/TextField';
 import textFieldStyles from '@/components/TextField/TextField.module.css';
 import { formatBudgetDigitsGrouped, parseBudgetDigits } from '@/lib/formatBudgetRub';
@@ -137,7 +138,7 @@ export function SourcingProductAccordion({
             />
           </label>
         </div>
-        <div className={styles.fieldRowThree}>
+        <div className={styles.fieldRow}>
           <TextField
             label="Количество"
             id={`sourcing-product-qty-${product.id}`}
@@ -172,6 +173,28 @@ export function SourcingProductAccordion({
               ) : null}
             </label>
           </div>
+        </div>
+        <div className={styles.budgetCheckboxRow}>
+          <AccountCheckbox
+            id={`sourcing-product-budget-toggle-${product.id}`}
+            className={styles.budgetCheckboxForm}
+            checked={product.showExpectedBudget}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              onUpdate({
+                showExpectedBudget: checked,
+                expectedBudget: checked ? product.expectedBudget : '',
+              });
+            }}
+          />
+          <label
+            htmlFor={`sourcing-product-budget-toggle-${product.id}`}
+            className={styles.budgetCheckboxLabel}
+          >
+            Указать ожидаемый бюджет
+          </label>
+        </div>
+        {product.showExpectedBudget ? (
           <div className={textFieldStyles.field}>
             <label className={textFieldStyles.label} htmlFor={`sourcing-product-budget-${product.id}`}>
               <span className={textFieldStyles.labelText}>
@@ -187,7 +210,7 @@ export function SourcingProductAccordion({
               />
             </label>
           </div>
-        </div>
+        ) : null}
       </div>
     </AccordionBig>
   );

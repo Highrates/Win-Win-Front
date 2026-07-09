@@ -181,6 +181,7 @@ export async function saveSourcingDraft(
       description: product.description,
       quantity: product.quantity,
       unit: product.unit,
+      showExpectedBudget: product.showExpectedBudget,
       expectedBudget: product.expectedBudget,
       referenceImages: product.referenceImages.map((image) => ({
         id: image.id,
@@ -236,6 +237,8 @@ export async function loadSourcingDraft(): Promise<SourcingFormSnapshot | null> 
     products.push({
       ...product,
       unit: normalizeSourcingUnit(product.unit),
+      showExpectedBudget:
+        product.showExpectedBudget ?? Boolean(product.expectedBudget?.trim()),
       referenceImages,
     });
   }

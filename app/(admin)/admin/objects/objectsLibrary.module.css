@@ -39,6 +39,67 @@
   color: var(--color-gray, #9d9d9d);
 }
 
+.folderSearchBox {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.folderSearchResults {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: min(420px, 50vh);
+  overflow-y: auto;
+}
+
+.folderSearchBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--font-commissioner, system-ui);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.folderSearchBtn:hover {
+  background: #e6e6e6;
+}
+
+.folderSearchName {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-body, 15px);
+  font-weight: var(--text-body-weight, 300);
+  color: var(--color-black, #000);
+}
+
+.folderSearchPath {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  color: var(--color-gray, #9d9d9d);
+}
+
+.folderSearchEmpty {
+  margin: 4px 0 0;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 0.8125rem;
+  color: var(--color-gray, #9d9d9d);
+}
+
 .folderCollapseAllBtn {
   flex-shrink: 0;
   display: inline-flex;

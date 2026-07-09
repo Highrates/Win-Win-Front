@@ -38,6 +38,28 @@
   width: 100%;
 }
 
+.budgetCheckboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.budgetCheckboxForm {
+  margin-top: 0;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.budgetCheckboxLabel {
+  margin: 0;
+  font-size: var(--text-body, 15px);
+  font-weight: var(--text-body-weight, 300);
+  color: var(--color-black);
+  line-height: 1.45;
+  padding-top: 1px;
+  cursor: pointer;
+}
+
 .fieldRowThree {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

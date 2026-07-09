@@ -32,8 +32,8 @@ export function adminReferralsPage(locale: AdminLocale) {
       percent: pick(locale, '', ''),
       payouts: pick(
         locale,
-        'Заявки на выплату, статусы, выгрузка для бухгалтерии — общий контур с разделом «Заявки».',
-        '提现申请、状态、导出 — 与「申请」板块总流程一致。',
+        'Заявки на выплату, статусы, выгрузка для бухгалтерии — общий контур с разделом «Взаимодействия».',
+        '提现申请、状态、导出 — 与「互动」板块总流程一致。',
       ),
       reports: pick(
         locale,
@@ -46,7 +46,7 @@ export function adminReferralsPage(locale: AdminLocale) {
 
 export function adminApplicationsPage(locale: AdminLocale) {
   return {
-    title: pick(locale, 'Заявки', '申请'),
+    title: pick(locale, 'Взаимодействия', '互动'),
     tabLabels: {
       designer: pick(locale, 'Заявки на статус дизайнера', '设计师资格申请'),
       payouts: pick(locale, 'Выплаты', '打款'),
@@ -91,7 +91,7 @@ export function adminApplicationsPage(locale: AdminLocale) {
 
 export function adminApplicationDetailPage(locale: AdminLocale) {
   return {
-    back: pick(locale, '← К списку заявок', '← 返回申请列表'),
+    back: pick(locale, '← К списку взаимодействий', '← 返回互动列表'),
     title: pick(locale, 'Заявка партнёра Win-Win', 'Win-Win 合作申请'),
     notFound: pick(locale, 'Пользователь не найден', '未找到用户'),
     errLoad: pick(locale, 'Не удалось загрузить данные', '无法加载数据'),

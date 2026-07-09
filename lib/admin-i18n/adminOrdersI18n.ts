@@ -50,36 +50,8 @@ export function adminSourcingStrings(locale: AdminLocale) {
     quantityLabel: pick(locale, 'Количество', '数量'),
     unitLabel: pick(locale, 'Ед. измерения', '计量单位'),
     expectedBudgetLabel: pick(locale, 'Ожидаемый бюджет', '预期预算'),
-    impliedCnyLabel: pick(locale, 'Ожидаемая цена в ¥', '预期采购价（¥）'),
-    impliedCnyDimsHint: pick(
-      locale,
-      'Проверка: при указанных габаритах укладывается ли бюджет',
-      '检查：按所填尺寸是否在预算内',
-    ),
-    impliedCnyProfileHint: pick(
-      locale,
-      'Расчёт по основному профилю ценообразования',
-      '按默认定价配置计算',
-    ),
-    impliedCnyLoading: pick(locale, 'Расчёт…', '计算中…'),
-    impliedCnyNoProfile: pick(locale, 'Нет основного профиля ценообразования', '未设置默认定价配置'),
-    impliedCnyTooLow: pick(
-      locale,
-      'Бюджет слишком низкий для расчёта (даже при типовых габаритах 30 кг / 0,15 м³)',
-      '预算过低，无法计算（即使按典型尺寸 30 kg / 0.15 m³）',
-    ),
-    impliedCnyOverBudget: (retailRub: string, budgetRub: string) =>
-      pick(
-        locale,
-        `При этих габаритах розница ≈ ${retailRub} — выше бюджета ${budgetRub}`,
-        `按此尺寸零售价约为 ${retailRub}，高于预算 ${budgetRub}`,
-      ),
-    impliedCnyInvalid: pick(locale, 'Не удалось рассчитать', '无法计算'),
-    grossWeightLabel: pick(locale, 'Вес брутто (кг)', '毛重（kg）'),
-    volumeLabel: pick(locale, 'Объём (м³)', '体积（m³）'),
     quantityLine: (qty: number, unit: string) =>
       pick(locale, `Количество: ${qty} ${unit}`, `数量：${qty} ${unit}`),
-    budgetPerUnit: pick(locale, 'Бюджет за ед.', '单价预算'),
     chatAsideAria: pick(locale, 'Чат по заявке', '申请沟通'),
   };
 }

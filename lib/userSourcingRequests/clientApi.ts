@@ -22,7 +22,8 @@ function buildSourcingRequestFormData(snapshot: SourcingFormSnapshot): FormData 
       description: p.description.trim() || undefined,
       quantity: Math.max(1, parseInt(p.quantity, 10) || 1),
       unit: p.unit,
-      expectedBudget: p.expectedBudget.trim() || undefined,
+      expectedBudget:
+        p.showExpectedBudget && p.expectedBudget.trim() ? p.expectedBudget.trim() : undefined,
       referenceImageKeys: p.referenceImages.map((img) => img.id),
     })),
     attachmentKeys: snapshot.formAttachments.map((a) => a.id),

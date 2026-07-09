@@ -40,6 +40,8 @@ export type SourcingProductItem = {
   description: string;
   quantity: string;
   unit: SourcingUnit;
+  /** Пользователь включил поле «Ожидаемый бюджет». */
+  showExpectedBudget: boolean;
   expectedBudget: string;
 };
 
@@ -69,6 +71,7 @@ export function createEmptySourcingProduct(): SourcingProductItem {
     description: '',
     quantity: '1',
     unit: 'шт',
+    showExpectedBudget: false,
     expectedBudget: '',
   };
 }
@@ -96,6 +99,7 @@ function isProductDirty(product: SourcingProductItem, empty: SourcingProductItem
     product.description.trim() !== '' ||
     product.quantity !== empty.quantity ||
     product.unit !== empty.unit ||
+    product.showExpectedBudget !== empty.showExpectedBudget ||
     product.expectedBudget.trim() !== ''
   );
 }

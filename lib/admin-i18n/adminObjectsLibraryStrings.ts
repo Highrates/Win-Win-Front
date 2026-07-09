@@ -32,6 +32,9 @@ export type ObjectsLibraryStrings = {
   tablistMainScopeAria: string;
   foldersAsideLabel: string;
   foldersTitle: string;
+  folderSearchPlaceholder: string;
+  folderSearchAriaLabel: string;
+  folderSearchEmpty: string;
   collapseAllFoldersAria: string;
   expandAllFoldersAria: string;
   allLocations: string;
@@ -120,6 +123,9 @@ const ru: ObjectsLibraryStrings = {
   tablistMainScopeAria: 'Тип библиотеки',
   foldersAsideLabel: 'Папки',
   foldersTitle: 'Папки',
+  folderSearchPlaceholder: 'Поиск папки…',
+  folderSearchAriaLabel: 'Поиск папок',
+  folderSearchEmpty: 'Папки не найдены',
   collapseAllFoldersAria: 'Свернуть все папки',
   expandAllFoldersAria: 'Развернуть все папки',
   allLocations: 'Все расположения',
@@ -212,6 +218,9 @@ const zh: ObjectsLibraryStrings = {
   tablistMainScopeAria: '库类型',
   foldersAsideLabel: '文件夹',
   foldersTitle: '文件夹',
+  folderSearchPlaceholder: '搜索文件夹…',
+  folderSearchAriaLabel: '搜索文件夹',
+  folderSearchEmpty: '未找到文件夹',
   collapseAllFoldersAria: '折叠全部文件夹',
   expandAllFoldersAria: '展开全部文件夹',
   allLocations: '全部位置',

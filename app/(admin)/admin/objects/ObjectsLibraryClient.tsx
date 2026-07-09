@@ -74,9 +74,12 @@ function folderDepth(pathKey: string): number {
   return Math.max(0, pathKey.split('/').length - 1);
 }
 
-function sortedFolders(rows: MediaFolderRow[]): MediaFolderRow[] {
-  return [...rows].sort((a, b) => a.pathKey.localeCompare(b.pathKey));
-}
+import {
+  collectFolderAncestorIds,
+  folderMatchesQuery,
+  folderPathLabel,
+  sortedMediaFolders,
+} from '@/lib/adminMediaLibrary/folderSearch';
 
 const PROTECTED_FOLDER_PATH_PREFIX = 'category-backgrounds';
 const USER_PROFILES_ROOT_PATH_KEY = 'user-profiles';
@@ -128,6 +131,8 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   const [q, setQ] = useState('');
   const debouncedQ = useDebouncedValue(q.trim());
   const [folderFilter, setFolderFilter] = useState<string | null>(null);
+  const [folderQ, setFolderQ] = useState('');
+  const folderSearchQuery = folderQ.trim();
   const [objectsPage, setObjectsPage] = useState(1);
 
   const [uploadBatch, setUploadBatch] = useState<UploadBatchItem[] | null>(null);
@@ -256,6 +261,15 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
     [folders],
   );
 
+  const folderSearchActive = folderSearchQuery.length > 0;
+
+  const folderSearchResults = useMemo(() => {
+    if (!folderSearchActive) return [];
+    return sortedMediaFolders(folders.filter((f) => folderMatchesQuery(f, folderSearchQuery)));
+  }, [folders, folderSearchActive, folderSearchQuery]);
+
+  const foldersById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders]);
+
   const allFoldersCollapsed = useMemo(() => {
     if (folderIdsWithChildren.size === 0) return false;
     return Array.from(folderIdsWithChildren).every((id) => collapsedFolderIds.has(id));
@@ -282,6 +296,43 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
       persistCollapsedFolderIds(next);
       return next;
     });
+  }
+
+  function selectFolder(id: string) {
+    setFolderFilter(id);
+    const ancestorIds = collectFolderAncestorIds(id, foldersById);
+    if (ancestorIds.length === 0) return;
+    setCollapsedFolderIds((prev) => {
+      const next = new Set(prev);
+      for (const aid of ancestorIds) next.delete(aid);
+      persistCollapsedFolderIds(next);
+      return next;
+    });
+  }
+
+  function selectFolderFromSearch(id: string) {
+    selectFolder(id);
+    setFolderQ('');
+  }
+
+  function renderFolderSearchResults(): React.ReactNode {
+    if (folderSearchResults.length === 0) {
+      return <p className={styles.folderSearchEmpty}>{s.folderSearchEmpty}</p>;
+    }
+    return folderSearchResults.map((f) => (
+      <button
+        key={f.id}
+        type="button"
+        className={`${styles.folderSearchBtn} ${folderFilter === f.id ? styles.folderBtnActive : ''}`}
+        onClick={() => selectFolderFromSearch(f.id)}
+        title={f.pathKey}
+      >
+        <span className={styles.folderSearchName}>{f.name}</span>
+        {f.pathKey !== f.name ? (
+          <span className={styles.folderSearchPath}>{folderPathLabel(f.pathKey)}</span>
+        ) : null}
+      </button>
+    ));
   }
 
   function renderFolderBranch(parentId: string | null, depth: number): React.ReactNode {
@@ -316,7 +367,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
               <button
                 type="button"
                 className={`${styles.folderBtn} ${folderFilter === f.id ? styles.folderBtnActive : ''}`}
-                onClick={() => setFolderFilter(f.id)}
+                onClick={() => selectFolder(f.id)}
                 title={f.name}
               >
                 {f.name}
@@ -344,6 +395,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
 
   useEffect(() => {
     setFolderFilter(null);
+    setFolderQ('');
     setObjectsPage(1);
     setCollapsedFolderIds(readCollapsedFolderIds(libraryScope));
   }, [libraryScope]);
@@ -655,7 +707,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
   const uploadInProgress =
     uploadBatch?.some((item) => item.status === 'pending' || item.status === 'uploading') ?? false;
 
-  const folderList = sortedFolders(folders);
+  const folderList = sortedMediaFolders(folders);
 
   function renderThumb(row: MediaObjectRow) {
     if (row.category === 'IMAGE') {
@@ -751,7 +803,7 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
         <aside className={styles.folderSidebar} aria-label={s.foldersAsideLabel}>
           <div className={styles.folderSidebarTitleRow}>
             <p className={styles.folderSidebarTitle}>{s.foldersTitle}</p>
-            {folderIdsWithChildren.size > 0 ? (
+            {!folderSearchActive && folderIdsWithChildren.size > 0 ? (
               <button
                 type="button"
                 className={styles.folderCollapseAllBtn}
@@ -768,18 +820,31 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
               </button>
             ) : null}
           </div>
-          <button
-            type="button"
-            className={`${styles.folderBtn} ${folderFilter === null ? styles.folderBtnActive : ''}`}
-            onClick={() => setFolderFilter(null)}
-          >
-            {s.allLocations}
-          </button>
-          {libraryScope === 'user' && userProfilesRootId
-            ? renderFolderBranch(userProfilesRootId, 0)
-            : libraryScope === 'winwin'
-              ? renderFolderBranch(null, 0)
-              : null}
+          <AdminSearchBox
+            className={styles.folderSearchBox}
+            placeholder={s.folderSearchPlaceholder}
+            ariaLabel={s.folderSearchAriaLabel}
+            value={folderQ}
+            onChange={(e) => setFolderQ(e.target.value)}
+          />
+          {!folderSearchActive ? (
+            <>
+              <button
+                type="button"
+                className={`${styles.folderBtn} ${folderFilter === null ? styles.folderBtnActive : ''}`}
+                onClick={() => setFolderFilter(null)}
+              >
+                {s.allLocations}
+              </button>
+              {libraryScope === 'user' && userProfilesRootId
+                ? renderFolderBranch(userProfilesRootId, 0)
+                : libraryScope === 'winwin'
+                  ? renderFolderBranch(null, 0)
+                  : null}
+            </>
+          ) : (
+            <div className={styles.folderSearchResults}>{renderFolderSearchResults()}</div>
+          )}
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <AdminCompactBtn type="button" onClick={openCreateFolder}>
               {s.newFolderButton}
