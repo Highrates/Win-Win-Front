@@ -62,6 +62,24 @@ export async function fetchPublicBrands(options?: {
   }
 }
 
+/** Страница бренда в браузере (вкладки категорий на `/brands/[slug]`). */
+export async function fetchPublicBrandBySlugClient(
+  slug: string,
+  categoryId?: string | null,
+): Promise<PublicBrandDetailPayload | null> {
+  const id = categoryId?.trim();
+  const qs = id ? `?categoryId=${encodeURIComponent(id)}` : '';
+  try {
+    const res = await fetch(`/api/brands/${encodeURIComponent(slug)}${qs}`, { cache: 'no-store' });
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    const data = (await res.json()) as PublicBrandDetailPayload | null;
+    return data?.slug ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Список брендов в браузере (вкладки категорий на `/brands`). */
 export async function fetchPublicBrandsClient(categoryId?: string | null): Promise<PublicBrandListRow[]> {
   const id = categoryId?.trim();

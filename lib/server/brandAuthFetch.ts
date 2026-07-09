@@ -5,11 +5,16 @@ import { dedupeById } from '@/lib/dedupeById';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import { publicFetchInitWithOptionalUserAuth } from '@/lib/server/publicFetchInit';
 
-export async function fetchPublicBrandBySlug(slug: string): Promise<PublicBrandDetailPayload | null> {
+export async function fetchPublicBrandBySlug(
+  slug: string,
+  options?: { categoryId?: string | null },
+): Promise<PublicBrandDetailPayload | null> {
   const base = getServerApiBase();
+  const categoryId = options?.categoryId?.trim();
+  const qs = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : '';
   try {
     const res = await fetch(
-      `${base}/brands/${encodeURIComponent(slug)}`,
+      `${base}/brands/${encodeURIComponent(slug)}${qs}`,
       await publicFetchInitWithOptionalUserAuth(),
     );
     if (res.status === 404) return null;

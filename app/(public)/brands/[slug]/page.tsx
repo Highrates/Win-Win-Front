@@ -1,14 +1,12 @@
 import Link from 'next/link';
-import { Fragment } from 'react';
+import { Fragment, Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ProductGridWithLikes } from '@/components/ProductGridWithLikes';
-import {
-  BRAND_CATEGORY_TABS,
-} from '@/lib/public/brands';
+import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
 import { brandCoverImageUrl, plainTextExcerptFromHtml } from '@/lib/brandsPublic';
 import { fetchPublicBrandBySlug } from '@/lib/server/brandAuthFetch';
 import { brandProductRowToProductGridItem } from '@/lib/productGridItem';
+import { BrandPageMarketClient } from './BrandPageMarketClient';
 import { MoreAboutBrandModal } from './MoreAboutBrandModal';
 import styles from './BrandPage.module.css';
 
@@ -40,10 +38,13 @@ export default async function BrandPage({
 }) {
   const { slug } = await params;
   const { category: categoryParam } = await searchParams;
-  const currentCategory =
-    categoryParam && BRAND_CATEGORY_TABS.some((t) => t.id === categoryParam) ? categoryParam : 'living';
+  const catalogRoots = await fetchHomeCatalogRoots();
+  const initialCategoryId =
+    categoryParam?.trim() && catalogRoots.some((r) => r.id === categoryParam.trim())
+      ? categoryParam.trim()
+      : null;
 
-  const row = await fetchPublicBrandBySlug(slug);
+  const row = await fetchPublicBrandBySlug(slug, { categoryId: initialCategoryId });
   if (!row) notFound();
 
   const name = row.name;
@@ -111,49 +112,14 @@ export default async function BrandPage({
         </div>
       </section>
 
-      <section className={styles.marketSection} aria-label="Товары бренда">
-        <div className="padding-global">
-          <div className={styles.marketSectionInner}>
-            <nav className={styles.tabsWrapper} aria-label="Категории товаров бренда">
-              {BRAND_CATEGORY_TABS.map((tab) => {
-                const isActive = tab.id === currentCategory;
-                const href = `/brands/${slug}?category=${tab.id}`;
-                return (
-                  <Link
-                    key={tab.id}
-                    href={href}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={isActive ? styles.tabActive : styles.tab}
-                  >
-                    {tab.label}
-                  </Link>
-                );
-              })}
-            </nav>
-            <div className={styles.marketSectionRow}>
-              <div className={styles.marketSectionRowLeft}>
-                <div className={styles.marketFilterGroup}>
-                  <button type="button" aria-label="Фильтр">
-                    <img src="/icons/filter.svg" alt="" width={20} height={20} />
-                    <span>Фильтр</span>
-                  </button>
-                </div>
-                <div className={styles.marketSortGroup}>
-                  <button type="button" aria-label="Сортировка">
-                    <img src="/icons/sort.svg" alt="" width={20} height={20} />
-                    <span>Самые популярные</span>
-                  </button>
-                </div>
-              </div>
-              <div className={styles.marketSectionRowResult}>
-                <span className={styles.marketSectionRowResultLabel}>Результат: </span>
-                <span className={styles.marketSectionRowResultValue}>{brandProducts.length}</span>
-              </div>
-            </div>
-            <ProductGridWithLikes items={brandProducts} gridClassName={styles.marketGrid} />
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={null}>
+        <BrandPageMarketClient
+          slug={slug}
+          catalogRoots={catalogRoots}
+          initialCategoryId={initialCategoryId}
+          initialProducts={brandProducts}
+        />
+      </Suspense>
     </main>
   );
 }
