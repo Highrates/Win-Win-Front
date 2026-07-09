@@ -23,6 +23,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/commissioner": "^5.0.0",
     "@tanstack/react-query": "^5.101.0",
+    "@win-win/admin-sections": "file:./packages/admin-sections",
     "@win-win/order-item-snapshot": "file:./packages/order-item-snapshot",
     "@win-win/order-status": "file:./packages/order-status",
     "@win-win/sourcing-request": "file:./packages/sourcing-request",
@@ -37,10 +38,14 @@
     "zod": "3.22.4"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20.0.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "jsdom": "^29.1.1",
     "typescript": "^5.0.0",
     "vitest": "^3.0.5"
   }

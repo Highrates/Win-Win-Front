@@ -42,6 +42,8 @@ export interface ProductCardProps {
   productLikesBulk?: ProductCardLikesBulkState;
   /** Инкремент — листнуть галерею на следующий кадр (для scroll-trigger на главной). */
   galleryAdvanceSignal?: number;
+  /** `eager` — для LCP/первого экрана; по умолчанию `lazy`. */
+  imageLoading?: 'lazy' | 'eager';
 }
 
 function formatCardPrice(value: number, priceMin?: number, priceMax?: number): string {
@@ -78,6 +80,7 @@ export function ProductCard({
   onLikedChange,
   productLikesBulk,
   galleryAdvanceSignal,
+  imageLoading = 'lazy',
 }: ProductCardProps) {
   const urls = useMemo(() => normalizeProductCardImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
   const urlsKey = urls.join('\0');
@@ -266,6 +269,8 @@ export function ProductCard({
               src={urls[0]}
               alt=""
               draggable={false}
+              loading={imageLoading}
+              decoding="async"
               onError={productCardImageOnError}
             />
           ) : !slide ? (
@@ -274,6 +279,8 @@ export function ProductCard({
               src={urls[index]}
               alt=""
               draggable={false}
+              loading={imageLoading}
+              decoding="async"
               onError={productCardImageOnError}
             />
           ) : (
@@ -292,6 +299,8 @@ export function ProductCard({
                         src={urls[slide.from]}
                         alt=""
                         draggable={false}
+                        loading="lazy"
+                        decoding="async"
                         onError={productCardImageOnError}
                       />
                     </div>
@@ -301,6 +310,8 @@ export function ProductCard({
                         src={urls[slide.to]}
                         alt=""
                         draggable={false}
+                        loading="lazy"
+                        decoding="async"
                         onError={productCardImageOnError}
                       />
                     </div>
@@ -313,6 +324,8 @@ export function ProductCard({
                         src={urls[slide.to]}
                         alt=""
                         draggable={false}
+                        loading="lazy"
+                        decoding="async"
                         onError={productCardImageOnError}
                       />
                     </div>
@@ -322,6 +335,8 @@ export function ProductCard({
                         src={urls[slide.from]}
                         alt=""
                         draggable={false}
+                        loading="lazy"
+                        decoding="async"
                         onError={productCardImageOnError}
                       />
                     </div>

@@ -112,6 +112,13 @@
   text-decoration: underline;
 }
 
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
 .caseCoverGrid {
   display: flex;
   flex-wrap: wrap;

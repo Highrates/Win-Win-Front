@@ -7,3 +7,4 @@ export type { BestBrandsBrandItem, BestBrandsProps } from './BestBrands/BestBran
 export { News } from './News/News';
 export { Recommendations } from './Recommendations/Recommendations';
 export type { RecommendationsStaticItem } from './Recommendations/recommendationsStaticItem';
+export { HomeProductLikesScope } from './HomeProductLikesScope';

@@ -241,7 +241,6 @@ export function adminSettingsStaffPage(locale: AdminLocale) {
   return {
     title: pick(locale, 'Сотрудники', '员工'),
     lead: pick(locale, 'Учётные записи модераторов и администраторов.', '管理员与版主账号。'),
-    devNote: pick(locale, 'Раздел в разработке.', '该分区开发中。'),
   };
 }
 

@@ -45,8 +45,12 @@ export function SiteLoader() {
     const paths = logoRef.current.querySelectorAll('.site-loader__path');
     if (!paths.length) return;
 
+    let cancelled = false;
+
     const runSequence = () => {
+      if (cancelled) return;
       import('animejs').then(({ animate, stagger }) => {
+        if (cancelled) return;
         const pathAnimation = animate(paths, {
           translateY: LOGO_HEIGHT,
           duration: PATH_DURATION,
@@ -55,27 +59,28 @@ export function SiteLoader() {
         });
 
         pathAnimation.then(() => {
+          if (cancelled) return;
           document.body.classList.add('--js-ready');
           const bgAnimation = animate(bgRef.current!, {
             translateY: '100%',
             duration: BG_COLLAPSE_DURATION,
             ease: 'inQuad',
           });
-          bgAnimation.then(() => _destroy());
+          bgAnimation.then(() => {
+            if (!cancelled) _destroy();
+          });
         });
       });
     };
 
-    const handleLoad = () => {
-      runSequence();
-    };
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(runSequence);
+    });
 
-    if (document.readyState === 'complete') {
-      const t = setTimeout(runSequence, 0);
-      return () => clearTimeout(t);
-    }
-    window.addEventListener('load', handleLoad);
-    return () => window.removeEventListener('load', handleLoad);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
   }, [shouldShow]);
 
   function _destroy() {

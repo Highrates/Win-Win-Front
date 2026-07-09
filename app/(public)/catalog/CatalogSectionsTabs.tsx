@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useId } from 'react';
 import { homeRootsFromPublicTreeClient, type HomeCatalogRoot } from '@/lib/homeCatalog';
 import { animateScrollStripBy } from '@/sections/home/ScrollCatalog/scrollStripScroll';
@@ -12,12 +13,13 @@ const DRAG_THRESHOLD = 5;
 
 type Props = {
   initialRoots: HomeCatalogRoot[];
-  /** Смена корневой категории (таб) — для обновления сетки товаров на `/catalog`. */
-  onActiveCategoryChange?: (categoryId: string) => void;
+  /** Активный корневой раздел (из URL страницы категории). */
+  activeRootId: string;
 };
 
-/** Страница `/catalog`: табы как на странице брендов + горизонтальная полоса карточек как на главной. */
-export function CatalogSectionsTabs({ initialRoots, onActiveCategoryChange }: Props) {
+/** Табы разделов каталога + полоса подкатегорий; переключение — навигация на `/catalog/[slug]`. */
+export function CatalogSectionsTabs({ initialRoots, activeRootId }: Props) {
+  const router = useRouter();
   const [roots, setRoots] = useState<HomeCatalogRoot[]>(initialRoots);
 
   const pullTree = useCallback(async () => {
@@ -56,15 +58,10 @@ export function CatalogSectionsTabs({ initialRoots, onActiveCategoryChange }: Pr
     return () => document.removeEventListener('visibilitychange', onVis);
   }, [pullTree]);
 
-  const [activeId, setActiveId] = useState<string>(() => initialRoots[0]?.id ?? '');
-
-  useEffect(() => {
-    if (!roots.length) {
-      setActiveId('');
-      return;
-    }
-    setActiveId((prev) => (roots.some((r) => r.id === prev) ? prev : roots[0].id));
-  }, [roots]);
+  const activeId = useMemo(() => {
+    if (roots.some((r) => r.id === activeRootId)) return activeRootId;
+    return roots[0]?.id ?? '';
+  }, [roots, activeRootId]);
 
   const activeRoot = useMemo(
     () => roots.find((r) => r.id === activeId) ?? roots[0],
@@ -172,6 +169,14 @@ export function CatalogSectionsTabs({ initialRoots, onActiveCategoryChange }: Pr
     scrollStripAnimCancelRef.current = anim.cancel;
   }, []);
 
+  const openRootSection = useCallback(
+    (root: HomeCatalogRoot) => {
+      if (root.id === activeId) return;
+      router.push(`/catalog/${encodeURIComponent(root.slug)}`);
+    },
+    [activeId, router],
+  );
+
   if (!roots.length) {
     return null;
   }
@@ -190,9 +195,8 @@ export function CatalogSectionsTabs({ initialRoots, onActiveCategoryChange }: Pr
               aria-controls={cardsPanelId}
               className={tab.id === activeId ? brandsStyles.tabActive : brandsStyles.tab}
               onClick={() => {
-                if (tab.id === activeId) return;
-                setActiveId(tab.id);
-                onActiveCategoryChange?.(tab.id);
+                const root = roots.find((r) => r.id === tab.id);
+                if (root) openRootSection(root);
               }}
             >
               {tab.name}

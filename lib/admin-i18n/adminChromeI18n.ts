@@ -1,3 +1,9 @@
+import {
+  adminNavLabel,
+  type AdminDashboardLinkKey,
+  type AdminNavLabelKey,
+} from '@win-win/admin-sections';
+
 export type AdminLocale = 'ru' | 'zh';
 
 export const ADMIN_LOCALE_STORAGE_KEY = 'winwin-admin-locale';
@@ -13,95 +19,22 @@ export function adminLocaleCookieString(locale: AdminLocale): string {
   return `${ADMIN_LOCALE_COOKIE_NAME}=${locale}; Path=/admin; Max-Age=${maxAge}; SameSite=Lax`;
 }
 
-const NAV_HREFS = [
-  '/admin',
-  '/admin/clients',
-  '/admin/applications',
-  '/admin/orders',
-  '/admin/brands',
-  '/admin/objects',
-  '/admin/blog',
-  '/admin/journal',
-] as const;
-
-const navRu: Record<(typeof NAV_HREFS)[number], string> = {
-  '/admin': 'Дашборд',
-  '/admin/clients': 'Пользователи',
-  '/admin/applications': 'Заявки',
-  '/admin/orders': 'Заказы',
-  '/admin/brands': 'Бренды',
-  '/admin/objects': 'Медиафайлы',
-  '/admin/blog': 'Блог',
-  '/admin/journal': 'Журнал',
-};
-
-const navZh: Record<(typeof NAV_HREFS)[number], string> = {
-  '/admin': '仪表板',
-  '/admin/clients': '用户',
-  '/admin/applications': '申请',
-  '/admin/orders': '订单',
-  '/admin/brands': '品牌',
-  '/admin/objects': '媒体文件',
-  '/admin/blog': '博客',
-  '/admin/journal': '日志',
-};
-
-export function catalogGroupLabel(locale: AdminLocale): string {
-  return locale === 'zh' ? '目录' : 'Каталог';
-}
-
-export function settingsGroupLabel(locale: AdminLocale): string {
-  return locale === 'zh' ? '设置' : 'Настройки';
-}
-
-export function settingsSubLabel(
-  locale: AdminLocale,
-  key: 'pricing' | 'staff' | 'userGroups' | 'referrals' | 'site',
-): string {
-  const ru = {
-    pricing: 'Ценообразование',
-    staff: 'Сотрудники',
-    userGroups: 'Группы пользователей',
-    referrals: 'Реферальная программа',
-    site: 'Настройки сайта',
-  };
-  const zh = {
-    pricing: '定价',
-    staff: '员工',
-    userGroups: '用户组',
-    referrals: '推荐计划',
-    site: '网站设置',
-  };
-  return locale === 'zh' ? zh[key] : ru[key];
-}
-
-export function catalogSubLabel(
-  locale: AdminLocale,
-  key: 'products' | 'categories' | 'collections' | 'productSets'
-): string {
-  const ru = {
-    products: 'Товары',
-    categories: 'Категории',
-    collections: 'Коллекции',
-    productSets: 'Наборы',
-  };
-  const zh = {
-    products: '商品',
-    categories: '类别',
-    collections: '集合',
-    productSets: '套装',
-  };
-  return locale === 'zh' ? zh[key] : ru[key];
-}
-
-export function getNavLabel(locale: AdminLocale, href: string): string {
-  const ru = navRu[href as keyof typeof navRu];
-  if (ru) return locale === 'zh' ? navZh[href as keyof typeof navZh] : ru;
-  return href;
+export function getNavLabel(locale: AdminLocale, labelKey: AdminNavLabelKey): string {
+  return adminNavLabel(labelKey, locale);
 }
 
 export function adminBrandLine(locale: AdminLocale): string {
   return locale === 'zh' ? 'WIN-WIN · 管理面板' : 'WIN-WIN · АДМИН-ПАНЕЛЬ';
+}
+
+export function adminNavBadgeTitles(locale: AdminLocale) {
+  const pick = (ru: string, zh: string) => (locale === 'zh' ? zh : ru);
+  return {
+    partnerApps: pick('Необработанные заявки', '待处理申请'),
+    ordersPending: pick('Заказы на согласование', '待审批订单'),
+    sourcingPending: pick('Новые заявки на подбор', '新采购申请'),
+    ordersChatUnread: pick('Непрочитанные сообщения от клиента', '未读客户消息'),
+  };
 }
 
 export function adminChromeStrings(locale: AdminLocale) {
@@ -118,47 +51,60 @@ export function adminChromeStrings(locale: AdminLocale) {
 }
 
 export function adminDashboardStrings(locale: AdminLocale) {
+  const linkMeta = dashboardLinkMeta(locale);
   if (locale === 'zh') {
     return {
       title: '仪表板',
       lead: '请从左侧菜单进入，或点击下方卡片。数据目前通过 API 填充。',
-      links: [
-        { href: '/admin/catalog', label: '目录', note: '商品与类别' },
-        { href: '/admin/brands', label: '品牌', note: '网站上的品牌' },
-        { href: '/admin/orders', label: '订单', note: '状态与单据' },
-        { href: '/admin/clients', label: '客户', note: '用户' },
-        { href: '/admin/blog', label: '博客', note: '文章' },
-        { href: '/admin/referrals', label: '推荐', note: '推荐计划' },
-        { href: '/admin/collections', label: '集合', note: '公开精选' },
-        { href: '/admin/product-sets', label: '套装', note: '仅商品' },
-      ] as const,
+      accessDenied: '无权访问此分区。',
+      linkMeta,
     };
   }
   return {
     title: 'Дашборд',
     lead: 'Выберите раздел в меню слева или перейдите по карточкам ниже. Данные пока наполняются через API.',
-    links: [
-      { href: '/admin/catalog', label: 'Каталог', note: 'Товары и категории' },
-      { href: '/admin/brands', label: 'Бренды', note: 'Бренды на сайте' },
-      { href: '/admin/orders', label: 'Заказы', note: 'Статусы и документы' },
-      { href: '/admin/clients', label: 'Клиенты', note: 'Пользователи' },
-      { href: '/admin/blog', label: 'Блог', note: 'Статьи' },
-      { href: '/admin/referrals', label: 'Рефералы', note: 'Программа' },
-      { href: '/admin/collections', label: 'Коллекции', note: 'Публичные подборки' },
-      { href: '/admin/product-sets', label: 'Наборы', note: 'Только товары' },
-    ] as const,
+    accessDenied: 'Нет доступа к этому разделу.',
+    linkMeta,
+  };
+}
+
+function dashboardLinkMeta(locale: AdminLocale): Record<
+  AdminDashboardLinkKey,
+  { label: string; note: string }
+> {
+  if (locale === 'zh') {
+    return {
+      catalog: { label: adminNavLabel('catalog', 'zh'), note: '商品与类别' },
+      brands: { label: adminNavLabel('brands', 'zh'), note: '网站上的品牌' },
+      orders: { label: adminNavLabel('orders', 'zh'), note: '状态与单据' },
+      clients: { label: adminNavLabel('clients', 'zh'), note: '用户' },
+      blog: { label: adminNavLabel('blog', 'zh'), note: '文章' },
+      referrals: { label: adminNavLabel('referrals', 'zh'), note: '推荐计划' },
+      collections: { label: adminNavLabel('collections', 'zh'), note: '公开精选' },
+      productSets: { label: adminNavLabel('productSets', 'zh'), note: '仅商品' },
+    };
+  }
+  return {
+    catalog: { label: adminNavLabel('catalog', 'ru'), note: 'Товары и категории' },
+    brands: { label: adminNavLabel('brands', 'ru'), note: 'Бренды на сайте' },
+    orders: { label: adminNavLabel('orders', 'ru'), note: 'Статусы и документы' },
+    clients: { label: adminNavLabel('clients', 'ru'), note: 'Пользователи' },
+    blog: { label: adminNavLabel('blog', 'ru'), note: 'Статьи' },
+    referrals: { label: adminNavLabel('referrals', 'ru'), note: 'Программа' },
+    collections: { label: adminNavLabel('collections', 'ru'), note: 'Публичные подборки' },
+    productSets: { label: adminNavLabel('productSets', 'ru'), note: 'Только товары' },
   };
 }
 
 export function adminObjectsPageStrings(locale: AdminLocale) {
   if (locale === 'zh') {
     return {
-      title: '媒体文件',
+      title: adminNavLabel('objects', 'zh'),
       compressLink: '在此压缩',
     };
   }
   return {
-    title: 'Медиафайлы',
+    title: adminNavLabel('objects', 'ru'),
     compressLink: 'Сжимать тут',
   };
 }

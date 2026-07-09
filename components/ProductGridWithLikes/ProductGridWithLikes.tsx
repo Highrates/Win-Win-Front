@@ -2,6 +2,7 @@
 
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { ProductCard } from '@/components/ProductCard';
+import { useSharedProductLikesBulk } from '@/components/ProductGridWithLikes/ProductLikesBulkContext';
 import { useProductLikesBulk } from '@/hooks/useProductLikesBulk';
 import { buildLikesBulkUiProp } from '@/lib/buildLikesBulkUiProp';
 import type { ProductGridItem } from '@/lib/productGridItem';
@@ -25,12 +26,15 @@ export function ProductGridWithLikes({ items, gridClassName, galleryAdvanceSigna
     primeProductGridLikesFromItems(items);
   }, [items]);
 
+  const sharedBulk = useSharedProductLikesBulk();
   const productIds = useMemo(
     () => items.map((i) => i.productId).filter(Boolean),
     [items],
   );
-  const bulk = useProductLikesBulk(productIds, { skip: ssrLikes });
+  const ownBulk = useProductLikesBulk(productIds, { skip: ssrLikes || sharedBulk != null });
+  const bulk = sharedBulk ?? ownBulk;
   const usePageBulk = !ssrLikes && bulk.auth === true && productIds.length > 0;
+  const showBulkStatus = usePageBulk && sharedBulk == null;
 
   const onProductLikedChange = useCallback(
     (id: string, liked: boolean) => {
@@ -49,7 +53,7 @@ export function ProductGridWithLikes({ items, gridClassName, galleryAdvanceSigna
 
   return (
     <>
-      {usePageBulk && bulk.status === 'loading' ? (
+      {showBulkStatus && bulk.status === 'loading' ? (
         <p className={gridStyles.likesBulkStatus} role="status" aria-live="polite">
           Загружаем лайки…
         </p>
@@ -81,7 +85,7 @@ export function ProductGridWithLikes({ items, gridClassName, galleryAdvanceSigna
           );
         })}
       </div>
-      {usePageBulk && bulk.status === 'error' ? (
+      {showBulkStatus && bulk.status === 'error' ? (
         <div className={gridStyles.likesBulkRetryWrap} role="status">
           <button type="button" className={gridStyles.likesBulkRetryBtn} onClick={bulk.retry}>
             Повторить загрузку лайков

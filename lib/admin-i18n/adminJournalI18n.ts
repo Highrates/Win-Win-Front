@@ -5,6 +5,9 @@ const pick = <T,>(locale: AdminLocale, ru: T, zh: T): T => (locale === 'zh' ? zh
 export function adminJournalStrings(locale: AdminLocale) {
   return {
     errLoad: pick(locale, 'Ошибка загрузки', '加载失败'),
+    filterLabel: pick(locale, 'Фильтр по сущности', '按实体筛选'),
+    filterAll: pick(locale, 'Все записи', '全部记录'),
+    filterStaffUser: pick(locale, 'Сотрудники (StaffUser)', '员工 (StaffUser)'),
     purgePasswordPrompt: pick(locale, 'Введите пароль очистки', '请输入清理密码'),
     purgeConfirm: pick(
       locale,

@@ -2,7 +2,9 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminNavBadge } from '@/components/admin/AdminNavBadge/AdminNavBadge';
 import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
+import { adminNavBadgeTitles } from '@/lib/admin-i18n/adminChromeI18n';
 import { adminOrdersSectionStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { useAdminSidebarBadges } from '@/lib/adminSidebarBadgesContext';
@@ -20,6 +22,7 @@ function sectionFromQuery(raw: string | null): AdminOrdersSection {
 export function AdminOrdersSectionClient() {
   const { locale } = useAdminLocale();
   const sectionStr = adminOrdersSectionStrings(locale);
+  const badgeTitles = adminNavBadgeTitles(locale);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { pendingSourcingReview } = useAdminSidebarBadges();
@@ -57,18 +60,26 @@ export function AdminOrdersSectionClient() {
   const section = SECTIONS[sectionIndex] ?? 'orders';
   const sectionTabItems = useMemo(() => {
     const labels = [sectionStr.tabOrders, sectionStr.tabSourcing];
+    const pendingSourcing =
+      pendingSourcingReview != null && pendingSourcingReview > 0 ? pendingSourcingReview : 0;
     return labels.map((label, index) => {
       const isSourcing = SECTIONS[index] === 'sourcing';
-      const pending =
-        isSourcing && pendingSourcingReview != null && pendingSourcingReview > 0
-          ? pendingSourcingReview
-          : 0;
       return {
         id: index,
-        label: pending > 0 ? `${label} (${pending})` : label,
+        label: (
+          <>
+            {label}
+            {isSourcing ? (
+              <AdminNavBadge
+                count={pendingSourcing}
+                title={badgeTitles.sourcingPending}
+              />
+            ) : null}
+          </>
+        ),
       };
     });
-  }, [pendingSourcingReview, sectionStr.tabOrders, sectionStr.tabSourcing]);
+  }, [badgeTitles.sourcingPending, pendingSourcingReview, sectionStr.tabOrders, sectionStr.tabSourcing]);
 
   return (
     <>

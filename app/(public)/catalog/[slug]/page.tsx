@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { CatalogSectionsTabs } from '@/app/(public)/catalog/CatalogSectionsTabs';
 import { fetchCategoryBySlug } from '@/lib/catalogPublic';
+import { findCatalogRootForCategoryId } from '@/lib/catalog/findCatalogRoot';
 import { fetchProductsSearch } from '@/lib/server/catalogAuthFetch';
+import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import { CategoryCatalogContent } from '@/app/(public)/categories/CategoryCatalogContent';
 import { CATEGORY_PER_PAGE } from '@/app/(public)/categories/categoryCatalogData';
@@ -24,10 +27,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CatalogSlugPage({ params }: Props) {
   const { slug } = await params;
 
-  const category = await fetchCategoryBySlug(slug);
+  const [roots, category] = await Promise.all([
+    fetchHomeCatalogRoots(),
+    fetchCategoryBySlug(slug),
+  ]);
   if (!category) {
     notFound();
   }
+
+  const catalogRoot = findCatalogRootForCategoryId(roots, category.id) ?? roots[0] ?? null;
 
   const search = await fetchProductsSearch({
     categoryId: category.id,
@@ -38,24 +46,17 @@ export default async function CatalogSlugPage({ params }: Props) {
   const isRoot = category.parentId == null;
   const previewImageSrc = resolveMediaUrlForServer(category.backgroundImageUrl);
 
-  const subcategoryItems = (category.children ?? [])
-    .slice()
-    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'ru'))
-    .map((ch) => ({
-      slug: ch.slug,
-      name: ch.name,
-      imageSrc: resolveMediaUrlForServer(ch.backgroundImageUrl),
-    }));
+  const catalogRootHref = catalogRoot ? `/catalog/${catalogRoot.slug}` : '/catalog';
 
   const breadcrumbs = isRoot
     ? [
         { label: 'Главная', href: '/', current: false as const },
-        { label: 'Каталог', href: '/catalog', current: false as const },
+        { label: 'Каталог', href: catalogRootHref, current: false as const },
         { label: category.name, href: '', current: true as const },
       ]
     : [
         { label: 'Главная', href: '/', current: false as const },
-        { label: 'Каталог', href: '/catalog', current: false as const },
+        { label: 'Каталог', href: catalogRootHref, current: false as const },
         {
           label: category.parent!.name,
           href: `/catalog/${category.parent!.slug}`,
@@ -73,8 +74,11 @@ export default async function CatalogSlugPage({ params }: Props) {
       catalogHits={search.hits}
       catalogTotal={search.total}
       previewImageSrc={previewImageSrc}
-      showSubcategoryCardsStrip={isRoot && subcategoryItems.length > 0}
-      subcategoryItems={isRoot && subcategoryItems.length > 0 ? subcategoryItems : undefined}
+      belowPreview={
+        catalogRoot ? (
+          <CatalogSectionsTabs initialRoots={roots} activeRootId={catalogRoot.id} />
+        ) : null
+      }
     />
   );
 }

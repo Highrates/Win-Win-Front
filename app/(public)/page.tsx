@@ -11,6 +11,7 @@ import {
   BestBrands,
   News,
   Recommendations,
+  HomeProductLikesScope,
   type BestBrandsBrandItem,
 } from '@/sections/home';
 import { cookies } from 'next/headers';
@@ -81,30 +82,38 @@ export default async function HomePage() {
       ? heroImages[((Number.isFinite(idx) && idx >= 0 ? idx : 0) % heroImages.length) | 0]
       : null;
 
+  const allHomeRecommendationItems = [
+    ...(collection1?.items ?? []),
+    ...(collection2?.items ?? []),
+    ...(recommendationItems ?? []),
+  ];
+
   return (
     <main>
-      <Hero imageUrl={heroImageUrl} />
-      <ScrollCatalog roots={catalogRoots} />
-      <ProjectSourcing />
-      {collection1?.items.length ? (
-        <Recommendations
-          title={collection1.title}
-          items={collection1.items}
-          advanceGalleryOnScroll
-        />
-      ) : null}
-      {bestBrands ? <BestBrands sectionTitle={bestBrands.sectionTitle} brands={bestBrands.brands} /> : null}
-      {collection2?.items.length ? (
-        <Recommendations
-          title={collection2.title}
-          items={collection2.items}
-          advanceGalleryOnScroll
-        />
-      ) : null}
-      <News />
-      {recommendationItems?.length ? (
-        <Recommendations title={recommendationsTitle} items={recommendationItems} />
-      ) : null}
+      <HomeProductLikesScope items={allHomeRecommendationItems}>
+        <Hero imageUrl={heroImageUrl} />
+        <ScrollCatalog roots={catalogRoots} />
+        <ProjectSourcing />
+        {collection1?.items.length ? (
+          <Recommendations
+            title={collection1.title}
+            items={collection1.items}
+            advanceGalleryOnScroll
+          />
+        ) : null}
+        {bestBrands ? <BestBrands sectionTitle={bestBrands.sectionTitle} brands={bestBrands.brands} /> : null}
+        {collection2?.items.length ? (
+          <Recommendations
+            title={collection2.title}
+            items={collection2.items}
+            advanceGalleryOnScroll
+          />
+        ) : null}
+        <News />
+        {recommendationItems?.length ? (
+          <Recommendations title={recommendationsTitle} items={recommendationItems} />
+        ) : null}
+      </HomeProductLikesScope>
     </main>
   );
 }

@@ -14,6 +14,34 @@
   line-height: 1.5;
 }
 
+.leadMt16 {
+  margin-top: 16px;
+}
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fdecea;
+  color: #8a1f17;
+  font-size: var(--text-body, 15px);
+}
+
+.errorBannerDismiss {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
 .visuallyHidden {
   position: absolute;
   width: 1px;

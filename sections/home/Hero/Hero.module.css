@@ -5,13 +5,17 @@
 .heroBg {
   min-height: 64vh;
   background-color: var(--color-ink-black);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   position: relative;
+  overflow: hidden;
+}
+
+.heroImage {
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
 }
 
 .heroBg::before {
@@ -39,6 +43,7 @@
 
 .heroSloganWrap {
   display: none;
+  z-index: 2;
 }
 
 @media (max-width: 768px) {

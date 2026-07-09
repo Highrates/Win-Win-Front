@@ -8,7 +8,14 @@ export function adminBackendPath(apiPath: string): string {
 
 export async function adminBackendFetch(apiPath: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers);
-  if (init?.body && !headers.has('Content-Type')) {
+  const body = init?.body;
+  if (
+    body &&
+    !headers.has('Content-Type') &&
+    !(body instanceof FormData) &&
+    !(body instanceof Blob) &&
+    !(body instanceof URLSearchParams)
+  ) {
     headers.set('Content-Type', 'application/json');
   }
   return fetch(adminBackendPath(apiPath), {

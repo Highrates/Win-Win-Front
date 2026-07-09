@@ -278,6 +278,8 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
                       width={index === 0 || index === 3 ? 306 : 242}
                       height={220}
                       className={styles.imgCover}
+                      loading={index < 2 ? 'eager' : 'lazy'}
+                      decoding="async"
                     />
                   </div>
                   <span className={styles.cardTitle}>{card.name}</span>
@@ -324,6 +326,8 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
                   width={120}
                   height={109}
                   className={styles.mobileCardImg}
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
               <span className={styles.mobileCardTitle}>{tab.name}</span>

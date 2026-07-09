@@ -54,5 +54,14 @@ export function adminClientDetailStrings(locale: AdminLocale) {
     levelL2: 'L2',
     partnerYes: pick(locale, 'Да', '是'),
     partnerNo: pick(locale, 'Нет', '否'),
+    deleteUser: pick(locale, 'Удалить пользователя', '删除用户'),
+    deleteUserConfirmTitle: pick(locale, 'Удалить пользователя?', '删除该用户？'),
+    deleteUserConfirmMessage: pick(
+      locale,
+      'Учётная запись будет деактивирована, email и телефон удалены. Заказы и история сохранятся. Действие необратимо.',
+      '账户将被停用，邮箱和电话将被清除。订单与历史记录保留。此操作不可撤销。',
+    ),
+    deletingUser: pick(locale, 'Удаление…', '删除中…'),
+    errDeleteUser: pick(locale, 'Не удалось удалить пользователя', '无法删除用户'),
   };
 }

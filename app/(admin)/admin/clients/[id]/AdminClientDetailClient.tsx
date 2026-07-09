@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { adminClientDetailStrings } from '@/lib/admin-i18n/adminClientDetailI18n';
 import { adminDesignerProjectsPage } from '@/lib/admin-i18n/adminMiscPagesI18n';
@@ -100,6 +101,7 @@ type InviterPayload = {
 };
 
 export function AdminClientDetailClient({ id }: { id: string }) {
+  const router = useRouter();
   const { locale: adminLoc } = useAdminLocale();
   const s = useMemo(() => adminClientDetailStrings(adminLoc), [adminLoc]);
   const consLocale: 'ru' | 'zh' = adminLoc === 'zh' ? 'zh' : 'ru';
@@ -123,6 +125,7 @@ export function AdminClientDetailClient({ id }: { id: string }) {
   const [groupSelect, setGroupSelect] = useState('');
   const [groupSaving, setGroupSaving] = useState(false);
   const [groupError, setGroupError] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
   const { confirm } = useAdminConfirm();
 
   const load = useCallback(async () => {
@@ -312,6 +315,33 @@ export function AdminClientDetailClient({ id }: { id: string }) {
     return s.titleWithContacts(phone, email);
   }, [data, s]);
 
+  async function handleDeleteUser() {
+    const ok = await confirm({
+      title: s.deleteUserConfirmTitle,
+      message: s.deleteUserConfirmMessage,
+      confirmLabel: s.deleteUser,
+    });
+    if (!ok) return;
+
+    setDeletingUser(true);
+    setError(null);
+    try {
+      await adminBackendJson(`users/admin/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      router.replace('/admin/clients');
+      router.refresh();
+    } catch (e) {
+      setError(
+        adminDetailErrorFromBackend(e, {
+          fallback: s.errDeleteUser,
+          notFound: s.userNotFound,
+          errStatus: s.errStatus,
+        }),
+      );
+    } finally {
+      setDeletingUser(false);
+    }
+  }
+
   const clientTabItems = useMemo(() => {
     const items: { id: number; label: string }[] = [
       { id: TAB_ORDERS, label: s.tabOrders },
@@ -342,6 +372,16 @@ export function AdminClientDetailClient({ id }: { id: string }) {
       ) : null}
       {!loading && !error && data ? (
         <>
+          <div className={styles.pageActions}>
+            <AdminCompactBtn
+              type="button"
+              variant="danger"
+              disabled={deletingUser}
+              onClick={() => void handleDeleteUser()}
+            >
+              {deletingUser ? s.deletingUser : s.deleteUser}
+            </AdminCompactBtn>
+          </div>
           <AdminTabs
             compact
             ariaLabel={s.tabsAria}

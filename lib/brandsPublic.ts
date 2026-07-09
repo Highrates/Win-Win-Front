@@ -46,10 +46,28 @@ export function brandCoverImageUrl(
   return u || null;
 }
 
-export async function fetchPublicBrands(): Promise<PublicBrandListRow[]> {
+export async function fetchPublicBrands(options?: {
+  categoryId?: string | null;
+}): Promise<PublicBrandListRow[]> {
   const base = getServerApiBase();
+  const categoryId = options?.categoryId?.trim();
+  const qs = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : '';
   try {
-    const res = await fetch(`${base}/brands`, { next: catalogPublicFetchNext() });
+    const res = await fetch(`${base}/brands${qs}`, { next: catalogPublicFetchNext() });
+    if (!res.ok) return [];
+    const data: unknown = await res.json();
+    return Array.isArray(data) ? (data as PublicBrandListRow[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Список брендов в браузере (вкладки категорий на `/brands`). */
+export async function fetchPublicBrandsClient(categoryId?: string | null): Promise<PublicBrandListRow[]> {
+  const id = categoryId?.trim();
+  const qs = id ? `?categoryId=${encodeURIComponent(id)}` : '';
+  try {
+    const res = await fetch(`/api/brands${qs}`, { cache: 'no-store' });
     if (!res.ok) return [];
     const data: unknown = await res.json();
     return Array.isArray(data) ? (data as PublicBrandListRow[]) : [];

@@ -1,0 +1,50 @@
+.avatarField {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.avatarLabel {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+}
+
+.avatarPicker {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bright-snow);
+  cursor: pointer;
+}
+
+.avatarPickerDisabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.avatarInput {
+  display: none;
+}
+
+.avatarImage {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarHint {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+}
+
+.staffListHeader {
+  margin-top: 24px;
+}

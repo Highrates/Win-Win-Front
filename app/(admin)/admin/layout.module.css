@@ -176,17 +176,52 @@
 }
 
 .sidebarProfile {
-  margin-top: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   min-height: 32px;
+  min-width: 0;
+  flex: 1;
+  padding: 8px;
+  color: var(--color-black, #000000);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.sidebarProfileBlock {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   width: 100%;
   min-width: 0;
-  padding: 8px;
+  padding-top: 8px;
   border-top: var(--account-hairline-width, 0.7px) solid var(--account-hairline-color, rgba(0, 0, 0, 0.2));
+}
+
+.sidebarLogout {
+  align-self: flex-start;
+  margin-left: 8px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
   color: var(--color-black, #000000);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.75;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.sidebarLogout:hover {
+  opacity: 1;
+  background: #e6e6e6;
+}
+
+.sidebarProfile:hover {
+  background: #e6e6e6;
 }
 
 .sidebarProfileMain {
@@ -233,27 +268,64 @@
   color: var(--color-gray, #9d9d9d);
 }
 
-.sidebarProfileMenu {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
+.skeletonBrand,
+.skeletonNavItem,
+.skeletonTitle,
+.skeletonLine,
+.skeletonLineShort {
   border-radius: 6px;
-  background: transparent;
-  font-size: 18px;
-  line-height: 1;
-  color: var(--color-gray, #9d9d9d);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  background: linear-gradient(90deg, #e8e8e8 25%, #f3f3f3 50%, #e8e8e8 75%);
+  background-size: 200% 100%;
+  animation: adminSkeletonShimmer 1.2s ease-in-out infinite;
 }
 
-.sidebarProfileMenu:hover {
-  background: #e6e6e6;
-  color: var(--color-black, #000000);
+@keyframes adminSkeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeletonBrand {
+  height: 14px;
+  width: 70%;
+  margin: 0 10px 16px;
+}
+
+.skeletonNav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.skeletonNavItem {
+  height: 32px;
+  width: 100%;
+}
+
+.skeletonContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 480px;
+}
+
+.skeletonTitle {
+  height: 28px;
+  width: 40%;
+}
+
+.skeletonLine {
+  height: 16px;
+  width: 100%;
+}
+
+.skeletonLineShort {
+  height: 16px;
+  width: 72%;
 }
 
 .content {

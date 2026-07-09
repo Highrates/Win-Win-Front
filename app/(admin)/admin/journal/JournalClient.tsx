@@ -5,6 +5,7 @@ import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { adminJournalStrings } from '@/lib/admin-i18n/adminJournalI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
+import { useAdminPermissions } from '@/lib/adminPermissions/AdminPermissionsProvider';
 import styles from '../catalog/catalogAdmin.module.css';
 
 export type AuditLogRow = {
@@ -54,42 +55,31 @@ function metadataPreview(meta: unknown): string {
   }
 }
 
-type SessionRes = { authenticated: boolean; user?: { role?: string } };
-
 export function JournalClient() {
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminJournalStrings(locale), [locale]);
   const { confirm } = useAdminConfirm();
+  const { isSuperAdmin } = useAdminPermissions();
   const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
 
   const [page, setPage] = useState(1);
+  const [entityTypeFilter, setEntityTypeFilter] = useState<'all' | 'StaffUser'>('all');
   const [data, setData] = useState<ListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [purgePassword, setPurgePassword] = useState('');
   const [purgeBusy, setPurgeBusy] = useState(false);
   const [purgeMessage, setPurgeMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch('/api/admin/session', { credentials: 'same-origin' });
-        const j = (await res.json()) as SessionRes;
-        setIsAdmin(j.authenticated && j.user?.role === 'ADMIN');
-      } catch {
-        setIsAdmin(false);
-      }
-    })();
-  }, []);
-
   const load = useCallback(
-    async (p: number) => {
+    async (p: number, entityType: 'all' | 'StaffUser') => {
       setLoading(true);
       setError(null);
       try {
+        const entityQuery =
+          entityType === 'StaffUser' ? `&entityType=${encodeURIComponent('StaffUser')}` : '';
         const res = await adminBackendJson<ListResponse>(
-          `audit/admin/logs?page=${p}&limit=${PAGE_SIZE}`,
+          `audit/admin/logs?page=${p}&limit=${PAGE_SIZE}${entityQuery}`,
         );
         setData(res);
       } catch (e) {
@@ -103,8 +93,8 @@ export function JournalClient() {
   );
 
   useEffect(() => {
-    void load(page);
-  }, [load, page]);
+    void load(page, entityTypeFilter);
+  }, [load, page, entityTypeFilter]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 
@@ -125,7 +115,7 @@ export function JournalClient() {
       });
       setPurgePassword('');
       setPurgeMessage(s.purged(res.deleted));
-      void load(page);
+      void load(page, entityTypeFilter);
     } catch (e) {
       setPurgeMessage(e instanceof Error ? e.message : s.purgeErr);
     } finally {
@@ -140,6 +130,27 @@ export function JournalClient() {
           {error}
         </p>
       ) : null}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' }}>
+          <span>{s.filterLabel}</span>
+          <select
+            value={entityTypeFilter}
+            onChange={(e) => {
+              setPage(1);
+              setEntityTypeFilter(e.target.value === 'StaffUser' ? 'StaffUser' : 'all');
+            }}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid var(--account-hairline-color, #e2e6e8)',
+              fontSize: '0.9rem',
+              background: '#fff',
+            }}
+          >
+            <option value="all">{s.filterAll}</option>
+            <option value="StaffUser">{s.filterStaffUser}</option>
+          </select>
+        </label>
+      </div>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -236,7 +247,7 @@ export function JournalClient() {
           </button>
         </div>
       ) : null}
-      {isAdmin ? (
+      {isSuperAdmin ? (
         <section
           style={{
             marginTop: 32,

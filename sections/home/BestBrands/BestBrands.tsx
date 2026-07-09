@@ -39,12 +39,12 @@ const MOBILE_CARD_WIDTH_RATIO = 0.9;
 const MOBILE_CARD_GAP_PX = 10;
 const SWIPE_THRESHOLD_PX = 52;
 
-function collectBrandImageUrls(brands: BestBrandsBrandItem[]): string[] {
+function collectBrandImageUrls(brands: BestBrandsBrandItem[], activeIndex: number): string[] {
   const urls: string[] = [];
-  for (const brand of brands) {
-    for (const url of [brand.logo, brand.galleryMain]) {
-      if (url && !urls.includes(url)) urls.push(url);
-    }
+  const brand = brands[activeIndex];
+  if (!brand) return urls;
+  for (const url of [brand.logo, brand.galleryMain]) {
+    if (url && !urls.includes(url)) urls.push(url);
   }
   return urls;
 }
@@ -100,6 +100,7 @@ function BrandInfoPanel({ brand, panelClassName, ariaHidden, style }: BrandInfoP
             width={240}
             height={240}
             decoding="async"
+            loading="lazy"
           />
         ) : (
           <span className={styles.logoPlaceholder} aria-hidden />
@@ -141,12 +142,12 @@ export function BestBrands({ sectionTitle, brands, activeBrandSlug }: BestBrands
   const visibleDotIndices = getVisibleDotIndices(brands.length, activeIndex);
 
   useEffect(() => {
-    for (const url of collectBrandImageUrls(brands)) {
+    for (const url of collectBrandImageUrls(brands, activeIndex)) {
       const img = new Image();
       img.decoding = 'async';
       img.src = url;
     }
-  }, [brands]);
+  }, [brands, activeIndex]);
 
   function goPrev() {
     if (!canNavigate) return;
@@ -223,13 +224,14 @@ export function BestBrands({ sectionTitle, brands, activeBrandSlug }: BestBrands
                       brands.length,
                       brandPanelClasses,
                     );
+                    const isActive = index === activeIndex;
                     return (
                       <div
                         key={brand.slug}
                         className={`${styles.imagePanel} ${panelClass}`}
-                        aria-hidden={index !== activeIndex}
+                        aria-hidden={!isActive}
                       >
-                        {brand.galleryMain ? (
+                        {isActive && brand.galleryMain ? (
                           <img
                             className={styles.brandHeroImage}
                             src={brand.galleryMain}
@@ -237,7 +239,7 @@ export function BestBrands({ sectionTitle, brands, activeBrandSlug }: BestBrands
                             width={680}
                             height={520}
                             decoding="async"
-                            fetchPriority={brand.slug === brands[0]?.slug ? 'high' : 'low'}
+                            fetchPriority="high"
                           />
                         ) : (
                           <div className={styles.imagePlaceholder} aria-hidden />

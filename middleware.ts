@@ -93,8 +93,14 @@ export function middleware(request: NextRequest) {
   // Редирект здесь только по наличию cookie давал цикл с layout ЛК при протухшем токене.
 
   if (pathname.startsWith('/admin')) {
+    const forward = () => {
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set('x-pathname', pathname);
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    };
+
     if (pathname === '/admin/login') {
-      return NextResponse.next();
+      return forward();
     }
     if (!hasAuthCookie(request, ADMIN_ACCESS_TOKEN_COOKIE)) {
       const url = request.nextUrl.clone();
@@ -102,7 +108,7 @@ export function middleware(request: NextRequest) {
       url.searchParams.set('from', pathname);
       return NextResponse.redirect(url);
     }
-    return NextResponse.next();
+    return forward();
   }
 
   return NextResponse.next();

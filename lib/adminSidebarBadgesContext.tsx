@@ -2,8 +2,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { useAdminPermissionsOptional } from '@/lib/adminPermissions/AdminPermissionsProvider';
 
 const ADMIN_SIDEBAR_BADGE_POLL_MS = 30_000;
+
+function warnBadgeLoadFailure(label: string, error: unknown): void {
+  if (process.env.NODE_ENV !== 'development') return;
+  const msg = error instanceof Error ? error.message : String(error);
+  console.warn(`[AdminSidebarBadges] ${label}: ${msg}`);
+}
 
 export type AdminSidebarBadgesValue = {
   pendingPartnerApps: number | null;
@@ -32,8 +39,8 @@ export function AdminSidebarBadgesProvider({
         'users/admin/partner-applications/pending-count',
       );
       setPendingPartnerApps(typeof j.total === 'number' ? j.total : 0);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      warnBadgeLoadFailure('partner applications', e);
     }
   }, []);
 
@@ -41,8 +48,8 @@ export function AdminSidebarBadgesProvider({
     try {
       const j = await adminBackendJson<{ total?: number }>('orders/admin/pending-approval-count');
       setPendingOrdersApproval(typeof j.total === 'number' ? j.total : 0);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      warnBadgeLoadFailure('orders pending approval', e);
     }
   }, []);
 
@@ -50,8 +57,8 @@ export function AdminSidebarBadgesProvider({
     try {
       const j = await adminBackendJson<{ total?: number }>('sourcing-requests/admin/pending-review-count');
       setPendingSourcingReview(typeof j.total === 'number' ? j.total : 0);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      warnBadgeLoadFailure('sourcing pending review', e);
     }
   }, []);
 
@@ -59,17 +66,35 @@ export function AdminSidebarBadgesProvider({
     try {
       const j = await adminBackendJson<{ total?: number }>('orders/admin/chat-unread-summary');
       setOrdersChatUnread(typeof j.total === 'number' ? j.total : 0);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      warnBadgeLoadFailure('orders chat unread', e);
     }
   }, []);
 
+  const permissions = useAdminPermissionsOptional();
+
   const refreshAll = useCallback(() => {
-    void loadPendingPartnerApps();
-    void loadPendingOrdersApproval();
-    void loadPendingSourcingReview();
-    void loadOrdersChatUnread();
-  }, [loadPendingPartnerApps, loadPendingOrdersApproval, loadPendingSourcingReview, loadOrdersChatUnread]);
+    if (permissions && !permissions.loading) {
+      if (permissions.canAccessSection('applications')) void loadPendingPartnerApps();
+      else setPendingPartnerApps(null);
+      if (permissions.canAccessSection('orders')) {
+        void loadPendingOrdersApproval();
+        void loadPendingSourcingReview();
+        void loadOrdersChatUnread();
+      } else {
+        setPendingOrdersApproval(null);
+        setPendingSourcingReview(null);
+        setOrdersChatUnread(null);
+      }
+      return;
+    }
+  }, [
+    permissions,
+    loadPendingPartnerApps,
+    loadPendingOrdersApproval,
+    loadPendingSourcingReview,
+    loadOrdersChatUnread,
+  ]);
 
   useEffect(() => {
     if (!enabled) return;
