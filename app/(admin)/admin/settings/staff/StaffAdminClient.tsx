@@ -16,6 +16,7 @@ import { adminStaffPage, formatStaffLastLogin } from '@/lib/admin-i18n/adminStaf
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import { useAdminPermissions } from '@/lib/adminPermissions/AdminPermissionsProvider';
+import { dispatchAdminStaffProfileUpdated } from '@/lib/adminPermissions/adminStaffProfileEvents';
 import { useFlashBanner } from '@/hooks/useFlashBanner';
 import type {
   CreateStaffResponse,
@@ -201,6 +202,30 @@ export function StaffAdminClient() {
     }
   }
 
+  async function handleDelete() {
+    if (!selected || selected.role === 'ADMIN' || selected.id === userId) return;
+    const ok = await confirm({
+      title: t.deleteConfirmTitle,
+      message: t.deleteConfirmMessage,
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+    });
+    if (!ok) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await adminBackendJson<void>(`settings/admin/staff/${selected.id}`, { method: 'DELETE' });
+      setSelectedId(null);
+      setMode('edit');
+      await load();
+      pushSuccess(t.deleteSuccess);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t.errDelete);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleAvatarFile(file: File) {
     if (!selected) return;
     setUploadingAvatar(true);
@@ -218,6 +243,8 @@ export function StaffAdminClient() {
       const row = (await res.json()) as StaffAdminRow;
       setAvatarUrl(row.staffAvatarUrl);
       await load();
+      if (selected.id === userId) await refreshPermissions();
+      dispatchAdminStaffProfileUpdated();
       pushSuccess(t.avatarSuccess);
     } catch (e) {
       setError(e instanceof Error ? e.message : t.errAvatar);
@@ -429,6 +456,16 @@ export function StaffAdminClient() {
                           onClick={() => void handleToggleActive()}
                         >
                           {selected.isActive ? t.deactivate : t.activate}
+                        </AdminCompactBtn>
+                      ) : null}
+                      {selected && selected.role !== 'ADMIN' && selected.id !== userId ? (
+                        <AdminCompactBtn
+                          type="button"
+                          variant="danger"
+                          disabled={saving}
+                          onClick={() => void handleDelete()}
+                        >
+                          {t.delete}
                         </AdminCompactBtn>
                       ) : null}
                     </>

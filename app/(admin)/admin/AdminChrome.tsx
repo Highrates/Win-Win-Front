@@ -13,7 +13,6 @@ import {
 } from '@win-win/admin-sections';
 import { AdminNavBadge } from '@/components/admin/AdminNavBadge/AdminNavBadge';
 import { useAdminOrderChatStaffUnreadEvents } from '@/hooks/useAdminOrderChatStaffUnreadEvents';
-import { useAdminLogout } from '@/lib/adminAuth/useAdminLogout';
 import { AdminDeployRecovery } from '@/lib/adminDeployRecovery/AdminDeployRecovery';
 import { AdminConfirmProvider } from '@/lib/adminConfirm/AdminConfirmProvider';
 import { AdminQueryProvider } from '@/lib/adminQuery/AdminQueryProvider';
@@ -83,7 +82,6 @@ function AdminSidebar({
     useAdminSidebarBadges();
   const { canAccessSection, isSuperAdmin, staff, email, loading: permissionsLoading } =
     useAdminPermissions();
-  const logout = useAdminLogout();
   const t = adminChromeStrings(locale);
   const badgeTitles = adminNavBadgeTitles(locale);
 
@@ -276,31 +274,21 @@ function AdminSidebar({
           </>
         )}
       </nav>
-      <div className={styles.sidebarProfileBlock}>
-        <Link href="/admin/settings/staff/me" prefetch={false} className={styles.sidebarProfile}>
-          <div className={styles.sidebarProfileMain}>
-            <img
-              src={profileAvatar}
-              alt=""
-              width={32}
-              height={32}
-              className={styles.sidebarProfileAvatar}
-            />
-            <div className={styles.sidebarProfileText}>
-              <span className={styles.sidebarProfileName}>{profileName}</span>
-              <span className={styles.sidebarProfileRole}>{profileRole}</span>
-            </div>
+      <Link href="/admin/settings/staff/me" prefetch={false} className={styles.sidebarProfile}>
+        <div className={styles.sidebarProfileMain}>
+          <img
+            src={profileAvatar}
+            alt=""
+            width={32}
+            height={32}
+            className={styles.sidebarProfileAvatar}
+          />
+          <div className={styles.sidebarProfileText}>
+            <span className={styles.sidebarProfileName}>{profileName}</span>
+            <span className={styles.sidebarProfileRole}>{profileRole}</span>
           </div>
-        </Link>
-        <button
-          type="button"
-          className={styles.sidebarLogout}
-          onClick={() => void logout()}
-          title={t.logout}
-        >
-          {t.logout}
-        </button>
-      </div>
+        </div>
+      </Link>
     </aside>
   );
 }

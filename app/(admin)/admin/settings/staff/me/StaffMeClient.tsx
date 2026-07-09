@@ -14,6 +14,7 @@ import { adminChromeStrings } from '@/lib/admin-i18n/adminChromeI18n';
 import { adminStaffMePage, formatStaffLastLogin } from '@/lib/admin-i18n/adminStaffI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { useAdminPermissions } from '@/lib/adminPermissions/AdminPermissionsProvider';
+import { dispatchAdminStaffProfileUpdated } from '@/lib/adminPermissions/adminStaffProfileEvents';
 import type { StaffAdminRow } from '@/lib/adminStaffTypes';
 import catalogStyles from '../../../catalog/catalogAdmin.module.css';
 import panelStyles from '../../pricing/pricingSettings.module.css';
@@ -67,6 +68,7 @@ export function StaffMeClient() {
       setDisplayName(row.staffDisplayName ?? '');
       setAvatarUrl(row.staffAvatarUrl);
       await refreshPermissions();
+      dispatchAdminStaffProfileUpdated();
     } catch (e) {
       setError(e instanceof Error ? e.message : t.errSave);
     } finally {
@@ -91,6 +93,7 @@ export function StaffMeClient() {
       setProfile(row);
       setAvatarUrl(row.staffAvatarUrl);
       await refreshPermissions();
+      dispatchAdminStaffProfileUpdated();
     } catch (e) {
       setError(e instanceof Error ? e.message : t.errAvatar);
     } finally {

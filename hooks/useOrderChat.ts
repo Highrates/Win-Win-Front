@@ -25,6 +25,8 @@ import {
   orderChatFileTooLargeUserMessage,
 } from '@/lib/orderChat/orderChatUploadError';
 import { dispatchAccountWorkFeedRefreshEvent, dispatchAccountWorkNotificationsEvent } from '@/lib/account/orders';
+import { useAdminPermissionsOptional } from '@/lib/adminPermissions/AdminPermissionsProvider';
+import { ADMIN_STAFF_PROFILE_UPDATED_EVENT } from '@/lib/adminPermissions/adminStaffProfileEvents';
 import { readUpstreamJsonErrorMessage } from '@/lib/readUpstreamJsonError';
 import type {
   OrderChatApiMessage,
@@ -182,6 +184,7 @@ function mapApiToUi(
   viewerUserId: string | null,
   variant: OrderChatVariant,
   timeLocale: string,
+  viewerStaffAvatar?: string | null,
 ): ChatWindowMessage {
   const deleted = !!m.deletedAt;
   const isStaff = m.authorRole === 'STAFF';
@@ -225,7 +228,11 @@ function mapApiToUi(
   const avatarRaw = m.authorAvatarUrl?.trim();
   let senderAvatarUrl = avatarRaw && avatarRaw.length > 0 ? avatarRaw : PROFILE_AVATAR_PLACEHOLDER;
   if (variant === 'account' && isStaff) {
-    senderAvatarUrl = STAFF_AVATAR_ACCOUNT;
+    senderAvatarUrl = avatarRaw && avatarRaw.length > 0 ? avatarRaw : STAFF_AVATAR_ACCOUNT;
+  }
+  if (variant === 'admin' && isMineStaff) {
+    const mineAvatar = viewerStaffAvatar?.trim() || avatarRaw;
+    senderAvatarUrl = mineAvatar && mineAvatar.length > 0 ? mineAvatar : PROFILE_AVATAR_PLACEHOLDER;
   }
 
   return {
@@ -253,6 +260,11 @@ export function useOrderChat(opts: {
   timeLocale?: string;
 }) {
   const { orderId, enabled, variant, chatSubject = 'order', timeLocale = 'ru-RU' } = opts;
+
+  const permissions = useAdminPermissionsOptional();
+  const viewerStaffAvatar = variant === 'admin' ? permissions?.staff?.staffAvatarUrl : null;
+  const viewerStaffAvatarRef = useRef(viewerStaffAvatar);
+  viewerStaffAvatarRef.current = viewerStaffAvatar;
 
   const [messages, setMessages] = useState<ChatWindowMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -330,9 +342,37 @@ export function useOrderChat(opts: {
     const data = (await res.json()) as OrderChatMessagesResponse;
     const viewer = viewerRef.current;
     conversationIdRef.current = data.conversationId ?? null;
-    setMessages((data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale)));
+    setMessages((data.messages ?? []).map((m) =>
+      mapApiToUi(m, viewer, variant, timeLocale, viewerStaffAvatar),
+    ));
     setHasOlderHistory(Boolean(data.hasOlder));
-  }, [orderId, variant, timeLocale, chatSubject]);
+  }, [orderId, variant, timeLocale, chatSubject, viewerStaffAvatar]);
+
+  useEffect(() => {
+    if (!enabled || variant !== 'admin') return;
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const avatarUrl =
+      viewerStaffAvatar?.trim() && viewerStaffAvatar.trim().length > 0
+        ? viewerStaffAvatar.trim()
+        : PROFILE_AVATAR_PLACEHOLDER;
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.ocAuthorRole !== 'STAFF' || m.ocAuthorUserId !== viewer) return m;
+        if (m.senderAvatarUrl === avatarUrl) return m;
+        return { ...m, senderAvatarUrl: avatarUrl };
+      }),
+    );
+  }, [enabled, variant, viewerStaffAvatar]);
+
+  useEffect(() => {
+    if (!enabled || variant !== 'admin') return undefined;
+    const onProfileUpdated = () => {
+      void reloadMessages();
+    };
+    document.addEventListener(ADMIN_STAFF_PROFILE_UPDATED_EVENT, onProfileUpdated);
+    return () => document.removeEventListener(ADMIN_STAFF_PROFILE_UPDATED_EVENT, onProfileUpdated);
+  }, [enabled, variant, reloadMessages]);
 
   const loadOlderChatMessages = useCallback(async () => {
     if (!orderId || !hasOlderHistory || loadingOlderHistory) return;
@@ -352,7 +392,9 @@ export function useOrderChat(opts: {
       if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
       const data = (await res.json()) as OrderChatMessagesResponse;
       const viewer = viewerRef.current;
-      const mapped = (data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale));
+      const mapped = (data.messages ?? []).map((m) =>
+        mapApiToUi(m, viewer, variant, timeLocale, viewerStaffAvatarRef.current),
+      );
       setHasOlderHistory(Boolean(data.hasOlder));
       setMessages((prev) => {
         const seen = new Set(prev.map((x) => x.id));
@@ -404,7 +446,7 @@ export function useOrderChat(opts: {
       }
       setMessages((prev) => {
         if (prev.some((x) => x.id === payload.id)) return prev;
-        return [...prev, mapApiToUi(payload, viewer, variant, timeLocale)];
+        return [...prev, mapApiToUi(payload, viewer, variant, timeLocale, viewerStaffAvatarRef.current)];
       });
       if (variant === 'account' && payload.authorRole === 'STAFF') {
         dispatchAccountWorkFeedRefreshEvent();
@@ -479,7 +521,9 @@ export function useOrderChat(opts: {
         if (disposed) return;
         conversationIdRef.current = data.conversationId ?? null;
         const viewer = viewerRef.current;
-        const rows = (data.messages ?? []).map((m) => mapApiToUi(m, viewer, variant, timeLocale));
+        const rows = (data.messages ?? []).map((m) =>
+          mapApiToUi(m, viewer, variant, timeLocale, viewerStaffAvatarRef.current),
+        );
         setMessages(rows);
         setHasOlderHistory(Boolean(data.hasOlder));
 
@@ -580,7 +624,7 @@ export function useOrderChat(opts: {
         const viewer = viewerRef.current;
         setMessages((prev) => {
           if (prev.some((x) => x.id === created.id)) return prev;
-          return [...prev, mapApiToUi(created, viewer, variant, timeLocale)];
+          return [...prev, mapApiToUi(created, viewer, variant, timeLocale, viewerStaffAvatarRef.current)];
         });
         setPendingRefs([]);
         if (variant === 'account') {

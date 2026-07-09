@@ -176,48 +176,19 @@
 }
 
 .sidebarProfile {
+  margin-top: auto;
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 32px;
+  width: 100%;
   min-width: 0;
-  flex: 1;
   padding: 8px;
+  border-top: var(--account-hairline-width, 0.7px) solid var(--account-hairline-color, rgba(0, 0, 0, 0.2));
   color: var(--color-black, #000000);
   text-decoration: none;
   border-radius: 6px;
   transition: background-color 0.15s ease;
-}
-
-.sidebarProfileBlock {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  min-width: 0;
-  padding-top: 8px;
-  border-top: var(--account-hairline-width, 0.7px) solid var(--account-hairline-color, rgba(0, 0, 0, 0.2));
-}
-
-.sidebarLogout {
-  align-self: flex-start;
-  margin-left: 8px;
-  padding: 4px 8px;
-  border: none;
-  background: transparent;
-  color: var(--color-black, #000000);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  border-radius: 4px;
-  opacity: 0.75;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
-}
-
-.sidebarLogout:hover {
-  opacity: 1;
-  background: #e6e6e6;
 }
 
 .sidebarProfile:hover {
