@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import { getServerRequestOrigin } from '@/lib/serverRequestOrigin';
 
 /** Серверный редирект по ссылке из письма — без промежуточного лендинга. */
 export async function GET(request: Request) {
+  const siteOrigin = await getServerRequestOrigin();
   const requestUrl = new URL(request.url);
   const t = requestUrl.searchParams.get('t')?.trim();
   if (!t) {
-    return NextResponse.redirect(new URL('/login/email', requestUrl.origin));
+    return NextResponse.redirect(new URL('/login/email', siteOrigin));
   }
 
   let res: Response;
@@ -18,7 +20,7 @@ export async function GET(request: Request) {
       cache: 'no-store',
     });
   } catch {
-    return NextResponse.redirect(new URL('/login/email', requestUrl.origin));
+    return NextResponse.redirect(new URL('/login/email', siteOrigin));
   }
 
   const body = (await res.json().catch(() => ({}))) as {
@@ -36,7 +38,7 @@ export async function GET(request: Request) {
         ? body.message.trim()
         : 'Ссылка приглашения недействительна или истекла',
     );
-    return NextResponse.redirect(new URL(`/login/email?${q.toString()}`, requestUrl.origin));
+    return NextResponse.redirect(new URL(`/login/email?${q.toString()}`, siteOrigin));
   }
 
   if (body.accountExists) {
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
     q.set('designerInvite', t);
     const email = (body.email ?? '').trim();
     if (email) q.set('prefillEmail', email);
-    return NextResponse.redirect(new URL(`/login/email?${q.toString()}`, requestUrl.origin));
+    return NextResponse.redirect(new URL(`/login/email?${q.toString()}`, siteOrigin));
   }
 
   const q = new URLSearchParams();
@@ -53,5 +55,5 @@ export async function GET(request: Request) {
   q.set('designerInvite', t);
   const email = (body.email ?? '').trim();
   if (email) q.set('prefillEmail', email);
-  return NextResponse.redirect(new URL(`/register/email?${q.toString()}`, requestUrl.origin));
+  return NextResponse.redirect(new URL(`/register/email?${q.toString()}`, siteOrigin));
 }
