@@ -15,8 +15,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { createClientRandomId } from '@/lib/clientRandomId';
 import type { adminProductGalleryEditorStrings } from '@/lib/admin-i18n/adminProductGalleryEditorI18n';
@@ -38,6 +39,7 @@ type SortableTileProps = {
   showOrder: boolean;
   strings: GalleryStrings;
   onRemove: () => void;
+  onPreview: () => void;
 };
 
 function SortableGalleryTile({
@@ -47,6 +49,7 @@ function SortableGalleryTile({
   showOrder,
   strings,
   onRemove,
+  onPreview,
 }: SortableTileProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: frame.id,
@@ -62,7 +65,14 @@ function SortableGalleryTile({
       style={style}
       className={`${styles.tile} ${isDragging ? styles.tileDragging : ''}`}
     >
-      <img className={styles.thumb} src={frame.url} alt="" loading="lazy" />
+      <button
+        type="button"
+        className={styles.previewBtn}
+        onClick={onPreview}
+        aria-label={strings.previewFrameAria(index + 1)}
+      >
+        <img className={styles.thumb} src={frame.url} alt="" loading="lazy" />
+      </button>
       {showCover && index === 0 ? <span className={styles.coverBadge}>{strings.cover}</span> : null}
       {showOrder && index > 0 ? (
         <span className={styles.orderBadge}>{index + 1}</span>
@@ -113,9 +123,95 @@ function newFrameId() {
   return createClientRandomId();
 }
 
+type GalleryLightboxProps = {
+  frames: ProductGalleryFrame[];
+  index: number;
+  strings: GalleryStrings;
+  onClose: () => void;
+  onIndexChange: (index: number) => void;
+};
+
+function GalleryLightbox({ frames, index, strings, onClose, onIndexChange }: GalleryLightboxProps) {
+  const frame = frames[index];
+  const hasPrev = index > 0;
+  const hasNext = index < frames.length - 1;
+
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft' && hasPrev) onIndexChange(index - 1);
+      if (e.key === 'ArrowRight' && hasNext) onIndexChange(index + 1);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [hasNext, hasPrev, index, onClose, onIndexChange]);
+
+  if (!frame) return null;
+
+  return (
+    <div className={styles.lightboxBackdrop} role="presentation" onClick={onClose}>
+      <div className={styles.lightboxToolbar} onClick={(e) => e.stopPropagation()}>
+        {frames.length > 1 ? (
+          <span className={styles.lightboxCounter}>
+            {strings.lightboxCounter(index + 1, frames.length)}
+          </span>
+        ) : (
+          <span />
+        )}
+        <AdminModalCloseButton
+          label={strings.lightboxClose}
+          className={styles.lightboxCloseBtn}
+          onClick={onClose}
+        />
+      </div>
+      {hasPrev ? (
+        <button
+          type="button"
+          className={`${styles.lightboxNav} ${styles.lightboxNavPrev}`}
+          aria-label={strings.lightboxPrev}
+          onClick={(e) => {
+            e.stopPropagation();
+            onIndexChange(index - 1);
+          }}
+        >
+          ‹
+        </button>
+      ) : null}
+      <img
+        className={styles.lightboxImage}
+        src={frame.url}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+      />
+      {hasNext ? (
+        <button
+          type="button"
+          className={`${styles.lightboxNav} ${styles.lightboxNavNext}`}
+          aria-label={strings.lightboxNext}
+          onClick={(e) => {
+            e.stopPropagation();
+            onIndexChange(index + 1);
+          }}
+        >
+          ›
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function ProductGalleryEditor(props: ProductGalleryEditorProps) {
   const { strings, className } = props;
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const isFull = props.mode === 'full';
@@ -240,6 +336,7 @@ export function ProductGalleryEditor(props: ProductGalleryEditorProps) {
                   showOrder={count > 1}
                   strings={strings}
                   onRemove={() => removeFrame(frame.id)}
+                  onPreview={() => setPreviewIndex(index)}
                 />
               ))}
               {isFull && !atMaxItems ? (
@@ -290,6 +387,16 @@ export function ProductGalleryEditor(props: ProductGalleryEditorProps) {
           mediaFilter="image"
           onClose={() => setPickerOpen(false)}
           onPickBatch={handlePickBatch}
+        />
+      ) : null}
+
+      {previewIndex != null && selectedFrames[previewIndex] ? (
+        <GalleryLightbox
+          frames={selectedFrames}
+          index={previewIndex}
+          strings={strings}
+          onClose={() => setPreviewIndex(null)}
+          onIndexChange={setPreviewIndex}
         />
       ) : null}
     </div>

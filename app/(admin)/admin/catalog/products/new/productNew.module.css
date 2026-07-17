@@ -147,12 +147,6 @@
   color: var(--color-gray, #9d9d9d);
 }
 
-.contextTagsList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 @media (max-width: 960px) {
   .productFormGrid {
     grid-template-columns: 1fr;

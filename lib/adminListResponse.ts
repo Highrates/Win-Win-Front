@@ -8,6 +8,7 @@ export type AdminListResponse<T> = {
 };
 
 export const ADMIN_LIST_DEFAULT_LIMIT = 20;
+export const ADMIN_LIST_PRODUCTS_LIMIT = 100;
 export const ADMIN_LIST_PICKER_LIMIT = 500;
 
 export function adminListParams(

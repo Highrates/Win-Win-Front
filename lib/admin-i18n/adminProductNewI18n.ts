@@ -66,12 +66,12 @@ export function adminProductNewStrings(locale: AdminLocale) {
     publishedAria: pick(locale, 'Товар опубликован в каталоге', '商品在目录中发布'),
     publishedLabel: pick(locale, 'Товар опубликован (в каталоге)', '商品已发布（目录中）'),
     contextTagsTitle: pick(locale, 'Контекстные теги', '上下文标签'),
-    contextTagsHint: pick(
-      locale,
-      'Где уместен товар: офис, дом, HoReCa и т.д. Не заменяют категорию.',
-      '适用场景：办公、家居、酒店餐饮等。不替代类别。',
-    ),
-    contextTagAria: (name: string) => pick(locale, `Тег: ${name}`, `标签：${name}`),
+    addContextTag: pick(locale, 'Добавить тег', '添加标签'),
+    addContextTagAria: pick(locale, 'Добавить контекстный тег', '添加上下文标签'),
+    chooseContextTag: pick(locale, '— Выберите тег —', '— 请选择标签 —'),
+    selectedContextTagsAria: pick(locale, 'Выбранные контекстные теги', '已选上下文标签'),
+    removeContextTagAria: (name: string) => pick(locale, `Убрать тег: ${name}`, `移除标签：${name}`),
+    noContextTagsSelected: pick(locale, 'Теги не выбраны.', '未选择标签。'),
     extraCatsTitle: pick(locale, 'Дополнительные категории', '附加类别'),
     extraCatsHint: pick(
       locale,

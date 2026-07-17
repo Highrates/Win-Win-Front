@@ -140,20 +140,25 @@ export default function ProductInteractive(props: Props) {
     buildInitialSelections(elements, variants, selectedVariantId ?? defaultVariantId),
   );
 
+  /** Одна модификация — селектор скрыт, но для заказа/проекта mod всё равно нужна. */
+  const soleModificationId =
+    modifications.length === 1 ? (modifications[0]?.id ?? null) : null;
+  const effectiveModificationId = modificationId ?? soleModificationId;
+
   const matchedVariant = useMemo(
-    () => findExactVariant(variants, elements, modificationId, selections),
-    [variants, elements, modificationId, selections],
+    () => findExactVariant(variants, elements, effectiveModificationId, selections),
+    [variants, elements, effectiveModificationId, selections],
   );
 
   /** Достаточно для строки проекта: модификация + материал-цвет по каждому элементу (SKU может не существовать). */
   const configurationReadyForProject = useMemo(() => {
-    if (!modificationId) return false;
+    if (!effectiveModificationId) return false;
     const required = elements.filter((el) => el.availabilities.length > 0);
     return required.every((el) => Boolean(selections[el.id]));
-  }, [modificationId, elements, selections]);
+  }, [effectiveModificationId, elements, selections]);
 
   const priceText = useMemo(() => {
-    if (matchedVariant) {
+    if (modificationId && matchedVariant) {
       const n = parseProductPriceFromApi(matchedVariant.price);
       if (n > 0) return formatProductPriceRub(n);
     }
@@ -162,15 +167,15 @@ export default function ProductInteractive(props: Props) {
     }
     if (priceMin > 0) return formatProductPriceRub(priceMin);
     return '—';
-  }, [matchedVariant, priceMin, priceMax]);
+  }, [modificationId, matchedVariant, priceMin, priceMax]);
 
   const galleryImages = useMemo(() => {
-    if (matchedVariant) {
+    if (modificationId && matchedVariant) {
       const imgs = variantImagesMap[matchedVariant.id];
       if (imgs && imgs.length > 0) return imgs;
     }
     return productImages;
-  }, [matchedVariant, variantImagesMap, productImages]);
+  }, [modificationId, matchedVariant, variantImagesMap, productImages]);
 
   const [designerProjects, setDesignerProjects] = useState<ProductOrderProjectOption[]>([]);
   const [designerProjectsLoading, setDesignerProjectsLoading] = useState(false);
@@ -228,7 +233,7 @@ export default function ProductInteractive(props: Props) {
       modifications,
       elements,
       thumbUrl,
-      modificationId,
+      modificationId: effectiveModificationId,
       selections,
       matchedVariant,
       catalogPriceMinRub: priceMin,
@@ -412,7 +417,7 @@ export default function ProductInteractive(props: Props) {
               modificationSlug: m.modificationSlug,
             }))}
             selectedModificationId={modificationId}
-            onSelect={(id) => setModificationId(id)}
+            onSelect={(id) => setModificationId((cur) => (cur === id ? null : id))}
           />
 
           <ProductElementTabs

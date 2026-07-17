@@ -19,6 +19,12 @@ export function adminProductGalleryEditorStrings(locale: AdminLocale) {
     addFrameAria: pick(locale, 'Добавить кадр в галерею', '添加图片到图库'),
     removeFrameAria: pick(locale, 'Убрать кадр', '移除图片'),
     addFromLibraryAria: pick(locale, 'Добавить из медиатеки', '从媒体库添加'),
+    previewFrameAria: (n: number) => pick(locale, `Открыть кадр ${n} во весь экран`, `全屏打开第 ${n} 帧`),
+    lightboxClose: pick(locale, 'Закрыть', '关闭'),
+    lightboxPrev: pick(locale, 'Предыдущий кадр', '上一帧'),
+    lightboxNext: pick(locale, 'Следующий кадр', '下一帧'),
+    lightboxCounter: (current: number, total: number) =>
+      pick(locale, `${current} / ${total}`, `${current} / ${total}`),
     emptyPool: pick(
       locale,
       'У товара пока нет общей галереи — задайте кадры на карточке товара.',

@@ -69,6 +69,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const [productSetPick, setProductSetPick] = useState('');
   const [catalogTags, setCatalogTags] = useState<AdminCatalogTagRow[]>([]);
   const [catalogTagIds, setCatalogTagIds] = useState<Set<string>>(() => new Set());
+  const [catalogTagPick, setCatalogTagPick] = useState('');
   const [brandId, setBrandId] = useState('');
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -201,6 +202,11 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     [productSets, curatedProductSetIds],
   );
 
+  const catalogTagsAvailableForPick = useMemo(
+    () => catalogTags.filter((t) => !catalogTagIds.has(t.id)),
+    [catalogTags, catalogTagIds],
+  );
+
   const pickMediaFromLibrary = useCallback(
     (kind: 'image' | 'video') =>
       new Promise<string | null>((resolve) => {
@@ -235,11 +241,16 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     });
   }
 
-  function toggleCatalogTag(tagId: string, checked: boolean) {
+  function addCatalogTagFromDropdown(tagId: string) {
+    if (!tagId || catalogTagIds.has(tagId)) return;
+    setCatalogTagIds((prev) => new Set(prev).add(tagId));
+    setCatalogTagPick('');
+  }
+
+  function removeCatalogTag(tagId: string) {
     setCatalogTagIds((prev) => {
       const next = new Set(prev);
-      if (checked) next.add(tagId);
-      else next.delete(tagId);
+      next.delete(tagId);
       return next;
     });
   }
@@ -519,39 +530,50 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
               <h3 className={`${catalogStyles.groupHeading} ${pn.placementGroupHeading}`}>
                 {s.contextTagsTitle}
               </h3>
-              <p className={pn.placementHint}>{s.contextTagsHint}</p>
-              {catalogTags.length > 0 ? (
-                <div className={pn.contextTagsList}>
-                  {catalogTags.map((tag) => {
-                    const inputId = `product-catalog-tag-${tag.id}`;
-                    return (
-                      <div key={tag.id} className={catalogStyles.labelCheckboxRow}>
-                        <AccountCheckbox
-                          id={inputId}
-                          className={catalogStyles.adminCheckboxForm}
-                          checked={catalogTagIds.has(tag.id)}
-                          onChange={(e) => toggleCatalogTag(tag.id, e.target.checked)}
-                          aria-label={s.contextTagAria(tag.name)}
-                        />
-                        <label htmlFor={inputId}>{tag.name}</label>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className={catalogStyles.muted}>{s.loadingProduct}</p>
-              )}
-              {catalogTagIds.size > 0 ? (
-                <div style={{ marginTop: 8 }}>
-                  <AdminPillChipList aria-label={s.contextTagsTitle}>
+              <div className={pn.additionalCatsWrap}>
+                <AdminSelect
+                  label={s.addContextTag}
+                  aria-label={s.addContextTagAria}
+                  value={catalogTagPick}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v) addCatalogTagFromDropdown(v);
+                    else setCatalogTagPick('');
+                  }}
+                  disabled={catalogTags.length === 0}
+                >
+                  <option value="">{s.chooseContextTag}</option>
+                  {catalogTagsAvailableForPick.map((tag) => (
+                    <option key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </option>
+                  ))}
+                </AdminSelect>
+                {catalogTags.length === 0 ? (
+                  <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
+                    {s.loadingProduct}
+                  </p>
+                ) : null}
+                {catalogTagIds.size > 0 ? (
+                  <AdminPillChipList aria-label={s.selectedContextTagsAria}>
                     {catalogTags
                       .filter((t) => catalogTagIds.has(t.id))
                       .map((t) => (
-                        <AdminPillBadge key={t.id}>{t.name}</AdminPillBadge>
+                        <AdminPillChip
+                          key={t.id}
+                          onRemove={() => removeCatalogTag(t.id)}
+                          removeAriaLabel={s.removeContextTagAria(t.name)}
+                        >
+                          {t.name}
+                        </AdminPillChip>
                       ))}
                   </AdminPillChipList>
-                </div>
-              ) : null}
+                ) : (
+                  <p className={catalogStyles.muted} style={{ marginTop: 8 }}>
+                    {s.noContextTagsSelected}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className={pn.placementBlock}>

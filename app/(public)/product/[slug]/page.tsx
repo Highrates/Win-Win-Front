@@ -39,8 +39,8 @@ export async function generateMetadata({
 }
 
 /**
- * Начальная модификация: из `?m=<slug|id>`, иначе `defaultModificationId`,
- * иначе первая. Дальше переключение — клиентское, чтобы не сбрасывать selections.
+ * Начальная модификация только из `?m=<slug|id>` или якорного варианта (`?v=` / `?vs=`).
+ * Без query — без выбранной модификации (галерея и цена уровня товара).
  */
 function pickModificationId(
   product: ReturnType<typeof parsePublicProduct>,
@@ -54,7 +54,7 @@ function pickModificationId(
     const byId = product.modifications.find((m) => m.id === q);
     if (byId) return byId.id;
   }
-  return product.defaultModificationId ?? product.modifications[0]?.id ?? null;
+  return null;
 }
 
 export default async function ProductPage({

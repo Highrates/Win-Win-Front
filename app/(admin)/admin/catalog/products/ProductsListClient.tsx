@@ -9,6 +9,7 @@ import { AdminListPagination } from '@/components/admin/AdminListPagination/Admi
 import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { ADMIN_LIST_PRODUCTS_LIMIT } from '@/lib/adminListResponse';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminProductsListStrings } from '@/lib/admin-i18n/adminProductsListI18n';
@@ -56,6 +57,7 @@ export function ProductsListClient() {
     path: 'catalog/admin/products',
     page,
     q: debouncedQ,
+    limit: ADMIN_LIST_PRODUCTS_LIMIT,
     errorFallback: s.errLoad,
   });
 

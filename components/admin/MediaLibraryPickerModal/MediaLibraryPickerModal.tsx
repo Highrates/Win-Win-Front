@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
 import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import compactStyles from '@/components/AdminCompactBtn/AdminCompactBtn.module.css';
 import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
@@ -98,6 +99,7 @@ function selectionAllowed(
 }
 
 const PICKER_LIBRARY_SCOPE: MediaLibraryScope = 'winwin';
+const PICKER_OBJECTS_LIMIT = 40;
 
 export function MediaLibraryPickerModal({
   open,
@@ -121,12 +123,14 @@ export function MediaLibraryPickerModal({
 
   const [folders, setFolders] = useState<MediaFolderRow[]>([]);
   const [objects, setObjects] = useState<MediaObjectRow[]>([]);
+  const [objectsPage, setObjectsPage] = useState(1);
+  const [objectsTotal, setObjectsTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  /** Режим `onPickBatch`: id выбранных карточек */
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  /** Режим `onPickBatch`: выбранные карточки (сохраняются между страницами) */
+  const [selectedById, setSelectedById] = useState<Map<string, MediaLibraryPickResult>>(() => new Map());
 
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
 
@@ -182,8 +186,9 @@ export function MediaLibraryPickerModal({
     setDebouncedQ('');
     setFolderFilter(null);
     setFolderQ('');
+    setObjectsPage(1);
     setSelectedId(null);
-    setSelectedIds([]);
+    setSelectedById(new Map());
     setError(null);
     setCollapsedFolderIds(readCollapsedFolderIds(PICKER_LIBRARY_SCOPE));
   }, [open, mediaFilter]);
@@ -192,6 +197,10 @@ export function MediaLibraryPickerModal({
     const t = setTimeout(() => setDebouncedQ(q.trim()), 300);
     return () => clearTimeout(t);
   }, [q]);
+
+  useEffect(() => {
+    setObjectsPage(1);
+  }, [debouncedQ, tab, folderFilter]);
 
   const loadFolders = useCallback(async () => {
     try {
@@ -208,19 +217,21 @@ export function MediaLibraryPickerModal({
     setLoading(true);
     setError(null);
     try {
-      const sp = adminListParams({ page: 1, limit: 40, q: debouncedQ });
+      const sp = adminListParams({ page: objectsPage, limit: PICKER_OBJECTS_LIMIT, q: debouncedQ });
       sp.set('tab', tab);
       sp.set('scope', 'winwin');
       if (folderFilter) sp.set('folderId', folderFilter);
       const data = await adminBackendList<MediaObjectRow>('catalog/admin/media/objects', sp);
       setObjects(data.items);
+      setObjectsTotal(data.total);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки');
       setObjects([]);
+      setObjectsTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [tab, debouncedQ, folderFilter]);
+  }, [tab, debouncedQ, folderFilter, objectsPage]);
 
   useEffect(() => {
     if (!open) return;
@@ -395,10 +406,17 @@ export function MediaLibraryPickerModal({
         await loadObjects();
         await loadFolders();
         if (lastOk && selectionAllowed(mediaFilter, lastOk)) {
+          const pick = {
+            url: lastOk.publicUrl,
+            id: lastOk.id,
+            originalName: lastOk.originalName,
+          };
           if (multiMode) {
-            setSelectedIds((prev) =>
-              prev.includes(lastOk!.id) ? prev : [...prev, lastOk!.id],
-            );
+            setSelectedById((prev) => {
+              const next = new Map(prev);
+              next.set(lastOk!.id, pick);
+              return next;
+            });
           } else {
             setSelectedId(lastOk.id);
           }
@@ -429,20 +447,25 @@ export function MediaLibraryPickerModal({
 
   function confirmBatch() {
     if (!onPickBatch) return;
-    const rows = objects.filter(
-      (o) => selectedIds.includes(o.id) && selectionAllowed(mediaFilter, o),
-    );
+    const rows = Array.from(selectedById.values());
     if (!rows.length) return;
-    onPickBatch(
-      rows.map((r) => ({ url: r.publicUrl, id: r.id, originalName: r.originalName })),
-    );
+    onPickBatch(rows);
   }
 
   function toggleCardSelection(row: MediaObjectRow) {
     if (!selectionAllowed(mediaFilter, row)) return;
-    setSelectedIds((prev) =>
-      prev.includes(row.id) ? prev.filter((x) => x !== row.id) : [...prev, row.id],
-    );
+    setSelectedById((prev) => {
+      const next = new Map(prev);
+      if (next.has(row.id)) next.delete(row.id);
+      else {
+        next.set(row.id, {
+          url: row.publicUrl,
+          id: row.id,
+          originalName: row.originalName,
+        });
+      }
+      return next;
+    });
   }
 
   const selectedRow = selectedId ? objects.find((o) => o.id === selectedId) : undefined;
@@ -453,9 +476,7 @@ export function MediaLibraryPickerModal({
     selectionAllowed(mediaFilter, selectedRow) &&
     !loading &&
     !uploading;
-  const batchCount = objects.filter(
-    (o) => selectedIds.includes(o.id) && selectionAllowed(mediaFilter, o),
-  ).length;
+  const batchCount = selectedById.size;
   const canConfirmBatch =
     multiMode && batchCount > 0 && !loading && !uploading;
 
@@ -629,7 +650,7 @@ export function MediaLibraryPickerModal({
                     {objects.map((row) => {
                       const allowed = selectionAllowed(mediaFilter, row);
                       const selected = multiMode
-                        ? selectedIds.includes(row.id)
+                        ? selectedById.has(row.id)
                         : row.id === selectedId;
                       return (
                         <li
@@ -699,6 +720,13 @@ export function MediaLibraryPickerModal({
                     })}
                   </ul>
                 )}
+                <AdminListPagination
+                  page={objectsPage}
+                  total={objectsTotal}
+                  limit={PICKER_OBJECTS_LIMIT}
+                  onPageChange={setObjectsPage}
+                  disabled={loading}
+                />
               </div>
             </div>
           </div>

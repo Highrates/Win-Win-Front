@@ -16,9 +16,8 @@ type Props = {
 
 /**
  * Селектор модификаций. Стили переиспользуют `productSizeSelect`.
- * Переключение — чисто клиентское (через `onSelect`), без навигации, чтобы сохранять
- * локальный стейт selections; для SEO/deep-linking на бэке продолжаем читать `?m=`,
- * но здесь навигацию не триггерим.
+ * Переключение — клиентское (toggle: повторный клик снимает выбор).
+ * Для SEO/deep-linking на бэке читаем `?m=`; без query модификация не выбрана.
  */
 export default function ProductModifications({
   modifications,
