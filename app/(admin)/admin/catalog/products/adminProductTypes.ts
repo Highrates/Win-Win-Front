@@ -55,6 +55,14 @@ export type AdminProductVariantSummary = {
   selectionsLabel: string | null;
 };
 
+/** Контекстный тег каталога (офис, дом, …). */
+export type AdminCatalogTagRow = {
+  id: string;
+  slug: string;
+  name: string;
+  sortOrder: number;
+};
+
 /** Ответ GET catalog/admin/products/:id */
 export type ProductAdminDetail = {
   id: string;
@@ -64,6 +72,8 @@ export type ProductAdminDetail = {
   additionalCategoryIds: string[];
   curatedCollectionIds: string[];
   curatedProductSetIds: string[];
+  catalogTagIds: string[];
+  catalogTags: AdminCatalogTagRow[];
   brandId: string | null;
   shortDescription: string | null;
   isActive: boolean;

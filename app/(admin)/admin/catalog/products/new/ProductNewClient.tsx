@@ -15,6 +15,7 @@ import type { AdminBrandRow } from '../../../brands/adminBrandTypes';
 import type { AdminCategoryRow } from '../../categories/adminCategoryTypes';
 import type {
   AdminProductVariantSummary,
+  AdminCatalogTagRow,
   ProductAdminDetail,
 } from '../adminProductTypes';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
@@ -66,6 +67,8 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   const [collectionPick, setCollectionPick] = useState('');
   const [curatedProductSetIds, setCuratedProductSetIds] = useState<Set<string>>(() => new Set());
   const [productSetPick, setProductSetPick] = useState('');
+  const [catalogTags, setCatalogTags] = useState<AdminCatalogTagRow[]>([]);
+  const [catalogTagIds, setCatalogTagIds] = useState<Set<string>>(() => new Set());
   const [brandId, setBrandId] = useState('');
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -100,6 +103,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     setAdditionalCategoryIds(new Set(p.additionalCategoryIds ?? []));
     setCuratedCollectionIds(new Set(p.curatedCollectionIds ?? []));
     setCuratedProductSetIds(new Set(p.curatedProductSetIds ?? []));
+    setCatalogTagIds(new Set(p.catalogTagIds ?? []));
     setBrandId(p.brandId ?? '');
     setShortDescription(p.shortDescription ?? '');
     setIsActive(p.isActive);
@@ -125,17 +129,19 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       setLoadError(null);
       if (productId) setProductLoaded(false);
       try {
-        const [cats, brs, cols, sets] = await Promise.all([
+        const [cats, brs, cols, sets, tags] = await Promise.all([
           adminBackendJson<AdminCategoryRow[]>('catalog/admin/categories'),
           adminBackendListAll<AdminBrandRow>('catalog/admin/brands'),
           adminBackendListAll<AdminCuratedCollectionRow>('catalog/admin/curated-collections'),
           adminBackendListAll<AdminProductSetRow>('catalog/admin/product-sets'),
+          adminBackendJson<AdminCatalogTagRow[]>('catalog/admin/catalog-tags'),
         ]);
         if (cancelled) return;
         setCategories(cats);
         setBrands(brs);
         setCuratedCollections(cols);
         setProductSets(sets);
+        setCatalogTags(tags);
 
         if (productId) {
           const p = await adminBackendJson<ProductAdminDetail>(`catalog/admin/products/${productId}`);
@@ -229,6 +235,15 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
     });
   }
 
+  function toggleCatalogTag(tagId: string, checked: boolean) {
+    setCatalogTagIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(tagId);
+      else next.delete(tagId);
+      return next;
+    });
+  }
+
   function addCuratedCollectionFromDropdown(colId: string) {
     if (!colId || curatedCollectionIds.has(colId)) return;
     setCuratedCollectionIds((prev) => new Set(prev).add(colId));
@@ -311,6 +326,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       additionalCategoryIds: Array.from(additionalCategoryIds),
       curatedCollectionIds: Array.from(curatedCollectionIds),
       curatedProductSetIds: Array.from(curatedProductSetIds),
+      catalogTagIds: Array.from(catalogTagIds),
       brandId: brandId || null,
       name: nameTrim,
       slug: slug.trim() || undefined,
@@ -497,6 +513,45 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
                   </option>
                 ))}
               </AdminSelect>
+            </div>
+
+            <div className={pn.placementBlock}>
+              <h3 className={`${catalogStyles.groupHeading} ${pn.placementGroupHeading}`}>
+                {s.contextTagsTitle}
+              </h3>
+              <p className={pn.placementHint}>{s.contextTagsHint}</p>
+              {catalogTags.length > 0 ? (
+                <div className={pn.contextTagsList}>
+                  {catalogTags.map((tag) => {
+                    const inputId = `product-catalog-tag-${tag.id}`;
+                    return (
+                      <div key={tag.id} className={catalogStyles.labelCheckboxRow}>
+                        <AccountCheckbox
+                          id={inputId}
+                          className={catalogStyles.adminCheckboxForm}
+                          checked={catalogTagIds.has(tag.id)}
+                          onChange={(e) => toggleCatalogTag(tag.id, e.target.checked)}
+                          aria-label={s.contextTagAria(tag.name)}
+                        />
+                        <label htmlFor={inputId}>{tag.name}</label>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className={catalogStyles.muted}>{s.loadingProduct}</p>
+              )}
+              {catalogTagIds.size > 0 ? (
+                <div style={{ marginTop: 8 }}>
+                  <AdminPillChipList aria-label={s.contextTagsTitle}>
+                    {catalogTags
+                      .filter((t) => catalogTagIds.has(t.id))
+                      .map((t) => (
+                        <AdminPillBadge key={t.id}>{t.name}</AdminPillBadge>
+                      ))}
+                  </AdminPillChipList>
+                </div>
+              ) : null}
             </div>
 
             <div className={pn.placementBlock}>

@@ -65,6 +65,13 @@ export function adminProductNewStrings(locale: AdminLocale) {
     choosePlaceholder: pick(locale, '— Выберите —', '— 请选择 —'),
     publishedAria: pick(locale, 'Товар опубликован в каталоге', '商品在目录中发布'),
     publishedLabel: pick(locale, 'Товар опубликован (в каталоге)', '商品已发布（目录中）'),
+    contextTagsTitle: pick(locale, 'Контекстные теги', '上下文标签'),
+    contextTagsHint: pick(
+      locale,
+      'Где уместен товар: офис, дом, HoReCa и т.д. Не заменяют категорию.',
+      '适用场景：办公、家居、酒店餐饮等。不替代类别。',
+    ),
+    contextTagAria: (name: string) => pick(locale, `Тег: ${name}`, `标签：${name}`),
     extraCatsTitle: pick(locale, 'Дополнительные категории', '附加类别'),
     extraCatsHint: pick(
       locale,
