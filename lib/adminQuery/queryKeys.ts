@@ -1,8 +1,16 @@
 export const adminQueryKeys = {
   products: {
     all: ['admin', 'catalog', 'products'] as const,
-    list: (params: { q: string; page: number }) =>
-      ['admin', 'catalog', 'products', 'list', params] as const,
+    list: (params: {
+      q: string;
+      page: number;
+      visibility?: string;
+      brandId?: string;
+      categoryId?: string;
+      tagId?: string;
+      collectionId?: string;
+      productSetId?: string;
+    }) => ['admin', 'catalog', 'products', 'list', params] as const,
   },
   categories: {
     all: ['admin', 'catalog', 'categories'] as const,

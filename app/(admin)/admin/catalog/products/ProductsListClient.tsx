@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
 import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
+import { AdminPillChip, AdminPillChipList } from '@/components/AdminPillChip/AdminPillChip';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
-import { ADMIN_LIST_PRODUCTS_LIMIT } from '@/lib/adminListResponse';
+import { ADMIN_LIST_PRODUCTS_LIMIT, adminBackendListAll } from '@/lib/adminListResponse';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminProductsListStrings } from '@/lib/admin-i18n/adminProductsListI18n';
@@ -20,8 +22,26 @@ import {
   useAdminListSearch,
   useInvalidateAdminQueries,
 } from '@/lib/adminQuery';
+import type { AdminBrandRow } from '../../brands/adminBrandTypes';
+import type { AdminCuratedCollectionRow } from '../../collections/collectionsAdminTypes';
+import type { AdminProductSetRow } from '../../product-sets/productSetsAdminTypes';
+import type { AdminCategoryRow } from '../categories/adminCategoryTypes';
 import styles from '../catalogAdmin.module.css';
-import type { AdminProductRow } from './adminProductTypes';
+import filterStyles from './productsListFilters.module.css';
+import type { AdminCatalogTagRow, AdminProductRow } from './adminProductTypes';
+import { ProductsListFilterModal } from './ProductsListFilterModal';
+import {
+  EMPTY_PRODUCT_LIST_FILTERS,
+  countActiveProductListFilters,
+  productListFilterChipLabels,
+  productListFiltersToParams,
+  type ProductListFilterMeta,
+  type ProductListFilters,
+} from './productListFilters';
+
+export type ProductVisibilityFilter = 'all' | 'catalog' | 'hidden';
+
+const VISIBILITY_FILTERS: ProductVisibilityFilter[] = ['all', 'catalog', 'hidden'];
 
 function formatPrice(amount: string, currency: string, numberLocale: string): string {
   const n = Number(amount);
@@ -47,17 +67,88 @@ export function ProductsListClient() {
   const invalidate = useInvalidateAdminQueries();
   const { confirm } = useAdminConfirm();
 
-  const { q, setQ, debouncedQ, page, setPage } = useAdminListSearch();
+  const [visibilityIndex, setVisibilityIndex] = useState(0);
+  const visibility = VISIBILITY_FILTERS[visibilityIndex] ?? 'all';
+  const visibilityTabLabels = useMemo(
+    () => [s.tabAll, s.tabCatalog, s.tabHidden],
+    [s.tabAll, s.tabCatalog, s.tabHidden],
+  );
+
+  const [appliedFilters, setAppliedFilters] = useState<ProductListFilters>(EMPTY_PRODUCT_LIST_FILTERS);
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [filterMeta, setFilterMeta] = useState<ProductListFilterMeta | null>(null);
+  const [filterMetaLoading, setFilterMetaLoading] = useState(false);
+
+  const activeFilterCount = countActiveProductListFilters(appliedFilters);
+
+  const loadFilterMeta = useCallback(async () => {
+    if (filterMeta || filterMetaLoading) return;
+    setFilterMetaLoading(true);
+    try {
+      const [categories, brands, catalogTags, collections, productSets] = await Promise.all([
+        adminBackendJson<AdminCategoryRow[]>('catalog/admin/categories'),
+        adminBackendListAll<AdminBrandRow>('catalog/admin/brands'),
+        adminBackendJson<AdminCatalogTagRow[]>('catalog/admin/catalog-tags'),
+        adminBackendListAll<AdminCuratedCollectionRow>('catalog/admin/curated-collections'),
+        adminBackendListAll<AdminProductSetRow>('catalog/admin/product-sets'),
+      ]);
+      setFilterMeta({ categories, brands, catalogTags, collections, productSets });
+    } catch {
+      setFilterMeta(null);
+    } finally {
+      setFilterMetaLoading(false);
+    }
+  }, [filterMeta, filterMetaLoading]);
+
+  useEffect(() => {
+    void loadFilterMeta();
+  }, [loadFilterMeta]);
+
+  const filterChipLabels = useMemo(
+    () =>
+      productListFilterChipLabels(appliedFilters, filterMeta, {
+        brand: s.filterChipBrand,
+        category: s.filterChipCategory,
+        tag: s.filterChipTag,
+        collection: s.filterChipCollection,
+        productSet: s.filterChipProductSet,
+        noBrand: s.filterChipNoBrand,
+      }),
+    [appliedFilters, filterMeta, s],
+  );
+
+  const { q, setQ, debouncedQ, page, setPage } = useAdminListSearch(300, [
+    visibilityIndex,
+    appliedFilters,
+  ]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
+  const listParams = useMemo(
+    () => ({
+      q: debouncedQ,
+      page,
+      visibility: visibility === 'all' ? undefined : visibility,
+      ...productListFiltersToParams(appliedFilters),
+    }),
+    [debouncedQ, page, visibility, appliedFilters],
+  );
+
+  const listExtraParams = useMemo(() => {
+    const params: Record<string, string | undefined> = {};
+    if (visibility !== 'all') params.visibility = visibility;
+    Object.assign(params, productListFiltersToParams(appliedFilters));
+    return Object.keys(params).length ? params : undefined;
+  }, [visibility, appliedFilters]);
+
   const { rows, total, limit, loading, isFetching, error: listError, refetch } = useAdminList<AdminProductRow>({
-    queryKey: adminQueryKeys.products.list({ q: debouncedQ, page }),
+    queryKey: adminQueryKeys.products.list(listParams),
     path: 'catalog/admin/products',
     page,
     q: debouncedQ,
     limit: ADMIN_LIST_PRODUCTS_LIMIT,
+    extraParams: listExtraParams,
     errorFallback: s.errLoad,
   });
 
@@ -65,7 +156,27 @@ export function ProductsListClient() {
 
   useEffect(() => {
     setSelected(new Set());
-  }, [debouncedQ]);
+  }, [debouncedQ, visibilityIndex, appliedFilters]);
+
+  function onSelectVisibilityTab(index: number) {
+    setVisibilityIndex(index);
+    setPage(1);
+  }
+
+  function openFilterModal() {
+    void loadFilterMeta();
+    setFilterModalOpen(true);
+  }
+
+  function removeFilter(key: keyof ProductListFilters) {
+    setAppliedFilters((prev) => ({ ...prev, [key]: '' }));
+    setPage(1);
+  }
+
+  function clearAllFilters() {
+    setAppliedFilters(EMPTY_PRODUCT_LIST_FILTERS);
+    setPage(1);
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -113,6 +224,18 @@ export function ProductsListClient() {
   const allSelected = rows.length > 0 && selected.size === rows.length;
 
   return (
+    <>
+      <AdminTabs
+        variant="underline"
+        ariaLabel={s.visibilityTabsAria}
+        items={visibilityTabLabels.map((label, index) => ({
+          id: index,
+          label,
+        }))}
+        activeId={visibilityIndex}
+        onChange={onSelectVisibilityTab}
+      />
+
       <AdminListShell
       loading={loading}
       error={error}
@@ -122,40 +245,66 @@ export function ProductsListClient() {
       isEmpty={!loading && !error && rows.length === 0}
       isFetching={isFetching}
       toolbar={
-        <div className={styles.toolbar}>
-          <AdminSearchBox
-            className={styles.searchBoxToolbar}
-            placeholder={s.searchPh}
-            ariaLabel={s.searchAria}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <AdminCompactBtnLink href="/admin/catalog/products/new">{s.add}</AdminCompactBtnLink>
-          <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
-            {!debouncedQ && rows.length > 0 ? (
-              <>
-                <AdminCompactBtn
-                  type="button"
-                  variant="outline"
-                  onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
-                >
-                  {s.selectAll}
-                </AdminCompactBtn>
-                <AdminCompactBtn type="button" variant="outline" onClick={() => setSelected(new Set())}>
-                  {s.clear}
-                </AdminCompactBtn>
-              </>
-            ) : null}
-            <AdminCompactBtn
-              type="button"
-              variant="danger"
-              disabled={!selected.size || deleting}
-              onClick={removeSelected}
-            >
-              {deleting ? s.deleting : s.delete(selected.size)}
+        <>
+          <div className={styles.toolbar}>
+            <AdminSearchBox
+              className={styles.searchBoxToolbar}
+              placeholder={s.searchPh}
+              ariaLabel={s.searchAria}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <AdminCompactBtn type="button" variant="outline" onClick={openFilterModal}>
+              {s.filterBtn}
+              {activeFilterCount > 0 ? (
+                <span className={filterStyles.filterBtnCount}> ({activeFilterCount})</span>
+              ) : null}
             </AdminCompactBtn>
+            <AdminCompactBtnLink href="/admin/catalog/products/new">{s.add}</AdminCompactBtnLink>
+            <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
+              {!debouncedQ && activeFilterCount === 0 && rows.length > 0 ? (
+                <>
+                  <AdminCompactBtn
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSelected(new Set(rows.map((r) => r.id)))}
+                  >
+                    {s.selectAll}
+                  </AdminCompactBtn>
+                  <AdminCompactBtn type="button" variant="outline" onClick={() => setSelected(new Set())}>
+                    {s.clear}
+                  </AdminCompactBtn>
+                </>
+              ) : null}
+              <AdminCompactBtn
+                type="button"
+                variant="danger"
+                disabled={!selected.size || deleting}
+                onClick={removeSelected}
+              >
+                {deleting ? s.deleting : s.delete(selected.size)}
+              </AdminCompactBtn>
+            </div>
           </div>
-        </div>
+          {filterChipLabels.length > 0 ? (
+            <div className={filterStyles.activeFilters}>
+              <AdminPillChipList aria-label={s.filterTitle}>
+                {filterChipLabels.map((chip) => (
+                  <AdminPillChip
+                    key={chip.key}
+                    onRemove={() => removeFilter(chip.key)}
+                    removeAriaLabel={s.removeFilter(chip.label)}
+                  >
+                    {chip.label}
+                  </AdminPillChip>
+                ))}
+              </AdminPillChipList>
+              <button type="button" className={filterStyles.clearFiltersBtn} onClick={clearAllFilters}>
+                {s.filterClearAll}
+              </button>
+            </div>
+          ) : null}
+        </>
       }
       pagination={
         <AdminListPagination
@@ -231,5 +380,18 @@ export function ProductsListClient() {
         </tbody>
       </table>
     </AdminListShell>
+
+      <ProductsListFilterModal
+        open={filterModalOpen}
+        meta={filterMeta}
+        metaLoading={filterMetaLoading}
+        applied={appliedFilters}
+        onClose={() => setFilterModalOpen(false)}
+        onApply={(next) => {
+          setAppliedFilters(next);
+          setPage(1);
+        }}
+      />
+    </>
   );
 }

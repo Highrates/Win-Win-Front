@@ -1,0 +1,15 @@
+.filterBtnCount {
+  font-weight: 600;
+}
+
+.activeFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: -6px 0 12px;
+}
+
+.clearFiltersBtn {
+  font-size: 0.875rem;
+}
