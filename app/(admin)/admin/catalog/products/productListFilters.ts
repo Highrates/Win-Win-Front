@@ -1,7 +1,7 @@
 import type { AdminLocale } from '@/lib/admin-i18n/adminChromeI18n';
-import type { AdminBrandRow } from '../../../brands/adminBrandTypes';
-import type { AdminCuratedCollectionRow } from '../../../collections/collectionsAdminTypes';
-import type { AdminProductSetRow } from '../../../product-sets/productSetsAdminTypes';
+import type { AdminBrandRow } from '../../brands/adminBrandTypes';
+import type { AdminCuratedCollectionRow } from '../../collections/collectionsAdminTypes';
+import type { AdminProductSetRow } from '../../product-sets/productSetsAdminTypes';
 import type { AdminCategoryRow } from '../categories/adminCategoryTypes';
 import type { AdminCatalogTagRow } from './adminProductTypes';
 
