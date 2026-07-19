@@ -34,7 +34,7 @@ export function Hero({ imageUrl }: { imageUrl?: string | null }) {
         </div>
         <div className={styles.heroBetaRow} aria-hidden="true">
           <div className="padding-global">
-            <p className={styles.heroBeta}>Beta 1.0 · 2026</p>
+            <p className={styles.heroBeta}>Beta 2.0 · 2026</p>
           </div>
         </div>
       </div>

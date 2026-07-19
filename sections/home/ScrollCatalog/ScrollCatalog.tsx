@@ -2,34 +2,47 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useId } from 'react';
-import { homeRootsFromPublicTreeClient, type HomeCatalogRoot } from '@/lib/homeCatalog';
-import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
+import {
+  homeRootsFromPublicTreeClient,
+  type HomeCatalogChild,
+  type HomeCatalogRoot,
+} from '@/lib/homeCatalog';
 import { animateScrollStripBy } from './scrollStripScroll';
 import styles from './ScrollCatalog.module.css';
 
 const DRAG_THRESHOLD = 5;
 
-type CatalogTagTab = {
-  slug: string;
-  name: string;
-};
-
-type TagStripCategory = {
-  slug: string;
-  name: string;
-  backgroundImageUrl: string | null;
-};
-
 type Props = {
   roots: HomeCatalogRoot[];
 };
 
+type StripCard = {
+  slug: string;
+  name: string;
+  image: string;
+};
+
+function cardsForRoot(root: HomeCatalogRoot | undefined): StripCard[] {
+  if (!root) return [];
+  const children = root.children ?? [];
+  if (children.length > 0) {
+    return children.map((c: HomeCatalogChild) => ({
+      slug: c.slug,
+      name: c.name,
+      image: c.cardImageUrl,
+    }));
+  }
+  return [{ slug: root.slug, name: root.name, image: root.cardImageUrl }];
+}
+
 export function ScrollCatalog({ roots: initialRoots }: Props) {
   const [roots, setRoots] = useState<HomeCatalogRoot[]>(initialRoots);
-  const [tags, setTags] = useState<CatalogTagTab[]>([]);
   const tabsWrapperRef = useRef<HTMLDivElement>(null);
   const tabBtnRefs = useRef(new Map<string, HTMLButtonElement>());
   const [hoverTabSlug, setHoverTabSlug] = useState<string | null>(null);
+  const [activeRootSlug, setActiveRootSlug] = useState<string>(() => initialRoots[0]?.slug ?? '');
+  const [tabsCanScrollPrev, setTabsCanScrollPrev] = useState(false);
+  const [tabsCanScrollNext, setTabsCanScrollNext] = useState(false);
 
   const pullTree = useCallback(async () => {
     try {
@@ -44,18 +57,6 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     }
   }, []);
 
-  const pullTags = useCallback(async () => {
-    try {
-      const res = await fetch('/api/catalog/tags', { cache: 'no-store' });
-      if (!res.ok) return;
-      const data = (await res.json()) as { items?: CatalogTagTab[] };
-      const items = (data.items ?? []).filter((t) => t.slug && t.name);
-      if (items.length) setTags(items);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const reactUiId = useId().replace(/:/g, '');
   const tabIdsPrefix = `home-catalog-${reactUiId}`;
   const cardsPanelId = `${tabIdsPrefix}-cards-panel`;
@@ -64,9 +65,17 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     setRoots(initialRoots);
   }, [initialRoots]);
 
+  const tabRoots = roots;
+
   useEffect(() => {
-    void pullTags();
-  }, [pullTags]);
+    if (!tabRoots.length) {
+      setActiveRootSlug('');
+      return;
+    }
+    if (!tabRoots.some((r) => r.slug === activeRootSlug)) {
+      setActiveRootSlug(tabRoots[0].slug);
+    }
+  }, [tabRoots, activeRootSlug]);
 
   const lastTreePullRef = useRef(0);
   const TREE_PULL_MIN_INTERVAL_MS = 10 * 60 * 1000;
@@ -78,56 +87,29 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
       if (now - lastTreePullRef.current < TREE_PULL_MIN_INTERVAL_MS) return;
       lastTreePullRef.current = now;
       void pullTree();
-      void pullTags();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [pullTree, pullTags]);
+  }, [pullTree]);
 
-  const [activeTagSlug, setActiveTagSlug] = useState<string>(() => '');
-  const [tagStripCategories, setTagStripCategories] = useState<TagStripCategory[]>([]);
-
-  useEffect(() => {
-    if (!tags.length) {
-      setActiveTagSlug('');
-      return;
-    }
-    if (!tags.some((t) => t.slug === activeTagSlug)) {
-      setActiveTagSlug(tags[0].slug);
-    }
-  }, [tags, activeTagSlug]);
-
-  useEffect(() => {
-    if (!activeTagSlug) {
-      setTagStripCategories([]);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(
-          `/api/catalog/tags/${encodeURIComponent(activeTagSlug)}/strip-categories`,
-          { cache: 'no-store' },
-        );
-        if (!res.ok || cancelled) return;
-        const data = (await res.json()) as { items?: TagStripCategory[] };
-        const items = (data.items ?? []).filter((c) => c.slug && c.name);
-        if (!cancelled) setTagStripCategories(items);
-      } catch {
-        if (!cancelled) setTagStripCategories([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTagSlug]);
-
-  const activeTag = useMemo(
-    () => tags.find((t) => t.slug === activeTagSlug) ?? tags[0],
-    [tags, activeTagSlug]
+  const activeRoot = useMemo(
+    () => tabRoots.find((r) => r.slug === activeRootSlug) ?? tabRoots[0],
+    [tabRoots, activeRootSlug],
   );
 
-  const indicatorTargetSlug = hoverTabSlug ?? activeTagSlug;
+  const stripCards = useMemo(() => cardsForRoot(activeRoot), [activeRoot]);
+
+  const indicatorTargetSlug = hoverTabSlug ?? activeRootSlug;
+
+  const updateTabsScrollEdges = useCallback(() => {
+    const el = tabsWrapperRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    const scrollable = maxScroll > 2;
+    setTabsCanScrollPrev(scrollable && scrollLeft > 2);
+    setTabsCanScrollNext(scrollable && scrollLeft < maxScroll - 2);
+  }, []);
 
   const updateIndicator = useCallback(() => {
     const wrap = tabsWrapperRef.current;
@@ -138,46 +120,43 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
       wrap.style.setProperty('--tabs-indicator-w', '0px');
       return;
     }
-    const wRect = wrap.getBoundingClientRect();
-    const bRect = btn.getBoundingClientRect();
-    const x = Math.max(0, bRect.left - wRect.left);
-    const w = Math.max(0, bRect.width);
+    const x = Math.max(0, btn.offsetLeft);
+    const w = Math.max(0, btn.offsetWidth);
     wrap.style.setProperty('--tabs-indicator-x', `${x}px`);
     wrap.style.setProperty('--tabs-indicator-w', `${w}px`);
   }, [indicatorTargetSlug]);
 
   useLayoutEffect(() => {
     updateIndicator();
-  }, [updateIndicator, activeTagSlug, hoverTabSlug, tags.length]);
+    updateTabsScrollEdges();
+  }, [updateIndicator, updateTabsScrollEdges, activeRootSlug, hoverTabSlug, tabRoots.length]);
 
   useEffect(() => {
     const wrap = tabsWrapperRef.current;
     if (!wrap) return;
-    const ro = new ResizeObserver(() => updateIndicator());
+    const sync = () => {
+      updateIndicator();
+      updateTabsScrollEdges();
+    };
+    const ro = new ResizeObserver(sync);
     ro.observe(wrap);
-    window.addEventListener('resize', updateIndicator);
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      if (wrap.scrollWidth <= wrap.clientWidth + 2) return;
+      e.preventDefault();
+      wrap.scrollLeft += e.deltaY;
+    };
+    wrap.addEventListener('scroll', sync, { passive: true });
+    wrap.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('resize', sync);
+    sync();
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', updateIndicator);
+      wrap.removeEventListener('scroll', sync);
+      wrap.removeEventListener('wheel', onWheel);
+      window.removeEventListener('resize', sync);
     };
-  }, [updateIndicator]);
-
-  const stripCards = useMemo(() => {
-    if (tagStripCategories.length > 0) {
-      return tagStripCategories.map((c) => ({
-        slug: c.slug,
-        name: c.name,
-        image: resolveMediaUrlForClient(c.backgroundImageUrl),
-      }));
-    }
-    return roots.map((root) => ({
-      slug: root.slug,
-      name: root.name,
-      image: root.cardImageUrl,
-    }));
-  }, [tagStripCategories, roots]);
-
-  const tagQuery = activeTagSlug ? `?tag=${encodeURIComponent(activeTagSlug)}` : '';
+  }, [updateIndicator, updateTabsScrollEdges]);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const scrollStripAnimCancelRef = useRef<(() => void) | null>(null);
@@ -235,7 +214,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     const el = wrapperRef.current;
     if (el) el.scrollLeft = 0;
     updateScrollArrows();
-  }, [activeTagSlug, stripCards.length, updateScrollArrows]);
+  }, [activeRootSlug, stripCards.length, updateScrollArrows]);
 
   useEffect(() => {
     const el = wrapperRef.current;
@@ -254,7 +233,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     () => () => {
       scrollStripAnimCancelRef.current?.();
     },
-    []
+    [],
   );
 
   const scrollStrip = useCallback((dir: -1 | 1) => {
@@ -267,53 +246,67 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     scrollStripAnimCancelRef.current = anim.cancel;
   }, []);
 
-  if (!roots.length) {
+  const selectRoot = useCallback((slug: string) => {
+    setActiveRootSlug(slug);
+    const btn = tabBtnRefs.current.get(slug);
+    btn?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+  }, []);
+
+  if (!tabRoots.length) {
     return null;
   }
 
   return (
     <section className={styles.section}>
       <div className="padding-global">
-        {tags.length > 0 ? (
-          <div
-            className={styles.tabsWrapper}
-            role="tablist"
-            aria-label="Контекстные теги"
-            ref={tabsWrapperRef}
-            onMouseLeave={() => setHoverTabSlug(null)}
-          >
-            {tags.map((tab) => (
-              <button
-                key={tab.slug}
-                type="button"
-                role="tab"
-                id={`${tabIdsPrefix}-tab-${tab.slug}`}
-                aria-selected={tab.slug === activeTagSlug}
-                aria-controls={cardsPanelId}
-                className={tab.slug === activeTagSlug ? styles.tabActive : styles.tab}
-                onClick={() => setActiveTagSlug(tab.slug)}
-                onMouseEnter={() => setHoverTabSlug(tab.slug)}
-                ref={(el) => {
-                  if (!el) tabBtnRefs.current.delete(tab.slug);
-                  else tabBtnRefs.current.set(tab.slug, el);
-                }}
-              >
-                {tab.name}
-              </button>
-            ))}
-            <span className={styles.tabsIndicator} aria-hidden="true" />
+        <div
+          className={styles.tabsShell}
+          data-can-scroll-prev={tabsCanScrollPrev ? 'true' : 'false'}
+          data-can-scroll-next={tabsCanScrollNext ? 'true' : 'false'}
+        >
+          <div className={styles.tabsPill}>
+            <div
+              className={styles.tabsWrapper}
+              role="tablist"
+              aria-label="Разделы каталога"
+              ref={tabsWrapperRef}
+              onMouseLeave={() => setHoverTabSlug(null)}
+            >
+              {tabRoots.map((tab) => (
+                <button
+                  key={tab.slug}
+                  type="button"
+                  role="tab"
+                  id={`${tabIdsPrefix}-tab-${tab.slug}`}
+                  aria-selected={tab.slug === activeRootSlug}
+                  aria-controls={cardsPanelId}
+                  className={tab.slug === activeRootSlug ? styles.tabActive : styles.tab}
+                  onClick={() => selectRoot(tab.slug)}
+                  onMouseEnter={() => setHoverTabSlug(tab.slug)}
+                  ref={(el) => {
+                    if (!el) tabBtnRefs.current.delete(tab.slug);
+                    else tabBtnRefs.current.set(tab.slug, el);
+                  }}
+                >
+                  {tab.name}
+                </button>
+              ))}
+              <span className={styles.tabsIndicator} aria-hidden="true" />
+            </div>
+            <span className={styles.tabsFadeStart} aria-hidden="true" />
+            <span className={styles.tabsFadeEnd} aria-hidden="true" />
           </div>
-        ) : null}
+        </div>
         <div className={`${styles.stripHostFlex} ${styles.stripHostFlexHome}`}>
           <div className={styles.stripPanel}>
             <div
               id={cardsPanelId}
               role="tabpanel"
               aria-labelledby={
-                activeTag ? `${tabIdsPrefix}-tab-${activeTag.slug}` : undefined
+                activeRoot ? `${tabIdsPrefix}-tab-${activeRoot.slug}` : undefined
               }
               ref={wrapperRef}
-              className={styles.cardsWrapper}
+              className={`${styles.cardsWrapper} ${styles.cardsWrapperHome}`}
               onMouseDown={handlePointerDown}
               onMouseMove={handlePointerMove}
               onMouseLeave={handlePointerMove}
@@ -323,7 +316,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
               {stripCards.map((card, index) => (
                 <Link
                   key={card.slug}
-                  href={`/catalog/${card.slug}${tagQuery}`}
+                  href={`/catalog/${card.slug}`}
                   className={styles.card}
                   onClick={handleLinkClick}
                 >
@@ -351,7 +344,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
             <button
               type="button"
               className={`${styles.stripArrow} ${styles.stripArrowPrev}`}
-              aria-label="Прокрутить каталог влево"
+              aria-label="Прокрутить подкатегории влево"
               disabled={!canScrollPrev}
               onClick={(e) => {
                 e.preventDefault();
@@ -364,7 +357,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
             <button
               type="button"
               className={`${styles.stripArrow} ${styles.stripArrowNext}`}
-              aria-label="Прокрутить каталог вправо"
+              aria-label="Прокрутить подкатегории вправо"
               disabled={!canScrollNext}
               onClick={(e) => {
                 e.preventDefault();
@@ -375,26 +368,6 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
               <img src="/icons/arrow.svg" alt="" className={styles.stripArrowIconNext} aria-hidden />
             </button>
           </div>
-        </div>
-      </div>
-      <div className={styles.mobileWrapper}>
-        <div className={styles.mobileCardsWrapper}>
-          {roots.map((tab) => (
-            <Link key={tab.id} href={`/catalog/${tab.slug}`} className={styles.mobileCard}>
-              <div className={styles.mobileCardImgWrap}>
-                <img
-                  src={tab.cardImageUrl}
-                  alt=""
-                  width={120}
-                  height={109}
-                  className={styles.mobileCardImg}
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-              <span className={styles.mobileCardTitle}>{tab.name}</span>
-            </Link>
-          ))}
         </div>
       </div>
     </section>
