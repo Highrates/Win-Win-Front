@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
 import type {
   AdminBrandMaterial,
@@ -41,9 +42,13 @@ export function BrandMaterialColorPickerModal({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [searchQ, setSearchQ] = useState('');
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSearchQ('');
+      return;
+    }
     setSelected(new Set(preSelectedIds));
   }, [open, preSelectedIds]);
 
@@ -91,6 +96,21 @@ export function BrandMaterialColorPickerModal({
     }
     return map;
   }, [materials]);
+
+  const filteredMaterials = useMemo(() => {
+    if (!materials) return [];
+    const q = searchQ.trim().toLowerCase();
+    if (!q) return materials;
+    return materials
+      .map((m) => {
+        const materialMatches = m.name.toLowerCase().includes(q);
+        const colors = m.colors.filter(
+          (c) => materialMatches || c.name.toLowerCase().includes(q),
+        );
+        return colors.length ? { ...m, colors } : null;
+      })
+      .filter((m): m is AdminBrandMaterial => m !== null);
+  }, [materials, searchQ]);
 
   function confirm() {
     const out: BrandMaterialColorPick[] = [];
@@ -144,44 +164,57 @@ export function BrandMaterialColorPickerModal({
               В бренде ещё не заведены материалы и цвета — добавьте их на странице бренда.
             </p>
           ) : (
-            materials.map((m) => {
-              if (m.colors.length === 0) return null;
-              return (
-                <div key={m.id} className={styles.materialGroup}>
-                  <h3 className={`${catalogStyles.groupHeading} ${styles.materialTitle}`}>{m.name}</h3>
-                  <div className={styles.colorsGrid}>
-                    {m.colors.map((c) => {
-                      const isSelected = selected.has(c.id);
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          className={`${styles.colorTile} ${isSelected ? styles.colorTileSelected : ''}`}
-                          onClick={() => toggle(c.id)}
-                          aria-pressed={isSelected}
-                        >
-                          {isSelected ? <span className={styles.selectedBadge} aria-hidden>✓</span> : null}
-                          {c.imageUrl ? (
-                            <img
-                              className={styles.colorTileThumb}
-                              src={c.imageUrl}
-                              alt=""
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className={styles.colorTileThumbPh} aria-hidden />
-                          )}
-                          <div className={styles.colorTileLabel}>
-                            <span className={styles.colorTileName}>{c.name}</span>
-                            <span className={styles.colorTileSub}>{m.name}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })
+            <>
+              <AdminSearchBox
+                className={styles.searchBox}
+                placeholder="Поиск по материалу или цвету…"
+                ariaLabel="Поиск материалов и цветов"
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+              />
+              {filteredMaterials.length === 0 ? (
+                <p className={catalogStyles.muted}>Ничего не найдено по запросу «{searchQ.trim()}».</p>
+              ) : (
+                filteredMaterials.map((m) => {
+                  if (m.colors.length === 0) return null;
+                  return (
+                    <div key={m.id} className={styles.materialGroup}>
+                      <h3 className={`${catalogStyles.groupHeading} ${styles.materialTitle}`}>{m.name}</h3>
+                      <div className={styles.colorsGrid}>
+                        {m.colors.map((c) => {
+                          const isSelected = selected.has(c.id);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className={`${styles.colorTile} ${isSelected ? styles.colorTileSelected : ''}`}
+                              onClick={() => toggle(c.id)}
+                              aria-pressed={isSelected}
+                            >
+                              {isSelected ? <span className={styles.selectedBadge} aria-hidden>✓</span> : null}
+                              {c.imageUrl ? (
+                                <img
+                                  className={styles.colorTileThumb}
+                                  src={c.imageUrl}
+                                  alt=""
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className={styles.colorTileThumbPh} aria-hidden />
+                              )}
+                              <div className={styles.colorTileLabel}>
+                                <span className={styles.colorTileName}>{c.name}</span>
+                                <span className={styles.colorTileSub}>{m.name}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </>
           )}
         </div>
         <div className={styles.footer}>

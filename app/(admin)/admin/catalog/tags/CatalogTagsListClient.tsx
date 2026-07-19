@@ -18,7 +18,7 @@ import {
   normalizeCategoriesListResponse,
   type AdminListResponse,
 } from '@/lib/adminListResponse';
-import { adminCollectionsListStrings } from '@/lib/admin-i18n/adminCollectionsI18n';
+import { adminCatalogTagsListStrings } from '@/lib/admin-i18n/adminCatalogTagsI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
@@ -28,16 +28,16 @@ import {
   useAdminListSearch,
   useInvalidateAdminQueries,
 } from '@/lib/adminQuery';
-import styles from '../catalog/catalogAdmin.module.css';
-import { CollectionsSortableTable } from './CollectionsSortableTable';
-import type { AdminCuratedCollectionRow } from './collectionsAdminTypes';
+import styles from '../catalogAdmin.module.css';
+import { CatalogTagsSortableTable } from './CatalogTagsSortableTable';
+import type { AdminCatalogTagListRow } from './catalogTagsAdminTypes';
 
-type CollectionsQueryData = AdminListResponse<AdminCuratedCollectionRow> & { paginated: boolean };
+type TagsQueryData = AdminListResponse<AdminCatalogTagListRow> & { paginated: boolean };
 
-export function CollectionsListClient() {
+export function CatalogTagsListClient() {
   const router = useRouter();
   const { locale } = useAdminLocale();
-  const s = useMemo(() => adminCollectionsListStrings(locale), [locale]);
+  const s = useMemo(() => adminCatalogTagsListStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
   const invalidate = useInvalidateAdminQueries();
   const { confirm } = useAdminConfirm();
@@ -48,18 +48,16 @@ export function CollectionsListClient() {
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const { rows, data, loading, isFetching, error: listError, refetch } = useAdminList<
-    AdminCuratedCollectionRow,
-    CollectionsQueryData
+    AdminCatalogTagListRow,
+    TagsQueryData
   >({
-    queryKey: adminQueryKeys.collections.list(debouncedQ ? { q: debouncedQ, page } : { q: '' }),
+    queryKey: adminQueryKeys.catalogTags.list(debouncedQ ? { q: debouncedQ, page } : { q: '' }),
     page,
     q: debouncedQ,
-    errorFallback: c.errLoad,
+    errorFallback: s.errLoad,
     queryFn: async () => {
       if (!debouncedQ) {
-        const allRows = await adminBackendJson<AdminCuratedCollectionRow[]>(
-          'catalog/admin/curated-collections',
-        );
+        const allRows = await adminBackendJson<AdminCatalogTagListRow[]>('catalog/admin/catalog-tags');
         const normalized = normalizeCategoriesListResponse(allRows);
         return {
           items: normalized.rows,
@@ -69,8 +67,8 @@ export function CollectionsListClient() {
           paginated: normalized.paginated,
         };
       }
-      const res = await adminBackendList<AdminCuratedCollectionRow>(
-        'catalog/admin/curated-collections',
+      const res = await adminBackendList<AdminCatalogTagListRow>(
+        'catalog/admin/catalog-tags',
         adminListParams({ page, q: debouncedQ }),
       );
       const normalized = normalizeCategoriesListResponse(res);
@@ -102,16 +100,16 @@ export function CollectionsListClient() {
   const runReorder = useCallback(
     async (orderedIds: string[]) => {
       try {
-        await adminBackendJson('catalog/admin/curated-collections/reorder', {
+        await adminBackendJson('catalog/admin/catalog-tags/reorder', {
           method: 'POST',
           body: JSON.stringify({ orderedIds }),
         });
         await revalidatePublicCatalogCache();
         router.refresh();
-        await invalidate(adminQueryKeys.collections.all);
+        await invalidate(adminQueryKeys.catalogTags.all);
       } catch (e) {
         setMutationError(e instanceof Error ? e.message : s.errReorder);
-        await invalidate(adminQueryKeys.collections.all);
+        await invalidate(adminQueryKeys.catalogTags.all);
       }
     },
     [invalidate, router, s.errReorder],
@@ -130,10 +128,6 @@ export function CollectionsListClient() {
     },
     [sortedRows, runReorder],
   );
-
-  function kindLabel(k: AdminCuratedCollectionRow['kind']): string {
-    return k === 'PRODUCT' ? s.kindProduct : s.kindBrand;
-  }
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -155,14 +149,14 @@ export function CollectionsListClient() {
     setDeleting(true);
     setMutationError(null);
     try {
-      await adminBackendJson<{ deleted: string[] }>('catalog/admin/curated-collections/bulk-delete', {
+      await adminBackendJson<{ deleted: string[] }>('catalog/admin/catalog-tags/bulk-delete', {
         method: 'POST',
         body: JSON.stringify({ ids: Array.from(selected) }),
       });
       await revalidatePublicCatalogCache();
       router.refresh();
       setSelected(new Set());
-      await invalidate(adminQueryKeys.collections.all);
+      await invalidate(adminQueryKeys.catalogTags.all);
     } catch (e) {
       setMutationError(e instanceof Error ? e.message : s.errDelete);
     } finally {
@@ -191,7 +185,7 @@ export function CollectionsListClient() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <AdminCompactBtnLink href="/admin/collections/new">{s.add}</AdminCompactBtnLink>
+            <AdminCompactBtnLink href="/admin/catalog/tags/new">{s.add}</AdminCompactBtnLink>
             <div className={styles.bulkGroup} role="group" aria-label={s.bulkAria}>
               {!debouncedQ && rows.length > 0 ? (
                 <>
@@ -242,7 +236,7 @@ export function CollectionsListClient() {
             <tr>
               <th style={{ width: 44 }}>
                 <AccountCheckbox
-                  id="collections-select-all"
+                  id="catalog-tags-select-all"
                   className={styles.adminCheckboxInTable}
                   checked={allSelected}
                   onChange={toggleAll}
@@ -250,9 +244,8 @@ export function CollectionsListClient() {
                 />
               </th>
               <th>{s.thName}</th>
-              <th>{s.thType}</th>
+              <th>{s.thSlug}</th>
               <th>{s.thCount}</th>
-              <th>{s.thVis}</th>
             </tr>
           </thead>
           <tbody>
@@ -260,7 +253,7 @@ export function CollectionsListClient() {
               <tr key={r.id}>
                 <td>
                   <AccountCheckbox
-                    id={`col-${r.id}`}
+                    id={`catalog-tag-select-${r.id}`}
                     className={styles.adminCheckboxInTable}
                     checked={selected.has(r.id)}
                     onChange={() => toggle(r.id)}
@@ -268,27 +261,21 @@ export function CollectionsListClient() {
                   />
                 </td>
                 <td>
-                  <Link href={`/admin/collections/${r.id}`}>{r.name}</Link>
+                  <Link href={`/admin/catalog/tags/${r.id}`}>{r.name}</Link>
                 </td>
-                <td>{kindLabel(r.kind)}</td>
-                <td>{r.itemCount}</td>
-                <td>
-                  <span className={`${styles.badge} ${r.isActive ? styles.badgeOn : styles.badgeOff}`}>
-                    {r.isActive ? s.inCatalog : s.hidden}
-                  </span>
-                </td>
+                <td>{r.slug}</td>
+                <td>{r.productCount}</td>
               </tr>
             ))}
           </tbody>
         </table>
       ) : (
-        <CollectionsSortableTable
+        <CatalogTagsSortableTable
           rows={sortedRows}
           selected={selected}
           onToggle={toggle}
           onToggleAll={toggleAll}
           allSelected={allSelected}
-          kindLabel={kindLabel}
           onDragEnd={onDragEnd}
         />
       )}

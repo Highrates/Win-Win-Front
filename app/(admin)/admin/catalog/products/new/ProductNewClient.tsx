@@ -135,7 +135,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
           adminBackendListAll<AdminBrandRow>('catalog/admin/brands'),
           adminBackendListAll<AdminCuratedCollectionRow>('catalog/admin/curated-collections'),
           adminBackendListAll<AdminProductSetRow>('catalog/admin/product-sets'),
-          adminBackendJson<AdminCatalogTagRow[]>('catalog/admin/catalog-tags'),
+          adminBackendJson<AdminCatalogTagRow[]>('catalog/admin/catalog-tags?all=1'),
         ]);
         if (cancelled) return;
         setCategories(cats);

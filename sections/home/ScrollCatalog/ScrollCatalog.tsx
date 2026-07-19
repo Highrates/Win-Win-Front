@@ -3,10 +3,22 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useId } from 'react';
 import { homeRootsFromPublicTreeClient, type HomeCatalogRoot } from '@/lib/homeCatalog';
+import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import { animateScrollStripBy } from './scrollStripScroll';
 import styles from './ScrollCatalog.module.css';
 
 const DRAG_THRESHOLD = 5;
+
+type CatalogTagTab = {
+  slug: string;
+  name: string;
+};
+
+type TagStripCategory = {
+  slug: string;
+  name: string;
+  backgroundImageUrl: string | null;
+};
 
 type Props = {
   roots: HomeCatalogRoot[];
@@ -14,9 +26,10 @@ type Props = {
 
 export function ScrollCatalog({ roots: initialRoots }: Props) {
   const [roots, setRoots] = useState<HomeCatalogRoot[]>(initialRoots);
+  const [tags, setTags] = useState<CatalogTagTab[]>([]);
   const tabsWrapperRef = useRef<HTMLDivElement>(null);
   const tabBtnRefs = useRef(new Map<string, HTMLButtonElement>());
-  const [hoverTabId, setHoverTabId] = useState<string | null>(null);
+  const [hoverTabSlug, setHoverTabSlug] = useState<string | null>(null);
 
   const pullTree = useCallback(async () => {
     try {
@@ -31,6 +44,18 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     }
   }, []);
 
+  const pullTags = useCallback(async () => {
+    try {
+      const res = await fetch('/api/catalog/tags', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as { items?: CatalogTagTab[] };
+      const items = (data.items ?? []).filter((t) => t.slug && t.name);
+      if (items.length) setTags(items);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const reactUiId = useId().replace(/:/g, '');
   const tabIdsPrefix = `home-catalog-${reactUiId}`;
   const cardsPanelId = `${tabIdsPrefix}-cards-panel`;
@@ -38,6 +63,10 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
   useEffect(() => {
     setRoots(initialRoots);
   }, [initialRoots]);
+
+  useEffect(() => {
+    void pullTags();
+  }, [pullTags]);
 
   const lastTreePullRef = useRef(0);
   const TREE_PULL_MIN_INTERVAL_MS = 10 * 60 * 1000;
@@ -49,34 +78,61 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
       if (now - lastTreePullRef.current < TREE_PULL_MIN_INTERVAL_MS) return;
       lastTreePullRef.current = now;
       void pullTree();
+      void pullTags();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [pullTree]);
+  }, [pullTree, pullTags]);
 
-  const [activeId, setActiveId] = useState<string>(() => initialRoots[0]?.id ?? '');
+  const [activeTagSlug, setActiveTagSlug] = useState<string>(() => '');
+  const [tagStripCategories, setTagStripCategories] = useState<TagStripCategory[]>([]);
 
   useEffect(() => {
-    if (!roots.length) {
-      setActiveId('');
+    if (!tags.length) {
+      setActiveTagSlug('');
       return;
     }
-    if (!roots.some((r) => r.id === activeId)) {
-      setActiveId(roots[0].id);
+    if (!tags.some((t) => t.slug === activeTagSlug)) {
+      setActiveTagSlug(tags[0].slug);
     }
-  }, [roots, activeId]);
+  }, [tags, activeTagSlug]);
 
-  const activeRoot = useMemo(
-    () => roots.find((r) => r.id === activeId) ?? roots[0],
-    [roots, activeId]
+  useEffect(() => {
+    if (!activeTagSlug) {
+      setTagStripCategories([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/catalog/tags/${encodeURIComponent(activeTagSlug)}/strip-categories`,
+          { cache: 'no-store' },
+        );
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { items?: TagStripCategory[] };
+        const items = (data.items ?? []).filter((c) => c.slug && c.name);
+        if (!cancelled) setTagStripCategories(items);
+      } catch {
+        if (!cancelled) setTagStripCategories([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTagSlug]);
+
+  const activeTag = useMemo(
+    () => tags.find((t) => t.slug === activeTagSlug) ?? tags[0],
+    [tags, activeTagSlug]
   );
 
-  const indicatorTargetId = hoverTabId ?? activeId;
+  const indicatorTargetSlug = hoverTabSlug ?? activeTagSlug;
 
   const updateIndicator = useCallback(() => {
     const wrap = tabsWrapperRef.current;
     if (!wrap) return;
-    const btn = indicatorTargetId ? tabBtnRefs.current.get(indicatorTargetId) : null;
+    const btn = indicatorTargetSlug ? tabBtnRefs.current.get(indicatorTargetSlug) : null;
     if (!btn) {
       wrap.style.setProperty('--tabs-indicator-x', '0px');
       wrap.style.setProperty('--tabs-indicator-w', '0px');
@@ -88,11 +144,11 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     const w = Math.max(0, bRect.width);
     wrap.style.setProperty('--tabs-indicator-x', `${x}px`);
     wrap.style.setProperty('--tabs-indicator-w', `${w}px`);
-  }, [indicatorTargetId]);
+  }, [indicatorTargetSlug]);
 
   useLayoutEffect(() => {
     updateIndicator();
-  }, [updateIndicator, activeId, hoverTabId, roots.length]);
+  }, [updateIndicator, activeTagSlug, hoverTabSlug, tags.length]);
 
   useEffect(() => {
     const wrap = tabsWrapperRef.current;
@@ -107,19 +163,21 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
   }, [updateIndicator]);
 
   const stripCards = useMemo(() => {
-    if (!roots.length) return [];
-    const root = roots.find((r) => r.id === activeId) ?? roots[0];
-    if (!root) return [];
-    const direct = root.children ?? [];
-    if (direct.length > 0) {
-      return direct.map((c) => ({
+    if (tagStripCategories.length > 0) {
+      return tagStripCategories.map((c) => ({
         slug: c.slug,
         name: c.name,
-        image: c.cardImageUrl,
+        image: resolveMediaUrlForClient(c.backgroundImageUrl),
       }));
     }
-    return [{ slug: root.slug, name: root.name, image: root.cardImageUrl }];
-  }, [roots, activeId]);
+    return roots.map((root) => ({
+      slug: root.slug,
+      name: root.name,
+      image: root.cardImageUrl,
+    }));
+  }, [tagStripCategories, roots]);
+
+  const tagQuery = activeTagSlug ? `?tag=${encodeURIComponent(activeTagSlug)}` : '';
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const scrollStripAnimCancelRef = useRef<(() => void) | null>(null);
@@ -177,7 +235,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     const el = wrapperRef.current;
     if (el) el.scrollLeft = 0;
     updateScrollArrows();
-  }, [activeId, stripCards.length, updateScrollArrows]);
+  }, [activeTagSlug, stripCards.length, updateScrollArrows]);
 
   useEffect(() => {
     const el = wrapperRef.current;
@@ -216,40 +274,44 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
   return (
     <section className={styles.section}>
       <div className="padding-global">
-        <div
-          className={styles.tabsWrapper}
-          role="tablist"
-          aria-label="Разделы каталога"
-          ref={tabsWrapperRef}
-          onMouseLeave={() => setHoverTabId(null)}
-        >
-          {roots.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              id={`${tabIdsPrefix}-tab-${tab.id}`}
-              aria-selected={tab.id === activeId}
-              aria-controls={cardsPanelId}
-              className={tab.id === activeId ? styles.tabActive : styles.tab}
-              onClick={() => setActiveId(tab.id)}
-              onMouseEnter={() => setHoverTabId(tab.id)}
-              ref={(el) => {
-                if (!el) tabBtnRefs.current.delete(tab.id);
-                else tabBtnRefs.current.set(tab.id, el);
-              }}
-            >
-              {tab.name}
-            </button>
-          ))}
-          <span className={styles.tabsIndicator} aria-hidden="true" />
-        </div>
+        {tags.length > 0 ? (
+          <div
+            className={styles.tabsWrapper}
+            role="tablist"
+            aria-label="Контекстные теги"
+            ref={tabsWrapperRef}
+            onMouseLeave={() => setHoverTabSlug(null)}
+          >
+            {tags.map((tab) => (
+              <button
+                key={tab.slug}
+                type="button"
+                role="tab"
+                id={`${tabIdsPrefix}-tab-${tab.slug}`}
+                aria-selected={tab.slug === activeTagSlug}
+                aria-controls={cardsPanelId}
+                className={tab.slug === activeTagSlug ? styles.tabActive : styles.tab}
+                onClick={() => setActiveTagSlug(tab.slug)}
+                onMouseEnter={() => setHoverTabSlug(tab.slug)}
+                ref={(el) => {
+                  if (!el) tabBtnRefs.current.delete(tab.slug);
+                  else tabBtnRefs.current.set(tab.slug, el);
+                }}
+              >
+                {tab.name}
+              </button>
+            ))}
+            <span className={styles.tabsIndicator} aria-hidden="true" />
+          </div>
+        ) : null}
         <div className={`${styles.stripHostFlex} ${styles.stripHostFlexHome}`}>
           <div className={styles.stripPanel}>
             <div
               id={cardsPanelId}
               role="tabpanel"
-              aria-labelledby={activeRoot ? `${tabIdsPrefix}-tab-${activeRoot.id}` : undefined}
+              aria-labelledby={
+                activeTag ? `${tabIdsPrefix}-tab-${activeTag.slug}` : undefined
+              }
               ref={wrapperRef}
               className={styles.cardsWrapper}
               onMouseDown={handlePointerDown}
@@ -261,7 +323,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
               {stripCards.map((card, index) => (
                 <Link
                   key={card.slug}
-                  href={`/catalog/${card.slug}`}
+                  href={`/catalog/${card.slug}${tagQuery}`}
                   className={styles.card}
                   onClick={handleLinkClick}
                 >

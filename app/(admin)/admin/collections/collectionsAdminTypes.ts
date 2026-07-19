@@ -5,6 +5,7 @@ export type AdminCuratedCollectionRow = {
   slug: string;
   kind: 'PRODUCT' | 'BRAND';
   isActive: boolean;
+  sortOrder: number;
   itemCount: number;
 };
 

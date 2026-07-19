@@ -88,7 +88,7 @@ export function ProductsListClient() {
       const [categories, brands, catalogTags, collections, productSets] = await Promise.all([
         adminBackendJson<AdminCategoryRow[]>('catalog/admin/categories'),
         adminBackendListAll<AdminBrandRow>('catalog/admin/brands'),
-        adminBackendJson<AdminCatalogTagRow[]>('catalog/admin/catalog-tags'),
+        adminBackendJson<AdminCatalogTagRow[]>('catalog/admin/catalog-tags?all=1'),
         adminBackendListAll<AdminCuratedCollectionRow>('catalog/admin/curated-collections'),
         adminBackendListAll<AdminProductSetRow>('catalog/admin/product-sets'),
       ]);
@@ -299,9 +299,14 @@ export function ProductsListClient() {
                   </AdminPillChip>
                 ))}
               </AdminPillChipList>
-              <button type="button" className={filterStyles.clearFiltersBtn} onClick={clearAllFilters}>
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                className={filterStyles.clearFiltersBtn}
+                onClick={clearAllFilters}
+              >
                 {s.filterClearAll}
-              </button>
+              </AdminCompactBtn>
             </div>
           ) : null}
         </>

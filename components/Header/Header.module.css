@@ -417,6 +417,7 @@
   transform: translateY(-100%);
   transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   isolation: isolate;
+  overflow: visible;
 }
 
 .superMenu[aria-hidden='false'] .superMenuSlideWrap {
@@ -439,6 +440,11 @@
   z-index: 1;
   padding-top: 72px;
   padding-bottom: 24px;
+  overflow: visible;
+}
+
+.superMenuPanel .padding-global {
+  overflow: visible;
 }
 
 /* В супер-меню siteHeaderWrap содержит один ряд; inner на всю ширину grid */
@@ -490,10 +496,10 @@
 
 /* Структура как в siteHeaderWrap: logoBlock + menu (без rightNav) */
 .superMenuSectionWrap {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 12px;
-  align-items: stretch;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 72px;
   width: 100%;
 }
 
@@ -502,36 +508,62 @@
   padding-top: 12px;
 }
 
+.superMenuSectionWrapMain .superMenuLogoBlock {
+  flex: 0 0 100px;
+  width: 100px;
+}
+
 @media (min-width: 1280px) {
   .superMenuSectionWrap {
-    gap: 20px;
+    gap: 96px;
   }
 }
 
-/* Блок со ссылкой «Показать все» (items-end) */
-.superMenuSectionItemsEnd {
+/* Колонка: список категорий + ссылка «В Каталог» */
+.superMenuMenuCol {
   display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  margin-top: auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: min(240px, 22vw);
   position: relative;
   z-index: 2;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.2s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
 }
 
-.superMenuSectionShowAll {
+.superMenuCatalogLink {
+  margin-top: 2rem; /* mt-8 */
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   text-transform: uppercase;
   color: #00bcd4;
+  text-decoration: none;
 }
 
-.superMenuSectionShowAll:hover {
+.superMenuCatalogLink:hover {
   text-decoration: underline;
+}
+
+.superMenuMenu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 
 .superMenuLogoBlock {
   position: relative;
-  grid-column: 1 / span 3;
+  flex: 0 0 240px;
+  width: 240px;
   display: flex;
   align-items: stretch;
   /* Пустой слот сетки не должен перехватывать клики по ссылкам в соседней колонке */
@@ -568,29 +600,46 @@
   border-radius: 8px;
 }
 
-.superMenuMenu {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.superMenuTagsPanel {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: visible;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  grid-column: 4 / -1;
+  gap: 0;
+  min-height: 0;
   position: relative;
   z-index: 2;
   opacity: 0;
   transform: translateY(56px);
   transition:
-    opacity 0.55s ease-out 0.2s,
-    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+    opacity 0.55s ease-out 0.24s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.24s;
 }
 
-.superMenu.superMenuContentRevealed .superMenuMenu {
+.superMenu.superMenuContentRevealed .superMenuTagsPanel {
   opacity: 1;
   transform: translateY(0);
 }
 
-.superMenu.superMenuClosing .superMenuMenu {
+.superMenu.superMenuClosing .superMenuTagsPanel {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.superMenuTagsEmpty {
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+}
+
+.superMenu.superMenuContentRevealed .superMenuMenuCol {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.superMenu.superMenuClosing .superMenuMenuCol {
   opacity: 0;
   transform: translateY(56px);
   transition-duration: 0.28s;

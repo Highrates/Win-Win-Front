@@ -118,7 +118,9 @@
 
 @media (min-width: 769px) {
   .stripHostFlexHome,
-  .stripHostFlexTightTop {
+  .stripHostFlexTightTop,
+  .stripHostFlexContained,
+  .stripHostFlexSuperMenu {
     margin-left: calc(50% - 50vw);
     width: 100vw;
     max-width: none;
@@ -126,9 +128,30 @@
     box-sizing: border-box;
   }
 
+  .stripHostFlexContained {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding-left: 0;
+  }
+
+  .stripHostFlexSuperMenu {
+    margin-left: 0;
+    margin-right: calc(50% - 50vw);
+    width: calc(100vw - var(--super-menu-strip-left, 0px));
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
   .stripArrow {
     display: inline-flex;
   }
+}
+
+.stripPanelOnDark .cardTitle,
+.stripPanelOnDark .cardTitleCaption {
+  color: var(--color-white);
 }
 
 .stripArrowPrev {
@@ -227,6 +250,11 @@
   font-size: var(--text-card-16-300);
   font-weight: 300;
   color: var(--color-ink-black);
+}
+
+.cardTitleCaption {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
 }
 
 

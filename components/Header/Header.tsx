@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useBrandsNavMenu } from '@/components/BrandsNavContext';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
+import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
+import { ScrollCatalogStripPanel } from '@/sections/home/ScrollCatalog/ScrollCatalogStripPanel';
 import { USER_SESSION_CHANGED_EVENT } from '@/lib/userSessionClient';
 import styles from './Header.module.css';
 
@@ -90,10 +92,88 @@ export function Header({
   const closeSuperMenuRef = useRef<() => void>(() => {});
   const setSuperMenuOpenRef = useRef(setSuperMenuOpen);
   const superMenuPanelRef = useRef<HTMLDivElement | null>(null);
+  const catalogMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const superMenuMenuColRef = useRef<HTMLDivElement>(null);
+  const superMenuTagsPanelRef = useRef<HTMLDivElement>(null);
   setSuperMenuOpenRef.current = setSuperMenuOpen;
   const catalogRoots = useCatalogNavRoots();
   const brandsMenuItems = useBrandsNavMenu();
   const [designersMenuLinks, setDesignersMenuLinks] = useState<{ href: string; label: string }[]>([]);
+  const [catalogTags, setCatalogTags] = useState<
+    { slug: string; name: string; coverImageUrl: string | null }[]
+  >([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/catalog/tags', { cache: 'no-store' });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          items?: { slug: string; name: string; coverImageUrl?: string | null }[];
+        };
+        const items = (data.items ?? [])
+          .filter((t) => t.slug && t.name)
+          .map((t) => ({
+            slug: t.slug,
+            name: t.name,
+            coverImageUrl: t.coverImageUrl ?? null,
+          }));
+        if (!cancelled) setCatalogTags(items);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const syncSuperMenuCatalogLayout = useCallback(() => {
+    const catalogBtn = catalogMenuTriggerRef.current;
+    const menuCol = superMenuMenuColRef.current;
+    const tagsPanel = superMenuTagsPanelRef.current;
+    if (!catalogBtn || !menuCol || !tagsPanel) return;
+
+    menuCol.style.marginLeft = '0';
+    const catalogLeft = catalogBtn.getBoundingClientRect().left;
+    const menuLeft = menuCol.getBoundingClientRect().left;
+    const offset = Math.round(catalogLeft - menuLeft);
+    if (offset !== 0) {
+      menuCol.style.marginLeft = `${offset}px`;
+    }
+
+    const tagsLeft = tagsPanel.getBoundingClientRect().left;
+    tagsPanel.style.setProperty('--super-menu-strip-left', `${tagsLeft}px`);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!superMenuOpen || superMenuClosing || superMenuSection !== 'categories') return;
+
+    syncSuperMenuCatalogLayout();
+    const raf = requestAnimationFrame(syncSuperMenuCatalogLayout);
+    window.addEventListener('resize', syncSuperMenuCatalogLayout);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', syncSuperMenuCatalogLayout);
+    };
+  }, [
+    superMenuOpen,
+    superMenuClosing,
+    superMenuSection,
+    superMenuContentRevealed,
+    catalogRoots.length,
+    catalogTags.length,
+    syncSuperMenuCatalogLayout,
+  ]);
+
+  useEffect(() => {
+    if (superMenuOpen) return;
+    if (superMenuMenuColRef.current) superMenuMenuColRef.current.style.marginLeft = '';
+    if (superMenuTagsPanelRef.current) {
+      superMenuTagsPanelRef.current.style.removeProperty('--super-menu-strip-left');
+    }
+  }, [superMenuOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,6 +302,7 @@ export function Header({
   }, [superMenuOpen, variant]);
 
   const openSuperMenu = (sectionId: string) => {
+    if (sectionId !== 'categories') return;
     if (superMenuOpen && superMenuSection === sectionId) {
       closeSuperMenu();
       return;
@@ -238,6 +319,10 @@ export function Header({
     setSuperMenuClosing(false);
     setSuperMenuSection(sectionId);
     setSuperMenuOpen(true);
+  };
+
+  const closeSuperMenuIfOpen = () => {
+    if (superMenuOpen) closeSuperMenu();
   };
 
   const closeMobileMenu = () => {
@@ -349,21 +434,34 @@ export function Header({
           </div>
           <nav className={styles.siteHeaderNav} aria-label="Основное меню">
             <div className={styles.siteHeaderMenu}>
-              {MENU_SECTIONS.map(({ id, href, label }) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={styles.menuItem}
-                  onClick={() => openSuperMenu(id)}
-                  aria-expanded={superMenuOpen && superMenuSection === id}
-                  aria-controls={SUPER_MENU_PANEL_ID}
-                  aria-haspopup="true"
-                  data-section={id}
-                >
-                  <span className={styles.menuItemText}>{label}</span>
-                  <MenuChevron open={superMenuOpen && superMenuSection === id} />
-                </button>
-              ))}
+              {MENU_SECTIONS.map(({ id, href, label }) =>
+                id === 'categories' ? (
+                  <button
+                    key={id}
+                    type="button"
+                    ref={id === 'categories' ? catalogMenuTriggerRef : undefined}
+                    className={styles.menuItem}
+                    onClick={() => openSuperMenu(id)}
+                    aria-expanded={superMenuOpen && superMenuSection === id}
+                    aria-controls={SUPER_MENU_PANEL_ID}
+                    aria-haspopup="true"
+                    data-section={id}
+                  >
+                    <span className={styles.menuItemText}>{label}</span>
+                    <MenuChevron open={superMenuOpen && superMenuSection === id} />
+                  </button>
+                ) : (
+                  <Link
+                    key={id}
+                    href={href}
+                    className={styles.menuItem}
+                    onClick={closeSuperMenuIfOpen}
+                    data-section={id}
+                  >
+                    <span className={styles.menuItemText}>{label}</span>
+                  </Link>
+                ),
+              )}
             </div>
           </nav>
           <nav className={styles.rightNav} aria-label="Поиск и аккаунт">
@@ -548,114 +646,73 @@ export function Header({
           <div className="padding-global">
             <div className={styles.siteHeaderWrap}>
               <div className={`${styles.superMenuPanelInner} ${openedFromMinimal ? styles.superMenuOpenedFromMinimal : ''}`.trim()}>
-                {MENU_SECTIONS.map((section) => (
-              <div
-                key={section.id}
-                className={styles.superMenuSection}
-                data-active={superMenuSection === section.id || undefined}
-                hidden={superMenuSection !== section.id}
-              >
-                <div className={styles.superMenuSectionWrap}>
-                  <div className={styles.superMenuLogoBlock} />
-                  <ul className={styles.superMenuMenu} role="list">
-                    {section.id === 'categories' ? (
-                      catalogRoots.length > 0 ? (
-                        catalogRoots.map((c) => (
-                          <li key={c.slug}>
-                            <Link
-                              href={`/catalog/${c.slug}`}
-                              className={styles.superMenuItem}
-                              onClick={closeSuperMenu}
-                            >
-                              {c.name}
-                            </Link>
-                          </li>
-                        ))
-                      ) : (
-                        <li>
-                          <Link
-                            href="/catalog"
-                            className={styles.superMenuItem}
-                            onClick={closeSuperMenu}
-                          >
-                            Каталог
-                          </Link>
-                        </li>
-                      )
-                    ) : section.id === 'brands' ? (
-                      brandsMenuItems.length > 0 ? (
-                        brandsMenuItems.map((b) => (
-                          <li key={b.slug}>
-                            <Link
-                              href={`/brands/${b.slug}`}
-                              className={styles.superMenuItem}
-                              onClick={closeSuperMenu}
-                            >
-                              {b.name}
-                            </Link>
-                          </li>
-                        ))
-                      ) : (
-                        <li>
-                          <Link
-                            href="/brands"
-                            className={styles.superMenuItem}
-                            onClick={closeSuperMenu}
-                          >
-                            Бренды
-                          </Link>
-                        </li>
-                      )
-                    ) : section.id === 'designers' ? (
-                      designersMenuLinks.length > 0 ? (
-                        designersMenuLinks.map((item) => (
-                          <li key={item.href}>
-                            <Link
-                              href={item.href}
-                              className={styles.superMenuItem}
-                              onClick={closeSuperMenu}
-                            >
-                              {item.label}
-                            </Link>
-                          </li>
-                        ))
-                      ) : (
-                        <li>
-                          <Link
-                            href="/designers"
-                            className={styles.superMenuItem}
-                            onClick={closeSuperMenu}
-                          >
-                            Дизайнеры
-                          </Link>
-                        </li>
-                      )
-                    ) : (
-                      SUPER_MENU_FALLBACK_LINKS.map((label, i) => (
-                        <li key={i}>
-                          <Link
-                            href={`${section.href}#${i}`}
-                            className={styles.superMenuItem}
-                            onClick={closeSuperMenu}
-                          >
-                            {label}
-                          </Link>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
-                <div className={styles.superMenuSectionItemsEnd}>
-                  <Link
-                    href={section.href}
-                    className={styles.superMenuSectionShowAll}
-                    onClick={closeSuperMenu}
+                <div
+                  className={styles.superMenuSection}
+                  data-active={superMenuSection === 'categories' || undefined}
+                  hidden={superMenuSection !== 'categories'}
+                >
+                  <div
+                    className={[
+                      styles.superMenuSectionWrap,
+                      variant === 'main' ? styles.superMenuSectionWrapMain : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                   >
-                    Показать все
-                  </Link>
+                    <div className={styles.superMenuLogoBlock} />
+                    <div className={styles.superMenuMenuCol} ref={superMenuMenuColRef}>
+                      <ul className={styles.superMenuMenu} role="list">
+                        {catalogRoots.length > 0 ? (
+                          catalogRoots.map((c) => (
+                            <li key={c.slug}>
+                              <Link
+                                href={`/catalog/${c.slug}`}
+                                className={styles.superMenuItem}
+                                onClick={closeSuperMenu}
+                              >
+                                {c.name}
+                              </Link>
+                            </li>
+                          ))
+                        ) : (
+                          <li>
+                            <Link href="/catalog" className={styles.superMenuItem} onClick={closeSuperMenu}>
+                              Каталог
+                            </Link>
+                          </li>
+                        )}
+                      </ul>
+                      <Link href="/catalog" className={styles.superMenuCatalogLink} onClick={closeSuperMenu}>
+                        В Каталог
+                      </Link>
+                    </div>
+                    <div
+                      className={styles.superMenuTagsPanel}
+                      role="region"
+                      aria-label="Контекстные теги"
+                      ref={superMenuTagsPanelRef}
+                    >
+                      {catalogTags.length > 0 ? (
+                        <ScrollCatalogStripPanel
+                          layout="superMenu"
+                          theme="dark"
+                          uniformCards
+                          titleVariant="caption"
+                          tightTop
+                          items={catalogTags.map((tag) => ({
+                            key: tag.slug,
+                            href: `/catalog?tag=${encodeURIComponent(tag.slug)}`,
+                            name: tag.name,
+                            imageSrc: resolveMediaUrlForClient(tag.coverImageUrl),
+                          }))}
+                          onLinkClick={() => closeSuperMenu()}
+                        />
+                      ) : (
+                        <span className={styles.superMenuTagsEmpty}>—</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-                ))}
               </div>
             </div>
           </div>

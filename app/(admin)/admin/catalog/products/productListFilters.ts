@@ -3,7 +3,7 @@ import type { AdminBrandRow } from '../../brands/adminBrandTypes';
 import type { AdminCuratedCollectionRow } from '../../collections/collectionsAdminTypes';
 import type { AdminProductSetRow } from '../../product-sets/productSetsAdminTypes';
 import type { AdminCategoryRow } from '../categories/adminCategoryTypes';
-import type { AdminCatalogTagRow } from './adminProductTypes';
+import type { AdminCatalogTagOption } from '../tags/catalogTagsAdminTypes';
 
 export type ProductListFilters = {
   brandId: string;
@@ -24,7 +24,7 @@ export const EMPTY_PRODUCT_LIST_FILTERS: ProductListFilters = {
 export type ProductListFilterMeta = {
   categories: AdminCategoryRow[];
   brands: AdminBrandRow[];
-  catalogTags: AdminCatalogTagRow[];
+  catalogTags: AdminCatalogTagOption[];
   collections: AdminCuratedCollectionRow[];
   productSets: AdminProductSetRow[];
 };

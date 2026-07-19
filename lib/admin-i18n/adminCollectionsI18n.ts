@@ -18,6 +18,14 @@ export function adminCollectionsListStrings(locale: AdminLocale) {
     kindProduct: pick(locale, 'Товары', '商品'),
     kindBrand: pick(locale, 'Бренды', '品牌'),
     errLoad: pick(locale, 'Ошибка загрузки', '加载失败'),
+    errReorder: pick(locale, 'Не удалось сохранить порядок', '无法保存排序'),
+    searchReorderHint: pick(
+      locale,
+      'При активном поиске порядок коллекций менять нельзя — очистите поле поиска.',
+      '搜索时无法调整顺序，请清空搜索框。',
+    ),
+    drag: pick(locale, 'Перетащить', '拖动'),
+    thOrder: pick(locale, 'Порядок', '顺序'),
     confirmDelete: (n: number) =>
       pick(locale, `Удалить выбранные коллекции (${n})?`, `删除所选 ${n} 个集合？`),
     errDelete: pick(locale, 'Ошибка удаления', '删除失败'),

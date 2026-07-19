@@ -8,7 +8,12 @@ export const metadata: Metadata = {
   description: 'Каталог мебели и предметов интерьера',
 };
 
-export default async function CatalogIndexPage() {
+export default async function CatalogIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   const roots = await fetchHomeCatalogRoots();
 
   if (roots.length === 0) {
@@ -22,5 +27,11 @@ export default async function CatalogIndexPage() {
     );
   }
 
-  redirect(`/catalog/${encodeURIComponent(roots[0].slug)}`);
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    if (typeof value === 'string' && value.trim()) qs.set(key, value);
+  }
+  const query = qs.toString();
+
+  redirect(`/catalog/${encodeURIComponent(roots[0].slug)}${query ? `?${query}` : ''}`);
 }
