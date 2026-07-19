@@ -27,13 +27,19 @@ export const adminQueryKeys = {
   },
   collections: {
     all: ['admin', 'collections'] as const,
-    list: (params: { q: string; page: number }) =>
-      ['admin', 'collections', 'list', params] as const,
+    /** Без q — полный список для DnD (page не участвует в запросе и ключе). */
+    list: (params: { q: string; page?: number }) =>
+      params.q
+        ? (['admin', 'collections', 'list', { q: params.q, page: params.page ?? 1 }] as const)
+        : (['admin', 'collections', 'list', { q: '' }] as const),
   },
   catalogTags: {
     all: ['admin', 'catalog', 'tags'] as const,
-    list: (params: { q: string; page: number }) =>
-      ['admin', 'catalog', 'tags', 'list', params] as const,
+    /** Без q — полный список для DnD (page не участвует в запросе и ключе). */
+    list: (params: { q: string; page?: number }) =>
+      params.q
+        ? (['admin', 'catalog', 'tags', 'list', { q: params.q, page: params.page ?? 1 }] as const)
+        : (['admin', 'catalog', 'tags', 'list', { q: '' }] as const),
   },
   productSets: {
     all: ['admin', 'product-sets'] as const,
