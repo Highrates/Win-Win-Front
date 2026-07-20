@@ -18,6 +18,13 @@
   row-gap: 32px;
 }
 
+.infiniteScrollSentinel {
+  width: 100%;
+  height: 1px;
+  margin-top: 32px;
+  pointer-events: none;
+}
+
 @media (max-width: 768px) {
   .section {
     margin-top: 80px;

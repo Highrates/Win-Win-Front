@@ -49,7 +49,7 @@
   flex-shrink: 0;
   aspect-ratio: 372 / 400;
   position: relative;
-  border-radius: 10px;
+  border-radius: var(--radius-4);
   overflow: hidden;
   touch-action: manipulation;
   user-select: none;

@@ -14,6 +14,8 @@ const DRAG_THRESHOLD = 5;
 
 type Props = {
   roots: HomeCatalogRoot[];
+  /** Hero + ScrollCatalog в fold: hero сжимается, карточки — фиксированный размер */
+  fillFold?: boolean;
 };
 
 type StripCard = {
@@ -35,7 +37,7 @@ function cardsForRoot(root: HomeCatalogRoot | undefined): StripCard[] {
   return [{ slug: root.slug, name: root.name, image: root.cardImageUrl }];
 }
 
-export function ScrollCatalog({ roots: initialRoots }: Props) {
+export function ScrollCatalog({ roots: initialRoots, fillFold = false }: Props) {
   const [roots, setRoots] = useState<HomeCatalogRoot[]>(initialRoots);
   const tabsWrapperRef = useRef<HTMLDivElement>(null);
   const tabBtnRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -140,20 +142,12 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
     };
     const ro = new ResizeObserver(sync);
     ro.observe(wrap);
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-      if (wrap.scrollWidth <= wrap.clientWidth + 2) return;
-      e.preventDefault();
-      wrap.scrollLeft += e.deltaY;
-    };
     wrap.addEventListener('scroll', sync, { passive: true });
-    wrap.addEventListener('wheel', onWheel, { passive: false });
     window.addEventListener('resize', sync);
     sync();
     return () => {
       ro.disconnect();
       wrap.removeEventListener('scroll', sync);
-      wrap.removeEventListener('wheel', onWheel);
       window.removeEventListener('resize', sync);
     };
   }, [updateIndicator, updateTabsScrollEdges]);
@@ -257,7 +251,7 @@ export function ScrollCatalog({ roots: initialRoots }: Props) {
   }
 
   return (
-    <section className={styles.section}>
+    <section className={fillFold ? `${styles.section} ${styles.sectionFold}` : styles.section}>
       <div className="padding-global">
         <div
           className={styles.tabsShell}

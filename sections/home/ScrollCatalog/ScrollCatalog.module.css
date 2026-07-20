@@ -5,11 +5,41 @@
   margin-top: 0;
 }
 
+/* В fold: фиксированные размеры карточек; hero сжимается, отступы только на низких экранах */
+.sectionFold {
+  flex: 0 0 auto;
+  padding-bottom: 16px;
+}
+
+.sectionFold .tabsShell {
+  top: -32px;
+  margin-bottom: -32px;
+}
+
+.sectionFold .stripHostFlexHome {
+  margin-top: 24px;
+}
+
+@media (max-height: 820px) {
+  .sectionFold {
+    padding-bottom: 8px;
+  }
+
+  .sectionFold .tabsShell {
+    top: -24px;
+    margin-bottom: -24px;
+  }
+
+  .sectionFold .stripHostFlexHome {
+    margin-top: 24px;
+  }
+}
+
 .tabsShell {
   position: relative;
   z-index: 6;
-  top: -24px;
-  margin-bottom: -24px;
+  top: -32px;
+  margin-bottom: -32px;
   margin-left: auto;
   margin-right: auto;
   max-width: 80%;
@@ -23,7 +53,7 @@
   gap: 28px;
   padding: 14px 28px;
   background: var(--color-bright-snow);
-  border-radius: 8px;
+  border-radius: var(--radius-4);
   box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.10);
   justify-content: flex-start;
   align-items: center;
@@ -59,7 +89,7 @@
   z-index: 2;
   opacity: 0;
   transition: opacity 200ms ease;
-  border-radius: 8px;
+  border-radius: var(--radius-4);
 }
 
 .tabsFadeStart {
@@ -111,38 +141,39 @@
   position: absolute;
   left: 0;
   bottom: 0;
-  height: 1.2px;
+  height: 1px;
   width: var(--tabs-indicator-w);
-  transform: translateX(var(--tabs-indicator-x));
+  transform: translate3d(var(--tabs-indicator-x), 0, 0);
   background: var(--color-ink-black);
-  border-radius: 2px;
+  border-radius: 0;
   transition: transform 600ms ease, width 600ms ease;
   pointer-events: none;
+  /* стабильная толщина при смене ширины / hover */
+  backface-visibility: hidden;
+  box-shadow: none;
 }
 
 .tab,
 .tabActive {
-  font-size: var(--text-card-20-300);
-  font-weight: 300;
-  background: none;
-  border: none;
-  cursor: pointer;
+  appearance: none;
+  margin: 0;
   padding: 0;
+  border: none;
+  background: none;
   font-family: inherit;
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+  line-height: 1.2;
+  color: var(--color-gray);
+  cursor: pointer;
   position: relative;
   z-index: 1;
   flex: 0 0 auto;
   white-space: nowrap;
+  transition: color 0.2s ease;
 }
 
-.tab {
-  color: var(--color-gray);
-}
-
-.tab:hover {
-  color: var(--color-ink-black);
-}
-
+.tab:hover,
 .tabActive {
   color: var(--color-ink-black);
 }
@@ -152,7 +183,7 @@
  * совпадает с табами в .padding-global. Табы остаются внутри padding-global.
  */
 .stripHostFlex {
-  margin-top: 40px;
+  margin-top: 24px;
 }
 
 .stripHostFlexTightTop {
@@ -181,7 +212,7 @@
   height: 32px;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-4);
   background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
   display: none;
@@ -306,7 +337,7 @@
   width: 242px;
   height: 220px;
   background: var(--color-bright-snow);
-  border-radius: 8px;
+  border-radius: var(--radius-4);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -396,6 +427,29 @@
     margin-top: 32px;
   }
 
+  .sectionFold {
+    margin-top: 16px;
+  }
+
+  .sectionFold .tabsShell {
+    top: 0;
+    margin-bottom: 0;
+  }
+
+  .sectionFold .stripHostFlexHome {
+    margin-top: 24px;
+  }
+
+  @media (max-height: 820px) {
+    .sectionFold {
+      margin-top: 8px;
+    }
+
+    .sectionFold .stripHostFlexHome {
+      margin-top: 24px;
+    }
+  }
+
   .tabsShell {
     top: 0;
     margin-bottom: 0;
@@ -417,13 +471,8 @@
     width: 36px;
   }
 
-  .tab,
-  .tabActive {
-    font-size: var(--text-body);
-  }
-
   .stripHostFlexHome {
-    margin-top: 20px;
+    margin-top: 24px;
   }
 
   /* Главная + страница родителя: компактные карточки подкатегорий */

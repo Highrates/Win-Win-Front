@@ -17,6 +17,7 @@ export type BrandAdminDetail = {
   logoUrl: string | null;
   coverImageUrl: string | null;
   backgroundImageUrl: string | null;
+  productPreviewImageUrl: string | null;
   galleryImageUrls: unknown;
   seoTitle: string | null;
   seoDescription: string | null;

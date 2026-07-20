@@ -2,13 +2,18 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { LogoPaths } from './LogoPaths';
+import {
+  animateLogoWaveIn,
+  animateLogoWaveOut,
+  loadAnime,
+  logoWaveDistance,
+  prepareLogoWaveIn,
+} from './logoWave';
 
 const BOOT_LOADER_ID = 'site-boot-loader';
 
-const LOGO_HEIGHT = 41;
-const STAGGER_MS = 35;
-const PATH_DURATION = 500;
-const BG_COLLAPSE_DURATION = 600;
+const HOLD_AFTER_IN_MS = 280;
+const BG_COLLAPSE_DURATION = 700;
 
 function removeBootLoader() {
   try {
@@ -18,63 +23,59 @@ function removeBootLoader() {
   }
 }
 
+function markReady() {
+  document.body.classList.add('--js-ready');
+}
+
 export function SiteLoader() {
   const rootRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const [shouldShow, setShouldShow] = useState(false);
 
-  /** До первого layout-прохода клиента держим SSR `#site-boot-loader`; затем синхронно решаем — показывать ли анимированный лоадер. */
   useLayoutEffect(() => {
     removeBootLoader();
-    try {
-      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-      if (nav?.type === 'reload' || nav?.type === 'back_forward') {
-        setShouldShow(false);
-      } else {
-        setShouldShow(true);
-      }
-    } catch {
-      setShouldShow(true);
-    }
+    /* Всегда показываем preload с волной (в т.ч. reload) — иначе анимация «пропадает» при обновлении. */
+    setShouldShow(true);
   }, []);
 
   useEffect(() => {
     if (!shouldShow || !rootRef.current || !bgRef.current || !logoRef.current) return;
 
-    const paths = logoRef.current.querySelectorAll('.site-loader__path');
-    if (!paths.length) return;
-
     let cancelled = false;
+    const logoEl = logoRef.current;
+    const distance = logoWaveDistance(logoEl);
+    prepareLogoWaveIn(logoEl, distance);
 
-    const runSequence = () => {
+    const runSequence = async () => {
+      const bgEl = bgRef.current;
+      if (!logoEl || !bgEl || cancelled) return;
+
+      await animateLogoWaveIn(logoEl, distance);
       if (cancelled) return;
-      import('animejs').then(({ animate, stagger }) => {
-        if (cancelled) return;
-        const pathAnimation = animate(paths, {
-          translateY: LOGO_HEIGHT,
-          duration: PATH_DURATION,
-          ease: 'outCubic',
-          delay: stagger(STAGGER_MS),
-        });
 
-        pathAnimation.then(() => {
-          if (cancelled) return;
-          document.body.classList.add('--js-ready');
-          const bgAnimation = animate(bgRef.current!, {
-            translateY: '100%',
-            duration: BG_COLLAPSE_DURATION,
-            ease: 'inQuad',
-          });
-          bgAnimation.then(() => {
-            if (!cancelled) _destroy();
-          });
-        });
+      await new Promise((r) => setTimeout(r, HOLD_AFTER_IN_MS));
+      if (cancelled) return;
+
+      await animateLogoWaveOut(logoEl, distance);
+      if (cancelled) return;
+
+      markReady();
+      const { animate } = await loadAnime();
+      if (cancelled) return;
+
+      await animate(bgEl, {
+        translateY: '100%',
+        duration: BG_COLLAPSE_DURATION,
+        ease: 'inQuad',
       });
+      if (!cancelled) _destroy();
     };
 
     const frame = requestAnimationFrame(() => {
-      requestAnimationFrame(runSequence);
+      requestAnimationFrame(() => {
+        void runSequence();
+      });
     });
 
     return () => {
@@ -86,9 +87,10 @@ export function SiteLoader() {
   function _destroy() {
     const el = rootRef.current;
     if (!el) return;
+    el.style.pointerEvents = 'none';
+    el.style.visibility = 'hidden';
     const parent = el.parentNode;
     if (!parent) return;
-    if ((parent as ParentNode).contains?.(el) === false) return;
     try {
       parent.removeChild(el);
     } catch {

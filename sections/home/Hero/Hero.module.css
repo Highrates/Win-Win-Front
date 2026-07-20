@@ -2,6 +2,13 @@
   margin: 0;
 }
 
+.sectionFold {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .heroBg {
   min-height: 64vh;
   background-color: var(--color-ink-black);
@@ -10,6 +17,12 @@
   justify-content: flex-end;
   position: relative;
   overflow: hidden;
+}
+
+.heroBgFold {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
 }
 
 .heroImage {
@@ -39,23 +52,9 @@
   .heroBg {
     min-height: 64vh;
   }
-}
 
-.heroSloganWrap {
-  display: none;
-  z-index: 2;
-}
-
-@media (max-width: 768px) {
-  .heroSloganWrap {
-    display: flex;
-    position: absolute;
-    inset: 0;
-    align-items: center;
-    justify-content: center;
-    padding: 0 16px;
-    z-index: 2;
-    pointer-events: none;
+  .heroBgFold {
+    min-height: 0;
   }
 }
 

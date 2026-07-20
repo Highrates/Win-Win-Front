@@ -20,7 +20,7 @@ export default function StyleGuidePage() {
             <h3 className="h3">Заголовок третьего уровня</h3>
           </div>
           <div>
-            <p className="text-caption" style={{ color: 'var(--color-gray)', marginBottom: 4 }}>H4 — 20px, 450, uppercase</p>
+            <p className="text-caption" style={{ color: 'var(--color-gray)', marginBottom: 4 }}>H4 — 20px, 350</p>
             <h4 className="h4">Заголовок четвёртого уровня</h4>
           </div>
           <div>

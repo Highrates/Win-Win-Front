@@ -1,37 +1,62 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
+import styles from './CatalogHub.module.css';
 
 export const metadata: Metadata = {
   title: 'Каталог — Win-Win',
   description: 'Каталог мебели и предметов интерьера',
 };
 
-export default async function CatalogIndexPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
+export default async function CatalogIndexPage() {
   const roots = await fetchHomeCatalogRoots();
 
   if (roots.length === 0) {
     return (
-      <main className="padding-global" style={{ paddingTop: '4rem', paddingBottom: '4rem' }}>
+      <main className={`padding-global ${styles.page}`}>
         <p>Каталог пока пуст.</p>
-        <p style={{ marginTop: '1rem' }}>
+        <p className={styles.emptyBack}>
           <Link href="/">На главную</Link>
         </p>
       </main>
     );
   }
 
-  const qs = new URLSearchParams();
-  for (const [key, value] of Object.entries(sp)) {
-    if (typeof value === 'string' && value.trim()) qs.set(key, value);
-  }
-  const query = qs.toString();
+  return (
+    <main className={`padding-global ${styles.page}`}>
+      <nav className={styles.breadcrumbs} aria-label="Навигация">
+        <Link href="/" className={styles.breadcrumbsLink}>
+          Главная
+        </Link>
+        <span className={styles.breadcrumbsSep} aria-hidden>
+          /
+        </span>
+        <span className={styles.breadcrumbsCurrent}>Каталог</span>
+      </nav>
 
-  redirect(`/catalog/${encodeURIComponent(roots[0].slug)}${query ? `?${query}` : ''}`);
+      <h1 className={styles.title}>Каталог</h1>
+      <p className={styles.lead}>Выберите раздел</p>
+
+      <ul className={styles.grid}>
+        {roots.map((root) => (
+          <li key={root.id} className={styles.gridItem}>
+            <Link href={`/catalog/${root.slug}`} className={styles.card}>
+              <div className={styles.cardImgWrap}>
+                <img
+                  src={root.cardImageUrl}
+                  alt=""
+                  width={320}
+                  height={240}
+                  className={styles.cardImg}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <span className={styles.cardTitle}>{root.name}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
 }

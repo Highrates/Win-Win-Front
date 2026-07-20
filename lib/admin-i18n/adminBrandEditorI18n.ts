@@ -10,6 +10,26 @@ export function adminBrandEditorStrings(locale: AdminLocale) {
     pickerImageDesc: pick(locale, 'Изображение для описания', '描述用图片'),
     pickerLogo: pick(locale, 'Логотип бренда', '品牌标志'),
     pickerCover: pick(locale, 'Обложка бренда', '品牌封面'),
+    pickerProductPreview: pick(
+      locale,
+      'Изображение товара (preview)',
+      '商品预览图',
+    ),
+    sectionProductPreview: pick(
+      locale,
+      'Изображение товара (preview)',
+      '商品预览图',
+    ),
+    removeProductPreview: pick(
+      locale,
+      'Убрать изображение товара',
+      '移除商品预览图',
+    ),
+    productPreviewHint: pick(
+      locale,
+      'Для блока Best Brands на главной (левая колонка)',
+      '用于首页 Best Brands（左栏）',
+    ),
     pickerGallery: (n: number) =>
       pick(locale, `Галерея — изображение ${n}`, `图库 — 图片 ${n}`),
     pickerColorImage: pick(locale, 'Изображение цвета', '颜色图片'),

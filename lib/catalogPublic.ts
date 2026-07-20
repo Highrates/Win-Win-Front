@@ -136,6 +136,8 @@ export type PublicBrandCollectionBrand = {
   name: string;
   logoUrl: string | null;
   shortDescription: string | null;
+  productPreviewImageUrl: string | null;
+  lifestyleImageUrl: string | null;
   galleryMain: string | null;
   gallerySide1: string | null;
   gallerySide2: string | null;

@@ -103,6 +103,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const [isActive, setIsActive] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
+  const [productPreviewImageUrl, setProductPreviewImageUrl] = useState('');
   const [galleryFrames, setGalleryFrames] = useState<ProductGalleryFrame[]>([]);
   const [shortDescription, setShortDescription] = useState('');
   const [description, setDescription] = useState('');
@@ -117,6 +118,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const brandTargetRef = useRef<
     | 'logo'
     | 'background'
+    | 'productPreview'
     | { kind: 'brandColor'; materialId: string; colorId: string }
     | { kind: 'brandColorBatch'; materialId: string }
     | null
@@ -139,6 +141,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setIsActive(row.isActive);
       setLogoUrl(row.logoUrl ?? '');
       setBackgroundImageUrl(row.backgroundImageUrl ?? '');
+      setProductPreviewImageUrl(row.productPreviewImageUrl ?? '');
       setGalleryFrames(galleryUrlsToFrames(row.galleryImageUrls));
       setShortDescription(row.shortDescription ?? '');
       setDescription(row.description ?? '');
@@ -200,6 +203,17 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     setPicker({ filter: 'image', title: s.pickerCover });
   }
 
+  function openProductPreviewPicker() {
+    richPickResolver.current = null;
+    brandTargetRef.current = 'productPreview';
+    setSaveMsg(null);
+    setPicker({ filter: 'image', title: s.pickerProductPreview });
+  }
+
+  function clearProductPreview() {
+    setProductPreviewImageUrl('');
+  }
+
   function handlePickerPick(sel: { url: string; id: string; originalName?: string }) {
     const resolveRich = richPickResolver.current;
     if (resolveRich) {
@@ -214,6 +228,8 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setLogoUrl(sel.url);
     } else if (t === 'background') {
       setBackgroundImageUrl(sel.url);
+    } else if (t === 'productPreview') {
+      setProductPreviewImageUrl(sel.url);
     } else if (t && typeof t === 'object' && t.kind === 'brandColor') {
       setMaterials((prev) =>
         prev.map((m) =>
@@ -381,6 +397,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       isActive,
       logoUrl: logoUrl.trim() || null,
       backgroundImageUrl: backgroundImageUrl.trim() || null,
+      productPreviewImageUrl: productPreviewImageUrl.trim() || null,
       galleryImageUrls: galleryUrls,
       shortDescription: shortDescription.trim().slice(0, 400) || null,
       description: description.trim() || null,
@@ -555,6 +572,42 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
           {backgroundImageUrl ? (
             <div className={styles.bgPreview} style={{ marginTop: 10 }}>
               <img src={backgroundImageUrl} alt="" />
+            </div>
+          ) : null}
+        </div>
+
+        <div>
+          <h2 className={styles.groupHeading}>{s.sectionProductPreview}</h2>
+          <p className={styles.muted} style={{ margin: '0 0 8px' }}>
+            {s.productPreviewHint}
+          </p>
+          <div className={styles.coverActions}>
+            <AdminCompactBtn type="button" onClick={openProductPreviewPicker}>
+              {common.mediaLibrary}
+            </AdminCompactBtn>
+            {productPreviewImageUrl ? (
+              <AdminCompactBtn type="button" variant="danger" onClick={clearProductPreview}>
+                {s.removeProductPreview}
+              </AdminCompactBtn>
+            ) : null}
+          </div>
+          {productPreviewImageUrl ? (
+            <div
+              className={styles.bgPreview}
+              style={{
+                marginTop: 10,
+                maxWidth: 280,
+                aspectRatio: '4 / 3',
+                borderRadius: 8,
+                overflow: 'hidden',
+                background: 'var(--color-bright-snow, #f5f5f5)',
+              }}
+            >
+              <img
+                src={productPreviewImageUrl}
+                alt=""
+                style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+              />
             </div>
           ) : null}
         </div>

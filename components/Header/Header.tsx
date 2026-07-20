@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useBrandsNavMenu } from '@/components/BrandsNavContext';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
+import { LogoPaths } from '@/components/SiteLoader/LogoPaths';
+import { animateLogoWaveIn, logoWaveDistance, prepareLogoWaveIn } from '@/components/SiteLoader/logoWave';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import { ScrollCatalogStripPanel } from '@/sections/home/ScrollCatalog/ScrollCatalogStripPanel';
 import { USER_SESSION_CHANGED_EVENT } from '@/lib/userSessionClient';
@@ -12,9 +13,8 @@ import styles from './Header.module.css';
 
 const MENU_SECTIONS = [
   { id: 'categories', href: '/catalog', label: 'Каталог' },
+  { id: 'zones', href: '/catalog', label: 'Зоны' },
   { id: 'brands', href: '/brands', label: 'Бренды' },
-  { id: 'designers', href: '/designers', label: 'Дизайнеры' },
-  { id: 'projects', href: '/projects', label: 'Проекты и концепции' },
 ] as const;
 
 const SUPER_MENU_PANEL_ID = 'super-menu-panel';
@@ -32,16 +32,19 @@ const SUPER_MENU_FALLBACK_LINKS = [
   'Сад',
 ] as const;
 
-const MOBILE_MENU_SUBLINKS: Record<string, string[]> = {
-  designers: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
-  projects: ['Гостиная', 'Столовая', 'Свет', 'Офис', 'Отель', 'Декор', 'Сад'],
-};
-
 const MOBILE_INFO_LINKS = [
-  { href: '/about', label: 'О Win-Win' },
+  { href: '/about', label: 'О нас' },
+  { href: '/designers', label: 'Дизайнеры' },
+  { href: '/projects', label: 'Проекты и концепции' },
   { href: '/delivery', label: 'Доставка и оплата' },
-  { href: '/guarantee', label: 'Гарантия, обмен и возврат' },
+  { href: '/warranty', label: 'Гарантия, обмен и возврат' },
+  { href: '/referral', label: 'Реферальная программа' },
+  { href: '/faq', label: 'FAQ' },
+  { href: '/contacts', label: 'Контакты' },
 ] as const;
+
+/** Пока нет URL в настройках — заглушка. */
+const TELEGRAM_HREF = 'https://t.me/';
 
 function MenuChevron({ open }: { open: boolean }) {
   return (
@@ -64,18 +67,22 @@ const headerClassMap: Record<HeaderVariant, string> = {
 export function Header({
   variant = 'default',
   isMainOverlayOnHome = false,
-  showHeroLogoBadge = false,
+  showHeroLogoBadge: _showHeroLogoBadge = false,
   superMenuOpen: superMenuOpenProp,
   setSuperMenuOpen: setSuperMenuOpenProp,
 }: {
   variant?: HeaderVariant;
   isMainOverlayOnHome?: boolean;
+  /** @deprecated бейдж убран — только логотип */
   showHeroLogoBadge?: boolean;
   superMenuOpen?: boolean;
   setSuperMenuOpen?: (open: boolean) => void;
 }) {
   const [mainOverlayVisible, setMainOverlayVisible] = useState(false);
   const [internalSuperMenuOpen, setInternalSuperMenuOpen] = useState(false);
+  const [logoWaveReady, setLogoWaveReady] = useState(false);
+  const [logoFading, setLogoFading] = useState(false);
+  const logoWaveRef = useRef<HTMLSpanElement>(null);
   const superMenuOpen = setSuperMenuOpenProp !== undefined ? (superMenuOpenProp ?? false) : internalSuperMenuOpen;
   const setSuperMenuOpen = setSuperMenuOpenProp ?? setInternalSuperMenuOpen;
   const [superMenuSection, setSuperMenuSection] = useState<string | null>(null);
@@ -84,7 +91,8 @@ export function Header({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuContentRevealed, setMobileMenuContentRevealed] = useState(false);
   const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
-  const [mobileMenuExpandedId, setMobileMenuExpandedId] = useState<string | null>(null);
+  const [mobileMenuCatalogOpen, setMobileMenuCatalogOpen] = useState(false);
+  const [mobileMenuZonesOpen, setMobileMenuZonesOpen] = useState(false);
   const [accountEntryHref, setAccountEntryHref] = useState('/login');
   const mobileMenuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTransitioningRef = useRef(false);
@@ -97,8 +105,6 @@ export function Header({
   const superMenuTagsPanelRef = useRef<HTMLDivElement>(null);
   setSuperMenuOpenRef.current = setSuperMenuOpen;
   const catalogRoots = useCatalogNavRoots();
-  const brandsMenuItems = useBrandsNavMenu();
-  const [designersMenuLinks, setDesignersMenuLinks] = useState<{ href: string; label: string }[]>([]);
   const [catalogTags, setCatalogTags] = useState<
     { slug: string; name: string; coverImageUrl: string | null }[]
   >([]);
@@ -128,6 +134,87 @@ export function Header({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const el = logoWaveRef.current;
+    if (!el) return;
+
+    /* Overlay main ещё не виден — держим буквы ниже клипа, волну не стартуем. */
+    if (variant === 'main' && isMainOverlayOnHome && !mainOverlayVisible) {
+      const distance = logoWaveDistance(el);
+      prepareLogoWaveIn(el, distance);
+      setLogoWaveReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    const distance = logoWaveDistance(el);
+    prepareLogoWaveIn(el, distance);
+    setLogoWaveReady(false);
+
+    const play = () => {
+      if (cancelled) return;
+      void animateLogoWaveIn(el, distance).finally(() => {
+        if (!cancelled) setLogoWaveReady(true);
+      });
+    };
+
+    /* На главной над hero ждём конец preload; иначе играем сразу. */
+    const waitForLoader =
+      variant === 'minimal' && Boolean(document.querySelector('[data-site-loader]'));
+
+    if (!waitForLoader || document.body.classList.contains('--js-ready')) {
+      play();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const mo = new MutationObserver(() => {
+      if (document.body.classList.contains('--js-ready')) {
+        mo.disconnect();
+        play();
+      }
+    });
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    const fallback = window.setTimeout(() => {
+      mo.disconnect();
+      play();
+    }, 4000);
+
+    return () => {
+      cancelled = true;
+      mo.disconnect();
+      window.clearTimeout(fallback);
+    };
+  }, [variant, mainOverlayVisible, isMainOverlayOnHome]);
+
+  /* Уход с hero: плавный opacity лого (без wave-out) */
+  useEffect(() => {
+    if (variant !== 'minimal') return;
+    const hero = document.getElementById('hero-section');
+    if (!hero) return;
+
+    let raf = 0;
+    const update = () => {
+      const bottom = hero.getBoundingClientRect().bottom;
+      /* Начинаем гасить лого, когда низ hero подходит к верху вьюпорта */
+      const fading = bottom < 160;
+      setLogoFading(fading);
+    };
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(update);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    update();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+      setLogoFading(false);
+    };
+  }, [variant]);
 
   const syncSuperMenuCatalogLayout = useCallback(() => {
     const catalogBtn = catalogMenuTriggerRef.current;
@@ -174,27 +261,6 @@ export function Header({
       superMenuTagsPanelRef.current.style.removeProperty('--super-menu-strip-left');
     }
   }, [superMenuOpen]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch('/api/public/designers?page=1&limit=8', { cache: 'no-store' });
-        if (!res.ok || cancelled) return;
-        const data = (await res.json()) as { items?: { slug: string; displayName: string }[] };
-        const items = (data.items ?? []).slice(0, 8).map((d) => ({
-          href: `/designers/${encodeURIComponent(d.slug)}`,
-          label: d.displayName,
-        }));
-        if (!cancelled) setDesignersMenuLinks(items);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -302,7 +368,7 @@ export function Header({
   }, [superMenuOpen, variant]);
 
   const openSuperMenu = (sectionId: string) => {
-    if (sectionId !== 'categories') return;
+    if (sectionId !== 'categories' && sectionId !== 'zones') return;
     if (superMenuOpen && superMenuSection === sectionId) {
       closeSuperMenu();
       return;
@@ -334,6 +400,8 @@ export function Header({
       mobileMenuCloseTimeoutRef.current = null;
       setMobileMenuOpen(false);
       setMobileMenuClosing(false);
+      setMobileMenuCatalogOpen(false);
+      setMobileMenuZonesOpen(false);
     }, 280);
   };
   const toggleMobileMenu = () => {
@@ -405,37 +473,22 @@ export function Header({
               </svg>
             </span>
           </button>
-          <div className={styles.logoBlock}>
-            <Link href="/" aria-label="На главную">
-              {showHeroLogoBadge ? (
-                <div className={styles.heroLogoBadge}>
-                  <p className={styles.heroLogoBadgeText}>
-                    Качественный, стильный интерьер из Китая
-                  </p>
-                  <span className={styles.heroLogoBadgeBottomRow} aria-hidden="true">
-                    <span className={styles.heroLogoBadgeLogoSlot}>
-                      <img className={styles.heroLogoBadgeLogo} src="/images/logo.svg" alt="" />
-                    </span>
-                    <span className={styles.heroLogoBadgeTm}>TM</span>
-                  </span>
-                </div>
-              ) : (
-                <Image
-                  src="/images/logo.svg"
-                  alt="Win-Win"
-                  width={280}
-                  height={41}
-                  className={styles.logoImg}
-                  style={{ height: 'auto' }}
-                  priority
-                />
-              )}
+          <div
+            className={[styles.logoBlock, logoFading ? styles.logoBlockFading : '']
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <Link href="/" aria-label="На главную" className={styles.logoLink}>
+              <span className={styles.logoWaveMark} ref={logoWaveRef} aria-hidden={!logoWaveReady}>
+                <LogoPaths className={styles.logoWaveSvg} />
+              </span>
+              <span className={styles.srOnly}>588est</span>
             </Link>
           </div>
           <nav className={styles.siteHeaderNav} aria-label="Основное меню">
             <div className={styles.siteHeaderMenu}>
               {MENU_SECTIONS.map(({ id, href, label }) =>
-                id === 'categories' ? (
+                id === 'categories' || id === 'zones' ? (
                   <button
                     key={id}
                     type="button"
@@ -497,7 +550,7 @@ export function Header({
             <Link href="/" onClick={closeMobileMenu} className={styles.mobileMenuLogoLink} aria-label="На главную">
               <Image
                 src="/images/logo.svg"
-                alt="Win-Win"
+                alt="588est"
                 width={200}
                 height={30}
                 className={styles.mobileMenuLogoImg}
@@ -519,56 +572,53 @@ export function Header({
           <div className={styles.mobileMenuInner}>
             <nav className={styles.mobileMenuNav} aria-label="Основное меню">
               {MENU_SECTIONS.map(({ id, href, label }) => {
-                const isExpanded = mobileMenuExpandedId === id;
-                const sublinks =
-                  id === 'categories'
-                    ? catalogRoots.length > 0
-                      ? catalogRoots.map((c) => ({ href: `/catalog/${c.slug}`, label: c.name }))
-                      : [{ href: '/catalog', label: 'Каталог' }]
-                    : id === 'brands'
-                      ? brandsMenuItems.length > 0
-                        ? brandsMenuItems.map((b) => ({ href: `/brands/${b.slug}`, label: b.name }))
-                        : [{ href: '/brands', label: 'Бренды' }]
-                      : id === 'designers'
-                        ? designersMenuLinks.length > 0
-                          ? designersMenuLinks.map((d) => ({ href: d.href, label: d.label }))
-                          : [{ href: '/designers', label: 'Дизайнеры' }]
-                        : (MOBILE_MENU_SUBLINKS[id] ?? []).map((sublabel, i) => ({
-                            href: `${href}#${i}`,
-                            label: sublabel,
-                          }));
-                return (
-                  <div key={id} className={styles.mobileMenuItem}>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      className={styles.mobileMenuTrigger}
-                      onClick={() => setMobileMenuExpandedId((prev) => (prev === id ? null : id))}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setMobileMenuExpandedId((prev) => (prev === id ? null : id));
-                        }
-                      }}
-                      aria-expanded={isExpanded}
-                    >
-                      <span className={styles.mobileMenuTriggerRow}>
-                        <span className={styles.mobileMenuTriggerText}>{label}</span>
-                        <span className={styles.mobileMenuArrow} aria-hidden data-open={isExpanded || undefined}>
-                          <svg width="9" height="5" viewBox="0 0 9 5" fill="none">
-                            <path d="M0 0L4.5 5L9 0" stroke="currentColor" strokeWidth="1.2" />
-                          </svg>
+                if (id === 'categories') {
+                  const catalogSublinks =
+                    catalogRoots.length > 0
+                      ? catalogRoots.map((c) => ({
+                          href: `/catalog/${c.slug}`,
+                          label: c.name,
+                        }))
+                      : [{ href: '/catalog', label: 'Каталог' }];
+                  return (
+                    <div key={id} className={styles.mobileMenuItem}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={styles.mobileMenuTrigger}
+                        onClick={() => {
+                          setMobileMenuCatalogOpen((o) => !o);
+                          setMobileMenuZonesOpen(false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setMobileMenuCatalogOpen((o) => !o);
+                            setMobileMenuZonesOpen(false);
+                          }
+                        }}
+                        aria-expanded={mobileMenuCatalogOpen}
+                      >
+                        <span className={styles.mobileMenuTriggerRow}>
+                          <span className={styles.mobileMenuTriggerText}>{label}</span>
+                          <span
+                            className={styles.mobileMenuArrow}
+                            aria-hidden
+                            data-open={mobileMenuCatalogOpen || undefined}
+                          >
+                            <svg width="9" height="5" viewBox="0 0 9 5" fill="none">
+                              <path d="M0 0L4.5 5L9 0" stroke="currentColor" strokeWidth="1.2" />
+                            </svg>
+                          </span>
                         </span>
-                      </span>
-                      {sublinks.length > 0 && (
                         <div
                           className={styles.mobileMenuSublinks}
-                          hidden={!isExpanded}
+                          hidden={!mobileMenuCatalogOpen}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {sublinks.map((sub, i) => (
+                          {catalogSublinks.map((sub) => (
                             <Link
-                              key={`${id}-${sub.href}-${i}`}
+                              key={sub.href}
                               href={sub.href}
                               className={styles.mobileMenuSublink}
                               onClick={closeMobileMenu}
@@ -576,12 +626,91 @@ export function Header({
                               {sub.label}
                             </Link>
                           ))}
-                          <Link href={href} className={styles.mobileMenuShowAll} onClick={closeMobileMenu}>
-                            Показать все
+                          <Link
+                            href={href}
+                            className={styles.mobileMenuShowAll}
+                            onClick={closeMobileMenu}
+                          >
+                            В каталог
                           </Link>
                         </div>
-                      )}
+                      </div>
                     </div>
+                  );
+                }
+
+                if (id === 'zones') {
+                  const zoneSublinks =
+                    catalogTags.length > 0
+                      ? catalogTags.map((tag) => ({
+                          href: `/catalog?tag=${encodeURIComponent(tag.slug)}`,
+                          label: tag.name,
+                          key: tag.slug,
+                        }))
+                      : [{ href: '/catalog', label: 'Зоны', key: 'zones-fallback' }];
+                  return (
+                    <div key={id} className={styles.mobileMenuItem}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className={styles.mobileMenuTrigger}
+                        onClick={() => {
+                          setMobileMenuZonesOpen((o) => !o);
+                          setMobileMenuCatalogOpen(false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setMobileMenuZonesOpen((o) => !o);
+                            setMobileMenuCatalogOpen(false);
+                          }
+                        }}
+                        aria-expanded={mobileMenuZonesOpen}
+                      >
+                        <span className={styles.mobileMenuTriggerRow}>
+                          <span className={styles.mobileMenuTriggerText}>{label}</span>
+                          <span
+                            className={styles.mobileMenuArrow}
+                            aria-hidden
+                            data-open={mobileMenuZonesOpen || undefined}
+                          >
+                            <svg width="9" height="5" viewBox="0 0 9 5" fill="none">
+                              <path d="M0 0L4.5 5L9 0" stroke="currentColor" strokeWidth="1.2" />
+                            </svg>
+                          </span>
+                        </span>
+                        <div
+                          className={styles.mobileMenuSublinks}
+                          hidden={!mobileMenuZonesOpen}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {zoneSublinks.map((sub) => (
+                            <Link
+                              key={sub.key}
+                              href={sub.href}
+                              className={styles.mobileMenuSublink}
+                              onClick={closeMobileMenu}
+                            >
+                              {sub.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={id} className={styles.mobileMenuItem}>
+                    <Link
+                      href={href}
+                      className={styles.mobileMenuTrigger}
+                      onClick={closeMobileMenu}
+                    >
+                      <span className={styles.mobileMenuTriggerRow}>
+                        <span className={styles.mobileMenuTriggerText}>{label}</span>
+                      </span>
+                    </Link>
                   </div>
                 );
               })}
@@ -617,6 +746,17 @@ export function Header({
               </Link>
             </div>
           </div>
+          </div>
+          <div className={styles.mobileMenuBottom}>
+            <a
+              href={TELEGRAM_HREF}
+              className={styles.mobileMenuTelegram}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={closeMobileMenu}
+            >
+              Телеграм
+            </a>
           </div>
         </div>
       </div>
@@ -710,6 +850,44 @@ export function Header({
                       ) : (
                         <span className={styles.superMenuTagsEmpty}>—</span>
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  className={styles.superMenuSection}
+                  data-active={superMenuSection === 'zones' || undefined}
+                  hidden={superMenuSection !== 'zones'}
+                >
+                  <div
+                    className={[
+                      styles.superMenuSectionWrap,
+                      variant === 'main' ? styles.superMenuSectionWrapMain : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <div className={styles.superMenuLogoBlock} />
+                    <div className={styles.superMenuMenuCol}>
+                      <ul className={styles.superMenuMenu} role="list">
+                        {catalogTags.length > 0 ? (
+                          catalogTags.map((tag) => (
+                            <li key={tag.slug}>
+                              <Link
+                                href={`/catalog?tag=${encodeURIComponent(tag.slug)}`}
+                                className={styles.superMenuItem}
+                                onClick={closeSuperMenu}
+                              >
+                                {tag.name}
+                              </Link>
+                            </li>
+                          ))
+                        ) : (
+                          <li>
+                            <span className={styles.superMenuTagsEmpty}>—</span>
+                          </li>
+                        )}
+                      </ul>
                     </div>
                   </div>
                 </div>

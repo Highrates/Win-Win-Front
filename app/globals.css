@@ -3,7 +3,7 @@
 /* --- Design tokens (Style Guide) --- */
 :root {
   /* Colors */
-  --color-ink-black: #051826;
+  --color-ink-black: #1D1C1B;
   --color-black: #000000;
   --color-white: #FFFFFF;
   --color-gray: #9D9D9D;
@@ -26,9 +26,9 @@
   --h2-weight: 350;
   --h3-size: 24px;
   --h3-weight: 300;
-  --h4-size: 20px;
-  --h4-weight: 350;
-  --h5-size: 15px;
+  --h4-size: 18px;
+  --h4-weight: 300;
+  --h5-size: 16px;
   --h5-weight: 300;
 
   --text-body: 15px;
@@ -58,6 +58,11 @@
   --text-card-16-500: 16px;
   --text-card-16-400: 16px;
   --text-card-16-300: 16px;
+
+  /* Border radius */
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
 }
 
 /* Mobile typography (пока задано ориентировочно) */
@@ -66,10 +71,10 @@
     --h1-size: 28px;
     --h2-size: 24px;
     --h3-size: 20px;
-    --h4-size: 18px;
+    --h4-size: 16px;
     --h5-size: 14px;
-    --text-body: 14px;
-    --text-caption: 13px;
+    --text-body: 15px;
+    --text-caption: 14px;
     --text-card-20-400: 18px;
     --text-card-20-500: 18px;
     --text-card-20-300: 18px;
@@ -145,7 +150,6 @@ body.account-mobile-dock-open {
 .h4 {
   font-size: var(--h4-size);
   font-weight: var(--h4-weight);
-  text-transform: uppercase;
   font-family: var(--font-commissioner);
 }
 
@@ -239,18 +243,53 @@ body.header-super-menu-open {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+  /* 588est ~725×193; пропорции подправим отдельно */
   width: 280px;
-  height: 41px;
+  height: 75px;
+  overflow: hidden;
+  color: var(--color-white);
 }
 
-.site-loader__logo svg {
+.site-loader__logo .logo-wave {
+  position: relative;
+  display: block;
   width: 100%;
   height: 100%;
-  display: block;
+  overflow: hidden;
+  aspect-ratio: auto;
 }
 
-.site-loader__logo path {
-  fill: var(--color-white);
+.logo-wave {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 725 / 193;
+  overflow: hidden;
+}
+
+.logo-wave__letter {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: block;
+  overflow: hidden;
+  will-change: transform;
+  line-height: 0;
+}
+
+.logo-wave__letter svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.site-loader__logo .logo-wave__letter {
+  color: var(--color-white);
+}
+
+.site-loader__logo .logo-wave__letter path {
+  fill: currentColor;
 }
 
 /* --- Site transition (page-to-page) --- */
@@ -303,10 +342,18 @@ body.header-super-menu-open {
   color: var(--color-black);
 }
 
-.rich-content :where(h1, h2, h3, h4, h5) {
+.rich-content :where(h1, h2, h3, h5) {
   margin: 0 0 8px;
   text-transform: uppercase;
   color: var(--color-ink-black);
+}
+
+.rich-content h4 {
+  margin: 0 0 8px;
+  text-transform: none;
+  color: var(--color-ink-black);
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
 }
 
 .rich-content h1 {
@@ -322,11 +369,6 @@ body.header-super-menu-open {
 .rich-content h3 {
   font-size: var(--h3-size);
   font-weight: var(--h3-weight);
-}
-
-.rich-content h4 {
-  font-size: var(--h4-size);
-  font-weight: var(--h4-weight);
 }
 
 .rich-content h5 {

@@ -7,18 +7,18 @@ import { fetchPublicSiteSettings } from '@/lib/siteSettingsPublic';
 import {
   Hero,
   ScrollCatalog,
-  ProjectSourcing,
   BestBrands,
+  AboutTeaser,
   News,
   Recommendations,
   HomeProductLikesScope,
   type BestBrandsBrandItem,
 } from '@/sections/home';
 import { cookies } from 'next/headers';
+import topFoldStyles from '@/sections/home/HomeTopFold.module.css';
 
 const HOME_BRAND_COLLECTION_SLUG = 'luchshie-brendy-mesyatsa';
 const HOME_COLLECTION_1_SLUG = 'kollektsiya-1';
-const HOME_COLLECTION_2_SLUG = 'kollektsiya-2';
 const HOME_RECOMMENDATIONS_COLLECTION_SLUG = 'rekomendatsii';
 const HERO_ROTATION_COOKIE = 'winwin-hero-idx';
 
@@ -39,33 +39,28 @@ export default async function HomePage() {
     brandCollection,
     siteSettings,
     collection1Raw,
-    collection2Raw,
     recommendationsCollection,
   ] = await Promise.all([
     fetchHomeCatalogRoots(),
     fetchCuratedBrandCollectionBySlug(HOME_BRAND_COLLECTION_SLUG),
     fetchPublicSiteSettings(),
     fetchCuratedProductCollectionBySlug(HOME_COLLECTION_1_SLUG),
-    fetchCuratedProductCollectionBySlug(HOME_COLLECTION_2_SLUG),
     fetchCuratedProductCollectionBySlug(HOME_RECOMMENDATIONS_COLLECTION_SLUG),
   ]);
 
   const collection1 = productCollectionSection(collection1Raw, 'Коллекция 1');
-  const collection2 = productCollectionSection(collection2Raw, 'Коллекция 2');
 
-  let bestBrands: { sectionTitle: string; brands: BestBrandsBrandItem[] } | null = null;
+  let bestBrands: BestBrandsBrandItem[] | null = null;
   if (brandCollection?.brands?.length) {
-    const sectionTitle = brandCollection.name?.trim() || 'Лучшие бренды месяца';
-    const brands: BestBrandsBrandItem[] = brandCollection.brands.map((b) => ({
+    bestBrands = brandCollection.brands.map((b) => ({
       slug: b.slug,
       name: b.name,
-      logo: resolveMediaUrlForServer(b.logoUrl),
       description: b.shortDescription?.trim() || '',
-      galleryMain: resolveMediaUrlForServer(b.galleryMain),
-      gallerySide1: resolveMediaUrlForServer(b.gallerySide1),
-      gallerySide2: resolveMediaUrlForServer(b.gallerySide2),
+      productPreview: resolveMediaUrlForServer(b.productPreviewImageUrl),
+      lifestyleImage: resolveMediaUrlForServer(
+        b.lifestyleImageUrl || b.galleryMain,
+      ),
     }));
-    bestBrands = { sectionTitle, brands };
   }
 
   const recommendationItems = recommendationsCollection?.products?.length
@@ -84,31 +79,26 @@ export default async function HomePage() {
 
   const allHomeRecommendationItems = [
     ...(collection1?.items ?? []),
-    ...(collection2?.items ?? []),
     ...(recommendationItems ?? []),
   ];
 
   return (
     <main>
       <HomeProductLikesScope items={allHomeRecommendationItems}>
-        <Hero imageUrl={heroImageUrl} />
-        <ScrollCatalog roots={catalogRoots} />
-        <ProjectSourcing />
+        <div className={topFoldStyles.topFold}>
+          <Hero imageUrl={heroImageUrl} fillFold />
+          <ScrollCatalog roots={catalogRoots} fillFold />
+        </div>
+        {bestBrands?.length ? <BestBrands brands={bestBrands} /> : null}
         {collection1?.items.length ? (
           <Recommendations
             title={collection1.title}
             items={collection1.items}
             advanceGalleryOnScroll
+            progressiveLoad={false}
           />
         ) : null}
-        {bestBrands ? <BestBrands sectionTitle={bestBrands.sectionTitle} brands={bestBrands.brands} /> : null}
-        {collection2?.items.length ? (
-          <Recommendations
-            title={collection2.title}
-            items={collection2.items}
-            advanceGalleryOnScroll
-          />
-        ) : null}
+        <AboutTeaser />
         <News />
         {recommendationItems?.length ? (
           <Recommendations title={recommendationsTitle} items={recommendationItems} />

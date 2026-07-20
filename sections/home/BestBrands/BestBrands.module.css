@@ -1,372 +1,251 @@
 .section {
-  margin-top: 180px;
+  position: relative;
+  margin-top: 128px;
+  width: 100%;
   background: var(--color-white);
 }
 
-.wrapper {
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 74vh;
+  height: 74dvh;
+  min-height: 560px;
+  width: 100%;
+  position: relative;
+}
+
+.infoCol {
+  display: flex;
+  background: var(--color-bright-snow);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Левый/правый край как у .padding-global на полной ширине экрана */
+.infoPad {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  box-sizing: border-box;
+  padding-top: 64px;
+  padding-bottom: 64px;
+  padding-left: max(2rem, calc((100vw - 1536px) / 2 + 2rem));
+  padding-right: max(2rem, calc((100vw - 1536px) / 2 + 2rem));
+}
+
+.infoLink {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 32px;
-}
-
-.titlesWrapper {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0;
+  text-decoration: none;
+  color: inherit;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.titlesWrapper:hover .allBrandsLink {
-  opacity: 0.85;
-}
-
-.title {
+.brandName {
+  margin: 0;
   font-size: var(--h5-size);
   font-weight: var(--h5-weight);
   font-family: var(--font-commissioner);
   text-transform: uppercase;
-  margin: 0;
   color: var(--color-ink-black);
+  text-align: center;
+  line-height: 1.2;
+  flex-shrink: 0;
 }
 
-.allBrandsLink {
+.productPreviewWrap {
+  flex: 1 1 auto;
   display: flex;
-  flex-direction: row;
-  gap: 8px;
-  justify-content: space-between;
   align-items: center;
-  text-decoration: none;
-  color: inherit;
-  transition: opacity 0.2s ease;
+  justify-content: center;
+  width: 100%;
+  max-width: min(100%, 560px);
+  min-height: 0;
+  overflow: hidden;
 }
 
-.allBrandsLink:hover {
-  opacity: 0.85;
-}
-
-.allBrandsText {
-  font-size: var(--text-body);
-  color: var(--color-gray);
-}
-
-.arrow {
+.productPreview {
   display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
-.previewBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.productPreviewPlaceholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  background: rgba(0, 0, 0, 0.04);
 }
 
-.previewHost {
+.description {
+  margin: 0;
+  max-width: 36em;
+  width: 100%;
+  font-size: var(--text-body-long-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-long-height);
+  color: var(--color-ink-black);
+  text-align: center;
+  flex-shrink: 0;
+  /* фиксируем высоту под ~5 строк — смена бренда не двигает блок */
+  min-height: calc(var(--text-body-long-height) * 5);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+}
+
+.lifestyleCol {
   position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--color-bright-snow);
 }
 
-.previewHost .previewArrow {
+.lifestyleLink {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.lifestyleImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lifestylePlaceholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.navArrow {
   top: 50%;
   transform: translateY(-50%);
   width: 48px;
   height: 48px;
-  border-radius: 8px;
+  border-radius: var(--radius-8);
+  z-index: 2;
+  display: inline-flex;
 }
 
-.previewArrowPrev {
+.navArrowPrev {
   left: 16px;
 }
 
-.previewArrowNext {
+.navArrowNext {
   right: 16px;
 }
 
-.previewArrowIcon,
-.previewArrowIconNext {
+.navArrowIcon,
+.navArrowIconNext {
   display: block;
   width: 22px;
   height: 22px;
   pointer-events: none;
 }
 
-.previewArrowIcon {
+.navArrowIcon {
   transform: rotate(180deg);
-}
-
-.previewGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  height: 75vh;
-  min-height: 520px;
-}
-
-.infoStackDesktop,
-.imageStack {
-  position: relative;
-  min-height: 100%;
-  height: 100%;
-}
-
-.infoPanel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 40px 32px;
-  box-sizing: border-box;
-  background: var(--color-bright-snow, #f5f7f8);
-  border-radius: 12px;
-}
-
-.imagePanel {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.infoPanel,
-.imagePanel {
-  transition:
-    opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: opacity, transform;
-}
-
-.infoStackDesktop .infoPanel,
-.imageStack .imagePanel {
-  position: absolute;
-  inset: 0;
-}
-
-.mobileCarouselViewport {
-  display: none;
-}
-
-.mobileCarouselTrack {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-  width: max-content;
-  box-sizing: border-box;
-  padding-inline: 5vw;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
-}
-
-.mobileCarouselTrackDragging {
-  transition: none;
-}
-
-.mobileCarouselCard {
-  position: relative;
-  flex: 0 0 90vw;
-  width: 90vw;
-  min-width: 90vw;
-  box-sizing: border-box;
-  min-height: 420px;
-  opacity: 0.8;
-  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-  touch-action: pan-y;
-}
-
-.mobileCarouselCardActive {
-  opacity: 1;
-  z-index: 1;
-}
-
-.mobileCarouselCardPeek {
-  pointer-events: none;
-}
-
-.brandPanelHidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.brandPanelHiddenAfter {
-  transform: translateX(28px);
-}
-
-.brandPanelHiddenBefore {
-  transform: translateX(-28px);
-}
-
-.brandPanelActive {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  z-index: 1;
-  transform: translateX(0);
-}
-
-.infoPanel.brandPanelActive {
-  padding-bottom: 64px;
-}
-
-.brandNameLarge {
-  margin: 0;
-  font-family: var(--font-commissioner, system-ui);
-  font-size: var(--text-card-20-400, 20px);
-  font-weight: 400;
-  line-height: 1.2;
-  text-transform: uppercase;
-  text-align: center;
-  color: var(--color-black, #1a1a1a);
-  letter-spacing: 0.02em;
-}
-
-.logoWrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 160px;
-}
-
-.brandLogo {
-  max-width: min(240px, 100%);
-  max-height: 240px;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-}
-
-.logoPlaceholder {
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.brandDetailsFooter {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-}
-
-.brandDescription {
-  margin: 0;
-  width: 100%;
-  max-width: min(554px, 100%);
-  font-family: var(--font-commissioner, system-ui);
-  font-size: var(--text-card-20-300);
-  font-weight: 300;
-  line-height: var(--text-card-20-300-line-height);
-  text-align: center;
-  color: var(--color-ink-black, #051826);
-  display: -webkit-box;
-  -webkit-line-clamp: 12;
-  line-clamp: 12;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.brandHeroImage {
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.imagePlaceholder {
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  background: var(--color-bright-snow, #f5f7f8);
 }
 
 .dots {
   display: flex;
-  flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  min-height: 10px;
+  gap: 8px;
+  padding: 16px 0 0;
 }
 
 .dot {
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgba(5, 24, 38, 0.2);
+  background: rgba(29, 28, 27, 0.2);
   cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    background 0.35s ease;
 }
 
 .dot:hover {
-  background: rgba(5, 24, 38, 0.4);
+  background: rgba(29, 28, 27, 0.4);
 }
 
 .dot:focus-visible {
-  outline: 2px solid var(--color-ink-black, #051826);
+  outline: 2px solid var(--color-ink-black);
   outline-offset: 2px;
 }
 
 .dotActive {
-  width: 8px;
-  height: 8px;
-  background: var(--color-ink-black, #051826);
+  background: var(--color-ink-black);
 }
 
 @media (max-width: 768px) {
+  .infoPad {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-top: 28px;
+    padding-bottom: 28px;
+  }
+}
+
+@media (max-width: 900px) {
   .section {
-    margin-top: 96px;
+    margin-top: 64px;
   }
 
-  .previewGrid {
-    display: none;
+  .split {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
   }
 
-  .previewHost .previewArrow {
-    display: none;
+  .infoCol {
+    height: auto;
   }
 
-  .mobileCarouselViewport {
-    display: block;
-    overflow: hidden;
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-    touch-action: pan-y;
-    user-select: none;
-    -webkit-user-select: none;
+  .infoPad {
+    height: auto;
   }
 
-  .infoPanel.brandPanelActive {
-    padding-bottom: 40px;
+  .infoLink {
+    gap: 20px;
+    min-height: 0;
   }
 
-  .logoWrap {
-    min-height: 120px;
+  .productPreviewWrap {
+    max-width: min(100%, 420px);
+    max-height: 320px;
   }
 
-  .brandLogo {
-    max-width: min(180px, 60%);
-    max-height: 180px;
+  .lifestyleCol {
+    height: 56vw;
+    min-height: 240px;
   }
 
-  .brandDetailsFooter {
-    align-self: stretch;
-    width: 100%;
+  .navArrowPrev {
+    left: 8px;
   }
 
-  .brandDescription {
-    max-width: none;
-    width: 100%;
-    align-self: stretch;
-    -webkit-line-clamp: 10;
-    line-clamp: 10;
+  .navArrowNext {
+    right: 8px;
   }
 }

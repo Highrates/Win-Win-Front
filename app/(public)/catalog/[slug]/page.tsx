@@ -46,17 +46,15 @@ export default async function CatalogSlugPage({ params }: Props) {
   const isRoot = category.parentId == null;
   const previewImageSrc = resolveMediaUrlForServer(category.backgroundImageUrl);
 
-  const catalogRootHref = catalogRoot ? `/catalog/${catalogRoot.slug}` : '/catalog';
-
   const breadcrumbs = isRoot
     ? [
         { label: 'Главная', href: '/', current: false as const },
-        { label: 'Каталог', href: catalogRootHref, current: false as const },
+        { label: 'Каталог', href: '/catalog', current: false as const },
         { label: category.name, href: '', current: true as const },
       ]
     : [
         { label: 'Главная', href: '/', current: false as const },
-        { label: 'Каталог', href: catalogRootHref, current: false as const },
+        { label: 'Каталог', href: '/catalog', current: false as const },
         {
           label: category.parent!.name,
           href: `/catalog/${category.parent!.slug}`,
