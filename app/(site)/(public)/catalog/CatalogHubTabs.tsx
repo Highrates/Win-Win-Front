@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import type { CatalogHubTabId } from '@/lib/catalog/parseCatalogHubTab';
 import styles from './CatalogHubTabs.module.css';
 
-export type CatalogHubTabId = 'categories' | 'zones' | 'collections';
+export type { CatalogHubTabId } from '@/lib/catalog/parseCatalogHubTab';
 
 type Props = {
   activeTab: CatalogHubTabId;

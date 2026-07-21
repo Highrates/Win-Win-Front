@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { CatalogHubClient, parseCatalogHubTab } from '@/app/(site)/(public)/catalog/CatalogHubClient';
+import { CatalogHubClient } from '@/app/(site)/(public)/catalog/CatalogHubClient';
 import { CatalogZonesGrid } from '@/app/(site)/(public)/catalog/CatalogZonesGrid';
 import { CATALOG_HERO_IMAGE_SRC } from '@/app/(site)/(public)/catalog/catalogHero';
 import { CategoryCatalogContent } from '@/app/(site)/(public)/categories/CategoryCatalogContent';
@@ -16,6 +16,7 @@ import {
   loadCatalogTreeRoots,
   loadTagStripCategories,
 } from '@/lib/catalog/loadCatalogPageData';
+import { parseCatalogHubTab } from '@/lib/catalog/parseCatalogHubTab';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import { getServerRequestOrigin } from '@/lib/serverRequestOrigin';
 

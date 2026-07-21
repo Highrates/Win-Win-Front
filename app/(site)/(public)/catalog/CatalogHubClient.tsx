@@ -7,6 +7,7 @@ import { CatalogHubCollectionsLazy } from './CatalogHubCollectionsLazy';
 import topFoldStyles from '@/sections/home/HomeTopFold.module.css';
 import { Hero } from '@/sections/home';
 import styles from './CatalogHubCollections.module.css';
+import { parseCatalogHubTab } from '@/lib/catalog/parseCatalogHubTab';
 
 const CATEGORIES_COPY =
   'В 588est в каталог попадают только изделия, которые мы и наши дизайнеры отобрали и проверили сами: качество материалов, фабрики и то, как вещь живёт в интерьере.';
@@ -14,15 +15,7 @@ const CATEGORIES_COPY =
 const ZONES_COPY =
   'В 588est каталог собран по сценариям жизни — гостиная, спальня, кабинет, сад. Выберите зону, чтобы увидеть мебель и свет под конкретный интерьер.';
 
-const HUB_TABS = new Set<CatalogHubTabId>(['categories', 'zones', 'collections']);
-
-export function parseCatalogHubTab(raw?: string | null): CatalogHubTabId {
-  const v = raw?.trim().toLowerCase();
-  if (v && HUB_TABS.has(v as CatalogHubTabId) && v !== 'categories') {
-    return v as CatalogHubTabId;
-  }
-  return 'categories';
-}
+export { parseCatalogHubTab } from '@/lib/catalog/parseCatalogHubTab';
 
 function readHubTabFromLocation(): CatalogHubTabId {
   if (typeof window === 'undefined') return 'categories';
