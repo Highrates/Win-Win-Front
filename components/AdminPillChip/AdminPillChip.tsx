@@ -63,7 +63,9 @@ export function AdminPillChip({
           onClick={onRemove}
           aria-label={removeAriaLabel}
         >
-          ×
+          <span className={styles.removeIcon} aria-hidden>
+            ×
+          </span>
         </button>
       ) : null}
     </li>

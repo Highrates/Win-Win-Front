@@ -2,6 +2,7 @@
  * Только для Server Components: прямые запросы к бэкенду (как `brandsPublic`).
  * Клиентские компоненты импортируют `@/lib/blogPublic` и `/api/public/blog/*`.
  */
+import { cache } from 'react';
 import { jsonFromResponse } from './jsonFromResponse';
 import { getServerApiBase } from './serverApiBase';
 import type {
@@ -43,11 +44,12 @@ export async function fetchBlogPostsPublic(opts: {
   page?: number;
   limit?: number;
 }): Promise<PublicBlogPostsResponse> {
+  const limit = opts.limit ?? BLOG_LIST_PAGE_SIZE;
   const qs = new URLSearchParams();
   if (opts.categorySlug) qs.set('categorySlug', opts.categorySlug);
   qs.set('page', String(opts.page ?? 1));
-  qs.set('limit', String(opts.limit ?? 20));
-  const empty: PublicBlogPostsResponse = { items: [], total: 0, page: 1, limit: opts.limit ?? 20 };
+  qs.set('limit', String(limit));
+  const empty: PublicBlogPostsResponse = { items: [], total: 0, page: 1, limit };
   try {
     const res = await fetchBlogBackend(`posts?${qs.toString()}`, 'list');
     if (!res.ok) return empty;
@@ -125,7 +127,7 @@ function isBlogPostDetail(data: unknown): data is PublicBlogPostDetail {
   );
 }
 
-export async function fetchBlogPostBySlugPublic(slug: string): Promise<PublicBlogPostDetail | null> {
+export const loadBlogPostBySlug = cache(async (slug: string): Promise<PublicBlogPostDetail | null> => {
   const s = slug.trim();
   if (!s) return null;
   try {
@@ -137,4 +139,7 @@ export async function fetchBlogPostBySlugPublic(slug: string): Promise<PublicBlo
   } catch {
     return null;
   }
-}
+});
+
+/** @alias loadBlogPostBySlug */
+export const fetchBlogPostBySlugPublic = loadBlogPostBySlug;

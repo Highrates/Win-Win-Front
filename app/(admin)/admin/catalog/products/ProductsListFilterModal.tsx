@@ -68,12 +68,12 @@ export function ProductsListFilterModal({
   }, [open, onClose]);
 
   const sortedCategories = useMemo(
-    () => (meta ? sortCategoriesForAdminSelect(meta.categories, locale) : []),
+    () => (meta?.categories ? sortCategoriesForAdminSelect(meta.categories, locale) : []),
     [meta, locale],
   );
 
   const productCollections = useMemo(
-    () => meta?.collections.filter((row) => row.kind === 'PRODUCT') ?? [],
+    () => meta?.collections?.filter((row) => row.kind === 'PRODUCT') ?? [],
     [meta],
   );
 

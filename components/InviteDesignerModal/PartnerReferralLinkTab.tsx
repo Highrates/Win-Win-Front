@@ -9,7 +9,7 @@ import {
   buildPartnerRegistrationUrl,
   partnerReferralQrFilename,
 } from '@/lib/referral/partnerRegistrationLink';
-import profileSheetStyles from '@/app/(account)/account/profile/page.module.css';
+import profileSheetStyles from '@/app/(site)/(account)/account/profile/page.module.css';
 import styles from './InviteDesignerModal.module.css';
 
 type PartnerReferralLinkTabProps = {

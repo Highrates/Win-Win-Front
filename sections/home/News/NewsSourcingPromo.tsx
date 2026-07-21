@@ -4,27 +4,17 @@ import { useCallback, useState } from 'react';
 import { Button } from '@/components/Button/Button';
 import { SourcingRequestModal } from '@/components/SourcingRequest/SourcingRequestModal';
 import { SourcingDraftBanner } from '@/components/SourcingRequest/SourcingDraftBanner';
+import { useSourcingPromoFlow } from '@/components/SourcingRequest/useSourcingPromoFlow';
 import styles from './News.module.css';
 
 const TITLE = 'Индивидуальный подбор мебели';
 const EYEBROW = 'Предложения';
 const DESCRIPTION =
   'Не нашли нужную модель в каталоге? Опишите задачу — подберём варианты по вашему ТЗ, референсам, чертежам или аналогам. Работаем с фабриками, проверяем соответствие бюджету и срокам, подготовим предложение для согласования.';
-const FEATURE_IMAGE_SRC = '/images/hero-img.png';
+const FEATURE_IMAGE_SRC = '/images/news-sourcing.webp';
 
 export function NewsSourcingPromo() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [resumeDraft, setResumeDraft] = useState(false);
-  const [draftRefreshKey, setDraftRefreshKey] = useState(0);
-
-  const bumpDraftBanner = useCallback(() => {
-    setDraftRefreshKey((key) => key + 1);
-  }, []);
-
-  const openFreshModal = useCallback(() => {
-    setResumeDraft(false);
-    setModalOpen(true);
-  }, []);
+  const { draftRefreshKey, openFreshModal, openDraftModal, modalProps } = useSourcingPromoFlow();
 
   return (
     <>
@@ -38,10 +28,7 @@ export function NewsSourcingPromo() {
           <SourcingDraftBanner
             className={styles.sourcingDraft}
             refreshKey={draftRefreshKey}
-            onContinue={() => {
-              setResumeDraft(true);
-              setModalOpen(true);
-            }}
+            onContinue={openDraftModal}
           />
           <Button
             type="button"
@@ -63,16 +50,7 @@ export function NewsSourcingPromo() {
           />
         </div>
       </div>
-      <SourcingRequestModal
-        open={modalOpen}
-        resumeDraft={resumeDraft}
-        onClose={() => {
-          setModalOpen(false);
-          setResumeDraft(false);
-          bumpDraftBanner();
-        }}
-        onSubmitted={bumpDraftBanner}
-      />
+      <SourcingRequestModal {...modalProps} />
     </>
   );
 }

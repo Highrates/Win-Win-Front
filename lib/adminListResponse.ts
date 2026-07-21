@@ -51,7 +51,7 @@ export async function adminBackendListAll<T>(
   limit = ADMIN_LIST_PICKER_LIMIT,
 ): Promise<T[]> {
   const res = await adminBackendList<T>(path, adminListParams({ page: 1, limit, q }));
-  return res.items;
+  return res.items ?? [];
 }
 
 export function isAdminListResponse<T>(data: unknown): data is AdminListResponse<T> {

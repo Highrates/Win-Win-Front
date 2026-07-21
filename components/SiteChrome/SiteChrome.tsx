@@ -1,9 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { HeaderWrapper } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import styles from './SiteChrome.module.css';
 
 /** Пути без хедера и футера (страницы auth и админка со своим layout). */
 const NO_CHROME_PREFIXES = ['/login', '/register', '/admin'];
@@ -26,7 +26,11 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!hideChrome && <HeaderWrapper />}
+      {!hideChrome && (
+        <Suspense fallback={null}>
+          <HeaderWrapper />
+        </Suspense>
+      )}
       {children}
       {!hideChrome && !hideFooter && <Footer />}
     </>

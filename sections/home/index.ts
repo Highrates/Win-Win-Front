@@ -1,11 +1,10 @@
 export { Hero } from './Hero/Hero';
 export { ScrollCatalog } from './ScrollCatalog/ScrollCatalog';
-export { ScrollCatalogCardsStrip } from './ScrollCatalog/ScrollCatalogCardsStrip';
-export { ProjectSourcing } from './ProjectSourcing/ProjectSourcing';
 export { BestBrands } from './BestBrands/BestBrands';
 export type { BestBrandsBrandItem, BestBrandsProps } from './BestBrands/BestBrands';
 export { AboutTeaser } from './AboutTeaser/AboutTeaser';
 export { News } from './News/News';
 export { Recommendations } from './Recommendations/Recommendations';
+export { HomeProductCollections } from './HomeProductCollections';
 export type { RecommendationsStaticItem } from './Recommendations/recommendationsStaticItem';
 export { HomeProductLikesScope } from './HomeProductLikesScope';

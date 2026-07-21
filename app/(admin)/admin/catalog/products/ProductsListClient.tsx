@@ -85,14 +85,26 @@ export function ProductsListClient() {
     if (filterMeta || filterMetaLoading) return;
     setFilterMetaLoading(true);
     try {
-      const [categories, brands, catalogTags, collections, productSets] = await Promise.all([
+      const [categories, brands, catalogTags, collections, productSets] = await Promise.allSettled([
         adminBackendJson<AdminCategoryRow[]>('catalog/admin/categories'),
         adminBackendListAll<AdminBrandRow>('catalog/admin/brands'),
         adminBackendJson<AdminCatalogTagRow[]>('catalog/admin/catalog-tags?all=1'),
         adminBackendListAll<AdminCuratedCollectionRow>('catalog/admin/curated-collections'),
         adminBackendListAll<AdminProductSetRow>('catalog/admin/product-sets'),
       ]);
-      setFilterMeta({ categories, brands, catalogTags, collections, productSets });
+
+      const pickArray = <T,>(result: PromiseSettledResult<unknown>): T[] => {
+        if (result.status !== 'fulfilled' || !Array.isArray(result.value)) return [];
+        return result.value as T[];
+      };
+
+      setFilterMeta({
+        categories: pickArray<AdminCategoryRow>(categories),
+        brands: pickArray<AdminBrandRow>(brands),
+        catalogTags: pickArray<AdminCatalogTagRow>(catalogTags),
+        collections: pickArray<AdminCuratedCollectionRow>(collections),
+        productSets: pickArray<AdminProductSetRow>(productSets),
+      });
     } catch {
       setFilterMeta(null);
     } finally {

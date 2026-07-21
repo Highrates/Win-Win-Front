@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Header, HeaderVariant } from './Header';
 
 const MOBILE_BREAKPOINT = 768;
@@ -10,12 +10,20 @@ const HERO_SECTION_ID = 'hero-section';
 const PAST_THRESHOLD = 80;
 const OVER_MINIMAL_THRESHOLD = 80;
 
-function useScrolledPastHero(pathname: string) {
+function isHeroLandingPath(pathname: string, hasTagQuery: boolean) {
+  if (pathname === '/') return true;
+  // Хаб каталога с fold/hero; `?tag=` — обычная страница без hero
+  if (pathname === '/catalog' && !hasTagQuery) return true;
+  return false;
+}
+
+function useScrolledPastHero(pathname: string, hasTagQuery: boolean) {
   const [past, setPast] = useState(false);
   const pastRef = useRef(false);
+  const isLanding = isHeroLandingPath(pathname, hasTagQuery);
 
   useEffect(() => {
-    if (pathname !== '/') {
+    if (!isLanding) {
       setPast(true);
       pastRef.current = true;
       return;
@@ -25,10 +33,17 @@ function useScrolledPastHero(pathname: string) {
 
     let rafId: number;
     let scrollCleanup: (() => void) | null = null;
+    let attempts = 0;
 
     const setup = () => {
       const hero = document.getElementById(HERO_SECTION_ID);
       if (!hero) {
+        attempts += 1;
+        if (attempts > 90) {
+          pastRef.current = true;
+          setPast(true);
+          return;
+        }
         rafId = requestAnimationFrame(setup);
         return;
       }
@@ -69,7 +84,7 @@ function useScrolledPastHero(pathname: string) {
       cancelAnimationFrame(rafId);
       scrollCleanup?.();
     };
-  }, [pathname]);
+  }, [pathname, isLanding]);
 
   return past;
 }
@@ -88,30 +103,34 @@ function useIsMobile() {
 
 export function HeaderWrapper() {
   const pathname = usePathname();
-  const hasScrolledPastHero = useScrolledPastHero(pathname);
+  const searchParams = useSearchParams();
+  const hasTagQuery = Boolean(searchParams.get('tag')?.trim());
+  const isLanding = isHeroLandingPath(pathname, hasTagQuery);
+  const hasScrolledPastHero = useScrolledPastHero(pathname, hasTagQuery);
   const isMobile = useIsMobile();
   const [superMenuOpen, setSuperMenuOpen] = useState(false);
 
   const variant: HeaderVariant =
-    isMobile ? 'main' : pathname !== '/' ? 'main' : hasScrolledPastHero ? 'main' : 'minimal';
-  const showHeroLogoBadge = pathname === '/' && variant === 'minimal';
+    isMobile ? 'main' : !isLanding ? 'main' : hasScrolledPastHero ? 'main' : 'minimal';
+  const showHeroLogoBadge = isLanding && variant === 'minimal';
   const isMainOverlayOnHome =
-    (pathname === '/' && variant === 'main') ||
-    (pathname === '/catalog' || pathname.startsWith('/catalog/')) ||
+    (isLanding && variant === 'main') ||
+    pathname === '/catalog' ||
+    pathname.startsWith('/catalog/') ||
     pathname.startsWith('/product/') ||
     pathname.startsWith('/brands');
 
   const prevScrolledPastHeroRef = useRef(hasScrolledPastHero);
 
-  // Закрываем супер-меню только в момент перехода minimal → main; ref обновляем всегда на главной, иначе при первом открытии с main мерцает
+  // Закрываем супер-меню только в момент перехода minimal → main
   useEffect(() => {
-    if (pathname !== '/') return;
+    if (!isLanding) return;
     const justScrolledPast = hasScrolledPastHero && !prevScrolledPastHeroRef.current;
     prevScrolledPastHeroRef.current = hasScrolledPastHero;
     if (superMenuOpen && justScrolledPast) {
       setSuperMenuOpen(false);
     }
-  }, [pathname, hasScrolledPastHero, superMenuOpen]);
+  }, [isLanding, hasScrolledPastHero, superMenuOpen]);
 
   return (
     <Header

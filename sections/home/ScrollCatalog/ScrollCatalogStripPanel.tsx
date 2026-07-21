@@ -1,31 +1,25 @@
 'use client';
 
-import Link from 'next/link';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { animateScrollStripBy } from './scrollStripScroll';
+import { useMemo } from 'react';
+import { ScrollCatalogStripCards } from './ScrollCatalogStripCards';
 import styles from './ScrollCatalog.module.css';
+import type { ScrollCatalogStripItem } from './scrollCatalogStripItems';
+import { useHorizontalScrollStrip } from './useHorizontalScrollStrip';
 import { useMatchMinWidth } from './useMatchMinWidth';
 
-export type ScrollCatalogStripItem = {
-  key: string;
-  href: string;
-  name: string;
-  imageSrc: string;
-};
-
-const DRAG_THRESHOLD = 5;
+export type { ScrollCatalogStripItem } from './scrollCatalogStripItems';
 
 type Props = {
   items: ScrollCatalogStripItem[];
-  /** fullBleed — полоса на всю ширину вьюпорта (главная); contained — внутри колонки; superMenu — bleed только вправо. */
-  layout?: 'fullBleed' | 'contained' | 'superMenu';
-  /** dark — белые подписи карточек (фон мега-меню). */
+  layout?: 'fullBleed' | 'home' | 'contained' | 'superMenu';
   theme?: 'light' | 'dark';
-  /** Одинаковая ширина карточек (без wide на 0/3). */
   uniformCards?: boolean;
-  /** caption — подпись как --text-caption (мега-меню). */
   titleVariant?: 'default' | 'caption';
   tightTop?: boolean;
+  eagerImageCount?: number;
+  scrollPrevLabel?: string;
+  scrollNextLabel?: string;
+  tabPanel?: { id: string; labelledBy?: string };
   onLinkClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 };
 
@@ -36,108 +30,20 @@ export function ScrollCatalogStripPanel({
   uniformCards = false,
   titleVariant = 'default',
   tightTop = false,
+  eagerImageCount,
+  scrollPrevLabel = 'Прокрутить влево',
+  scrollNextLabel = 'Прокрутить вправо',
+  tabPanel,
   onLinkClick,
 }: Props) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const scrollStripAnimCancelRef = useRef<(() => void) | null>(null);
-  const didDragRef = useRef(false);
-  const startXRef = useRef(0);
-  const startScrollLeftRef = useRef(0);
-  const lastXRef = useRef(0);
-
   const desktopStrip = useMatchMinWidth(769);
-
-  const handlePointerDown = (e: React.MouseEvent) => {
-    scrollStripAnimCancelRef.current?.();
-    scrollStripAnimCancelRef.current = null;
-    didDragRef.current = false;
-    startXRef.current = e.clientX;
-    lastXRef.current = e.clientX;
-    if (wrapperRef.current) {
-      startScrollLeftRef.current = wrapperRef.current.scrollLeft;
-    }
-  };
-
-  const handlePointerMove = (e: React.MouseEvent) => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    if (e.buttons !== 1) return;
-
-    const dx = lastXRef.current - e.clientX;
-    lastXRef.current = e.clientX;
-    wrapper.scrollLeft += dx;
-
-    if (Math.abs(wrapper.scrollLeft - startScrollLeftRef.current) > DRAG_THRESHOLD) {
-      didDragRef.current = true;
-    }
-  };
-
-  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (didDragRef.current) {
-      e.preventDefault();
-      return;
-    }
-    onLinkClick?.(e);
-  };
-
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-    if (el.scrollWidth <= el.clientWidth) return;
-    el.scrollLeft += e.deltaY;
-    e.preventDefault();
-  };
-
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
-
   const itemsKey = useMemo(() => items.map((c) => c.key).join('\0'), [items]);
 
-  const updateScrollArrows = useCallback(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    const maxScroll = scrollWidth - clientWidth;
-    setCanScrollPrev(scrollLeft > 2);
-    setCanScrollNext(maxScroll > 2 && scrollLeft < maxScroll - 2);
-  }, []);
-
-  useLayoutEffect(() => {
-    const el = wrapperRef.current;
-    if (el) el.scrollLeft = 0;
-    if (desktopStrip) updateScrollArrows();
-  }, [itemsKey, desktopStrip, updateScrollArrows]);
-
-  useEffect(() => {
-    if (!desktopStrip) return;
-    const el = wrapperRef.current;
-    if (!el) return;
-    updateScrollArrows();
-    el.addEventListener('scroll', updateScrollArrows, { passive: true });
-    const ro = new ResizeObserver(updateScrollArrows);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener('scroll', updateScrollArrows);
-      ro.disconnect();
-    };
-  }, [desktopStrip, updateScrollArrows, itemsKey]);
-
-  useEffect(
-    () => () => {
-      scrollStripAnimCancelRef.current?.();
-    },
-    [],
-  );
-
-  const scrollStrip = useCallback((dir: -1 | 1) => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    scrollStripAnimCancelRef.current?.();
-    const anim = animateScrollStripBy(el, dir, () => {
-      scrollStripAnimCancelRef.current = null;
+  const { wrapperRef, canScrollPrev, canScrollNext, scrollStrip, handleLinkClick, wrapperProps } =
+    useHorizontalScrollStrip({
+      resetKey: itemsKey,
+      enabled: desktopStrip,
     });
-    scrollStripAnimCancelRef.current = anim.cancel;
-  }, []);
 
   if (!items.length) {
     return null;
@@ -149,69 +55,46 @@ export function ScrollCatalogStripPanel({
       ? styles.stripHostFlexSuperMenu
       : layout === 'contained'
         ? styles.stripHostFlexContained
-        : styles.stripHostFlexTightTop,
+        : layout === 'home'
+          ? styles.stripHostFlexHome
+          : styles.stripHostFlexTightTop,
     tightTop ? styles.stripHostFlexTightTop : null,
   ]
     .filter(Boolean)
     .join(' ');
 
-  const panelClass = theme === 'dark' ? `${styles.stripPanel} ${styles.stripPanelOnDark}` : styles.stripPanel;
+  const panelClass =
+    theme === 'dark' ? `${styles.stripPanel} ${styles.stripPanelOnDark}` : styles.stripPanel;
 
   const cardsClass = [
     styles.cardsWrapper,
-    styles.cardsWrapperOnCategoryParent,
+    layout === 'home'
+      ? styles.cardsWrapperHome
+      : styles.cardsWrapperOnCategoryParent,
     tightTop ? styles.cardsWrapperTightTop : null,
   ]
     .filter(Boolean)
     .join(' ');
 
-  const titleClass =
-    titleVariant === 'caption'
-      ? `${styles.cardTitle} ${styles.cardTitleCaption}`
-      : styles.cardTitle;
-
   return (
     <div className={hostClass}>
       <div className={panelClass}>
-        <div
-          ref={wrapperRef}
-          className={cardsClass}
-          onWheel={handleWheel}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseLeave={handlePointerMove}
-        >
-          {items.map((card, index) => {
-            const wide = !uniformCards && (index === 0 || index === 3);
-            return (
-            <Link
-              key={card.key}
-              href={card.href}
-              className={styles.card}
-              onClick={handleLinkClick}
-            >
-              <div className={wide ? `${styles.imgWrap} ${styles.imgWrapWide}` : styles.imgWrap}>
-                {card.imageSrc ? (
-                  <img
-                    src={card.imageSrc}
-                    alt=""
-                    width={wide ? 306 : 242}
-                    height={220}
-                    className={styles.imgCover}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : null}
-              </div>
-              <span className={titleClass}>{card.name}</span>
-            </Link>
-            );
-          })}
-        </div>
+        <ScrollCatalogStripCards
+          items={items}
+          cardsClassName={cardsClass}
+          panelId={tabPanel?.id}
+          panelLabelledBy={tabPanel?.labelledBy}
+          eagerImageCount={eagerImageCount}
+          titleVariant={titleVariant}
+          uniformCards={uniformCards}
+          onLinkClick={(e) => handleLinkClick(e, onLinkClick)}
+          scrollRef={wrapperRef}
+          scrollWrapperProps={wrapperProps}
+        />
         <button
           type="button"
           className={`${styles.stripArrow} ${styles.stripArrowPrev}`}
-          aria-label="Прокрутить влево"
+          aria-label={scrollPrevLabel}
           disabled={!canScrollPrev}
           onClick={(e) => {
             e.preventDefault();
@@ -224,7 +107,7 @@ export function ScrollCatalogStripPanel({
         <button
           type="button"
           className={`${styles.stripArrow} ${styles.stripArrowNext}`}
-          aria-label="Прокрутить вправо"
+          aria-label={scrollNextLabel}
           disabled={!canScrollNext}
           onClick={(e) => {
             e.preventDefault();

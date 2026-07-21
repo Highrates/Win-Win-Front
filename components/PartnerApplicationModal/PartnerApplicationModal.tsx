@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
-import type { ProfileDto } from '@/app/(account)/account/profile/profileTypes';
+import type { ProfileDto } from '@/app/(site)/(account)/account/profile/profileTypes';
 import flowStyles from '@/components/auth-forms/RegisterFlow.module.css';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
@@ -10,7 +10,7 @@ import {
   slideInPanelModalStyles as panelModal,
 } from '@/components/SlideInPanelModal/SlideInPanelModal';
 import { usePartnerApplication } from '@/hooks/usePartnerApplication';
-import profileSheetStyles from '@/app/(account)/account/profile/page.module.css';
+import profileSheetStyles from '@/app/(site)/(account)/account/profile/page.module.css';
 
 export type PartnerApplicationModalProps = {
   open: boolean;

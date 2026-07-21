@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { resolveSourcingProductDisplayName } from '@win-win/sourcing-request';
-import { AccordionBig } from '@/app/(account)/account/orders/AccordionBig';
+import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminSourcingStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { formatBudgetDigitsGrouped } from '@/lib/formatBudgetRub';

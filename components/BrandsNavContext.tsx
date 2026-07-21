@@ -1,6 +1,5 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 export type BrandsNavItem = { slug: string; name: string };
@@ -22,7 +21,6 @@ export function BrandsNavProvider({
   children: React.ReactNode;
 }) {
   const [items, setItems] = useState<BrandsNavItem[]>(initialItems);
-  const pathname = usePathname();
 
   const pull = useCallback(async () => {
     try {
@@ -40,18 +38,12 @@ export function BrandsNavProvider({
   }, [initialItems]);
 
   useEffect(() => {
-    if (pathname.startsWith('/admin')) return;
-    pull();
-  }, [pathname, pull]);
-
-  useEffect(() => {
     const onVis = () => {
-      if (pathname.startsWith('/admin')) return;
       if (document.visibilityState === 'visible') pull();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [pathname, pull]);
+  }, [pull]);
 
   return <BrandsNavContext.Provider value={items}>{children}</BrandsNavContext.Provider>;
 }

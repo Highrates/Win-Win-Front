@@ -7,3 +7,16 @@
   max-height: 100dvh;
   overflow: hidden;
 }
+
+/* Хаб /catalog: без полосы карточек fold короче, иначе hero растягивается на весь экран */
+.topFoldCompact {
+  height: min(70vh, 640px);
+  max-height: min(70vh, 640px);
+}
+
+@media (max-width: 768px) {
+  .topFoldCompact {
+    height: min(58vh, 520px);
+    max-height: min(58vh, 520px);
+  }
+}

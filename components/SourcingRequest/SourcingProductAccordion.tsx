@@ -1,4 +1,4 @@
-import { AccordionBig } from '@/app/(account)/account/orders/AccordionBig';
+import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { TextField } from '@/components/TextField';
 import textFieldStyles from '@/components/TextField/TextField.module.css';

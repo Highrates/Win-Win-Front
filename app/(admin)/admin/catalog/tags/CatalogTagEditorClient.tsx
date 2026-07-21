@@ -9,6 +9,7 @@ import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/
 import { AdminTableRemoveButton } from '@/components/admin/AdminTableRemoveButton/AdminTableRemoveButton';
 import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
+import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
 import { adminCatalogTagEditorStrings } from '@/lib/admin-i18n/adminCatalogTagsI18n';
@@ -38,6 +39,9 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
   const [loaded, setLoaded] = useState(!isEdit);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
+  const [coverMediaObjectId, setCoverMediaObjectId] = useState<string | null>(null);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [productRows, setProductRows] = useState<ProductRow[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -70,6 +74,8 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
         if (cancelled) return;
         setName(d.name);
         setSlug(d.slug);
+        setCoverUrl(d.coverImageUrl ?? '');
+        setCoverMediaObjectId(d.coverMediaObjectId ?? null);
         setProductRows(
           d.productItems.map((it) => ({
             key: rowKey(),
@@ -173,6 +179,12 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
         productIds: productRows.map((r) => r.productId),
       };
       if (slug.trim()) body.slug = slug.trim();
+      if (coverUrl.trim()) {
+        body.coverImageUrl = coverUrl.trim();
+        if (coverMediaObjectId) body.coverMediaObjectId = coverMediaObjectId;
+      } else {
+        body.coverImageUrl = null;
+      }
 
       if (isEdit) {
         await adminBackendJson(`catalog/admin/catalog-tags/${tagId}`, {
@@ -211,6 +223,19 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
       </p>
 
       {loadError ? <p className={styles.error}>{loadError}</p> : null}
+
+      <MediaLibraryPickerModal
+        open={coverPickerOpen}
+        title={str.coverTitle}
+        mediaFilter="image"
+        onClose={() => setCoverPickerOpen(false)}
+        onPick={(sel) => {
+          setCoverUrl(sel.url);
+          setCoverMediaObjectId(sel.id);
+          setCoverPickerOpen(false);
+          setSaveError(null);
+        }}
+      />
 
       {addPickerOpen ? (
         <div
@@ -327,6 +352,38 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
         />
+
+        <div className={styles.fieldBlock}>
+          <span className={styles.adminFieldLabel}>{str.coverBlock}</span>
+          {coverUrl.trim() ? (
+            <div className={styles.bgPreview} style={{ maxWidth: 360 }}>
+              <img src={coverUrl.trim()} alt="" />
+            </div>
+          ) : null}
+          <div className={styles.coverActions}>
+            <AdminCompactBtn
+              type="button"
+              onClick={() => {
+                setSaveError(null);
+                setCoverPickerOpen(true);
+              }}
+            >
+              {str.pickLibrary}
+            </AdminCompactBtn>
+            {coverUrl.trim() ? (
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCoverUrl('');
+                  setCoverMediaObjectId(null);
+                }}
+              >
+                {str.removeCover}
+              </AdminCompactBtn>
+            ) : null}
+          </div>
+        </div>
 
         <div className={styles.fieldBlock}>
           <span className={styles.adminFieldLabel}>{str.contentTitle}</span>

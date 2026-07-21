@@ -1,0 +1,150 @@
+/* Цена, sticky bar, вторичные кнопки */
+
+.rightRow {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price {
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+}
+
+.btnsWrapper {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+}
+
+.btnsSecondary {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: stretch;
+  position: relative;
+  border-radius: 100px;
+  overflow: hidden;
+  background: var(--color-bright-snow);
+}
+
+.btnSecondarySegment {
+  border-radius: 0 !important;
+  align-self: stretch !important;
+  height: auto;
+  min-height: 0;
+  background: transparent !important;
+}
+
+.btnSecondarySegment:first-child {
+  border-radius: 100px 0 0 100px !important;
+}
+
+.btnSecondarySegment:last-child {
+  border-radius: 0 100px 100px 0 !important;
+}
+
+.btnSecondarySegment:hover {
+  outline: none !important;
+  filter: brightness(0.97);
+}
+
+.btnsSecondaryDivider {
+  width: var(--account-hairline-width);
+  height: 70%;
+  align-self: center;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+.stickyBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  position: static;
+  padding: 0;
+  background: transparent;
+  outline: none;
+  overflow: visible;
+}
+
+.stickyPrice {
+  display: none;
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+  color: var(--color-ink-black);
+}
+
+@media (max-width: 768px) {
+  .rightRow {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .rightRow .price {
+    display: none;
+  }
+
+  .stickyPrice {
+    display: block;
+    font-weight: 400;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rightRow .btnsWrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .rightRow .btnsSecondary {
+    flex: 1;
+    display: flex;
+    gap: 0;
+    min-width: 0;
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .rightRow .btnsSecondary .btnSecondarySegment {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .stickyBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    background: var(--color-white);
+    outline: 0.5px solid rgba(0, 0, 0, 0.1);
+    outline-offset: 0;
+    z-index: 15;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    overflow: visible;
+  }
+
+  .stickyBar[data-hidden] {
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+}

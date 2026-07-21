@@ -1,6 +1,5 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 export type CatalogNavRoot = { slug: string; name: string };
@@ -22,7 +21,6 @@ export function CatalogNavProvider({
   children: React.ReactNode;
 }) {
   const [roots, setRoots] = useState<CatalogNavRoot[]>(initialRoots);
-  const pathname = usePathname();
 
   const pull = useCallback(async () => {
     try {
@@ -40,18 +38,12 @@ export function CatalogNavProvider({
   }, [initialRoots]);
 
   useEffect(() => {
-    if (pathname.startsWith('/admin')) return;
-    pull();
-  }, [pathname, pull]);
-
-  useEffect(() => {
     const onVis = () => {
-      if (pathname.startsWith('/admin')) return;
       if (document.visibilityState === 'visible') pull();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [pathname, pull]);
+  }, [pull]);
 
   return <CatalogNavContext.Provider value={roots}>{children}</CatalogNavContext.Provider>;
 }

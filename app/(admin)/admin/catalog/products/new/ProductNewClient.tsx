@@ -130,7 +130,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
       setLoadError(null);
       if (productId) setProductLoaded(false);
       try {
-        const [cats, brs, cols, sets, tags] = await Promise.all([
+        const results = await Promise.allSettled([
           adminBackendJson<AdminCategoryRow[]>('catalog/admin/categories'),
           adminBackendListAll<AdminBrandRow>('catalog/admin/brands'),
           adminBackendListAll<AdminCuratedCollectionRow>('catalog/admin/curated-collections'),
@@ -138,11 +138,22 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
           adminBackendJson<AdminCatalogTagRow[]>('catalog/admin/catalog-tags?all=1'),
         ]);
         if (cancelled) return;
-        setCategories(cats);
-        setBrands(brs);
-        setCuratedCollections(cols);
-        setProductSets(sets);
-        setCatalogTags(tags);
+
+        const pickArray = <T,>(result: PromiseSettledResult<unknown>): T[] => {
+          if (result.status !== 'fulfilled' || !Array.isArray(result.value)) return [];
+          return result.value as T[];
+        };
+
+        setCategories(pickArray<AdminCategoryRow>(results[0]));
+        setBrands(pickArray<AdminBrandRow>(results[1]));
+        setCuratedCollections(pickArray<AdminCuratedCollectionRow>(results[2]));
+        setProductSets(pickArray<AdminProductSetRow>(results[3]));
+        setCatalogTags(pickArray<AdminCatalogTagRow>(results[4]));
+
+        const loadFailures = results.filter((r) => r.status === 'rejected');
+        if (loadFailures.length > 0 && loadFailures.length === results.length) {
+          throw loadFailures[0].reason;
+        }
 
         if (productId) {
           const p = await adminBackendJson<ProductAdminDetail>(`catalog/admin/products/${productId}`);
@@ -173,7 +184,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   }, [categoryId]);
 
   const sortedCategories = useMemo(() => {
-    return [...categories].sort((a, b) => {
+    return [...(categories ?? [])].sort((a, b) => {
       const la = a.parent ? `${a.parent.name} ${a.name}` : a.name;
       const lb = b.parent ? `${b.parent.name} ${b.name}` : b.name;
       return la.localeCompare(lb, locale === 'zh' ? 'zh' : 'ru');
@@ -188,7 +199,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   }, [sortedCategories, categoryId, additionalCategoryIds]);
 
   const productCollections = useMemo(
-    () => curatedCollections.filter((c) => c.kind === 'PRODUCT'),
+    () => (curatedCollections ?? []).filter((c) => c.kind === 'PRODUCT'),
     [curatedCollections],
   );
 
@@ -198,12 +209,12 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
   );
 
   const setsAvailableForPick = useMemo(
-    () => productSets.filter((setRow) => !curatedProductSetIds.has(setRow.id)),
+    () => (productSets ?? []).filter((setRow) => !curatedProductSetIds.has(setRow.id)),
     [productSets, curatedProductSetIds],
   );
 
   const catalogTagsAvailableForPick = useMemo(
-    () => catalogTags.filter((t) => !catalogTagIds.has(t.id)),
+    () => (catalogTags ?? []).filter((t) => !catalogTagIds.has(t.id)),
     [catalogTags, catalogTagIds],
   );
 

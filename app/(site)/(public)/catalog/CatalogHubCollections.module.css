@@ -1,0 +1,14 @@
+.collections {
+  padding-bottom: 96px;
+}
+
+.collections :global(section:first-of-type) {
+  margin-top: 24px;
+}
+
+.empty {
+  margin: 16px 0 0;
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+  text-align: center;
+}

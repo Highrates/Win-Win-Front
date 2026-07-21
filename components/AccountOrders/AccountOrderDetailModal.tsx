@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
-import { AccordionBig } from '@/app/(account)/account/orders/AccordionBig';
+import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig';
 import { dispatchAccountWorkNotificationsEvent, ACCOUNT_WORK_NOTIFICATIONS_EVENT, type AccountWorkNotificationsDetail } from '@/lib/account/orders';
-import teamPageStyles from '@/app/(account)/account/team/page.module.css';
+import teamPageStyles from '@/app/(site)/(account)/account/team/page.module.css';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
 import { useOrderChat } from '@/hooks/useOrderChat';

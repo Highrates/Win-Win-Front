@@ -2,13 +2,13 @@
 
 .pswp--winwin .pswp__item {
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: var(--radius-4);
 }
 
 .pswp--winwin .pswp__content,
 .pswp--winwin .pswp__zoom-wrap,
 .pswp--winwin .pswp__img {
-  border-radius: 10px;
+  border-radius: var(--radius-4);
 }
 
 .pswp--winwin .pswp__img {
@@ -17,5 +17,5 @@
 
 .pswp--winwin div.pswp__img--placeholder,
 .pswp--winwin .pswp__img--with-bg {
-  border-radius: 10px;
+  border-radius: var(--radius-4);
 }

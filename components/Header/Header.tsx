@@ -36,6 +36,7 @@ const MOBILE_INFO_LINKS = [
   { href: '/about', label: 'О нас' },
   { href: '/designers', label: 'Дизайнеры' },
   { href: '/projects', label: 'Проекты и концепции' },
+  { href: '/blog', label: 'Новости и статьи' },
   { href: '/delivery', label: 'Доставка и оплата' },
   { href: '/warranty', label: 'Гарантия, обмен и возврат' },
   { href: '/referral', label: 'Реферальная программа' },

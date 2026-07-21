@@ -1,0 +1,168 @@
+/* Сплит «К заказу» + меню проектов */
+
+.root {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: stretch;
+  position: relative;
+  border-radius: 100px;
+  overflow: visible;
+}
+
+.primaryBtn {
+  border-radius: 100px 0 0 100px !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch !important;
+  height: auto;
+}
+
+.divider {
+  width: var(--account-hairline-width);
+  height: 70%;
+  align-self: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.chevronWrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.chevronBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  cursor: pointer;
+  background: var(--color-ink-black);
+  color: var(--color-white);
+  border-radius: 0 100px 100px 0;
+  transition: filter 0.15s ease;
+}
+
+.chevronBtn:hover {
+  filter: brightness(1.15);
+}
+
+.chevronBtn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.chevronIcon {
+  display: inline-flex;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  padding: 8px 0;
+  background: var(--color-white);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(5, 24, 38, 0.15);
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  z-index: 50;
+}
+
+.menuItem {
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--text-body);
+  cursor: pointer;
+  color: var(--color-ink-black);
+}
+
+.menuItem:hover:not(:disabled) {
+  background: var(--color-bright-snow);
+}
+
+.menuItem:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.menuInner {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 280px;
+  max-width: 360px;
+}
+
+.menuCol {
+  padding: 4px 0 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.menuHeading {
+  display: block;
+  padding: 4px 16px 8px;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-gray);
+  letter-spacing: 0.02em;
+}
+
+.menuMuted {
+  display: block;
+  padding: 4px 16px 8px;
+  font-size: var(--text-caption);
+  line-height: 1.45;
+  color: var(--color-gray);
+}
+
+.menuLink {
+  color: var(--color-ink-black);
+  text-decoration: underline;
+}
+
+.menuProjectList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menuFooter {
+  border-top: var(--account-hairline-width) solid var(--account-hairline-color);
+  padding: 4px 0 8px;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .menuOpensAbove {
+    top: auto;
+    bottom: calc(100% + 8px);
+    z-index: 100;
+  }
+
+  .inStickyBar {
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: min(100%, 280px);
+  }
+
+  .inStickyBar .primaryBtn {
+    padding-left: 14px;
+    padding-right: 14px;
+    font-size: var(--text-caption);
+  }
+
+  .inStickyBar .chevronBtn {
+    width: 40px;
+  }
+}

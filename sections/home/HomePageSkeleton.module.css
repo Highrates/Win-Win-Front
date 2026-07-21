@@ -1,0 +1,44 @@
+.root {
+  width: 100%;
+}
+
+.hero {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.catalog {
+  flex: 0 0 auto;
+  padding-bottom: 24px;
+}
+
+.catalogInner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tabsRow {
+  display: flex;
+  gap: 20px;
+  overflow: hidden;
+  padding-top: 8px;
+}
+
+.tab {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 20px;
+}
+
+.stripRow {
+  display: flex;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.stripCard {
+  flex: 0 0 auto;
+  width: 120px;
+  height: 140px;
+}

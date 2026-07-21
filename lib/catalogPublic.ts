@@ -10,6 +10,7 @@ export type PublicCategoryTreeChild = {
   name: string;
   sortOrder: number;
   backgroundImageUrl: string | null;
+  productCount?: number;
   children?: PublicCategoryTreeChild[];
 };
 
@@ -103,6 +104,66 @@ export async function fetchCategoryBySlug(
   }
 }
 
+export type PublicCatalogTag = {
+  slug: string;
+  name: string;
+  sortOrder: number;
+  coverImageUrl: string | null;
+  /** Число товаров в зоне (если API отдаёт). */
+  productCount?: number;
+};
+
+export type TagStripCategory = {
+  slug: string;
+  name: string;
+  sortOrder: number;
+  backgroundImageUrl: string | null;
+};
+
+/** `GET /catalog/tags` — список зон/тегов для навигации. */
+export async function fetchCatalogTags(): Promise<PublicCatalogTag[]> {
+  const base = getServerApiBase();
+  try {
+    const res = await fetch(`${base}/catalog/tags`, { next: catalogPublicFetchNext() });
+    if (!res.ok) return [];
+    const data = await jsonFromResponse<{ items?: PublicCatalogTag[] }>(res, { items: [] });
+    return data.items ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** `GET /catalog/tags/:slug` */
+export async function fetchCatalogTagBySlug(slug: string): Promise<PublicCatalogTag | null> {
+  const base = getServerApiBase();
+  try {
+    const res = await fetch(`${base}/catalog/tags/${encodeURIComponent(slug)}`, {
+      next: catalogPublicFetchNext(),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return await jsonFromResponse<PublicCatalogTag | null>(res, null);
+  } catch {
+    return null;
+  }
+}
+
+/** `GET /catalog/tags/:slug/strip-categories` */
+export async function fetchTagStripCategories(slug: string): Promise<TagStripCategory[]> {
+  const base = getServerApiBase();
+  try {
+    const res = await fetch(
+      `${base}/catalog/tags/${encodeURIComponent(slug)}/strip-categories`,
+      { next: catalogPublicFetchNext() },
+    );
+    if (!res.ok) return [];
+    const data = await jsonFromResponse<{ items?: TagStripCategory[] }>(res, { items: [] });
+    return data.items ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Элемент выдачи `GET /catalog/products/search` (Meilisearch или Prisma). */
 export type CatalogProductSearchHit = {
   /** id товара */
@@ -177,6 +238,18 @@ export type PublicProductCollectionPayload = {
   name: string;
   kind: 'PRODUCT';
   products: PublicBrandProductRow[];
+};
+
+/** `GET /catalog/collections-and-sets` — витрина коллекций и наборов. */
+export type PublicCollectionOrSetSection = {
+  kind: 'collection' | 'set';
+  slug: string;
+  name: string;
+  products: PublicBrandProductRow[];
+};
+
+export type PublicCollectionsAndSetsPayload = {
+  items: PublicCollectionOrSetSection[];
 };
 
 /** `GET /catalog/products/:slug/set-siblings` — соседи по кураторским наборам. */

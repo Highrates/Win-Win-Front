@@ -1,0 +1,237 @@
+/* Галерея, сетка деталей, баннеры, описание, бренд */
+
+.productImgsWrapper {
+  width: 100%;
+  height: 538px;
+  max-height: 538px;
+  display: flex;
+  flex-direction: column;
+}
+
+.productImgsWrapper > * {
+  flex: 1;
+  min-height: 0;
+}
+
+.productDetails {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  justify-content: start;
+  align-items: start;
+  width: 100%;
+}
+
+.productDetailsRight {
+  min-width: 0;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.pdpBannerRow {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.pdpProjectAddedBanner {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--color-bright-snow);
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+}
+
+.pdpProjectAddedBannerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.pdpBannerLink {
+  flex-shrink: 0;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.pdpProjectAddedBannerDismiss {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-gray);
+}
+
+.pdpProjectAddedBannerDismiss:hover {
+  color: var(--color-ink-black);
+}
+
+.descriptionWrapper {
+  align-self: stretch;
+}
+
+.descriptionText {
+  font-size: var(--text-body-long-size);
+  line-height: var(--text-body-long-height);
+  font-weight: var(--text-body-weight);
+}
+
+.brandWrapper {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.brandTitle {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  text-transform: uppercase;
+  color: var(--color-ink-black);
+}
+
+.brandContent {
+  align-self: stretch;
+  padding: 20px 16px;
+  background: var(--color-bright-snow);
+  border-radius: var(--radius-4);
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brandContent:hover {
+  opacity: 0.95;
+}
+
+.brandContentInner {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.brandLogo {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 100px;
+  background: var(--color-white);
+  flex-shrink: 0;
+}
+
+.brandShortDescription {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.brandName {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  color: var(--color-ink-black);
+  text-transform: uppercase;
+}
+
+.brandDescription {
+  font-size: var(--text-body-long-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-long-height);
+  color: var(--color-ink-black);
+}
+
+.brandArrow {
+  flex-shrink: 0;
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 768px) {
+  .productImgsWrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    height: 360px;
+    max-height: 360px;
+  }
+
+  .productDetails {
+    grid-template-columns: 1fr;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .productDetailsRight {
+    padding-top: 32px;
+    padding-bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .descriptionWrapper,
+  .descriptionText {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .brandWrapper {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .brandContent {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .brandName {
+    font-size: var(--text-card-20-400);
+    font-weight: 400;
+  }
+
+  .brandContentInner {
+    flex-direction: column;
+    gap: 24px;
+  }
+}

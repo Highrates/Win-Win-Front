@@ -1,0 +1,90 @@
+.select {
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.title {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.options {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.option {
+  padding: 8px 16px;
+  border-radius: var(--radius-4);
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  outline: none;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 24px;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  text-decoration: none;
+}
+
+.option:hover {
+  border-color: rgba(0, 0, 0, 0.4);
+  background: var(--color-bright-snow);
+}
+
+.option[aria-pressed='true'],
+.optionSelected {
+  border: 1px solid var(--color-black);
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+}
+
+.option[aria-pressed='true']:hover,
+.optionSelected:hover {
+  border: 1px solid var(--color-black);
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .options {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .options::-webkit-scrollbar {
+    display: none;
+  }
+
+  .option {
+    flex-shrink: 0;
+  }
+}

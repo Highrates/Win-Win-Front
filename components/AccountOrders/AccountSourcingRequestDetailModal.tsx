@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { resolveSourcingProductDisplayName } from '@win-win/sourcing-request';
-import { AccordionBig } from '@/app/(account)/account/orders/AccordionBig';
+import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import {

@@ -1,0 +1,215 @@
+.articleMainSection {
+  margin-top: 94px;
+}
+
+/* Блок шапки по центру страницы; содержимое внутри — слева */
+.articleHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 24px;
+  max-width: 48rem;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Как News_allNewsLink / News_allNewsText + News_arrow: стрелка слева, «назад» */
+.articleBackLink {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.articleBackLink:hover {
+  opacity: 0.85;
+}
+
+.articleBackText {
+  font-size: var(--text-body);
+  color: var(--color-gray);
+}
+
+.articleBackArrow {
+  display: block;
+  transform: scaleX(-1);
+}
+
+.articleDate {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+}
+
+.articleTitle {
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.articleLead {
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+  color: var(--color-ink-black);
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Стрелка в чипе рубрики: как icons/arrow.svg, цвет через currentColor */
+.categoryBtnInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.categoryArrow {
+  flex-shrink: 0;
+  color: var(--color-gray);
+  display: block;
+}
+
+/* Чипы рубрик статьи — вровень с левым краем шапки */
+.articleCategoryGroup {
+  justify-content: flex-start;
+}
+
+.articleHeroOuter {
+  width: 100%;
+  max-width: 48rem;
+  margin-top: 32px;
+  margin-bottom: 32px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Hero в той же measure, что и текст (48rem) */
+.articleHeroFrame {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border-radius: var(--radius-4);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.articleHeroImage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: block;
+  object-fit: cover;
+  border-radius: var(--radius-4);
+}
+
+/* Тело статьи: scoped overrides поверх глобального .rich-content */
+.articleBody {
+  padding-top: 0;
+  padding-bottom: 48px;
+}
+
+.articleBody :global(img),
+.articleBody :global(video),
+.articleBody :global(iframe) {
+  border-radius: var(--radius-4);
+}
+
+/* A — вертикальный ритм между абзацами и блоками */
+.articleBody :global(p + p),
+.articleBody :global(p + ul),
+.articleBody :global(p + ol),
+.articleBody :global(p + blockquote),
+.articleBody :global(p + figure),
+.articleBody :global(ul + p),
+.articleBody :global(ol + p),
+.articleBody :global(blockquote + p),
+.articleBody :global(figure + p),
+.articleBody :global(blockquote + blockquote),
+.articleBody :global(figure + figure) {
+  margin-top: 1.25em;
+}
+
+.articleBody :global(blockquote),
+.articleBody :global(figure) {
+  margin-bottom: 0;
+}
+
+.articleBody :global(ul + ul),
+.articleBody :global(ol + ol),
+.articleBody :global(ul + ol),
+.articleBody :global(ol + ul) {
+  margin-top: 1em;
+}
+
+/* B — подзаголовки в теле: sentence case, воздух между секциями */
+.articleBody :global(h1),
+.articleBody :global(h2),
+.articleBody :global(h3),
+.articleBody :global(h4),
+.articleBody :global(h5) {
+  text-transform: none;
+}
+
+.articleBody :global(h1),
+.articleBody :global(h2),
+.articleBody :global(h3),
+.articleBody :global(h4) {
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+}
+
+.articleBody :global(h1:first-child),
+.articleBody :global(h2:first-child),
+.articleBody :global(h3:first-child),
+.articleBody :global(h4:first-child) {
+  margin-top: 0;
+}
+
+.articleBody :global(h2 + p),
+.articleBody :global(h3 + p),
+.articleBody :global(h4 + p) {
+  margin-top: 0.75em;
+}
+
+.articleBody :global(p + h2),
+.articleBody :global(p + h3),
+.articleBody :global(p + h4),
+.articleBody :global(ul + h2),
+.articleBody :global(ol + h2),
+.articleBody :global(blockquote + h2),
+.articleBody :global(figure + h2),
+.articleBody :global(ul + h3),
+.articleBody :global(ol + h3),
+.articleBody :global(blockquote + h3),
+.articleBody :global(figure + h3),
+.articleBody :global(ul + h4),
+.articleBody :global(ol + h4),
+.articleBody :global(blockquote + h4),
+.articleBody :global(figure + h4) {
+  margin-top: 2em;
+}
+
+@media (max-width: 768px) {
+  .articleMainSection {
+    margin-top: 78px;
+  }
+
+  .articleCategoryGroup {
+    width: auto;
+    min-width: 0;
+    display: inline-flex;
+  }
+
+  .articleCategoryGroup > a[role='listitem'] {
+    flex: 0 0 auto;
+  }
+}

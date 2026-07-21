@@ -1,4 +1,4 @@
-import type { ProjectData } from '@/app/(public)/designers/DesignerProjectsSection';
+import type { ProjectData } from '@/app/(site)/(public)/designers/DesignerProjectsSection';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 
 export function parseCoverUrls(v: unknown): string[] {

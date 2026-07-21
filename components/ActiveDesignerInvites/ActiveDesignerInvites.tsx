@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import btnStyles from '@/components/Button/Button.module.css';
-import profileSheetStyles from '@/app/(account)/account/profile/page.module.css';
+import profileSheetStyles from '@/app/(site)/(account)/account/profile/page.module.css';
 import { copyTextToClipboard } from '@/lib/copyToClipboard';
 import {
   formatInviteExpiresLabel,

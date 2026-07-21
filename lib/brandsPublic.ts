@@ -105,6 +105,12 @@ export function publicBrandsMenuSlice(
     .map(({ slug, name }) => ({ slug, name }));
 }
 
+/** Меню брендов для header (без полного списка на SSR). */
+export async function fetchPublicBrandsMenuForNav(limit = 10): Promise<{ slug: string; name: string }[]> {
+  const brands = await fetchPublicBrands();
+  return publicBrandsMenuSlice(brands, limit);
+}
+
 /** До `limit` брендов с непустой обложкой, в порядке sortOrder. */
 export function featuredBrandsWithCover(
   brands: PublicBrandListRow[],

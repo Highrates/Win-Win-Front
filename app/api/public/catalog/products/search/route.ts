@@ -9,7 +9,25 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const base = getServerApiBase();
   const upstream = new URL(`${base}/catalog/products/search`);
-  for (const key of ['q', 'page', 'limit', 'categoryId', 'brandId']) {
+  for (const key of [
+    'q',
+    'page',
+    'limit',
+    'categoryId',
+    'brandId',
+    'tag',
+    'sort',
+    'priceFrom',
+    'priceTo',
+    'widthFrom',
+    'widthTo',
+    'heightFrom',
+    'heightTo',
+    'materialId',
+    'hasCase',
+    'has3d',
+    'hasDrawing',
+  ]) {
     const v = url.searchParams.get(key);
     if (v != null && v !== '') upstream.searchParams.set(key, v);
   }

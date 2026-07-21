@@ -21,6 +21,8 @@ export type CatalogTagAdminDetail = {
   name: string;
   slug: string;
   sortOrder: number;
+  coverImageUrl: string | null;
+  coverMediaObjectId: string | null;
   productItems: {
     productId: string;
     name: string;

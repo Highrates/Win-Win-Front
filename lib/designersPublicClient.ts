@@ -1,4 +1,4 @@
-import type { DesignersListItem } from '@/app/(public)/designers/DesignersCardsClient';
+import type { DesignersListItem } from '@/app/(site)/(public)/designers/DesignersCardsClient';
 
 export async function fetchDesignersPublicClient(params: {
   page: number;

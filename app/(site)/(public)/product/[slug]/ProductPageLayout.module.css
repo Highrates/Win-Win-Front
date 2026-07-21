@@ -1,0 +1,56 @@
+/* Layout shell + breadcrumbs (page.tsx) */
+
+.productSection {
+  margin-top: 94px;
+}
+
+.productPageFlow {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+
+.breadcrumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.breadcrumbsLink {
+  color: var(--color-gray);
+  text-decoration: none;
+}
+
+.breadcrumbsLink:hover {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsCurrent {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsSep {
+  color: var(--color-gray);
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .productSection {
+    margin-top: 78px;
+  }
+
+  .productPageFlow {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .breadcrumbs {
+    flex-wrap: wrap;
+    max-width: 100%;
+    row-gap: 4px;
+  }
+}

@@ -10,7 +10,7 @@ import {
 } from '@/components/SlideInPanelModal/SlideInPanelModal';
 import { useInviteDesigner } from '@/hooks/useInviteDesigner';
 import { copyTextToClipboard } from '@/lib/copyToClipboard';
-import profileSheetStyles from '@/app/(account)/account/profile/page.module.css';
+import profileSheetStyles from '@/app/(site)/(account)/account/profile/page.module.css';
 import flowStyles from '@/components/auth-forms/RegisterFlow.module.css';
 import { PartnerReferralLinkTab } from './PartnerReferralLinkTab';
 import styles from './InviteDesignerModal.module.css';

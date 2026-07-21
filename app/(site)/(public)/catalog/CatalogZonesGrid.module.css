@@ -1,0 +1,125 @@
+.section {
+  margin-top: 24px;
+  padding-bottom: 96px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 40px 12px;
+  align-items: start;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.cardWide {
+  grid-column: span 2;
+}
+
+.cardImgWrap {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-4);
+  background: var(--color-bright-snow);
+  aspect-ratio: 1 / 1.15;
+}
+
+.cardWide .cardImgWrap {
+  aspect-ratio: 16 / 10;
+}
+
+.cardImg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.cardMeta {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  align-self: stretch;
+  min-width: 0;
+}
+
+.cardName {
+  font-size: var(--text-card-16-400);
+  font-weight: 400;
+  color: var(--color-ink-black);
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cardCount {
+  flex-shrink: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+}
+
+.textCell {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 100%;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
+.textBody {
+  margin: 0;
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+  line-height: 1.45;
+  color: var(--color-ink-black);
+}
+
+.emptyCell {
+  min-height: 1px;
+  pointer-events: none;
+}
+
+.status {
+  margin: 16px 0 0;
+  font-size: var(--text-caption);
+  color: var(--color-gray);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cardWide {
+    grid-column: span 2;
+  }
+
+  .textCell {
+    grid-column: auto;
+    min-height: 0;
+    padding: 0 4px;
+  }
+
+  .emptyCell {
+    display: none;
+  }
+}

@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import {
   fetchCategoryTree,
   type PublicCategoryTreeChild,
@@ -11,6 +12,7 @@ export type HomeCatalogChild = {
   name: string;
   sortOrder: number;
   cardImageUrl: string;
+  productCount?: number;
   children?: HomeCatalogChild[];
 };
 
@@ -37,6 +39,7 @@ function mapRoot(r: PublicCategoryTreeRoot): HomeCatalogRoot {
     name: r.name,
     sortOrder: r.sortOrder,
     cardImageUrl: resolveMediaUrlForServer(r.backgroundImageUrl),
+    productCount: typeof r.productCount === 'number' ? r.productCount : 0,
     children: (r.children ?? []).map(mapChild),
   };
 }
@@ -60,6 +63,7 @@ function mapRootClient(r: PublicCategoryTreeRoot): HomeCatalogRoot {
     name: r.name,
     sortOrder: r.sortOrder,
     cardImageUrl: resolveMediaUrlForClient(r.backgroundImageUrl),
+    productCount: typeof r.productCount === 'number' ? r.productCount : 0,
     children: (r.children ?? []).map(mapChildClient),
   };
 }
@@ -69,8 +73,15 @@ export function homeRootsFromPublicTreeClient(data: { roots: PublicCategoryTreeR
   return data.roots.map(mapRootClient);
 }
 
-/** Корневые категории с дочерними для блока каталога на главной. */
-export async function fetchHomeCatalogRoots(): Promise<HomeCatalogRoot[]> {
+async function fetchHomeCatalogRootsUncached(): Promise<HomeCatalogRoot[]> {
   const { roots } = await fetchCategoryTree();
   return roots.map(mapRoot);
+}
+
+/** Дедуп fetch дерева каталога в рамках одного RSC-запроса. */
+export const loadHomeCatalogRoots = cache(fetchHomeCatalogRootsUncached);
+
+/** Корневые категории с дочерними для блока каталога на главной. */
+export async function fetchHomeCatalogRoots(): Promise<HomeCatalogRoot[]> {
+  return loadHomeCatalogRoots();
 }

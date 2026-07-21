@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { ProfileDto } from '@/app/(account)/account/profile/profileTypes';
+import type { ProfileDto } from '@/app/(site)/(account)/account/profile/profileTypes';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 
 export function usePartnerApplication(onSuccessProfile: (p: ProfileDto) => void) {
