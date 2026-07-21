@@ -47,7 +47,7 @@ export function UnderlineTabs({
   asTablist = true,
 }: Props) {
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const tabsWrapperRef = useRef<HTMLNavElement>(null);
+  const tabsWrapperRef = useRef<HTMLElement>(null);
   const tabBtnRefs = useRef(new Map<string, HTMLElement>());
   const indicatorTarget = hoverId ?? activeId;
 
@@ -106,14 +106,8 @@ export function UnderlineTabs({
         const isActive = tab.id === activeId;
         const classNameTab = isActive ? styles.tabActive : styles.tab;
         const { role: btnRole, ...restButtonProps } = tab.buttonProps ?? {};
-        const a11y = asTablist
-          ? { role: btnRole ?? 'tab', 'aria-selected': isActive }
-          : {
-              role: btnRole,
-              'aria-current': isActive ? ('page' as const) : undefined,
-            };
-
         if (tab.href) {
+          const { id, 'aria-controls': ariaControls } = restButtonProps;
           return (
             <Link
               key={tab.id}
@@ -121,8 +115,11 @@ export function UnderlineTabs({
               className={classNameTab}
               onMouseEnter={() => setHoverId(tab.id)}
               ref={(el) => setTabRef(tab.id, el)}
-              {...a11y}
-              {...(restButtonProps as Omit<typeof restButtonProps, 'ref'>)}
+              id={id}
+              aria-controls={ariaControls}
+              role={asTablist ? (btnRole ?? 'tab') : btnRole}
+              aria-selected={asTablist ? isActive : undefined}
+              aria-current={!asTablist && isActive ? 'page' : undefined}
             >
               {tab.label}
             </Link>
@@ -137,7 +134,9 @@ export function UnderlineTabs({
             onClick={() => onSelect?.(tab.id)}
             onMouseEnter={() => setHoverId(tab.id)}
             ref={(el) => setTabRef(tab.id, el)}
-            {...a11y}
+            role={asTablist ? (btnRole ?? 'tab') : btnRole}
+            aria-selected={asTablist ? isActive : undefined}
+            aria-current={!asTablist && isActive ? 'page' : undefined}
             {...restButtonProps}
           >
             {tab.label}
