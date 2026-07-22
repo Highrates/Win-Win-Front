@@ -6,6 +6,15 @@
   margin-top: 24px;
 }
 
+/** На hub уменьшаем огромный отступ секций Recommendations. */
+.hubRails :global(section) {
+  margin-top: 64px;
+}
+
+.hubRails :global(section:first-of-type) {
+  margin-top: 24px;
+}
+
 .empty {
   margin: 16px 0 0;
   font-size: var(--text-caption);

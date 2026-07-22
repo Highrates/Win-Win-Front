@@ -17,6 +17,8 @@ export type HomeProductCollectionSection = {
 export type HomeProductRailSection = HomeProductCollectionSection & {
   advanceGalleryOnScroll?: boolean;
   progressiveLoad?: boolean;
+  /** Ссылка «ВСЕ» рядом с заголовком (страница коллекции). */
+  allHref?: string;
 };
 
 export type HomeRecommendationsSection = HomeProductCollectionSection;
@@ -114,12 +116,18 @@ export function mapHomeCuratedSections(fetches: HomePageCuratedFetches) {
           items: collection1.items,
           advanceGalleryOnScroll: true,
           progressiveLoad: false,
+          allHref: fetches.collection1Raw?.slug
+            ? `/collections/${encodeURIComponent(fetches.collection1Raw.slug)}`
+            : undefined,
         }
       : null,
     recommendationsRail: recommendations?.items.length
       ? {
           title: recommendations.title,
           items: recommendations.items,
+          allHref: fetches.recommendationsCollection?.slug
+            ? `/collections/${encodeURIComponent(fetches.recommendationsCollection.slug)}`
+            : undefined,
         }
       : null,
     allRecommendationItems: mergeHomeRecommendationItems(collection1, recommendations),

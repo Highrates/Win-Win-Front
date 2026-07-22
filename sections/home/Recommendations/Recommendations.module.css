@@ -2,13 +2,38 @@
   margin-top: 180px;
 }
 
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 32px;
+}
+
 .title {
   font-size: var(--h5-size);
   font-weight: var(--h5-weight);
   font-family: var(--font-commissioner);
   text-transform: uppercase;
-  margin: 0 0 32px;
+  margin: 0;
   color: var(--color-ink-black);
+  min-width: 0;
+}
+
+.allLink {
+  flex-shrink: 0;
+  margin-top: -4px;
+  font-size: var(--h5-size);
+  font-weight: var(--text-caption-weight);
+  font-family: var(--font-commissioner);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-red);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.allLink:hover {
+  opacity: 0.8;
 }
 
 .grid {

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
 import { LogoPaths } from '@/components/SiteLoader/LogoPaths';
 import {
@@ -12,6 +13,7 @@ import styles from './Footer.module.css';
 
 const infoLinks = [
   { href: '/about', label: 'О нас' },
+  { href: '/brands', label: 'Бренды' },
   { href: '/designers', label: 'Дизайнеры' },
   { href: '/projects', label: 'Проекты и концепции' },
   { href: '/blog', label: 'Новости и статьи' },
@@ -20,6 +22,7 @@ const infoLinks = [
   { href: '/referral', label: 'Реферальная программа' },
   { href: '/faq', label: 'FAQ' },
   { href: '/contacts', label: 'Контакты' },
+  { href: '/sitemap', label: 'Карта сайта' },
 ];
 
 const legalLinks = [
@@ -31,13 +34,59 @@ const legalLinks = [
 /** Пока нет URL в настройках — заглушка. */
 const TELEGRAM_HREF = 'https://t.me/';
 
+/** CTA партнёрства → регистрация. */
+const PARTNER_HREF = '/register';
+
+const FOOTER_RIGHT_HOME = '#EFDECD';
+const FOOTER_RIGHT_CATALOG = '#FFC0CB';
+const FOOTER_RIGHT_PRODUCT = '#DBC5EE';
+
+/** Пастельная палитра для прочих страниц (детерминированный «рандом» по pathname). */
+const FOOTER_RIGHT_OTHER = [
+  '#E8F0E3',
+  '#F5E6D3',
+  '#E3EEF5',
+  '#F0E8F5',
+  '#E8F5F0',
+  '#F5F0E3',
+  '#EDE4DC',
+  '#E4EDE8',
+] as const;
+
 type TagItem = { slug: string; name: string };
 
+function hashPathname(pathname: string): number {
+  let h = 0;
+  for (let i = 0; i < pathname.length; i++) {
+    h = (h * 31 + pathname.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function footerRightBackground(pathname: string): string {
+  if (pathname === '/' || pathname === '') return FOOTER_RIGHT_HOME;
+  if (pathname.startsWith('/product/')) return FOOTER_RIGHT_PRODUCT;
+  if (
+    pathname === '/catalog' ||
+    pathname.startsWith('/catalog/') ||
+    pathname.startsWith('/collections/') ||
+    pathname === '/brands' ||
+    pathname.startsWith('/brands/')
+  ) {
+    return FOOTER_RIGHT_CATALOG;
+  }
+  const idx = hashPathname(pathname) % FOOTER_RIGHT_OTHER.length;
+  return FOOTER_RIGHT_OTHER[idx]!;
+}
+
 export function Footer() {
+  const pathname = usePathname() ?? '';
   const catalogRoots = useCatalogNavRoots();
   const [tags, setTags] = useState<TagItem[]>([]);
   const [accountHref, setAccountHref] = useState('/login');
   const logoRef = useRef<HTMLDivElement>(null);
+
+  const rightBg = useMemo(() => footerRightBackground(pathname), [pathname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +172,6 @@ export function Footer() {
       lastScroll = y;
       if (dy === 0) return;
 
-      // Импульс только в начало — хвост догоняет в paint()
       lag[0] = Math.max(-maxLag, Math.min(maxLag, lag[0]! + dy * 0.55));
       if (!raf) raf = requestAnimationFrame(paint);
     };
@@ -194,18 +242,33 @@ export function Footer() {
           </nav>
 
           <div className={styles.leftBottom}>
-            <div className={styles.legalLinks}>
-              {legalLinks.map((link) => (
-                <Link key={link.href} href={link.href}>
-                  {link.label}
-                </Link>
-              ))}
+            <aside className={styles.partnerCta} aria-label="Партнёрство">
+              <p className={styles.partnerCtaTitle}>Станьте партнёром 588est</p>
+              <p className={styles.partnerCtaText}>
+                Для дизайнеров, студий и команд —
+                <br />
+                присоединяйтесь к{'\u00A0'}реферальной программе и получайте выгоды
+                с{'\u00A0'}каждой{'\u00A0'}сделки.
+              </p>
+              <Link href={PARTNER_HREF} className={styles.partnerCtaLink}>
+                Стать партнёром
+              </Link>
+            </aside>
+
+            <div className={styles.leftBottomMeta}>
+              <div className={styles.legalLinks}>
+                {legalLinks.map((link) => (
+                  <Link key={link.href} href={link.href}>
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              <span className={styles.copyright}>588est. Все права защищены.</span>
             </div>
-            <span className={styles.copyright}>588est. Все права защищены.</span>
           </div>
         </div>
 
-        <div className={styles.right}>
+        <div className={styles.right} style={{ background: rightBg }}>
           <div className={styles.rightTop}>
             <Link href={accountHref} className={styles.rightLink}>
               Вход
@@ -220,7 +283,6 @@ export function Footer() {
             </a>
           </div>
 
-          {/* Sticky-контейнер ниже rightTop — лого упирается в его верх, не заходит под ссылки */}
           <div className={styles.rightLogoSlot}>
             <div ref={logoRef} className={styles.rightLogo} aria-label="588est">
               <LogoPaths className={styles.rightLogoMark} />

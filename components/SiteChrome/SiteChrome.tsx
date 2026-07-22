@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
+import { CatalogScrollToTop } from '@/components/CatalogScrollToTop/CatalogScrollToTop';
 import { HeaderWrapper } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
@@ -26,6 +27,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <CatalogScrollToTop />
       {!hideChrome && (
         <Suspense fallback={null}>
           <HeaderWrapper />

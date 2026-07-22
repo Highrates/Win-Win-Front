@@ -2,6 +2,15 @@ import Link from 'next/link';
 import { Fragment, Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import type { CollectionProductRow } from '@/app/(site)/(public)/collections/[slug]/CollectionProductsGrid';
+import {
+  normalizeCatalogPriceRange,
+  parseCatalogPriceBound,
+} from '@/lib/catalog/catalogPriceFilter';
+import { parseCatalogFacetFiltersFromSearchParams } from '@/lib/catalog/catalogProductFilters';
+import { parseCatalogSort } from '@/lib/catalog/catalogSort';
+import { loadCatalogTags } from '@/lib/catalog/loadCatalogPageData';
+import { parseCatalogTagSlugs } from '@/lib/catalog/parseCatalogTagSlugs';
 import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
 import { brandCoverImageUrl, plainTextExcerptFromHtml } from '@/lib/brandsPublic';
 import { fetchPublicBrandBySlug } from '@/lib/server/brandAuthFetch';
@@ -34,17 +43,45 @@ export default async function BrandPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{
+    category?: string;
+    tag?: string;
+    sort?: string;
+    priceFrom?: string;
+    priceTo?: string;
+    brandId?: string;
+    materialId?: string;
+    widthFrom?: string;
+    widthTo?: string;
+    heightFrom?: string;
+    heightTo?: string;
+    hasCase?: string;
+    has3d?: string;
+    hasDrawing?: string;
+  }>;
 }) {
   const { slug } = await params;
-  const { category: categoryParam } = await searchParams;
-  const catalogRoots = await fetchHomeCatalogRoots();
-  const initialCategoryId =
-    categoryParam?.trim() && catalogRoots.some((r) => r.id === categoryParam.trim())
-      ? categoryParam.trim()
-      : null;
+  const sp = await searchParams;
+  const tagSlugs = parseCatalogTagSlugs(sp.tag);
+  const tagParam = tagSlugs.length ? tagSlugs.join(',') : undefined;
+  const sort = parseCatalogSort(sp.sort);
+  const { priceFrom, priceTo } = normalizeCatalogPriceRange(
+    parseCatalogPriceBound(sp.priceFrom),
+    parseCatalogPriceBound(sp.priceTo),
+  );
+  const facets = parseCatalogFacetFiltersFromSearchParams({
+    get: (name: string) => {
+      const v = sp[name as keyof typeof sp];
+      return typeof v === 'string' ? v : null;
+    },
+  });
 
-  const row = await fetchPublicBrandBySlug(slug, { categoryId: initialCategoryId });
+  const [catalogRoots, zones, row] = await Promise.all([
+    fetchHomeCatalogRoots(),
+    loadCatalogTags(),
+    /** Все товары бренда — табы и фильтры на клиенте. */
+    fetchPublicBrandBySlug(slug),
+  ]);
   if (!row) notFound();
 
   const name = row.name;
@@ -59,7 +96,19 @@ export default async function BrandPage({
     { label: name, href: '', current: true },
   ];
 
-  const brandProducts = row.products.map(brandProductRowToProductGridItem);
+  const products: CollectionProductRow[] = row.products.map((p) => ({
+    ...brandProductRowToProductGridItem(p),
+    categoryId: p.categoryId?.trim() || null,
+    brandId: p.brandId?.trim() || null,
+    brandName: p.brandName?.trim() || null,
+    tagSlugs: p.tagSlugs ?? [],
+    materials: p.materials ?? [],
+    widthMm: p.widthMm ?? null,
+    heightMm: p.heightMm ?? null,
+    hasCase: p.hasCase ?? false,
+    has3d: p.has3d ?? false,
+    hasDrawing: p.hasDrawing ?? false,
+  }));
 
   return (
     <main>
@@ -116,8 +165,13 @@ export default async function BrandPage({
         <BrandPageMarketClient
           slug={slug}
           catalogRoots={catalogRoots}
-          initialCategoryId={initialCategoryId}
-          initialProducts={brandProducts}
+          products={products}
+          zones={zones}
+          initialTagSlug={tagParam}
+          initialFacets={facets}
+          initialSort={sort}
+          initialPriceFrom={priceFrom}
+          initialPriceTo={priceTo}
         />
       </Suspense>
     </main>

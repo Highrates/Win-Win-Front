@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ProductGridWithLikes } from '@/components/ProductGridWithLikes';
 import { useGalleryAdvanceOnView } from '@/hooks/useGalleryAdvanceOnView';
@@ -18,6 +19,8 @@ type RecommendationsProps = {
   /** Опциональный id секции (например для скрытия sticky-панели при скролле) */
   id?: string;
   items: RecommendationsStaticItem[];
+  /** Ссылка «ВСЕ» справа от заголовка. */
+  allHref?: string;
   /** При скролле к секции — все карточки с галереей листают на следующее фото */
   advanceGalleryOnScroll?: boolean;
   /**
@@ -31,6 +34,7 @@ export function Recommendations({
   title = 'Рекомендации',
   id,
   items,
+  allHref,
   advanceGalleryOnScroll = false,
   progressiveLoad = true,
 }: RecommendationsProps) {
@@ -65,7 +69,14 @@ export function Recommendations({
       className={styles.section}
     >
       <div className="padding-global">
-        <h5 className={styles.title}>{title}</h5>
+        <div className={styles.titleRow}>
+          <h5 className={styles.title}>{title}</h5>
+          {allHref ? (
+            <Link href={allHref} className={styles.allLink}>
+              ВСЕ
+            </Link>
+          ) : null}
+        </div>
         <ProductGridWithLikes
           items={visibleItems}
           gridClassName={styles.grid}

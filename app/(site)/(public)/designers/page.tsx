@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { Fragment } from 'react';
+import { Fragment, Suspense } from 'react';
 import type { Metadata } from 'next';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import { fetchPublicSiteSettings } from '@/lib/siteSettingsPublic';
 import { DesignersSearchBox } from './DesignersSearchBox';
-import { DesignersListClient } from './DesignersListClient';
+import { DesignersMarketClient } from './DesignersMarketClient';
 import { DESIGNERS_PER_PAGE } from './designersListConstants';
 import styles from './DesignersPage.module.css';
 
@@ -36,28 +37,6 @@ async function fetchDesigners(
   }
 }
 
-function ArrowIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="22"
-      height="22"
-      viewBox="0 0 22 22"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M8.25 16.5L13.75 11L8.25 5.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export const metadata: Metadata = {
   title: 'Дизайнеры — Win-Win',
   description: 'Каталог дизайнеров Win-Win',
@@ -71,7 +50,10 @@ export default async function DesignersPage({ searchParams }: Props) {
   const { q: qRaw } = await searchParams;
   const q = typeof qRaw === 'string' ? qRaw.trim() : '';
 
-  const { items, total } = await fetchDesigners(1, DESIGNERS_PER_PAGE, q || undefined);
+  const [{ items, total }, siteSettings] = await Promise.all([
+    fetchDesigners(1, DESIGNERS_PER_PAGE, q || undefined),
+    fetchPublicSiteSettings(),
+  ]);
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -100,38 +82,14 @@ export default async function DesignersPage({ searchParams }: Props) {
 
             <DesignersSearchBox initialQuery={q} />
 
-            <div className={styles.marketSectionRow}>
-              <div className={styles.marketSectionRowLeft}>
-                <div className={styles.marketCityGroup}>
-                  <button type="button" aria-label="Выбор города">
-                    <img
-                      src="/icons/location.svg"
-                      alt=""
-                      width={20}
-                      height={20}
-                    />
-                    <span>Москва</span>
-                    <ArrowIcon className={styles.marketCityArrow} />
-                  </button>
-                </div>
-                <div className={styles.marketFilterGroup}>
-                  <button type="button" aria-label="Фильтр">
-                    <img src="/icons/filter.svg" alt="" width={20} height={20} />
-                    <span>Фильтр</span>
-                  </button>
-                </div>
-              </div>
-              <div className={styles.marketSectionRowResult}>
-                <span className={styles.marketSectionRowResultLabel}>
-                  Результат:{' '}
-                </span>
-                <span className={styles.marketSectionRowResultValue}>
-                  {total}
-                </span>
-              </div>
-            </div>
-
-            <DesignersListClient initialItems={items} initialTotal={total} query={q} />
+            <Suspense fallback={null}>
+              <DesignersMarketClient
+                initialItems={items}
+                initialTotal={total}
+                query={q}
+                serviceOptions={siteSettings.designerServiceOptions}
+              />
+            </Suspense>
           </div>
         </div>
       </section>

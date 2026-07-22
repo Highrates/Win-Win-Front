@@ -242,7 +242,7 @@ button.interactItem:disabled {
   height: auto;
   aspect-ratio: 406 / 393;
   max-width: 406px;
-  border-radius: 10px;
+  border-radius: var(--radius-4);
   object-fit: cover;
 }
 

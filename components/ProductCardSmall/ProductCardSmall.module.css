@@ -83,7 +83,7 @@ button.productCardSmall {
   height: 140px;
   flex-shrink: 0;
   position: relative;
-  border-radius: 6px;
+  border-radius: var(--radius-4);
   overflow: hidden;
   object-fit: cover;
   display: block;

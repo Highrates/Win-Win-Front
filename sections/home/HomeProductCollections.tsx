@@ -12,9 +12,10 @@ export function HomeProductCollections({ sections }: Props) {
     <>
       {sections.map((section) => (
         <Recommendations
-          key={section.title}
+          key={section.allHref ?? section.title}
           title={section.title}
           items={section.items}
+          allHref={section.allHref}
           advanceGalleryOnScroll={section.advanceGalleryOnScroll}
           progressiveLoad={section.progressiveLoad}
         />

@@ -176,7 +176,11 @@ export async function fetchCuratedProductCollectionBySlug(
     if (!res.ok) return null;
     const data = await jsonFromResponse<PublicProductCollectionPayload | null>(res, null);
     if (!data || data.kind !== 'PRODUCT' || !Array.isArray(data.products)) return null;
-    return { ...data, products: dedupeById(data.products) };
+    return {
+      ...data,
+      coverImageUrl: data.coverImageUrl ?? null,
+      products: dedupeById(data.products),
+    };
   } catch {
     return null;
   }

@@ -50,7 +50,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-4);
   background: var(--color-bright-snow);
   border: var(--account-hairline-width) solid var(--account-hairline-color);
   font-size: var(--text-body);
@@ -72,6 +72,11 @@
   text-decoration: none;
   white-space: nowrap;
   box-sizing: border-box;
+  border-radius: var(--radius-4);
+}
+
+.pdpBannerRow .pdpBannerLink {
+  border-radius: var(--radius-4);
 }
 
 .pdpProjectAddedBannerDismiss {

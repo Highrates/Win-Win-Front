@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { PublicBrandProductRow } from '@/lib/brandsPublic';
 import { productPriceToNumber } from '@/lib/brandsPublic';
-import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
+import { homePageConfig } from '@/lib/home/homePageConfig';
 import type { HomeProductRailSection } from '@/lib/home/mapHomeSections';
+import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import type { RecommendationsStaticItem } from '@/sections/home/Recommendations/recommendationsStaticItem';
 import { HomeProductCollections } from '@/sections/home/HomeProductCollections';
 import { HomeProductLikesScope } from '@/sections/home/HomeProductLikesScope';
@@ -39,8 +40,10 @@ function mapRowsToItems(rows: PublicBrandProductRow[]): RecommendationsStaticIte
 }
 
 function mapApiSections(items: ApiSection[]): HomeProductRailSection[] {
+  const skipSlug = homePageConfig.recommendationsCollectionSlug;
   const sections: HomeProductRailSection[] = [];
   for (const section of items) {
+    if (section.kind === 'collection' && section.slug === skipSlug) continue;
     if (!section.products?.length) continue;
     const mappedItems = mapRowsToItems(section.products);
     if (!mappedItems.length) continue;
@@ -49,6 +52,10 @@ function mapApiSections(items: ApiSection[]): HomeProductRailSection[] {
       items: mappedItems,
       advanceGalleryOnScroll: true,
       progressiveLoad: true,
+      allHref:
+        section.kind === 'collection'
+          ? `/collections/${encodeURIComponent(section.slug)}`
+          : undefined,
     });
   }
   return sections;
@@ -101,8 +108,10 @@ export function CatalogHubCollectionsLazy() {
   }
 
   return (
-    <HomeProductLikesScope items={allItems}>
-      <HomeProductCollections sections={sections} />
-    </HomeProductLikesScope>
+    <div className={styles.hubRails}>
+      <HomeProductLikesScope items={allItems}>
+        <HomeProductCollections sections={sections} />
+      </HomeProductLikesScope>
+    </div>
   );
 }

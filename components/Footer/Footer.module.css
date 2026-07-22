@@ -69,6 +69,53 @@
 
 .leftBottom {
   display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.partnerCta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 620px;
+}
+
+.partnerCtaTitle {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-white);
+}
+
+.partnerCtaText {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.partnerCtaLink {
+  margin-top: 4px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-white);
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  transition: opacity 0.2s ease;
+}
+
+.partnerCtaLink:hover {
+  opacity: 0.75;
+}
+
+.leftBottomMeta {
+  display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -106,7 +153,6 @@
   flex-direction: column;
   gap: 12px;
   padding: 40px 32px 28px;
-  background: #ffc0cb;
   color: var(--color-ink-black);
   min-height: 78vh;
   min-height: 78dvh;
@@ -226,6 +272,10 @@
   }
 
   .leftBottom {
+    gap: 24px;
+  }
+
+  .leftBottomMeta {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;

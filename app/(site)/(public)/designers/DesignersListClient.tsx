@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DESIGNERS_PER_PAGE } from '@/app/(site)/(public)/designers/designersListConstants';
 import {
   DesignersCardsClient,
@@ -17,22 +17,48 @@ type Props = {
   initialItems: DesignersListItem[];
   initialTotal: number;
   query: string;
+  selectedServices?: string[];
+  onTotalChange?: (total: number) => void;
 };
 
-export function DesignersListClient({ initialItems, initialTotal, query }: Props) {
+function designerMatchesServices(item: DesignersListItem, services: string[]): boolean {
+  if (!services.length) return true;
+  const line = (item.servicesLine ?? '').toLowerCase();
+  if (!line.trim()) return false;
+  return services.some((s) => line.includes(s.trim().toLowerCase()));
+}
+
+export function DesignersListClient({
+  initialItems,
+  initialTotal,
+  query,
+  selectedServices = [],
+  onTotalChange,
+}: Props) {
   const [items, setItems] = useState(initialItems);
-  const [total, setTotal] = useState(initialTotal);
+  const [apiTotal, setApiTotal] = useState(initialTotal);
   const [loadedPage, setLoadedPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
 
+  const visibleItems = useMemo(
+    () => items.filter((item) => designerMatchesServices(item, selectedServices)),
+    [items, selectedServices],
+  );
+
+  const displayTotal = selectedServices.length ? visibleItems.length : apiTotal;
+
   useEffect(() => {
     setItems(initialItems);
-    setTotal(initialTotal);
+    setApiTotal(initialTotal);
     setLoadedPage(1);
   }, [initialItems, initialTotal, query]);
 
-  const hasMore = items.length < total;
+  useEffect(() => {
+    onTotalChange?.(displayTotal);
+  }, [displayTotal, onTotalChange]);
+
+  const hasMore = items.length < apiTotal;
 
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || !hasMore) return;
@@ -46,7 +72,7 @@ export function DesignersListClient({ initialItems, initialTotal, query }: Props
         q: query || undefined,
       });
       setItems((prev) => mergeDesignersListItems(prev, data.items));
-      setTotal(data.total);
+      setApiTotal(data.total);
       setLoadedPage(nextPage);
     } finally {
       loadingMoreRef.current = false;
@@ -61,7 +87,7 @@ export function DesignersListClient({ initialItems, initialTotal, query }: Props
 
   return (
     <>
-      <DesignersCardsClient items={items} />
+      <DesignersCardsClient items={visibleItems} />
       {hasMore ? (
         <div ref={sentinelRef} className={styles.infiniteScrollSentinel} aria-hidden="true" />
       ) : null}

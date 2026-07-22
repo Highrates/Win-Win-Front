@@ -77,7 +77,8 @@
   justify-content: space-between;
   align-items: center;
   text-decoration: none;
-  color: inherit;
+  color: var(--color-red);
+  font-size: var(--h5-size);
   transition: opacity 0.2s ease;
   background: none;
   border: none;
@@ -91,13 +92,16 @@
 }
 
 .moreAboutBrandText {
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-  color: var(--color-gray);
+  font-size: inherit;
+  font-weight: var(--text-caption-weight);
+  color: inherit;
+  text-transform: uppercase;
 }
 
 .moreAboutBrandArrow {
   display: block;
+  flex-shrink: 0;
+  color: var(--color-red);
 }
 
 /* Модальное окно «Еще о бренде» */
@@ -281,7 +285,7 @@
   min-width: 0;
   align-self: stretch;
   height: 394px;
-  border-radius: 10px;
+  border-radius: var(--radius-4);
   object-fit: cover;
   width: 100%;
 }

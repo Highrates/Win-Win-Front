@@ -26,6 +26,18 @@ export type PublicBrandProductRow = {
   price: unknown;
   currency: string;
   images: { url: string; sortOrder: number }[];
+  /** Основная категория товара (для табов на странице коллекции). */
+  categoryId?: string | null;
+  /** Метаданные для фильтров витрины коллекции. */
+  brandId?: string | null;
+  brandName?: string | null;
+  tagSlugs?: string[];
+  materials?: { id: string; name: string }[];
+  widthMm?: number | null;
+  heightMm?: number | null;
+  hasCase?: boolean;
+  has3d?: boolean;
+  hasDrawing?: boolean;
   casesLinkedCount?: number;
   likesDisplayCount?: number;
   likedByMe?: boolean;

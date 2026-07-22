@@ -237,6 +237,7 @@ export type PublicProductCollectionPayload = {
   slug: string;
   name: string;
   kind: 'PRODUCT';
+  coverImageUrl?: string | null;
   products: PublicBrandProductRow[];
 };
 

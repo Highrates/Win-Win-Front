@@ -1,101 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Fragment, useMemo, useState } from 'react';
 import { SearchBox } from '@/components/SearchBox/SearchBox';
-import { UnderlineTabs } from '@/components/UnderlineTabs';
 import {
   brandCoverImageUrl,
   brandsSortedAlphabetically,
   featuredBrandsWithCover,
-  fetchPublicBrandsClient,
   type PublicBrandListRow,
 } from '@/lib/brandsPublic';
 import { chunkColumns, groupBrandsByLetter } from '@/lib/public/brands';
-import type { HomeCatalogRoot } from '@/lib/homeCatalog';
 import styles from './BrandsPage.module.css';
-
-const ALL_TAB_ID = 'all';
 
 type Props = {
   initialBrands: PublicBrandListRow[];
-  catalogRoots: HomeCatalogRoot[];
-  initialCategoryId: string | null;
 };
 
-function resolveCategoryFromParam(
-  param: string | null,
-  roots: HomeCatalogRoot[],
-): string {
-  if (!param?.trim()) return ALL_TAB_ID;
-  return roots.some((r) => r.id === param) ? param : ALL_TAB_ID;
-}
-
-export function BrandsPageClient({ initialBrands, catalogRoots, initialCategoryId }: Props) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [brands, setBrands] = useState(initialBrands);
-  const [loading, setLoading] = useState(false);
+export function BrandsPageClient({ initialBrands }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeId, setActiveId] = useState(() =>
-    initialCategoryId && catalogRoots.some((r) => r.id === initialCategoryId)
-      ? initialCategoryId
-      : ALL_TAB_ID,
-  );
-
-  const selfNavRef = useRef(false);
-  const mountedRef = useRef(false);
-
-  const tabs = useMemo(
-    () => [{ id: ALL_TAB_ID, name: 'Все бренды' }, ...catalogRoots.map((r) => ({ id: r.id, name: r.name }))],
-    [catalogRoots],
-  );
-
-  const loadBrands = useCallback(async (categoryId: string | null) => {
-    setLoading(true);
-    try {
-      const rows = await fetchPublicBrandsClient(categoryId);
-      setBrands(rows);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const selectTab = useCallback(
-    (tabId: string) => {
-      if (tabId === activeId) return;
-      selfNavRef.current = true;
-      setActiveId(tabId);
-      const categoryId = tabId === ALL_TAB_ID ? null : tabId;
-      const href = categoryId ? `/brands?category=${encodeURIComponent(categoryId)}` : '/brands';
-      router.replace(href, { scroll: false });
-      void loadBrands(categoryId);
-    },
-    [activeId, loadBrands, router],
-  );
-
-  useEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      return;
-    }
-    if (selfNavRef.current) {
-      selfNavRef.current = false;
-      return;
-    }
-    const param = searchParams.get('category');
-    const nextId = resolveCategoryFromParam(param, catalogRoots);
-    setActiveId(nextId);
-    const categoryId = nextId === ALL_TAB_ID ? null : nextId;
-    void loadBrands(categoryId);
-  }, [searchParams, catalogRoots, loadBrands]);
 
   const filteredBrands = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return brands;
-    return brands.filter((b) => b.name.toLowerCase().includes(q));
-  }, [brands, searchQuery]);
+    if (!q) return initialBrands;
+    return initialBrands.filter((b) => b.name.toLowerCase().includes(q));
+  }, [initialBrands, searchQuery]);
 
   const featured = featuredBrandsWithCover(filteredBrands, 8);
   const forAlphabet = brandsSortedAlphabetically(filteredBrands).map((b) => ({
@@ -137,22 +65,6 @@ export function BrandsPageClient({ initialBrands, catalogRoots, initialCategoryI
               />
             </div>
 
-            {tabs.length > 1 ? (
-              <UnderlineTabs
-                ariaLabel="Категории брендов"
-                asTablist={false}
-                tabs={tabs.map((tab) => ({ id: tab.id, label: tab.name }))}
-                activeId={activeId}
-                onSelect={selectTab}
-              />
-            ) : null}
-
-            {loading ? (
-              <p className={styles.loadingHint} role="status" aria-live="polite">
-                Загружаем бренды…
-              </p>
-            ) : null}
-
             {featured.length > 0 ? (
               <div className={styles.brandCardsWrapper}>
                 {featured.map((brand) => {
@@ -181,7 +93,7 @@ export function BrandsPageClient({ initialBrands, catalogRoots, initialCategoryI
               <p className={styles.emptyFeatured}>
                 {searchQuery.trim()
                   ? 'Нет брендов по вашему запросу.'
-                  : 'В этой категории пока нет брендов с обложкой — ниже полный список по алфавиту.'}
+                  : 'Пока нет брендов с обложкой — ниже полный список по алфавиту.'}
               </p>
             )}
           </div>
@@ -191,8 +103,8 @@ export function BrandsPageClient({ initialBrands, catalogRoots, initialCategoryI
       <section className={styles.allBrandsSection} aria-label="Все бренды по алфавиту">
         <div className="padding-global">
           <div className={styles.allBrandsWrapper}>
-            {forAlphabet.length === 0 && !loading ? (
-              <p className={styles.emptyFeatured}>В этой категории пока нет брендов.</p>
+            {forAlphabet.length === 0 ? (
+              <p className={styles.emptyFeatured}>Пока нет брендов.</p>
             ) : (
               (() => {
                 const byLetter = groupBrandsByLetter(forAlphabet);

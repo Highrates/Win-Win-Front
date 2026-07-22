@@ -99,7 +99,30 @@ export function MoreAboutBrandModal({
         aria-label="Еще о бренде"
       >
         <span className={textClassName}>Еще о бренде</span>
-        <img src="/icons/arrow-right.svg" alt="" width={12} height={7} className={arrowClassName} />
+        <svg
+          className={arrowClassName}
+          width="12"
+          height="7"
+          viewBox="0 0 12 7"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden
+        >
+          <path
+            d="M8.17993 5.62L10.7399 3.06L8.17993 0.5"
+            stroke="currentColor"
+            strokeMiterlimit="10"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M0.5 3.06006H10.67"
+            stroke="currentColor"
+            strokeMiterlimit="10"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
     );
   }
