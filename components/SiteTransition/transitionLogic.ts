@@ -1,19 +1,37 @@
 'use client';
 
 const TRANSITION_DURATION = 280;
-const TRANSITION_EASE = 'outCubic';
+const MENU_EXIT_DURATION = 650;
+const MENU_ENTER_DURATION = 750;
+const MENU_HOLD_MS = 450;
+const TRANSITION_EASE = 'inOutCubic';
+
+export const MENU_COVERED_EVENT = 'site-transition:menu-covered';
 
 let overlayEl: HTMLDivElement | null = null;
 let bgEl: HTMLDivElement | null = null;
 let lastExitContext: TransitionContext = 'default';
+let menuExitCompletedAt = 0;
+let enterInProgress = false;
 let animateFn: typeof import('animejs').animate | null = null;
+let animateLoadPromise: Promise<typeof import('animejs').animate> | null = null;
 
 async function getAnimate() {
   if (!animateFn) {
-    const mod = await import('animejs');
-    animateFn = mod.animate;
+    if (!animateLoadPromise) {
+      animateLoadPromise = import('animejs').then((mod) => {
+        animateFn = mod.animate;
+        return animateFn;
+      });
+    }
+    animateFn = await animateLoadPromise;
   }
   return animateFn;
+}
+
+/** Прогрев anime.js до первого клика — иначе ширма «мелькает» во время dynamic import. */
+export function preloadTransitionAnimate() {
+  void getAnimate();
 }
 
 export type TransitionContext = 'default' | 'menu';
@@ -23,27 +41,44 @@ export function registerTransitionElements(overlay: HTMLDivElement | null, bg: H
   bgEl = bg;
 }
 
+function waitForPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
+function waitMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function exit(nextContext: TransitionContext = 'default'): Promise<void> {
   if (!overlayEl || !bgEl) return;
   lastExitContext = nextContext;
-  overlayEl.classList.remove('visibility-hidden', 'pointer-events-none');
   const animate = await getAnimate();
 
   if (nextContext === 'menu') {
+    setTransitionBgInkBlack();
+    bgEl.style.opacity = '';
     bgEl.style.transform = 'translateY(-100%)';
+    overlayEl.classList.remove('visibility-hidden', 'pointer-events-none');
     overlayEl.getBoundingClientRect();
-    await animate(bgEl!, {
+    await animate(bgEl, {
       translateY: 0,
-      duration: TRANSITION_DURATION,
+      duration: MENU_EXIT_DURATION,
       ease: TRANSITION_EASE,
     });
+    menuExitCompletedAt = Date.now();
+    window.dispatchEvent(new CustomEvent(MENU_COVERED_EVENT));
     return;
   }
 
   bgEl.style.transform = '';
   bgEl.style.opacity = '0';
+  overlayEl.classList.remove('visibility-hidden', 'pointer-events-none');
   overlayEl.getBoundingClientRect();
-  await animate(bgEl!, {
+  await animate(bgEl, {
     opacity: 1,
     duration: TRANSITION_DURATION,
     ease: TRANSITION_EASE,
@@ -51,47 +86,80 @@ export async function exit(nextContext: TransitionContext = 'default'): Promise<
 }
 
 export function entering(): void {
-  // Optional: set CSS custom property or class for incoming page module delays
   document.documentElement.style.setProperty('--site-transition-entering', '1');
 }
 
 export async function enter(fromMenu?: boolean): Promise<void> {
-  if (!overlayEl || !bgEl) return;
+  if (!overlayEl || !bgEl || enterInProgress) return;
 
-  document.documentElement.style.removeProperty('--site-transition-entering');
   const fromMenuTransition = fromMenu ?? lastExitContext === 'menu';
-  const animate = await getAnimate();
+  if (!fromMenuTransition) {
+    document.documentElement.style.removeProperty('--site-transition-entering');
+  }
 
-  if (fromMenuTransition) {
-    await animate(bgEl!, {
-      translateY: '100%',
+  enterInProgress = true;
+  try {
+    const animate = await getAnimate();
+
+    if (fromMenuTransition) {
+      const elapsedSinceCover = Date.now() - menuExitCompletedAt;
+      const holdRemaining = Math.max(0, MENU_HOLD_MS - elapsedSinceCover);
+      if (holdRemaining > 0) {
+        await waitMs(holdRemaining);
+      }
+      await waitForPaint();
+
+      document.documentElement.style.removeProperty('--site-transition-entering');
+
+      await animate(bgEl, {
+        translateY: '100%',
+        duration: MENU_ENTER_DURATION,
+        ease: TRANSITION_EASE,
+      });
+      bgEl.style.transform = '';
+      overlayEl.classList.add('visibility-hidden', 'pointer-events-none');
+      lastExitContext = 'default';
+      menuExitCompletedAt = 0;
+      return;
+    }
+
+    await animate(bgEl, {
+      opacity: 0,
       duration: TRANSITION_DURATION,
       ease: TRANSITION_EASE,
     });
-    bgEl!.style.transform = '';
-    overlayEl!.classList.add('visibility-hidden', 'pointer-events-none');
-    return;
+    bgEl.style.opacity = '';
+    overlayEl.classList.add('visibility-hidden', 'pointer-events-none');
+  } finally {
+    enterInProgress = false;
   }
+}
 
-  await animate(bgEl!, {
-    opacity: 0,
-    duration: TRANSITION_DURATION,
-    ease: TRANSITION_EASE,
-  });
-  bgEl!.style.opacity = '';
-  overlayEl!.classList.add('visibility-hidden', 'pointer-events-none');
+const BG_COLOR_CLASSES = ['bg-color-white', 'bg-color-black', 'bg-color-ink-black'] as const;
+
+function clearTransitionBgClasses() {
+  if (bgEl) {
+    bgEl.classList.remove(...BG_COLOR_CLASSES);
+  }
 }
 
 export function setTransitionBgWhite() {
   if (bgEl) {
-    bgEl.classList.remove('bg-color-black');
+    clearTransitionBgClasses();
     bgEl.classList.add('bg-color-white');
   }
 }
 
 export function setTransitionBgBlack() {
   if (bgEl) {
-    bgEl.classList.remove('bg-color-white');
+    clearTransitionBgClasses();
     bgEl.classList.add('bg-color-black');
+  }
+}
+
+export function setTransitionBgInkBlack() {
+  if (bgEl) {
+    clearTransitionBgClasses();
+    bgEl.classList.add('bg-color-ink-black');
   }
 }

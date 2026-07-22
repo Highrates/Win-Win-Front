@@ -22,6 +22,7 @@ export function SiteTransition() {
   const prevPathnameRef = useRef<string | null>(null);
 
   useEffect(() => {
+    transition.preloadTransitionAnimate();
     if (!overlayRef.current || !bgRef.current) return;
     transition.registerTransitionElements(overlayRef.current, bgRef.current);
     return () => {
@@ -44,7 +45,9 @@ export function SiteTransition() {
       return;
     }
 
-    transition.enter();
+    transition.enter().catch(() => {
+      /* ignore — overlay may be unmounted */
+    });
   }, [pathname]);
 
   return (

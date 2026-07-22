@@ -15,6 +15,8 @@ type Props = {
   pageCategoryName: string;
   pageCategorySlug: string;
   pageCategoryId: string;
+  /** Строка над H1 (родительская категория); на корне — null. */
+  parentCategoryName?: string | null;
   /** Крошки до страницы категории включительно (последняя — текущая страница без sub). */
   pageBreadcrumbs: CategoryBreadcrumb[];
   roots: HomeCatalogRoot[];
@@ -22,12 +24,14 @@ type Props = {
 
 /**
  * H1 остаётся именем страницы (`/catalog/[slug]`);
+ * над H1 — родитель (если есть);
  * при `?sub=` — подзаголовок + доп. крошки (slug страницы не меняем).
  */
 export function CatalogCategoryBrowseTitles({
   pageCategoryName,
   pageCategorySlug,
   pageCategoryId,
+  parentCategoryName = null,
   pageBreadcrumbs,
   roots,
 }: Props) {
@@ -84,6 +88,9 @@ export function CatalogCategoryBrowseTitles({
         ))}
       </nav>
       <div className={styles.previewPageTitlesInner}>
+        {parentCategoryName != null ? (
+          <span className={styles.previewParentName}>{parentCategoryName}</span>
+        ) : null}
         <h1 className={styles.previewCurrentName}>{pageCategoryName}</h1>
         {subtitle ? <p className={styles.previewSubName}>{subtitle}</p> : null}
       </div>

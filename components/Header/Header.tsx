@@ -4,8 +4,14 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
+import { TransitionLink, useSiteTransition, MENU_COVERED_EVENT } from '@/components/SiteTransition';
 import { LogoPaths } from '@/components/SiteLoader/LogoPaths';
-import { animateLogoWaveIn, logoWaveDistance, prepareLogoWaveIn } from '@/components/SiteLoader/logoWave';
+import {
+  animateLogoWaveIn,
+  logoWaveDistance,
+  prepareLogoWaveIn,
+  resetLogoWaveVisible,
+} from '@/components/SiteLoader/logoWave';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import { ScrollCatalogStripPanel } from '@/sections/home/ScrollCatalog/ScrollCatalogStripPanel';
 import { USER_SESSION_CHANGED_EVENT } from '@/lib/userSessionClient';
@@ -84,11 +90,14 @@ export function Header({
   const [logoWaveReady, setLogoWaveReady] = useState(false);
   const [logoFading, setLogoFading] = useState(false);
   const logoWaveRef = useRef<HTMLSpanElement>(null);
+  /** Лого уже показано (minimal wave) — не прятать буквы при смене variant. */
+  const logoRevealedRef = useRef(false);
   const superMenuOpen = setSuperMenuOpenProp !== undefined ? (superMenuOpenProp ?? false) : internalSuperMenuOpen;
   const setSuperMenuOpen = setSuperMenuOpenProp ?? setInternalSuperMenuOpen;
   const [superMenuSection, setSuperMenuSection] = useState<string | null>(null);
   const [superMenuClosing, setSuperMenuClosing] = useState(false);
   const [superMenuContentRevealed, setSuperMenuContentRevealed] = useState(false);
+  const siteTransition = useSiteTransition();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuContentRevealed, setMobileMenuContentRevealed] = useState(false);
   const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
@@ -140,54 +149,83 @@ export function Header({
     const el = logoWaveRef.current;
     if (!el) return;
 
-    /* Overlay main ещё не виден — держим буквы ниже клипа, волну не стартуем. */
-    if (variant === 'main' && isMainOverlayOnHome && !mainOverlayVisible) {
+    let cancelled = false;
+
+    const revealStatic = () => {
+      resetLogoWaveVisible(el);
+      logoRevealedRef.current = true;
+      if (!cancelled) setLogoWaveReady(true);
+    };
+
+    const playWave = () => {
+      if (cancelled) return;
       const distance = logoWaveDistance(el);
       prepareLogoWaveIn(el, distance);
       setLogoWaveReady(false);
-      return;
-    }
-
-    let cancelled = false;
-    const distance = logoWaveDistance(el);
-    prepareLogoWaveIn(el, distance);
-    setLogoWaveReady(false);
-
-    const play = () => {
-      if (cancelled) return;
-      void animateLogoWaveIn(el, distance).finally(() => {
-        if (!cancelled) setLogoWaveReady(true);
-      });
+      void animateLogoWaveIn(el, distance)
+        .catch(() => {
+          resetLogoWaveVisible(el);
+        })
+        .finally(() => {
+          if (!cancelled) {
+            logoRevealedRef.current = true;
+            setLogoWaveReady(true);
+          }
+        });
     };
 
-    /* На главной над hero ждём конец preload; иначе играем сразу. */
-    const waitForLoader =
-      variant === 'minimal' && Boolean(document.querySelector('[data-site-loader]'));
-
-    if (!waitForLoader || document.body.classList.contains('--js-ready')) {
-      play();
+    /* Overlay main ещё не показан — ждём, буквы не трогаем. */
+    if (variant === 'main' && isMainOverlayOnHome && !mainOverlayVisible) {
       return () => {
         cancelled = true;
+      };
+    }
+
+    /*
+     * Уже сыграли wave (minimal на главной) — при переходе minimal→main
+     * не прячем буквы и не перезапускаем анимацию.
+     */
+    if (logoRevealedRef.current) {
+      revealStatic();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const runWhenReady = () => {
+      if (cancelled) return;
+      playWave();
+    };
+
+    /* Пока SiteLoader на экране — ждём --js-ready (каталог, главная, reload). */
+    const waitForLoader = Boolean(document.querySelector('[data-site-loader]'));
+
+    if (!waitForLoader || document.body.classList.contains('--js-ready')) {
+      runWhenReady();
+      return () => {
+        cancelled = true;
+        resetLogoWaveVisible(el);
       };
     }
 
     const mo = new MutationObserver(() => {
       if (document.body.classList.contains('--js-ready')) {
         mo.disconnect();
-        play();
+        runWhenReady();
       }
     });
     mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
     const fallback = window.setTimeout(() => {
       mo.disconnect();
-      play();
+      runWhenReady();
     }, 4000);
 
     return () => {
       cancelled = true;
       mo.disconnect();
       window.clearTimeout(fallback);
+      resetLogoWaveVisible(el);
     };
   }, [variant, mainOverlayVisible, isMainOverlayOnHome]);
 
@@ -300,6 +338,22 @@ export function Header({
     }, 560);
   };
   closeSuperMenuRef.current = closeSuperMenu;
+
+  useEffect(() => {
+    const onMenuCovered = () => {
+      closeSuperMenuRef.current();
+    };
+    window.addEventListener(MENU_COVERED_EVENT, onMenuCovered);
+    return () => window.removeEventListener(MENU_COVERED_EVENT, onMenuCovered);
+  }, []);
+
+  const navigateFromSuperMenu = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const href = e.currentTarget.getAttribute('href');
+    if (href && siteTransition) {
+      e.preventDefault();
+      siteTransition.navigateWithTransition(href, true);
+    }
+  };
 
   useEffect(() => {
     if (variant === 'main' && isMainOverlayOnHome) {
@@ -806,26 +860,34 @@ export function Header({
                         {catalogRoots.length > 0 ? (
                           catalogRoots.map((c) => (
                             <li key={c.slug}>
-                              <Link
+                              <TransitionLink
                                 href={`/catalog/${c.slug}`}
                                 className={styles.superMenuItem}
-                                onClick={closeSuperMenu}
+                                fromMenu
                               >
                                 {c.name}
-                              </Link>
+                              </TransitionLink>
                             </li>
                           ))
                         ) : (
                           <li>
-                            <Link href="/catalog" className={styles.superMenuItem} onClick={closeSuperMenu}>
+                            <TransitionLink
+                              href="/catalog"
+                              className={styles.superMenuItem}
+                              fromMenu
+                            >
                               Каталог
-                            </Link>
+                            </TransitionLink>
                           </li>
                         )}
                       </ul>
-                      <Link href="/catalog" className={styles.superMenuCatalogLink} onClick={closeSuperMenu}>
+                      <TransitionLink
+                        href="/catalog"
+                        className={styles.superMenuCatalogLink}
+                        fromMenu
+                      >
                         В Каталог
-                      </Link>
+                      </TransitionLink>
                     </div>
                     <div
                       className={styles.superMenuTagsPanel}
@@ -846,7 +908,7 @@ export function Header({
                             name: tag.name,
                             imageSrc: resolveMediaUrlForClient(tag.coverImageUrl),
                           }))}
-                          onLinkClick={() => closeSuperMenu()}
+                          onLinkClick={navigateFromSuperMenu}
                         />
                       ) : (
                         <span className={styles.superMenuTagsEmpty}>—</span>
@@ -874,13 +936,13 @@ export function Header({
                         {catalogTags.length > 0 ? (
                           catalogTags.map((tag) => (
                             <li key={tag.slug}>
-                              <Link
+                              <TransitionLink
                                 href={`/catalog?tag=${encodeURIComponent(tag.slug)}`}
                                 className={styles.superMenuItem}
-                                onClick={closeSuperMenu}
+                                fromMenu
                               >
                                 {tag.name}
-                              </Link>
+                              </TransitionLink>
                             </li>
                           ))
                         ) : (

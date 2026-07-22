@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useCatalogBrowse } from '@/app/(site)/(public)/catalog/CatalogBrowseContext';
 import { CategoryCatalogGridClient } from '@/app/(site)/(public)/categories/CategoryCatalogGridClient';
 import { CATEGORY_PER_PAGE } from '@/app/(site)/(public)/categories/categoryCatalogData';
@@ -303,21 +303,29 @@ export function CatalogCategoryMarketClient({
     [],
   );
 
-  useEffect(() => {
-    setSelectedZoneSlugs(parseCatalogTagSlugs(initialTagSlug));
-    const next = normalizeCatalogPriceRange(initialPriceFrom, initialPriceTo);
+  const applyLocationFilters = useCallback(() => {
+    setSelectedZoneSlugs(readTagSlugsFromLocation());
+    const next = readPriceFromLocation();
     setPriceRange(next);
     setDraftFrom(priceBoundToInputValue(next.priceFrom));
     setDraftTo(priceBoundToInputValue(next.priceTo));
-    const nextFacets = initialFacets ?? { ...EMPTY_CATALOG_FACET_FILTERS };
+    const nextFacets = readFacetsFromLocation();
     setFacets(nextFacets);
     setDraftWidthFrom(priceBoundToInputValue(nextFacets.widthFrom));
     setDraftWidthTo(priceBoundToInputValue(nextFacets.widthTo));
     setDraftHeightFrom(priceBoundToInputValue(nextFacets.heightFrom));
     setDraftHeightTo(priceBoundToInputValue(nextFacets.heightTo));
-    setSortId(initialSort);
+    setSortId(readSortFromLocation());
+  }, []);
+
+  /**
+   * Back/restore отдаёт устаревшие `initial*`; query в адресной строке актуален.
+   */
+  useLayoutEffect(() => {
+    applyLocationFilters();
     if (initialFilterOptions) setFilterOptions(initialFilterOptions);
   }, [
+    applyLocationFilters,
     initialTagSlug,
     initialProductCategoryId,
     initialPriceFrom,
@@ -329,22 +337,11 @@ export function CatalogCategoryMarketClient({
 
   useEffect(() => {
     const onPop = () => {
-      setSelectedZoneSlugs(readTagSlugsFromLocation());
-      const next = readPriceFromLocation();
-      setPriceRange(next);
-      setDraftFrom(priceBoundToInputValue(next.priceFrom));
-      setDraftTo(priceBoundToInputValue(next.priceTo));
-      const nextFacets = readFacetsFromLocation();
-      setFacets(nextFacets);
-      setDraftWidthFrom(priceBoundToInputValue(nextFacets.widthFrom));
-      setDraftWidthTo(priceBoundToInputValue(nextFacets.widthTo));
-      setDraftHeightFrom(priceBoundToInputValue(nextFacets.heightFrom));
-      setDraftHeightTo(priceBoundToInputValue(nextFacets.heightTo));
-      setSortId(readSortFromLocation());
+      applyLocationFilters();
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [applyLocationFilters]);
 
   useEffect(() => {
     const isInitialCategory = productCategoryId === initialProductCategoryId;
@@ -423,9 +420,17 @@ export function CatalogCategoryMarketClient({
     priceRange.priceTo,
   ]);
 
-  /** Смена `?sub=` / вкладки: убираем бренд/материал, которых нет в новой категории. */
-  const prevProductCategoryIdRef = useRef(productCategoryId);
+  /**
+   * Смена `?sub=` / вкладки: убираем бренд/материал, которых нет в новой категории.
+   * Первый проход пропускаем — после Back `productCategoryId` может синхронизироваться
+   * из URL уже после первого рендера со «Все».
+   */
+  const prevProductCategoryIdRef = useRef<string | null>(null);
   useEffect(() => {
+    if (prevProductCategoryIdRef.current === null) {
+      prevProductCategoryIdRef.current = productCategoryId;
+      return;
+    }
     const prev = prevProductCategoryIdRef.current;
     if (prev === productCategoryId) return;
     prevProductCategoryIdRef.current = productCategoryId;

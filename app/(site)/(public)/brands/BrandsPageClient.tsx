@@ -75,15 +75,17 @@ export function BrandsPageClient({ initialBrands }: Props) {
                       href={`/brands/${brand.slug}`}
                       className={styles.brandCard}
                     >
-                      <img
-                        src={src}
-                        alt=""
-                        className={styles.brandCardImage}
-                        width={320}
-                        height={320}
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      <span className={styles.brandCardImageWrap}>
+                        <img
+                          src={src}
+                          alt=""
+                          className={styles.brandCardImage}
+                          width={320}
+                          height={320}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </span>
                       <span className={styles.brandCardName}>{brand.name}</span>
                     </Link>
                   );

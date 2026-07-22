@@ -310,6 +310,7 @@ body.header-super-menu-open {
 .site-transition__bg {
   position: absolute;
   inset: 0;
+  will-change: transform, opacity;
 }
 
 .site-transition__bg.bg-color-white {
@@ -318,6 +319,10 @@ body.header-super-menu-open {
 
 .site-transition__bg.bg-color-black {
   background: var(--color-black);
+}
+
+.site-transition__bg.bg-color-ink-black {
+  background: var(--color-ink-black);
 }
 
 .visibility-hidden {

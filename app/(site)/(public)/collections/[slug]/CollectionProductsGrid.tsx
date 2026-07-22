@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ProductGridWithLikes } from '@/components/ProductGridWithLikes';
 import { AdminPillChip, AdminPillChipList } from '@/components/AdminPillChip/AdminPillChip';
@@ -451,6 +451,27 @@ export function CollectionProductsGrid({
     setSortId('popular');
     writeSortToHistory('popular');
   };
+
+  useLayoutEffect(() => {
+    setSelectedZoneSlugs(readTagSlugsFromLocation());
+    const next = readPriceFromLocation();
+    setPriceRange(next);
+    setDraftFrom(priceBoundToInputValue(next.priceFrom));
+    setDraftTo(priceBoundToInputValue(next.priceTo));
+    const nextFacets = readFacetsFromLocation();
+    setFacets(nextFacets);
+    setDraftWidthFrom(priceBoundToInputValue(nextFacets.widthFrom));
+    setDraftWidthTo(priceBoundToInputValue(nextFacets.widthTo));
+    setDraftHeightFrom(priceBoundToInputValue(nextFacets.heightFrom));
+    setDraftHeightTo(priceBoundToInputValue(nextFacets.heightTo));
+    setSortId(readSortFromLocation());
+  }, [
+    initialTagSlug,
+    initialPriceFrom,
+    initialPriceTo,
+    initialFacets,
+    initialSort,
+  ]);
 
   useEffect(() => {
     const onPop = () => {

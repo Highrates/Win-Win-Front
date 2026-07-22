@@ -204,6 +204,22 @@
 
 .articleCardCover {
   object-fit: cover;
+  transform: scale(1);
+  transition: transform 0.35s ease;
+}
+
+.articleCard:hover .articleCardCover {
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .articleCardCover {
+    transition: none;
+  }
+
+  .articleCard:hover .articleCardCover {
+    transform: none;
+  }
 }
 
 .articleTitles {

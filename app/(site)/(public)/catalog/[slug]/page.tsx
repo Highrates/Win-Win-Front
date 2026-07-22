@@ -6,7 +6,7 @@ import { CatalogCategoryMarketClient } from '@/app/(site)/(public)/catalog/Catal
 import { CatalogSectionsTabs } from '@/app/(site)/(public)/catalog/CatalogSectionsTabs';
 import { CategoryCatalogContent } from '@/app/(site)/(public)/categories/CategoryCatalogContent';
 import { CATEGORY_PER_PAGE } from '@/app/(site)/(public)/categories/categoryCatalogData';
-import { findCatalogNodeById, findCatalogPathToSlugUnder } from '@/lib/catalog/findCatalogRoot';
+import { findCatalogNodeById, findCatalogPathToId, findCatalogPathToSlugUnder } from '@/lib/catalog/findCatalogRoot';
 import {
   loadCatalogCategoryBySlug,
   loadCatalogTags,
@@ -134,6 +134,11 @@ export default async function CatalogSlugPage({ params, searchParams }: Props) {
   }
 
   const pageBreadcrumbs = buildCategoryBreadcrumbs(category, activeTag, roots);
+  const pathToPage = findCatalogPathToId(roots, category.id);
+  const parentCategoryName =
+    pathToPage.length >= 2
+      ? pathToPage[pathToPage.length - 2]!.name
+      : category.parent?.name ?? null;
 
   const needsFilterOptions =
     Boolean(tagParam) ||
@@ -196,13 +201,14 @@ export default async function CatalogSlugPage({ params, searchParams }: Props) {
     >
       <CategoryCatalogContent
         categoryTitle={category.name}
-        parentCategoryName={null}
+        parentCategoryName={parentCategoryName}
         breadcrumbs={pageBreadcrumbs}
         heroTitles={
           <CatalogCategoryBrowseTitles
             pageCategoryName={category.name}
             pageCategorySlug={category.slug}
             pageCategoryId={category.id}
+            parentCategoryName={parentCategoryName}
             pageBreadcrumbs={pageBreadcrumbs}
             roots={roots}
           />

@@ -340,6 +340,14 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
 
       <div className={styles.detailTitleRow}>
         <h1 className={styles.title}>{isEdit ? str.titleEdit : str.titleNew}</h1>
+        <AdminCompactBtn
+          type="submit"
+          form={TAG_FORM_ID}
+          variant="accent"
+          disabled={saving || !!loadError || (isEdit && !loaded)}
+        >
+          {saving ? str.saving : str.save}
+        </AdminCompactBtn>
       </div>
 
       <form id={TAG_FORM_ID} onSubmit={submit}>
@@ -422,12 +430,6 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
               </tbody>
             </table>
           )}
-        </div>
-
-        <div className={styles.formActions}>
-          <AdminCompactBtn type="submit" disabled={saving}>
-            {saving ? str.saving : str.save}
-          </AdminCompactBtn>
         </div>
       </form>
     </>

@@ -36,21 +36,29 @@ export function prepareLogoWaveIn(root: HTMLElement, distancePx?: number) {
   return { letters, dist };
 }
 
+/** Сброс inline-transform после wave или отмены анимации. */
+export function resetLogoWaveVisible(root: HTMLElement) {
+  for (const el of logoWaveLetters(root)) {
+    el.style.transform = '';
+  }
+}
+
 export async function animateLogoWaveIn(
   root: HTMLElement,
   distancePx?: number,
 ): Promise<void> {
   const { letters, dist } = prepareLogoWaveIn(root, distancePx);
   if (!letters.length) return;
-  const { animate, stagger } = await loadAnime();
-  await animate(letters, {
-    translateY: [dist, 0],
-    duration: LOGO_WAVE_IN_DURATION,
-    ease: 'outCubic',
-    delay: stagger(LOGO_WAVE_STAGGER_MS),
-  });
-  for (const el of letters) {
-    el.style.transform = '';
+  try {
+    const { animate, stagger } = await loadAnime();
+    await animate(letters, {
+      translateY: [dist, 0],
+      duration: LOGO_WAVE_IN_DURATION,
+      ease: 'outCubic',
+      delay: stagger(LOGO_WAVE_STAGGER_MS),
+    });
+  } finally {
+    resetLogoWaveVisible(root);
   }
 }
 

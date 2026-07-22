@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { CatalogHubTabs, type CatalogHubTabId } from './CatalogHubTabs';
 import { CatalogZonesGrid, type CatalogHubGridItem } from './CatalogZonesGrid';
 import { CatalogHubCollectionsLazy } from './CatalogHubCollectionsLazy';
@@ -50,9 +50,10 @@ export function CatalogHubClient({
     () => initialTab === 'collections',
   );
 
-  useEffect(() => {
-    setActiveTab(initialTab);
-    if (initialTab === 'collections') setCollectionsVisited(true);
+  useLayoutEffect(() => {
+    const tab = readHubTabFromLocation();
+    setActiveTab(tab);
+    if (tab === 'collections') setCollectionsVisited(true);
   }, [initialTab]);
 
   useEffect(() => {

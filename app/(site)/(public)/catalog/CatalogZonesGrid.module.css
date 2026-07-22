@@ -40,6 +40,22 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  transform: scale(1);
+  transition: transform 0.35s ease;
+}
+
+.card:hover .cardImg {
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardImg {
+    transition: none;
+  }
+
+  .card:hover .cardImg {
+    transform: none;
+  }
 }
 
 .cardMeta {

@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -107,8 +108,12 @@ export function CatalogBrowseProvider({
 
   const [subSlug, setSubSlug] = useState<string | null>(() => initialSubSlug?.trim() || null);
 
-  useEffect(() => {
-    setSubSlug(initialSubSlug?.trim() || null);
+  /**
+   * Next при Back восстанавливает кэш RSC без актуальных searchParams.
+   * Источник правды на клиенте — `window.location` (в т.ч. после remount).
+   */
+  useLayoutEffect(() => {
+    setSubSlug(readSubSlugFromLocation());
   }, [pageCategoryId, initialSubSlug]);
 
   useEffect(() => {
@@ -127,6 +132,8 @@ export function CatalogBrowseProvider({
   /** Невалидный `?sub=` — сбрасываем в «Все» и чистим URL. */
   useEffect(() => {
     if (!subSlug?.trim()) return;
+    // Пока дерево пустое, не считаем `?sub=` невалидным и не чистим URL.
+    if (!subcategories.length) return;
     const scope = resolveBrowseScope(pageCategoryId, subcategories, subSlug);
     const invalid =
       scope.topTabId === CATALOG_ALL_TAB_ID && scope.productCategoryId === pageCategoryId;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useContext } from 'react';
+import React, { useCallback, useContext, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import * as transition from './transitionLogic';
 
@@ -17,6 +17,10 @@ export function useSiteTransition() {
 
 export function SiteTransitionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+
+  useEffect(() => {
+    transition.preloadTransitionAnimate();
+  }, []);
 
   const navigateWithTransition = useCallback(
     (href: string, fromMenu: boolean = false) => {
