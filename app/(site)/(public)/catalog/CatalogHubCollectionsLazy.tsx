@@ -41,11 +41,12 @@ function mapRowsToItems(rows: PublicBrandProductRow[]): RecommendationsStaticIte
 
 function mapApiSections(items: ApiSection[]): HomeProductRailSection[] {
   const skipSlug = homePageConfig.recommendationsCollectionSlug;
+  const perCollectionLimit = homePageConfig.collection1Limit;
   const sections: HomeProductRailSection[] = [];
   for (const section of items) {
     if (section.kind === 'collection' && section.slug === skipSlug) continue;
     if (!section.products?.length) continue;
-    const mappedItems = mapRowsToItems(section.products);
+    const mappedItems = mapRowsToItems(section.products).slice(0, perCollectionLimit);
     if (!mappedItems.length) continue;
     sections.push({
       title: section.name,

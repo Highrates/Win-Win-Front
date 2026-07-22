@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useId } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useId, type MouseEvent } from 'react';
 import {
   CATALOG_ALL_TAB_ID,
   useCatalogBrowse,
@@ -8,6 +8,8 @@ import {
 import { UnderlineTabs } from '@/components/UnderlineTabs';
 import { homeRootsFromPublicTreeClient, type HomeCatalogRoot } from '@/lib/homeCatalog';
 import categoryStyles from '@/app/(site)/(public)/categories/CategoryPage.module.css';
+import { ScrollCatalogStripPanel } from '@/sections/home/ScrollCatalog/ScrollCatalogStripPanel';
+import type { ScrollCatalogStripItem } from '@/sections/home/ScrollCatalog/scrollCatalogStripItems';
 
 type Props = {
   initialRoots: HomeCatalogRoot[];
@@ -15,12 +17,12 @@ type Props = {
 
 /**
  * Табы подкатегорий на `/catalog/[slug]`:
- * верхний ряд — прямые дети; второй ряд — внуки (только `?sub=`, без смены slug).
+ * верхний ряд — прямые дети; полоса карточек — внуки (только `?sub=`, без смены slug).
  */
 export function CatalogSectionsTabs({ initialRoots }: Props) {
   const {
     activeSubcategoryId,
-    productCategoryId,
+    pageSlug,
     setActiveSubcategoryId,
     setNestedSubcategoryId,
     subcategories,
@@ -43,7 +45,6 @@ export function CatalogSectionsTabs({ initialRoots }: Props) {
 
   const reactUiId = useId().replace(/:/g, '');
   const tabIdsPrefix = `catalog-page-${reactUiId}`;
-  const nestedTabIdsPrefix = `${tabIdsPrefix}-nested`;
 
   useEffect(() => {
     setRoots(initialRoots);
@@ -94,25 +95,31 @@ export function CatalogSectionsTabs({ initialRoots }: Props) {
     [subcategories, tabIdsPrefix],
   );
 
-  const nestedTabs = useMemo(() => {
-    if (!activeDirectSub || nestedSubcategories.length === 0) return [];
-    return [
-      {
-        id: activeDirectSub.id,
-        label: 'Все',
-        buttonProps: {
-          id: `${nestedTabIdsPrefix}-tab-all`,
-        },
-      },
-      ...nestedSubcategories.map((tab) => ({
-        id: tab.id,
-        label: tab.name,
-        buttonProps: {
-          id: `${nestedTabIdsPrefix}-tab-${tab.id}`,
-        },
-      })),
-    ];
-  }, [activeDirectSub, nestedSubcategories, nestedTabIdsPrefix]);
+  /** Внуки активной подкатегории — полоса ScrollCatalog (не на табе «Все»). */
+  const nestedStripItems = useMemo((): ScrollCatalogStripItem[] => {
+    if (isAllTab || !nestedSubcategories.length) return [];
+    return nestedSubcategories.map((c) => ({
+      key: c.slug,
+      href: `/catalog/${encodeURIComponent(pageSlug)}?sub=${encodeURIComponent(c.slug)}`,
+      name: c.name,
+      imageSrc: c.cardImageUrl,
+    }));
+  }, [isAllTab, nestedSubcategories, pageSlug]);
+
+  const onNestedStripClick = useCallback(
+    (e: MouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault();
+      let sub: string | null = null;
+      try {
+        sub = new URL(e.currentTarget.href).searchParams.get('sub');
+      } catch {
+        return;
+      }
+      const nested = nestedSubcategories.find((c) => c.slug === sub);
+      if (nested) setNestedSubcategoryId(nested.id);
+    },
+    [nestedSubcategories, setNestedSubcategoryId],
+  );
 
   if (!subcategories.length) {
     return null;
@@ -121,11 +128,6 @@ export function CatalogSectionsTabs({ initialRoots }: Props) {
   const activeTabId = isAllTab
     ? CATALOG_ALL_TAB_ID
     : (activeDirectSub?.id ?? activeSubcategoryId);
-
-  const nestedActiveId =
-    nestedSubcategories.length > 0 && activeDirectSub
-      ? productCategoryId
-      : activeDirectSub?.id;
 
   return (
     <section className={categoryStyles.catalogSectionsSlot}>
@@ -136,14 +138,13 @@ export function CatalogSectionsTabs({ initialRoots }: Props) {
           activeId={activeTabId}
           onSelect={setActiveSubcategoryId}
         />
-        {nestedTabs.length > 0 ? (
+        {nestedStripItems.length > 0 ? (
           <div className={categoryStyles.catalogNestedTabsSlot}>
-            <UnderlineTabs
-              ariaLabel="Подразделы"
-              tabs={nestedTabs}
-              activeId={nestedActiveId ?? nestedTabs[0]!.id}
-              onSelect={setNestedSubcategoryId}
-              className={categoryStyles.catalogNestedTabs}
+            <ScrollCatalogStripPanel
+              layout="contained"
+              items={nestedStripItems}
+              onLinkClick={onNestedStripClick}
+              tabPanel={{ id: `${tabIdsPrefix}-cards-panel` }}
             />
           </div>
         ) : null}

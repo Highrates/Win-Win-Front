@@ -87,7 +87,7 @@
   min-width: 0;
   align-self: stretch;
   height: 394px;
-  border-radius: 10px;
+  border-radius: var(--radius-4);
   object-fit: cover;
   width: 100%;
 }
@@ -103,11 +103,7 @@
 }
 
 .catalogNestedTabsSlot {
-  margin-top: 20px;
-}
-
-.catalogNestedTabs {
-  gap: 12px;
+  margin-top: 8px;
 }
 
 .marketSection {
