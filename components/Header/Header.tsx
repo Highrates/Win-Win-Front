@@ -183,7 +183,7 @@ export function Header({
     if (!el) return;
 
     let cancelled = false;
-    let safetyTimer: ReturnType<typeof setTimeout> | undefined;
+    let safetyTimer: number | undefined;
 
     const revealStatic = () => {
       resetLogoWaveVisible(el);
