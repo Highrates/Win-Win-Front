@@ -28,7 +28,6 @@ import {
 } from '@/lib/adminSidebarBadgesContext';
 import {
   ADMIN_LOCALE_STORAGE_KEY,
-  adminBrandLine,
   adminChromeStrings,
   adminLocaleCookieString,
   adminNavBadgeTitles,
@@ -160,7 +159,15 @@ function AdminSidebar({
 
   return (
     <aside className={styles.sidebar}>
-      <p className={styles.brand}>{adminBrandLine(locale)}</p>
+      <div className={styles.brand}>
+        <img
+          src="/images/588est.svg"
+          alt="588est"
+          className={styles.brandLogo}
+          width={56}
+          height={15}
+        />
+      </div>
       <div className={styles.localeBlock}>
         <p className={styles.localeHeading}>{t.langHeading}</p>
         <div className={styles.localeRow} role="group" aria-label={t.langHeading}>

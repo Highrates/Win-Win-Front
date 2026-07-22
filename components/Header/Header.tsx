@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
-import { TransitionLink, useSiteTransition, MENU_COVERED_EVENT } from '@/components/SiteTransition';
+import { TransitionLink, useSiteTransition, MENU_COVERED_EVENT, TRANSITION_ENTER_COMPLETE_EVENT } from '@/components/SiteTransition';
 import { LogoPaths } from '@/components/SiteLoader/LogoPaths';
 import {
   animateLogoWaveIn,
   logoWaveDistance,
+  preloadLogoWaveAnime,
   prepareLogoWaveIn,
   resetLogoWaveVisible,
 } from '@/components/SiteLoader/logoWave';
@@ -89,9 +91,13 @@ export function Header({
   const [internalSuperMenuOpen, setInternalSuperMenuOpen] = useState(false);
   const [logoWaveReady, setLogoWaveReady] = useState(false);
   const [logoFading, setLogoFading] = useState(false);
+  /** >0 — перезапуск wave после client-nav / page transition */
+  const [logoWaveSeq, setLogoWaveSeq] = useState(0);
   const logoWaveRef = useRef<HTMLSpanElement>(null);
-  /** Лого уже показано (minimal wave) — не прятать буквы при смене variant. */
+  /** Лого уже показано — не перезапускать wave только при смене variant на той же странице. */
   const logoRevealedRef = useRef(false);
+  const isFirstPathnameRef = useRef(true);
+  const pathname = usePathname();
   const superMenuOpen = setSuperMenuOpenProp !== undefined ? (superMenuOpenProp ?? false) : internalSuperMenuOpen;
   const setSuperMenuOpen = setSuperMenuOpenProp ?? setInternalSuperMenuOpen;
   const [superMenuSection, setSuperMenuSection] = useState<string | null>(null);
@@ -146,10 +152,38 @@ export function Header({
   }, []);
 
   useEffect(() => {
+    preloadLogoWaveAnime();
+  }, []);
+
+  /* Перезапуск wave при смене страницы (главная → каталог и т.д.) */
+  useEffect(() => {
+    if (isFirstPathnameRef.current) {
+      isFirstPathnameRef.current = false;
+      return;
+    }
+    const deferForPageTransition =
+      document.documentElement.style.getPropertyValue('--site-transition-entering') === '1';
+    if (deferForPageTransition) return;
+    setLogoWaveSeq((seq) => seq + 1);
+  }, [pathname]);
+
+  /* Wave после ширмы mega-menu */
+  useEffect(() => {
+    const onTransitionEnterComplete = (event: Event) => {
+      const fromMenu = (event as CustomEvent<{ fromMenu?: boolean }>).detail?.fromMenu;
+      if (!fromMenu) return;
+      setLogoWaveSeq((seq) => seq + 1);
+    };
+    window.addEventListener(TRANSITION_ENTER_COMPLETE_EVENT, onTransitionEnterComplete);
+    return () => window.removeEventListener(TRANSITION_ENTER_COMPLETE_EVENT, onTransitionEnterComplete);
+  }, []);
+
+  useEffect(() => {
     const el = logoWaveRef.current;
     if (!el) return;
 
     let cancelled = false;
+    let safetyTimer: ReturnType<typeof setTimeout> | undefined;
 
     const revealStatic = () => {
       resetLogoWaveVisible(el);
@@ -159,36 +193,50 @@ export function Header({
 
     const playWave = () => {
       if (cancelled) return;
-      const distance = logoWaveDistance(el);
-      prepareLogoWaveIn(el, distance);
-      setLogoWaveReady(false);
-      void animateLogoWaveIn(el, distance)
-        .catch(() => {
+      void (async () => {
+        await preloadLogoWaveAnime();
+        if (cancelled) return;
+        if (variant === 'main' && isMainOverlayOnHome && !mainOverlayVisible) return;
+
+        const distance = logoWaveDistance(el);
+        prepareLogoWaveIn(el, distance);
+        if (!cancelled) setLogoWaveReady(false);
+
+        try {
+          await animateLogoWaveIn(el, distance);
+        } catch {
           resetLogoWaveVisible(el);
-        })
-        .finally(() => {
-          if (!cancelled) {
-            logoRevealedRef.current = true;
-            setLogoWaveReady(true);
+        } finally {
+          if (cancelled) {
+            resetLogoWaveVisible(el);
+            return;
           }
-        });
+          logoRevealedRef.current = true;
+          setLogoWaveReady(true);
+        }
+      })();
     };
 
     /* Overlay main ещё не показан — ждём, буквы не трогаем. */
     if (variant === 'main' && isMainOverlayOnHome && !mainOverlayVisible) {
       return () => {
         cancelled = true;
+        resetLogoWaveVisible(el);
       };
     }
 
+    const isInitialWave = logoWaveSeq === 0 && !logoRevealedRef.current;
+    const isReplayWave = logoWaveSeq > 0;
+
     /*
-     * Уже сыграли wave (minimal на главной) — при переходе minimal→main
+     * Уже сыграли wave — при переходе minimal→main на той же странице
      * не прячем буквы и не перезапускаем анимацию.
      */
-    if (logoRevealedRef.current) {
+    if (logoRevealedRef.current && !isReplayWave) {
       revealStatic();
       return () => {
         cancelled = true;
+        resetLogoWaveVisible(el);
       };
     }
 
@@ -197,13 +245,30 @@ export function Header({
       playWave();
     };
 
-    /* Пока SiteLoader на экране — ждём --js-ready (каталог, главная, reload). */
-    const waitForLoader = Boolean(document.querySelector('[data-site-loader]'));
+    if (!isInitialWave && !isReplayWave) {
+      return () => {
+        cancelled = true;
+        resetLogoWaveVisible(el);
+      };
+    }
 
-    if (!waitForLoader || document.body.classList.contains('--js-ready')) {
+    safetyTimer = window.setTimeout(() => {
+      if (!cancelled && !logoRevealedRef.current) {
+        revealStatic();
+      }
+    }, 3000);
+
+    /* Первый заход: ждём SiteLoader. Replay после nav — сразу. */
+    const waitForLoader =
+      isInitialWave &&
+      Boolean(document.querySelector('[data-site-loader]')) &&
+      !document.body.classList.contains('--js-ready');
+
+    if (!waitForLoader) {
       runWhenReady();
       return () => {
         cancelled = true;
+        window.clearTimeout(safetyTimer);
         resetLogoWaveVisible(el);
       };
     }
@@ -225,9 +290,10 @@ export function Header({
       cancelled = true;
       mo.disconnect();
       window.clearTimeout(fallback);
+      window.clearTimeout(safetyTimer);
       resetLogoWaveVisible(el);
     };
-  }, [variant, mainOverlayVisible, isMainOverlayOnHome]);
+  }, [variant, mainOverlayVisible, isMainOverlayOnHome, logoWaveSeq]);
 
   /* Уход с hero: плавный opacity лого (без wave-out) */
   useEffect(() => {

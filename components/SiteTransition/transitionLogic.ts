@@ -7,6 +7,7 @@ const MENU_HOLD_MS = 450;
 const TRANSITION_EASE = 'inOutCubic';
 
 export const MENU_COVERED_EVENT = 'site-transition:menu-covered';
+export const TRANSITION_ENTER_COMPLETE_EVENT = 'site-transition:enter-complete';
 
 let overlayEl: HTMLDivElement | null = null;
 let bgEl: HTMLDivElement | null = null;
@@ -120,6 +121,9 @@ export async function enter(fromMenu?: boolean): Promise<void> {
       overlayEl.classList.add('visibility-hidden', 'pointer-events-none');
       lastExitContext = 'default';
       menuExitCompletedAt = 0;
+      window.dispatchEvent(
+        new CustomEvent(TRANSITION_ENTER_COMPLETE_EVENT, { detail: { fromMenu: true } }),
+      );
       return;
     }
 
@@ -130,6 +134,9 @@ export async function enter(fromMenu?: boolean): Promise<void> {
     });
     bgEl.style.opacity = '';
     overlayEl.classList.add('visibility-hidden', 'pointer-events-none');
+    window.dispatchEvent(
+      new CustomEvent(TRANSITION_ENTER_COMPLETE_EVENT, { detail: { fromMenu: false } }),
+    );
   } finally {
     enterInProgress = false;
   }

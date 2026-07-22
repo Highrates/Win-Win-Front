@@ -31,38 +31,22 @@ function useScrolledPastHero(pathname: string, hasTagQuery: boolean) {
     setPast(false);
     pastRef.current = false;
 
-    let rafId: number;
     let scrollCleanup: (() => void) | null = null;
-    let attempts = 0;
+    let heroObserver: MutationObserver | null = null;
 
-    const setup = () => {
-      const hero = document.getElementById(HERO_SECTION_ID);
-      if (!hero) {
-        attempts += 1;
-        if (attempts > 90) {
-          pastRef.current = true;
-          setPast(true);
-          return;
-        }
-        rafId = requestAnimationFrame(setup);
-        return;
-      }
-
+    const attachScrollTracking = (hero: HTMLElement) => {
       let scrollRafId = 0;
 
       const update = () => {
-        const rect = hero.getBoundingClientRect();
-        const bottom = rect.bottom;
+        const bottom = hero.getBoundingClientRect().bottom;
         if (pastRef.current) {
           if (bottom > OVER_MINIMAL_THRESHOLD) {
             pastRef.current = false;
             setPast(false);
           }
-        } else {
-          if (bottom < -PAST_THRESHOLD) {
-            pastRef.current = true;
-            setPast(true);
-          }
+        } else if (bottom < -PAST_THRESHOLD) {
+          pastRef.current = true;
+          setPast(true);
         }
       };
 
@@ -70,6 +54,7 @@ function useScrolledPastHero(pathname: string, hasTagQuery: boolean) {
         cancelAnimationFrame(scrollRafId);
         scrollRafId = requestAnimationFrame(update);
       };
+
       window.addEventListener('scroll', onScroll, { passive: true });
       update();
 
@@ -78,13 +63,33 @@ function useScrolledPastHero(pathname: string, hasTagQuery: boolean) {
         cancelAnimationFrame(scrollRafId);
       };
     };
-    rafId = requestAnimationFrame(setup);
+
+    const tryAttach = () => {
+      const hero = document.getElementById(HERO_SECTION_ID);
+      if (hero) {
+        heroObserver?.disconnect();
+        heroObserver = null;
+        attachScrollTracking(hero);
+        return true;
+      }
+      return false;
+    };
+
+    if (!tryAttach()) {
+      heroObserver = new MutationObserver(() => {
+        if (tryAttach()) {
+          heroObserver?.disconnect();
+          heroObserver = null;
+        }
+      });
+      heroObserver.observe(document.body, { childList: true, subtree: true });
+    }
 
     return () => {
-      cancelAnimationFrame(rafId);
       scrollCleanup?.();
+      heroObserver?.disconnect();
     };
-  }, [pathname, isLanding]);
+  }, [pathname, isLanding, hasTagQuery]);
 
   return past;
 }

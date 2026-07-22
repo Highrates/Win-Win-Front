@@ -25,3 +25,11 @@ export function formatCatalogPriceChip(bound: 'from' | 'to', value: number): str
   const digits = Math.floor(value).toLocaleString('ru-RU');
   return bound === 'from' ? `от ${digits} ₽` : `до ${digits} ₽`;
 }
+
+/** Быстрые пресеты «до N» в панели цены marketToolbar. */
+export const CATALOG_PRICE_QUICK_PRESETS = [
+  { label: 'до 100k', priceTo: 100_000 },
+  { label: 'до 300k', priceTo: 300_000 },
+  { label: 'до 500k', priceTo: 500_000 },
+  { label: 'до 1M', priceTo: 1_000_000 },
+] as const;

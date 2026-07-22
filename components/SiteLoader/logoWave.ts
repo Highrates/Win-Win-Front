@@ -16,6 +16,15 @@ export async function loadAnime(): Promise<AnimeModule> {
   return mod as unknown as AnimeModule;
 }
 
+let animeLoadPromise: Promise<AnimeModule> | null = null;
+
+export function preloadLogoWaveAnime() {
+  if (!animeLoadPromise) {
+    animeLoadPromise = loadAnime();
+  }
+  return animeLoadPromise;
+}
+
 export function logoWaveLetters(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(LOGO_WAVE_LETTER_SELECTOR));
 }
@@ -50,7 +59,7 @@ export async function animateLogoWaveIn(
   const { letters, dist } = prepareLogoWaveIn(root, distancePx);
   if (!letters.length) return;
   try {
-    const { animate, stagger } = await loadAnime();
+    const { animate, stagger } = await preloadLogoWaveAnime();
     await animate(letters, {
       translateY: [dist, 0],
       duration: LOGO_WAVE_IN_DURATION,
@@ -69,7 +78,7 @@ export async function animateLogoWaveOut(
   const letters = logoWaveLetters(root);
   if (!letters.length) return;
   const dist = distancePx ?? logoWaveDistance(root);
-  const { animate, stagger } = await loadAnime();
+  const { animate, stagger } = await preloadLogoWaveAnime();
   await animate(letters, {
     translateY: [0, dist],
     duration: LOGO_WAVE_OUT_DURATION,

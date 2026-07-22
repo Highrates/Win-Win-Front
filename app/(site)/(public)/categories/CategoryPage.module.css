@@ -348,6 +348,37 @@
   margin-top: 14px;
 }
 
+.marketPricePresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.marketPricePreset {
+  margin: 0;
+  padding: 5px 10px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color, #e2e6e8);
+  border-radius: var(--radius-4);
+  background: var(--color-white);
+  font-family: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  letter-spacing: 0.02em;
+  color: var(--color-ink-black);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.marketPricePreset:hover {
+  border-color: var(--color-ink-black);
+}
+
+.marketPricePresetActive {
+  border-color: var(--color-ink-black);
+  background: var(--color-bright-snow);
+}
+
 .marketPriceApply,
 .marketPriceReset {
   margin: 0;

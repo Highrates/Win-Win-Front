@@ -11,6 +11,7 @@ import {
   formatCatalogPriceChip,
   normalizeCatalogPriceRange,
   parseCatalogPriceBound,
+  CATALOG_PRICE_QUICK_PRESETS,
 } from '@/lib/catalog/catalogPriceFilter';
 import {
   catalogFacetFiltersToPatch,
@@ -371,6 +372,13 @@ export function CollectionProductsGrid({
     setPriceOpen(false);
   };
 
+  const applyPricePreset = (priceTo: number) => {
+    commitPriceRange({ priceFrom: undefined, priceTo });
+    setDraftFrom('');
+    setDraftTo(priceBoundToInputValue(priceTo));
+    setPriceOpen(false);
+  };
+
   const openPricePanel = () => {
     setDraftFrom(priceBoundToInputValue(priceRange.priceFrom));
     setDraftTo(priceBoundToInputValue(priceRange.priceTo));
@@ -676,6 +684,27 @@ export function CollectionProductsGrid({
                     >
                       Сбросить
                     </button>
+                  </div>
+                  <div className={styles.marketPricePresets} role="group" aria-label="Быстрый выбор цены">
+                    {CATALOG_PRICE_QUICK_PRESETS.map((preset) => {
+                      const active =
+                        priceRange.priceFrom == null && priceRange.priceTo === preset.priceTo;
+                      return (
+                        <button
+                          key={preset.priceTo}
+                          type="button"
+                          className={
+                            active
+                              ? `${styles.marketPricePreset} ${styles.marketPricePresetActive}`
+                              : styles.marketPricePreset
+                          }
+                          aria-pressed={active}
+                          onClick={() => applyPricePreset(preset.priceTo)}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}
