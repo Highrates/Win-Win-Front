@@ -33,16 +33,6 @@
   width: 55%;
 }
 
-.letter {
-  height: 40px;
-  width: 48px;
-}
-
-.linkLine {
-  height: 16px;
-  max-width: 100%;
-}
-
 @media (max-width: 768px) {
   .root {
     min-height: calc(100vh - 78px);

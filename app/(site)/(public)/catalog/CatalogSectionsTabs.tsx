@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useId, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useId } from 'react';
 import {
   CATALOG_ALL_TAB_ID,
   useCatalogBrowse,
@@ -17,14 +17,13 @@ type Props = {
 
 /**
  * Табы подкатегорий на `/catalog/[slug]`:
- * верхний ряд — прямые дети; полоса карточек — внуки (только `?sub=`, без смены slug).
+ * верхний ряд — прямые дети (`?sub=`);
+ * полоса карточек — внуки → переход на `/catalog/{slug}` дочки.
  */
 export function CatalogSectionsTabs({ initialRoots }: Props) {
   const {
     activeSubcategoryId,
-    pageSlug,
     setActiveSubcategoryId,
-    setNestedSubcategoryId,
     subcategories,
     nestedSubcategories,
   } = useCatalogBrowse();
@@ -100,26 +99,11 @@ export function CatalogSectionsTabs({ initialRoots }: Props) {
     if (isAllTab || !nestedSubcategories.length) return [];
     return nestedSubcategories.map((c) => ({
       key: c.slug,
-      href: `/catalog/${encodeURIComponent(pageSlug)}?sub=${encodeURIComponent(c.slug)}`,
+      href: `/catalog/${encodeURIComponent(c.slug)}`,
       name: c.name,
       imageSrc: c.cardImageUrl,
     }));
-  }, [isAllTab, nestedSubcategories, pageSlug]);
-
-  const onNestedStripClick = useCallback(
-    (e: MouseEvent<HTMLAnchorElement>) => {
-      e.preventDefault();
-      let sub: string | null = null;
-      try {
-        sub = new URL(e.currentTarget.href).searchParams.get('sub');
-      } catch {
-        return;
-      }
-      const nested = nestedSubcategories.find((c) => c.slug === sub);
-      if (nested) setNestedSubcategoryId(nested.id);
-    },
-    [nestedSubcategories, setNestedSubcategoryId],
-  );
+  }, [isAllTab, nestedSubcategories]);
 
   if (!subcategories.length) {
     return null;
@@ -143,7 +127,6 @@ export function CatalogSectionsTabs({ initialRoots }: Props) {
             <ScrollCatalogStripPanel
               layout="contained"
               items={nestedStripItems}
-              onLinkClick={onNestedStripClick}
               tabPanel={{ id: `${tabIdsPrefix}-cards-panel` }}
             />
           </div>

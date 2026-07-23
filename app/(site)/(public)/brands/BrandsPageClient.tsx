@@ -6,10 +6,8 @@ import { SearchBox } from '@/components/SearchBox/SearchBox';
 import {
   brandCoverImageUrl,
   brandsSortedAlphabetically,
-  featuredBrandsWithCover,
   type PublicBrandListRow,
 } from '@/lib/brandsPublic';
-import { chunkColumns, groupBrandsByLetter } from '@/lib/public/brands';
 import styles from './BrandsPage.module.css';
 
 type Props = {
@@ -21,15 +19,11 @@ export function BrandsPageClient({ initialBrands }: Props) {
 
   const filteredBrands = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return initialBrands;
-    return initialBrands.filter((b) => b.name.toLowerCase().includes(q));
+    if (!q) return brandsSortedAlphabetically(initialBrands);
+    return brandsSortedAlphabetically(
+      initialBrands.filter((b) => b.name.toLowerCase().includes(q)),
+    );
   }, [initialBrands, searchQuery]);
-
-  const featured = featuredBrandsWithCover(filteredBrands, 8);
-  const forAlphabet = brandsSortedAlphabetically(filteredBrands).map((b) => ({
-    slug: b.slug,
-    name: b.name,
-  }));
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -65,9 +59,9 @@ export function BrandsPageClient({ initialBrands }: Props) {
               />
             </div>
 
-            {featured.length > 0 ? (
+            {filteredBrands.length > 0 ? (
               <div className={styles.brandCardsWrapper}>
-                {featured.map((brand) => {
+                {filteredBrands.map((brand) => {
                   const src = brandCoverImageUrl(brand) ?? '/images/placeholder.svg';
                   return (
                     <Link
@@ -93,49 +87,8 @@ export function BrandsPageClient({ initialBrands }: Props) {
               </div>
             ) : (
               <p className={styles.emptyFeatured}>
-                {searchQuery.trim()
-                  ? 'Нет брендов по вашему запросу.'
-                  : 'Пока нет брендов с обложкой — ниже полный список по алфавиту.'}
+                {searchQuery.trim() ? 'Нет брендов по вашему запросу.' : 'Пока нет брендов.'}
               </p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.allBrandsSection} aria-label="Все бренды по алфавиту">
-        <div className="padding-global">
-          <div className={styles.allBrandsWrapper}>
-            {forAlphabet.length === 0 ? (
-              <p className={styles.emptyFeatured}>Пока нет брендов.</p>
-            ) : (
-              (() => {
-                const byLetter = groupBrandsByLetter(forAlphabet);
-                const letters = Array.from(byLetter.keys()).sort((a, b) => a.localeCompare(b, 'ru'));
-                return letters.map((letter) => {
-                  const list = byLetter.get(letter)!;
-                  const columns = chunkColumns(list, 4);
-                  return (
-                    <div key={letter} className={styles.allBrandsLetterBlock}>
-                      <h2 className={styles.allBrandsLetter}>{letter}</h2>
-                      <div className={styles.allBrandsGrid}>
-                        {columns.map((col, ci) => (
-                          <div key={ci} className={styles.allBrandsColumn}>
-                            {col.map((brand) => (
-                              <Link
-                                key={brand.slug}
-                                href={`/brands/${brand.slug}`}
-                                className={styles.allBrandsLink}
-                              >
-                                {brand.name}
-                              </Link>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                });
-              })()
             )}
           </div>
         </div>

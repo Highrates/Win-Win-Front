@@ -171,63 +171,6 @@
   text-decoration: none;
 }
 
-/* --- All brands section (A–Z) --- */
-.allBrandsSection {
-  margin-top: 96px;
-}
-
-.allBrandsWrapper {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 96px;
-  width: 100%;
-}
-
-.allBrandsLetterBlock {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 32px;
-  width: 100%;
-}
-
-.allBrandsLetter {
-  font-size: var(--h2-size);
-  font-weight: var(--h2-weight);
-  color: var(--color-gray);
-  margin: 0;
-}
-
-.allBrandsGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px 12px;
-  width: 100%;
-}
-
-.allBrandsColumn {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.allBrandsLink {
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-  color: var(--color-black);
-  text-decoration: none;
-}
-
-.allBrandsLink:hover {
-  color: var(--color-ink-black);
-  text-decoration: underline;
-}
-
 .emptyFeatured {
   margin: 0;
   font-size: var(--text-caption);
@@ -237,17 +180,5 @@
 @media (max-width: 768px) {
   .brandCardImageWrap {
     max-height: 148px;
-  }
-
-  .allBrandsSection {
-    margin-top: 48px;
-  }
-
-  .allBrandsWrapper {
-    gap: 48px;
-  }
-
-  .allBrandsGrid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
