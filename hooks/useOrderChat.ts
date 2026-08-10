@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
+import { useChatAttachments } from '@/hooks/useChatAttachments';
 import { adminBackendPath } from '@/lib/adminBackendFetch';
 import type { ChatWindowMessage } from '@/components/ChatWindow/ChatWindow';
 import {
@@ -31,8 +32,6 @@ import { readUpstreamJsonErrorMessage } from '@/lib/readUpstreamJsonError';
 import type {
   OrderChatApiMessage,
   OrderChatMessagesResponse,
-  OrderChatPendingUiAttachment,
-  PendingAttachmentRef,
 } from '@/lib/orderChat/types';
 
 export type OrderChatSubject = 'order' | 'sourcing';
@@ -47,18 +46,6 @@ function dispatchAdminChatUnreadRefresh(subject: OrderChatSubject): void {
 const PROFILE_AVATAR_PLACEHOLDER = '/images/placeholder.svg';
 /** В ЛК сообщения сотрудника показываем с фирменным аватаром менеджера. */
 const STAFF_AVATAR_ACCOUNT = '/images/Admin-avatar.jpeg';
-
-/** iOS/macOS иногда отдаёт File.type пустым — ищем картинку по расширению для превью и kind */
-function inferMimeFromFilename(name: string): string | null {
-  const base = name.trim().toLowerCase().split(/[/\\]/).pop() ?? '';
-  if (/\.jpe?g$/i.test(base)) return 'image/jpeg';
-  if (/\.png$/i.test(base)) return 'image/png';
-  if (/\.webp$/i.test(base)) return 'image/webp';
-  if (/\.gif$/i.test(base)) return 'image/gif';
-  if (/\.heic$/i.test(base)) return 'image/heic';
-  if (/\.heif$/i.test(base)) return 'image/heif';
-  return null;
-}
 
 async function parseOrderChatUploadResponse(res: Response): Promise<{
   url: string;
@@ -270,7 +257,6 @@ export function useOrderChat(opts: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [pendingRefs, setPendingRefs] = useState<PendingAttachmentRef[]>([]);
   const [hasOlderHistory, setHasOlderHistory] = useState(false);
   const [loadingOlderHistory, setLoadingOlderHistory] = useState(false);
   const viewerRef = useRef<string | null>(null);
@@ -278,30 +264,48 @@ export function useOrderChat(opts: {
   const conversationIdRef = useRef<string | null>(null);
   const messagesRef = useRef<ChatWindowMessage[]>([]);
 
-  const uploadBusy = useMemo(() => pendingRefs.some((r) => r.uploading), [pendingRefs]);
-
-  const pendingOutgoingUi = useMemo((): OrderChatPendingUiAttachment[] => {
-    return pendingRefs.map((r) => ({
-      clientKey: r.clientToken,
-      filename: r.filename,
-      kind: r.kind,
-      imageSrc: r.kind === 'IMAGE' ? r.fileUrl || r.localPreviewUrl || null : null,
-      uploading: r.uploading,
-    }));
-  }, [pendingRefs]);
-
-  const canSendAttachmentMessage = useMemo(
-    () =>
-      pendingRefs.some((r) => Boolean(r.fileUrl?.trim()) && !r.uploading) &&
-      !pendingRefs.some((r) => r.uploading),
-    [pendingRefs],
+  const uploadOrderChatFile = useCallback(
+    async (file: File) => {
+      if (!orderId) throw new Error('Чат недоступен');
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(uploadUrl(variant, orderId, chatSubject), {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: fd,
+      });
+      if (!res.ok) {
+        throw new Error(await describeOrderChatUploadFailure(res, ORDER_CHAT_UPLOAD_MAX_FILE_BYTES));
+      }
+      const row = await parseOrderChatUploadResponse(res);
+      return {
+        url: row.url,
+        kind: row.kind,
+        mimeType: row.mimeType,
+        filename: row.filename,
+      };
+    },
+    [orderId, variant, chatSubject],
   );
 
-  const pendingHint = useMemo(() => {
-    if (!pendingRefs.length) return undefined;
-    if (pendingRefs.some((r) => r.uploading)) return 'Загружаем файл…';
-    return undefined;
-  }, [pendingRefs]);
+  const {
+    uploadBusy,
+    pendingOutgoingAttachments,
+    canSendAttachmentMessage,
+    pendingAttachmentsHint,
+    attachChatFiles,
+    removePendingChatAttachment,
+    getReadyAttachments,
+    clearPendingAttachments,
+  } = useChatAttachments({
+    enabled: Boolean(orderId && enabled),
+    uploadFile: uploadOrderChatFile,
+    onError: setError,
+    maxFileBytes: ORDER_CHAT_UPLOAD_MAX_FILE_BYTES,
+    maxAttachments: ORDER_CHAT_ATTACHMENTS_MAX,
+    fileTooLargeMessage: orderChatFileTooLargeUserMessage(),
+    maxAttachmentsMessage: `Не более ${ORDER_CHAT_ATTACHMENTS_MAX} вложений в сообщении`,
+  });
 
   messagesRef.current = messages;
 
@@ -409,12 +413,7 @@ export function useOrderChat(opts: {
 
   useEffect(() => {
     if (!enabled || !orderId) {
-      setPendingRefs((prev) => {
-        for (const r of prev) {
-          if (r.localPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(r.localPreviewUrl);
-        }
-        return [];
-      });
+      clearPendingAttachments();
       setMessages([]);
       setError(null);
       setLoading(false);
@@ -572,13 +571,13 @@ export function useOrderChat(opts: {
       }
       unregisterSession?.();
     };
-  }, [enabled, orderId, variant, timeLocale, chatSubject]);
+  }, [enabled, orderId, variant, timeLocale, chatSubject, clearPendingAttachments]);
 
   const sendText = useCallback(
     async (text: string) => {
       if (!orderId) return;
       const body = text.trim();
-      const ready = pendingRefs.filter((r) => r.fileUrl?.trim() && !r.uploading);
+      const ready = getReadyAttachments();
       if (!body && ready.length === 0) return;
 
       if (body.length > ORDER_CHAT_POST_BODY_MAX_CHARS) {
@@ -592,7 +591,7 @@ export function useOrderChat(opts: {
       let refsPayloadChars = 0;
       for (const r of ready) {
         const mt = r.mimeType?.trim() ?? '';
-        refsPayloadChars += r.fileUrl.length + r.filename.length + mt.length;
+        refsPayloadChars += (r.fileUrl?.length ?? 0) + r.filename.length + mt.length;
       }
       if (refsPayloadChars > ORDER_CHAT_ATTACHMENT_REFS_PAYLOAD_MAX_CHARS) {
         setError('Суммарный размер полей вложений слишком большой — удалите часть файлов или напишите в поддержку');
@@ -611,7 +610,7 @@ export function useOrderChat(opts: {
             attachments:
               ready.length > 0
                 ? ready.map((r) => ({
-                    fileUrl: r.fileUrl,
+                    fileUrl: r.fileUrl!,
                     filename: r.filename,
                     mimeType: r.mimeType,
                     kind: r.kind,
@@ -626,7 +625,7 @@ export function useOrderChat(opts: {
           if (prev.some((x) => x.id === created.id)) return prev;
           return [...prev, mapApiToUi(created, viewer, variant, timeLocale, viewerStaffAvatarRef.current)];
         });
-        setPendingRefs([]);
+        clearPendingAttachments();
         if (variant === 'account') {
           void markAccountChatRead(variant, orderId, chatSubject);
         } else {
@@ -649,95 +648,8 @@ export function useOrderChat(opts: {
         setSending(false);
       }
     },
-    [orderId, variant, pendingRefs, timeLocale, chatSubject],
+    [orderId, variant, timeLocale, chatSubject, getReadyAttachments, clearPendingAttachments],
   );
-
-  const attachFiles = useCallback(
-    async (files: File[]) => {
-      if (!orderId || files.length === 0) return;
-      setError(null);
-
-      if (pendingRefs.length + files.length > ORDER_CHAT_ATTACHMENTS_MAX) {
-        setError(`Не более ${ORDER_CHAT_ATTACHMENTS_MAX} вложений в сообщении`);
-        return;
-      }
-      const tooLarge = files.find((f) => f.size > ORDER_CHAT_UPLOAD_MAX_FILE_BYTES);
-      if (tooLarge) {
-        setError(`${orderChatFileTooLargeUserMessage()} Файл: «${tooLarge.name}».`);
-        return;
-      }
-
-      for (const file of files) {
-        const clientToken =
-          typeof crypto !== 'undefined' && 'randomUUID' in crypto
-            ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-        const localPreviewUrl = URL.createObjectURL(file);
-        const mimeType =
-          (file.type && file.type.trim()) || inferMimeFromFilename(file.name) || 'application/octet-stream';
-        const kind: 'FILE' | 'IMAGE' =
-          mimeType.startsWith('image/') && mimeType !== 'image/tiff' ? 'IMAGE' : 'FILE';
-
-        setPendingRefs((p) => [
-          ...p,
-          {
-            clientToken,
-            fileUrl: '',
-            filename: file.name?.trim() || 'file',
-            mimeType,
-            kind,
-            localPreviewUrl,
-            uploading: true,
-          },
-        ]);
-
-        try {
-          const fd = new FormData();
-          fd.append('file', file);
-          const res = await fetch(uploadUrl(variant, orderId, chatSubject), {
-            method: 'POST',
-            credentials: 'same-origin',
-            body: fd,
-          });
-          if (!res.ok) {
-            throw new Error(
-              await describeOrderChatUploadFailure(res, ORDER_CHAT_UPLOAD_MAX_FILE_BYTES),
-            );
-          }
-          const row = await parseOrderChatUploadResponse(res);
-          setPendingRefs((p) =>
-            p.map((x) =>
-              x.clientToken === clientToken
-                ? {
-                    ...x,
-                    fileUrl: row.url,
-                    filename: row.filename || x.filename,
-                    mimeType: row.mimeType || x.mimeType,
-                    kind: row.kind,
-                    localPreviewUrl: undefined,
-                    uploading: false,
-                  }
-                : x,
-            ),
-          );
-          requestAnimationFrame(() => URL.revokeObjectURL(localPreviewUrl));
-        } catch (e) {
-          URL.revokeObjectURL(localPreviewUrl);
-          setPendingRefs((p) => p.filter((x) => x.clientToken !== clientToken));
-          setError(e instanceof Error ? e.message : 'Не удалось загрузить файл');
-        }
-      }
-    },
-    [orderId, variant, pendingRefs, chatSubject],
-  );
-
-  const removePendingAttachment = useCallback((clientToken: string) => {
-    setPendingRefs((p) => {
-      const row = p.find((x) => x.clientToken === clientToken);
-      if (row?.localPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(row.localPreviewUrl);
-      return p.filter((x) => x.clientToken !== clientToken);
-    });
-  }, []);
 
   const deleteMessage = useCallback(
     async (messageId: string) => {
@@ -780,12 +692,12 @@ export function useOrderChat(opts: {
     chatComposerDisabled: composerDisabled,
     chatAttachPickerDisabled: attachPickerDisabled,
     chatUploading: uploadBusy,
-    pendingAttachmentsHint: pendingHint,
-    pendingOutgoingAttachments: pendingOutgoingUi,
+    pendingAttachmentsHint,
+    pendingOutgoingAttachments,
     canSendAttachmentMessage,
     sendChatText: sendText,
-    attachChatFiles: attachFiles,
-    removePendingChatAttachment: removePendingAttachment,
+    attachChatFiles,
+    removePendingChatAttachment,
     deleteChatMessage: deleteMessage,
     reloadChat: reloadMessages,
     chatHasOlderHistory: hasOlderHistory,

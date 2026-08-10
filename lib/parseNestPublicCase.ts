@@ -20,6 +20,9 @@ function parseProductRow(q: Record<string, unknown>): PublicCaseProduct {
   const ldr = q.likesDisplayCount;
   const likesDisplayCount =
     typeof ldr === 'number' && Number.isFinite(ldr) ? Math.max(0, Math.floor(ldr)) : 0;
+  const qmc = q.qaMessageCountPublic;
+  const qaMessageCountPublic =
+    typeof qmc === 'number' && Number.isFinite(qmc) ? Math.max(0, Math.floor(qmc)) : 0;
   return {
     id,
     slug: typeof q.slug === 'string' ? q.slug : '',
@@ -27,6 +30,7 @@ function parseProductRow(q: Record<string, unknown>): PublicCaseProduct {
     price: typeof q.price === 'number' && Number.isFinite(q.price) ? q.price : 0,
     imageUrl: typeof q.imageUrl === 'string' ? q.imageUrl : null,
     casesLinkedCount,
+    qaMessageCountPublic,
     likesDisplayCount,
   };
 }

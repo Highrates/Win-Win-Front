@@ -13,6 +13,7 @@ import {
 } from '@win-win/admin-sections';
 import { AdminNavBadge } from '@/components/admin/AdminNavBadge/AdminNavBadge';
 import { useAdminOrderChatStaffUnreadEvents } from '@/hooks/useAdminOrderChatStaffUnreadEvents';
+import { AdminProductQaStaffAlerts } from '@/components/admin/AdminProductQaStaffToast/AdminProductQaStaffToast';
 import { AdminDeployRecovery } from '@/lib/adminDeployRecovery/AdminDeployRecovery';
 import { AdminConfirmProvider } from '@/lib/adminConfirm/AdminConfirmProvider';
 import { AdminQueryProvider } from '@/lib/adminQuery/AdminQueryProvider';
@@ -77,7 +78,7 @@ function AdminSidebar({
   pathname: string;
   setAdminLocale: (next: AdminLocale) => void;
 }) {
-  const { pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread } =
+  const { pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread, productQaPending } =
     useAdminSidebarBadges();
   const { canAccessSection, isSuperAdmin, staff, email, loading: permissionsLoading } =
     useAdminPermissions();
@@ -213,12 +214,17 @@ function AdminSidebar({
                   <NavLinkLeading expandable open={catalogOpen} />
                   <span className={styles.navLinkLabel}>
                     {getNavLabel(locale, ADMIN_NAV_MANIFEST.catalog.labelKey)}
+                    <AdminNavBadge
+                      count={productQaPending ?? 0}
+                      title={badgeTitles.productQaPending}
+                    />
                   </span>
                 </button>
                 {catalogOpen ? (
                   <div id="admin-nav-catalog-sub" className={styles.navSub}>
                     {ADMIN_NAV_MANIFEST.catalog.children.map((child) => {
                       const active = isAdminNavChildActive(pathname, child);
+                      const showProductQaBadge = child.href === '/admin/catalog/qa-queue';
                       return (
                         <Link
                           key={child.href}
@@ -230,6 +236,12 @@ function AdminSidebar({
                           <NavLinkLeading />
                           <span className={styles.navLinkLabel}>
                             {getNavLabel(locale, child.labelKey)}
+                            {showProductQaBadge ? (
+                              <AdminNavBadge
+                                count={productQaPending ?? 0}
+                                title={badgeTitles.productQaPending}
+                              />
+                            ) : null}
                           </span>
                         </Link>
                       );
@@ -375,6 +387,7 @@ export function AdminChrome({
             <AdminRouteGuard>
               <AdminSidebarBadgesProvider enabled>
                 <AdminShellBody sidebar={<AdminSidebar {...sidebarProps} />}>{children}</AdminShellBody>
+                <AdminProductQaStaffAlerts isLoginRoute={isLoginPage} />
               </AdminSidebarBadgesProvider>
             </AdminRouteGuard>
           </AdminPermissionsProvider>

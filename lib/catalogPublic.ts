@@ -178,6 +178,8 @@ export type CatalogProductSearchHit = {
   imageUrls?: string[];
   /** Кейсы партнёров с этим товаром (Meilisearch / Prisma). */
   casesLinkedCount?: number;
+  /** Публичный счётчик вопросов по товару (Meilisearch / Prisma). */
+  qaMessageCountPublic?: number;
   /** Публичный счётчик лайков (реальные + админ). */
   likesDisplayCount?: number;
   /** Только при SSR/запросе с Bearer: лайкнул ли текущий пользователь. */
@@ -263,6 +265,9 @@ export type PublicSetSiblingProduct = {
   price: unknown;
   thumbUrl: string | null;
   imageUrls: string[];
+  casesLinkedCount?: number;
+  qaMessageCountPublic?: number;
+  likesDisplayCount?: number;
   likedByMe?: boolean;
 };
 

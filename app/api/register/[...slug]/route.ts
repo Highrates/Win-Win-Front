@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import { establishUserSessionFromAuthJson } from '@/lib/userSessionEstablish';
+import { forwardClientIpHeaders } from '@/lib/forwardClientIpHeaders';
 
 function isAllowed(slug: string[]): boolean {
   const s = slug.filter((p) => p.length > 0);
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'Content-Type': request.headers.get('content-type') || 'application/json',
+    ...forwardClientIpHeaders(request),
   };
 
   let res: Response;

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { ProductGallery } from '@/components/ProductGallery';
 import type {
@@ -16,8 +16,12 @@ import ProductElementTabs from './ProductElementTabs';
 import ProductModifications from './ProductModifications';
 import { ProductCreateProjectModalGate } from './ProductCreateProjectModalLazy';
 import { ProductPdpPurchaseBlock } from './ProductPdpPurchaseBlock';
+import { ProductPageLeftColumn } from './ProductPageLeftColumn';
+import { ProductQaChatPanel } from '@/components/ProductQa/ProductQaChatPanel';
+import { useProductQaRealtime } from '@/hooks/useProductQaRealtime';
 import { useProductConfiguration } from './useProductConfiguration';
 import { useProductPdpActions } from './useProductPdpActions';
+import { PRODUCT_QA_SECTION_ID } from '@/lib/productQa/constants';
 import styles from './ProductInteractive.module.css';
 import purchaseStyles from './ProductPdpPurchaseBlock.module.css';
 import btnStyles from '@/components/Button/Button.module.css';
@@ -33,9 +37,15 @@ type Props = {
   productId: string;
   productSlug: string;
   productName: string;
+  productTitleText: string;
   productImages: string[];
   variantImagesMap: Record<string, string[]>;
-  leftColumn: ReactNode;
+  socialProps: {
+    productId: string;
+    casesLinkedCount: number;
+    likesDisplayCount: number;
+  };
+  initialQaMessageCount: number;
   modifications: PublicProductModificationApi[];
   elements: PublicProductElementApi[];
   variants: PublicProductVariantApi[];
@@ -56,9 +66,11 @@ export default function ProductInteractive(props: Props) {
     productId,
     productSlug,
     productName,
+    productTitleText,
     productImages,
     variantImagesMap,
-    leftColumn,
+    socialProps,
+    initialQaMessageCount,
     modifications,
     elements,
     variants,
@@ -73,6 +85,39 @@ export default function ProductInteractive(props: Props) {
     additionalInfoHtml,
     brand,
   } = props;
+
+  const [qaMessageCount, setQaMessageCount] = useState(initialQaMessageCount);
+  const [qaChatOpen, setQaChatOpen] = useState(false);
+
+  const openProductQa = () => {
+    setQaChatOpen(true);
+  };
+
+  useEffect(() => {
+    setQaMessageCount(initialQaMessageCount);
+  }, [initialQaMessageCount]);
+
+  useProductQaRealtime(
+    { productSlug },
+    {
+      enabled: Boolean(productSlug),
+      onMetaUpdated: (meta) => setQaMessageCount(meta.messageCount),
+    },
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const openFromHash = () => {
+      if (window.location.hash === `#${PRODUCT_QA_SECTION_ID}`) {
+        openProductQa();
+      }
+    };
+
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
+    return () => window.removeEventListener('hashchange', openFromHash);
+  }, []);
 
   const {
     modificationId,
@@ -145,15 +190,26 @@ export default function ProductInteractive(props: Props) {
     },
   };
 
+  const qaChatTitle = productTitleText;
+
   return (
     <>
+      <span id={PRODUCT_QA_SECTION_ID} className={styles.productQaHashAnchor} aria-hidden />
       <FlashBanner flash={flash} onDismiss={dismiss} />
       <div className={styles.productImgsWrapper}>
         <ProductGallery images={galleryImages} productName={productName} />
       </div>
 
       <div className={styles.productDetails}>
-        {leftColumn}
+        <ProductPageLeftColumn
+          productId={socialProps.productId}
+          productTitleText={productTitleText}
+          casesLinkedCount={socialProps.casesLinkedCount}
+          likesDisplayCount={socialProps.likesDisplayCount}
+          qaMessageCount={qaMessageCount}
+          onQaClick={openProductQa}
+          brand={brand ? { name: brand.name, href: brand.href } : null}
+        />
         <div className={styles.productDetailsRight}>
           {projectAddedMessage ? (
             <div className={styles.pdpBannerRow}>
@@ -290,6 +346,21 @@ export default function ProductInteractive(props: Props) {
           ) : null}
         </div>
       </div>
+
+      <ProductQaChatPanel
+        presentation="overlay"
+        chatOpen={qaChatOpen}
+        onChatClose={() => setQaChatOpen(false)}
+        enabled={qaChatOpen}
+        productSlug={productSlug}
+        productVariantId={matchedVariant?.id ?? selectedVariantId ?? defaultVariantId}
+        initialMessageCount={qaMessageCount}
+        onMessageCountChange={setQaMessageCount}
+        idPrefix="product-qa"
+        loginReturnPath={`/product/${productSlug}#${PRODUCT_QA_SECTION_ID}`}
+        postToCorrespondence
+        chatTitle={qaChatTitle}
+      />
 
       <ProductCreateProjectModalGate
         open={pdpActions.createProjectModalOpen}

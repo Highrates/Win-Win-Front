@@ -39,6 +39,7 @@ export type PublicBrandProductRow = {
   has3d?: boolean;
   hasDrawing?: boolean;
   casesLinkedCount?: number;
+  qaMessageCountPublic?: number;
   likesDisplayCount?: number;
   likedByMe?: boolean;
 };

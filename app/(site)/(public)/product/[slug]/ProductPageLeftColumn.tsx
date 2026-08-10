@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { ProductPdpHeartInteract } from './ProductPdpSocialRow';
 import styles from './ProductPageLeftColumn.module.css';
@@ -7,6 +9,8 @@ type Props = {
   productTitleText: string;
   casesLinkedCount: number;
   likesDisplayCount: number;
+  qaMessageCount: number;
+  onQaClick?: () => void;
   brand: { name: string; href: string } | null;
 };
 
@@ -15,6 +19,8 @@ export function ProductPageLeftColumn({
   productTitleText,
   casesLinkedCount,
   likesDisplayCount,
+  qaMessageCount,
+  onQaClick,
   brand,
 }: Props) {
   return (
@@ -61,7 +67,16 @@ export function ProductPageLeftColumn({
             </div>
           )}
           <ProductPdpHeartInteract productId={productId} likesDisplayCount={likesDisplayCount} />
-          <div className={styles.productDetailsInteractItem}>
+          <button
+            type="button"
+            className={styles.productDetailsInteractItem}
+            aria-label={
+              qaMessageCount > 0
+                ? `Задать вопрос по товару, ${qaMessageCount} сообщений`
+                : 'Задать вопрос по товару'
+            }
+            onClick={() => onQaClick?.()}
+          >
             <img
               src="/icons/message.svg"
               alt=""
@@ -69,8 +84,10 @@ export function ProductPageLeftColumn({
               height={20}
               className={styles.productDetailsInteractIcon}
             />
-            <span className={styles.productDetailsInteractValue}>0</span>
-          </div>
+            {qaMessageCount > 0 ? (
+              <span className={styles.productDetailsInteractValue}>{qaMessageCount}</span>
+            ) : null}
+          </button>
         </div>
       </div>
     </div>

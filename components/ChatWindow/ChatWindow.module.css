@@ -94,6 +94,7 @@
   min-height: 0 !important;
   max-height: 100% !important;
   flex: 1;
+  transform: none !important;
 }
 
 /* Light −45° / 80% */
@@ -169,6 +170,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.titleNormalCase {
+  text-transform: none;
 }
 
 .closeBtn {
@@ -325,9 +330,25 @@
   white-space: nowrap;
 }
 
+.messageHeadExtra {
+  flex-shrink: 0;
+}
+
+.messageFooter {
+  margin-top: 8px;
+}
+
 .messageTime {
   font-family: var(--font-commissioner);
   font-size: 13px;
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  flex-shrink: 0;
+}
+
+.editedBadge {
+  font-family: var(--font-commissioner);
+  font-size: 11px;
   font-weight: var(--text-caption-weight);
   color: var(--color-gray);
   flex-shrink: 0;
@@ -650,6 +671,17 @@ a.docChip:hover {
   font-weight: var(--text-caption-weight);
   color: var(--color-gray);
   white-space: pre-line;
+}
+
+.composerBanner {
+  margin: 0;
+  padding: 8px 16px 0;
+  font-family: var(--font-commissioner);
+  font-size: var(--h5-size, 0.75rem);
+  font-weight: var(--h5-weight, 600);
+  text-transform: uppercase;
+  color: var(--color-text-muted, rgba(0, 0, 0, 0.55));
+  line-height: 1.35;
 }
 
 .pendingOutgoingStrip {

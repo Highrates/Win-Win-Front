@@ -1,0 +1,47 @@
+.list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.list[data-variant='admin'] {
+  margin: 0 0 12px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.imageCaption {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted, rgba(0, 0, 0, 0.55));
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image {
+  max-width: 160px;
+  max-height: 120px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.imageLink {
+  display: block;
+}
+
+.fileLink {
+  font-size: var(--text-sm-size, 0.875rem);
+  color: var(--color-red, #c0392b);
+}
+
+.list[data-variant='admin'] .fileLink {
+  color: var(--color-link, #0969da);
+}

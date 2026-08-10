@@ -1,0 +1,27 @@
+.errorBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.retryBtn,
+.loadMoreBtn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 0.5px solid color-mix(in srgb, var(--color-black) 16%, transparent);
+  background: var(--color-white);
+  cursor: pointer;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-sm-size, 0.875rem);
+}
+
+.retryBtn:hover,
+.loadMoreBtn:hover {
+  background: var(--color-bright-snow, #f6f6f6);
+}
+
+.loadMoreBtn {
+  align-self: center;
+  margin-top: 8px;
+}

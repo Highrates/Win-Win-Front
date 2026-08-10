@@ -9,5 +9,6 @@ export type RecommendationsStaticItem = {
   productId?: string;
   collections?: number;
   likes?: number;
+  qaMessageCount?: number;
   likedByMe?: boolean;
 };

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { PRODUCT_QA_SECTION_ID } from '@/lib/productQa/constants';
 import { useToggleLike } from '@/hooks/useToggleLike';
 import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
 import { LikeHeartInteract } from '@/components/LikeHeartInteract';
@@ -31,7 +32,8 @@ export interface ProductCardProps {
   productId?: string;
   collections?: number;
   likes?: number;
-  comments?: number;
+  /** Публичные вопросы по товару (иконка → #product-qa). */
+  qaMessageCount?: number;
   /** Сердце с обводкой: в ЛК при списке лайков или явное значение с сервера. */
   heartActive?: boolean;
   /** С `productId`: вызывать POST/DELETE лайка (по умолчанию true). */
@@ -74,7 +76,7 @@ export function ProductCard({
   productId,
   collections = 0,
   likes = 0,
-  comments = 180,
+  qaMessageCount: qaMessageCountProp = 0,
   heartActive,
   likesInteractive = true,
   onLikedChange,
@@ -82,6 +84,7 @@ export function ProductCard({
   galleryAdvanceSignal,
   imageLoading = 'lazy',
 }: ProductCardProps) {
+  const qaMessageCount = Math.max(0, qaMessageCountProp);
   const urls = useMemo(() => normalizeProductCardImageUrls(imageUrl, imageUrls), [imageUrl, imageUrls]);
   const urlsKey = urls.join('\0');
   const [index, setIndex] = useState(0);
@@ -244,6 +247,7 @@ export function ProductCard({
   const gallery = urls.length > 1;
 
   const productHref = `/product/${encodeURIComponent(slug)}`;
+  const qaHref = `${productHref}#${PRODUCT_QA_SECTION_ID}`;
   const projectsCollectionsHref =
     productId && collections > 0
       ? `/projects?product=${encodeURIComponent(productId)}`
@@ -416,10 +420,21 @@ export function ProductCard({
               />
             )
           ) : null}
-          <div className={styles.interactItem}>
+          <Link
+            href={qaHref}
+            className={`${styles.interactItem} ${styles.interactItemLink}`}
+            prefetch={false}
+            aria-label={
+              qaMessageCount > 0
+                ? `Вопросы по товару, ${qaMessageCount}`
+                : 'Вопросы по товару'
+            }
+          >
             <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.interactIcon} />
-            <span className={styles.interactValue}>{comments}</span>
-          </div>
+            {qaMessageCount > 0 ? (
+              <span className={styles.interactValue}>{qaMessageCount}</span>
+            ) : null}
+          </Link>
         </div>
       </div>
     </div>

@@ -78,6 +78,10 @@ a.productDetailsInteractItem {
   cursor: pointer;
 }
 
+button.productDetailsInteractItem:hover .productDetailsInteractIcon {
+  opacity: 0.72;
+}
+
 .productDetailsInteractItem:hover .productDetailsInteractIcon {
   opacity: 0.72;
 }

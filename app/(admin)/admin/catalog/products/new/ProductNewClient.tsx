@@ -38,6 +38,8 @@ import objStyles from '../../../objects/objectsLibrary.module.css';
 import pn from './productNew.module.css';
 import { ProductElementsSection } from './ProductElementsSection';
 import { ProductModificationsSection } from './ProductModificationsSection';
+import { ProductQaAdminPanel } from './ProductQaAdminPanel';
+import { ProductCorrespondenceAdminPanel } from './ProductCorrespondenceAdminPanel';
 
 function rowId() {
   return createClientRandomId();
@@ -854,6 +856,10 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
               </div>
             )}
           </div>
+
+          <ProductCorrespondenceAdminPanel productId={productId} />
+
+          <ProductQaAdminPanel productId={productId} />
 
           <div className={pn.section}>
             <AdminTextField

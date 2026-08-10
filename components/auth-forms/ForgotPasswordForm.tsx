@@ -1,17 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { passwordResetRequest } from '@/lib/passwordResetApi';
 import { validateEmailRequired } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
-export function ForgotPasswordForm() {
+function ForgotPasswordFormInner() {
+  const searchParams = useSearchParams();
+  const prefillFromUrl = useMemo(() => {
+    const fromEmail = (searchParams.get('email') ?? '').trim().toLowerCase();
+    const fromPrefill = (searchParams.get('prefillEmail') ?? '').trim().toLowerCase();
+    const raw = fromEmail || fromPrefill;
+    return raw && !validateEmailRequired(raw) ? raw : '';
+  }, [searchParams]);
+
+  const [email, setEmail] = useState(prefillFromUrl);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (prefillFromUrl) setEmail(prefillFromUrl);
+  }, [prefillFromUrl]);
 
   return (
     <form
@@ -21,8 +35,6 @@ export function ForgotPasswordForm() {
         e.preventDefault();
         setFormError(null);
         setSuccessMessage(null);
-        const fd = new FormData(e.currentTarget);
-        const email = String(fd.get('email') ?? '');
         const err = validateEmailRequired(email);
         setEmailError(err);
         if (err) return;
@@ -30,11 +42,11 @@ export function ForgotPasswordForm() {
         setBusy(true);
         try {
           const data = await passwordResetRequest(email.trim().toLowerCase());
-          setSuccessMessage(
-            data.devHint ? `${data.message}\n\n${data.devHint}` : data.message,
-          );
+          setSuccessMessage(data.message);
         } catch (submitErr) {
-          setFormError(submitErr instanceof Error ? submitErr.message : 'Не удалось отправить письмо');
+          const msg =
+            submitErr instanceof Error ? submitErr.message : 'Не удалось отправить письмо';
+          setFormError(msg);
         } finally {
           setBusy(false);
         }
@@ -47,15 +59,17 @@ export function ForgotPasswordForm() {
           name="email"
           autoComplete="email"
           placeholder=""
+          value={email}
           error={emailError ?? undefined}
-          onChange={() => {
+          onChange={(e) => {
+            setEmail(e.target.value);
             setEmailError(null);
             setFormError(null);
             setSuccessMessage(null);
           }}
         />
         {successMessage ? (
-          <p className={styles.authOtpHint} role="status" style={{ whiteSpace: 'pre-line' }}>
+          <p className={styles.authOtpHint} role="status">
             {successMessage}
           </p>
         ) : null}
@@ -70,5 +84,13 @@ export function ForgotPasswordForm() {
         {busy ? 'Отправка…' : 'Отправить ссылку'}
       </Button>
     </form>
+  );
+}
+
+export function ForgotPasswordForm() {
+  return (
+    <Suspense fallback={<p className={styles.authOtpHint}>Загрузка…</p>}>
+      <ForgotPasswordFormInner />
+    </Suspense>
   );
 }

@@ -27,6 +27,7 @@ type CollectionProduct = {
   imageUrls?: string[];
   casesLinkedCount: number;
   likesDisplayCount: number;
+  qaMessageCountPublic?: number;
 };
 
 type CollectionJson = {
@@ -331,6 +332,7 @@ export function FavoritesPageClient() {
                       imageUrls={resolvedGallery.length > 1 ? resolvedGallery : undefined}
                       collections={p.casesLinkedCount}
                       likes={p.likesDisplayCount}
+                      qaMessageCount={p.qaMessageCountPublic ?? 0}
                       heartActive
                       likesInteractive
                       onLikedChange={({ liked, productId }) => {

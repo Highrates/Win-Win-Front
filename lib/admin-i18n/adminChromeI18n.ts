@@ -27,6 +27,12 @@ export function adminBrandLine(locale: AdminLocale): string {
   return locale === 'zh' ? 'WIN-WIN · 管理面板' : 'WIN-WIN · АДМИН-ПАНЕЛЬ';
 }
 
+import { adminProductQaUnreadBadgeTitle } from '@/lib/admin-i18n/adminProductQaStaffToastI18n';
+
+export function adminProductQaPendingBadgeTitle(locale: AdminLocale): string {
+  return locale === 'zh' ? '待审核或待发布' : 'Ожидают модерации или публикации';
+}
+
 export function adminNavBadgeTitles(locale: AdminLocale) {
   const pick = (ru: string, zh: string) => (locale === 'zh' ? zh : ru);
   return {
@@ -34,6 +40,8 @@ export function adminNavBadgeTitles(locale: AdminLocale) {
     ordersPending: pick('Заказы на согласование', '待审批订单'),
     sourcingPending: pick('Новые заявки на подбор', '新采购申请'),
     ordersChatUnread: pick('Непрочитанные сообщения от клиента', '未读客户消息'),
+    productQaUnread: adminProductQaUnreadBadgeTitle(locale),
+    productQaPending: adminProductQaPendingBadgeTitle(locale),
   };
 }
 

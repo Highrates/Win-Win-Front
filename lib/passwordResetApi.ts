@@ -31,14 +31,19 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 
 export async function passwordResetRequest(
   email: string,
-): Promise<{ message: string; sent?: boolean; devHint?: string }> {
+): Promise<{ message: string; sent?: boolean }> {
   return postJson('request', { email: email.trim().toLowerCase() });
 }
 
-export async function passwordResetVerify(token: string): Promise<{ valid: boolean; message?: string }> {
+export async function passwordResetVerify(
+  token: string,
+): Promise<{ valid: boolean; message?: string; email?: string }> {
   return postJson('verify', { token });
 }
 
-export async function passwordResetConfirm(token: string, password: string): Promise<{ ok: boolean }> {
+export async function passwordResetConfirm(
+  token: string,
+  password: string,
+): Promise<{ ok: boolean; email?: string }> {
   return postJson('confirm', { token, password });
 }

@@ -10,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from 'react';
 import type { OrderChatPendingUiAttachment } from '@/lib/orderChat/types';
 import {
@@ -17,6 +18,7 @@ import {
   orderChatLocalDayKey,
 } from '@/lib/orderChat/formatOrderChatDaySeparator';
 import { openOrderChatPhotoSwipe } from '@/lib/orderChat/openOrderChatPhotoSwipe';
+import { formatEditedAtLabel } from '@/lib/productQa/editHelpers';
 import styles from './ChatWindow.module.css';
 
 export type ChatDocAttachment = { id: string; filename: string; url?: string };
@@ -34,6 +36,12 @@ export type ChatWindowMessage = {
   isDeleted?: boolean;
   /** Показать кнопку удаления (если задан onDeleteMessage) */
   deletable?: boolean;
+  /** Доп. блок в шапке сообщения (бейдж статуса и т.п.) */
+  headExtra?: ReactNode;
+  /** Доп. блок под телом сообщения (модерация, действия) */
+  footerSlot?: ReactNode;
+  /** ISO-время последнего редактирования body */
+  editedAtIso?: string | null;
   /** Только order chat: для пересчёта кнопки «удалить» по истечении окна (24 ч). */
   ocAuthorUserId?: string;
   ocAuthorRole?: 'CUSTOMER' | 'STAFF';
@@ -68,6 +76,8 @@ type Props = {
   attachmentsEnabled?: boolean;
   /** Подсказка под полем (напр. файлы к отправке) */
   pendingAttachmentsHint?: string | null;
+  /** Баннер в области композера (напр. «войдите, чтобы написать») */
+  composerBanner?: ReactNode;
   /** Превью вложений до нажатия «Отправить» */
   pendingOutgoing?: OrderChatPendingUiAttachment[];
   /** Разрешить отправку пустого текста (когда есть вложения «к отправке» у родителя) */
@@ -87,6 +97,8 @@ type Props = {
    * Должна совпадать с локалью времени в сообщениях (напр. **`ru-RU`** / **`zh-CN`** для админки).
    */
   messageDayLocale?: string;
+  /** По умолчанию заголовок в uppercase (стиль заказов). */
+  titleTransform?: 'uppercase' | 'none';
 };
 
 /** Безопасная подстановка id в атрибут / селектор. */
@@ -222,6 +234,7 @@ export function ChatWindow({
   attachPickerDisabled,
   attachmentsEnabled = false,
   pendingAttachmentsHint = null,
+  composerBanner = null,
   pendingOutgoing = [],
   allowEmptySend = false,
   onAttachFiles,
@@ -232,15 +245,16 @@ export function ChatWindow({
   onLoadOlderHistory,
   loadOlderHistoryLabel = 'Показать раньше',
   messageDayLocale = 'ru-RU',
+  titleTransform = 'uppercase',
 }: Props) {
+  const embedded = variant === 'embedded';
   const titleId = useId();
   const fileInputId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState('');
   /** Два rAF: даём браузеру собрать слой с backdrop-filter до плавного появления */
-  const [blendReady, setBlendReady] = useState(false);
-  const embedded = variant === 'embedded';
+  const [blendReady, setBlendReady] = useState(embedded);
 
   /** Прокручивает область сообщений к низу (новые сообщения внизу). */
   const scrollMessagesToBottom = useCallback(() => {
@@ -434,7 +448,10 @@ export function ChatWindow({
       <div className={styles.panelInner}>
         <header className={styles.header}>
           <div className={styles.headerMain}>
-            <h2 id={titleId} className={styles.title}>
+            <h2
+              id={titleId}
+              className={`${styles.title} ${titleTransform === 'none' ? styles.titleNormalCase : ''}`}
+            >
               {title}
             </h2>
             {!hideCloseButton ? (
@@ -496,6 +513,9 @@ export function ChatWindow({
                               <div className={styles.avatar} aria-hidden />
                             )}
                             <span className={styles.senderName}>{m.senderName}</span>
+                            {m.headExtra ? (
+                              <span className={styles.messageHeadExtra}>{m.headExtra}</span>
+                            ) : null}
                           </div>
                           {m.deletable && onDeleteMessage ? (
                             <button
@@ -508,6 +528,14 @@ export function ChatWindow({
                             </button>
                           ) : null}
                           <span className={styles.messageTime}>{m.timeLabel}</span>
+                          {m.editedAtIso ? (
+                            <span
+                              className={styles.editedBadge}
+                              title={formatEditedAtLabel(m.editedAtIso, messageDayLocale)}
+                            >
+                              изменено
+                            </span>
+                          ) : null}
                         </div>
                         {!m.isDeleted &&
                         ((m.documents?.length ?? 0) > 0 || (m.images?.length ?? 0) > 0) ? (
@@ -517,6 +545,9 @@ export function ChatWindow({
                           <p className={styles.messageDeleted}>Сообщение удалено</p>
                         ) : m.content?.trim() ? (
                           <p className={styles.messageBody}>{m.content.trim()}</p>
+                        ) : null}
+                        {m.footerSlot ? (
+                          <div className={styles.messageFooter}>{m.footerSlot}</div>
                         ) : null}
                       </article>
                       {showBetweenDivider ? <MessageBetweenDivider /> : null}
@@ -578,6 +609,9 @@ export function ChatWindow({
           ) : null}
           {pendingAttachmentsHint ? (
             <p className={styles.footerPendingHint}>{pendingAttachmentsHint}</p>
+          ) : null}
+          {composerBanner ? (
+            <div className={styles.composerBanner}>{composerBanner}</div>
           ) : null}
           <div className={styles.footerMainTopRule} aria-hidden />
           <div className={styles.footerMain}>

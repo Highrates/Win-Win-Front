@@ -13,7 +13,7 @@ export type ProjectProduct = {
   imageUrl?: string;
   collections: number;
   likes: number;
-  comments: number;
+  qaMessageCount: number;
 };
 
 function CloseIcon() {
@@ -217,7 +217,7 @@ export function MoreAboutProjectModal({ project, linkClassName, textClassName, a
                                   productId={p.productId}
                                   collections={p.collections}
                                   likes={p.likes}
-                                  comments={p.comments}
+                                  qaMessageCount={p.qaMessageCount}
                                 />
                               ))
                             ) : (

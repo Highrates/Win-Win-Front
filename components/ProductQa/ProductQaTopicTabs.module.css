@@ -1,0 +1,72 @@
+.root {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+
+.root::-webkit-scrollbar {
+  height: 6px;
+}
+
+.root::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+}
+
+.tab,
+.tabActive {
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: var(--text-sm-size, 0.875rem);
+  cursor: pointer;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.tabActive {
+  border-color: var(--color-red, #c0392b);
+  background: rgba(192, 57, 43, 0.08);
+  font-weight: 600;
+}
+
+.tab[data-variant='admin'] {
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.tabActive[data-variant='admin'] {
+  border-radius: 8px;
+}
+
+.tabCount {
+  font-size: var(--text-xs-size, 0.75rem);
+  color: var(--color-text-muted, rgba(0, 0, 0, 0.55));
+}
+
+.tabTitle {
+  /* visible label */
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -28,6 +28,7 @@ export type PublicCaseProduct = {
   price: number;
   imageUrl: string | null;
   casesLinkedCount: number;
+  qaMessageCountPublic: number;
   likesDisplayCount: number;
 };
 
@@ -79,7 +80,7 @@ export function mapPublicCaseToProjectData(
         imageUrl: p.imageUrl ? resolveMediaUrlForServer(p.imageUrl) : undefined,
         collections: p.casesLinkedCount,
         likes: p.likesDisplayCount,
-        comments: 0,
+        qaMessageCount: p.qaMessageCountPublic,
       })),
     coverImage,
     coverImage2,

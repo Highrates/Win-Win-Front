@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { ADMIN_PRODUCT_QA_UNREAD_REFRESH_EVENT, ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT } from '@/lib/productQa/constants';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { useAdminPermissionsOptional } from '@/lib/adminPermissions/AdminPermissionsProvider';
 
@@ -17,6 +18,8 @@ export type AdminSidebarBadgesValue = {
   pendingOrdersApproval: number | null;
   pendingSourcingReview: number | null;
   ordersChatUnread: number | null;
+  productQaUnread: number | null;
+  productQaPending: number | null;
 };
 
 const AdminSidebarBadgesContext = createContext<AdminSidebarBadgesValue | null>(null);
@@ -32,6 +35,8 @@ export function AdminSidebarBadgesProvider({
   const [pendingOrdersApproval, setPendingOrdersApproval] = useState<number | null>(null);
   const [pendingSourcingReview, setPendingSourcingReview] = useState<number | null>(null);
   const [ordersChatUnread, setOrdersChatUnread] = useState<number | null>(null);
+  const [productQaUnread, setProductQaUnread] = useState<number | null>(null);
+  const [productQaPending, setProductQaPending] = useState<number | null>(null);
 
   const loadPendingPartnerApps = useCallback(async () => {
     try {
@@ -71,6 +76,24 @@ export function AdminSidebarBadgesProvider({
     }
   }, []);
 
+  const loadProductQaUnread = useCallback(async () => {
+    try {
+      const j = await adminBackendJson<{ total?: number }>('catalog/admin/qa/unread-summary');
+      setProductQaUnread(typeof j.total === 'number' ? j.total : 0);
+    } catch (e) {
+      warnBadgeLoadFailure('product qa unread', e);
+    }
+  }, []);
+
+  const loadProductQaPending = useCallback(async () => {
+    try {
+      const j = await adminBackendJson<{ total?: number }>('catalog/admin/qa/pending-summary');
+      setProductQaPending(typeof j.total === 'number' ? j.total : 0);
+    } catch (e) {
+      warnBadgeLoadFailure('product qa pending', e);
+    }
+  }, []);
+
   const permissions = useAdminPermissionsOptional();
 
   const refreshAll = useCallback(() => {
@@ -86,6 +109,13 @@ export function AdminSidebarBadgesProvider({
         setPendingSourcingReview(null);
         setOrdersChatUnread(null);
       }
+      if (permissions.canAccessSection('catalog')) {
+        void loadProductQaUnread();
+        void loadProductQaPending();
+      } else {
+        setProductQaUnread(null);
+        setProductQaPending(null);
+      }
       return;
     }
   }, [
@@ -94,6 +124,8 @@ export function AdminSidebarBadgesProvider({
     loadPendingOrdersApproval,
     loadPendingSourcingReview,
     loadOrdersChatUnread,
+    loadProductQaUnread,
+    loadProductQaPending,
   ]);
 
   useEffect(() => {
@@ -120,21 +152,46 @@ export function AdminSidebarBadgesProvider({
     const onRefreshOrdersChatUnread = () => {
       void loadOrdersChatUnread();
     };
+    const onRefreshProductQaUnread = () => {
+      void loadProductQaUnread();
+    };
+    const onRefreshProductQaPending = () => {
+      void loadProductQaPending();
+    };
     document.addEventListener('admin-partner-pending-refresh', onRefreshPartner);
     document.addEventListener('admin-orders-pending-refresh', onRefreshOrders);
     document.addEventListener('admin-sourcing-pending-refresh', onRefreshSourcingPending);
     document.addEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
+    document.addEventListener(ADMIN_PRODUCT_QA_UNREAD_REFRESH_EVENT, onRefreshProductQaUnread);
+    document.addEventListener(ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT, onRefreshProductQaPending);
     return () => {
       document.removeEventListener('admin-partner-pending-refresh', onRefreshPartner);
       document.removeEventListener('admin-orders-pending-refresh', onRefreshOrders);
       document.removeEventListener('admin-sourcing-pending-refresh', onRefreshSourcingPending);
       document.removeEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
+      document.removeEventListener(ADMIN_PRODUCT_QA_UNREAD_REFRESH_EVENT, onRefreshProductQaUnread);
+      document.removeEventListener(ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT, onRefreshProductQaPending);
     };
-  }, [enabled, loadPendingPartnerApps, loadPendingOrdersApproval, loadPendingSourcingReview, loadOrdersChatUnread]);
+  }, [
+    enabled,
+    loadPendingPartnerApps,
+    loadPendingOrdersApproval,
+    loadPendingSourcingReview,
+    loadOrdersChatUnread,
+    loadProductQaUnread,
+    loadProductQaPending,
+  ]);
 
   const value = useMemo(
-    () => ({ pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread }),
-    [pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread],
+    () => ({
+      pendingPartnerApps,
+      pendingOrdersApproval,
+      pendingSourcingReview,
+      ordersChatUnread,
+      productQaUnread,
+      productQaPending,
+    }),
+    [pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread, productQaUnread, productQaPending],
   );
 
   return (

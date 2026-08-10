@@ -422,7 +422,7 @@ export function DesignerProjectsSection({
                     productId={p.productId}
                     collections={p.collections}
                     likes={p.likes}
-                    comments={p.comments}
+                    qaMessageCount={p.qaMessageCount}
                     productLikesBulk={productBulkUi(p.productId)}
                   />
                 ))}

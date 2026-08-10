@@ -31,6 +31,7 @@ const ICON = {
   profile: '/icons/account-sidebar/profile.svg',
   docs: '/icons/doc.svg',
   contact: '/icons/sms.svg',
+  questions: '/icons/account-sidebar/message-question.svg',
 } as const;
 
 type MenuDef = { href: string; iconSrc: string; label: string };
@@ -119,6 +120,7 @@ export function CustomerAccountSidebar({
   const { primaryItems, moreTopItems, moreBottomItems } = useMemo(() => {
     const primary: MenuDef[] = [
       { href: '/account/orders', iconSrc: ICON.orders, label: 'Заказы' },
+      { href: '/account/questions', iconSrc: ICON.questions, label: 'Мои вопросы' },
       { href: '/account/favorites', iconSrc: ICON.favorites, label: 'Избранное' },
     ];
     if (showDesignerNav) {

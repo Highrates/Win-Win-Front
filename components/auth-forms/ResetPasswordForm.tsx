@@ -8,12 +8,25 @@ import { TextField } from '@/components/TextField';
 import { passwordResetConfirm, passwordResetVerify } from '@/lib/passwordResetApi';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
+async function clearStaleUserSession(): Promise<void> {
+  try {
+    await fetch('/api/user/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    /* ignore — главное не утащить старую cookie на /login/email */
+  }
+}
+
 function ResetPasswordFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = (searchParams.get('t') ?? '').trim();
 
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
+  const [tokenEmail, setTokenEmail] = useState<string | null>(null);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,6 +43,7 @@ function ResetPasswordFormInner() {
         if (cancelled) return;
         if (r.valid) {
           setTokenValid(true);
+          setTokenEmail(r.email ?? null);
           setTokenError(null);
         } else {
           setTokenValid(false);
@@ -85,8 +99,12 @@ function ResetPasswordFormInner() {
 
         setBusy(true);
         try {
-          await passwordResetConfirm(token, password);
-          router.push('/login/email?reset=ok');
+          const result = await passwordResetConfirm(token, password);
+          await clearStaleUserSession();
+          const email = (result.email || tokenEmail || '').trim().toLowerCase();
+          const q = new URLSearchParams({ reset: 'ok' });
+          if (email) q.set('prefillEmail', email);
+          router.push(`/login/email?${q.toString()}`);
         } catch (submitErr) {
           setFormError(submitErr instanceof Error ? submitErr.message : 'Не удалось сохранить пароль');
         } finally {
@@ -95,6 +113,11 @@ function ResetPasswordFormInner() {
       }}
     >
       <div className={styles.authFields}>
+        {tokenEmail ? (
+          <p className={styles.authOtpHint}>
+            Новый пароль для <strong>{tokenEmail}</strong>
+          </p>
+        ) : null}
         <TextField label="Новый пароль" type="password" name="password" autoComplete="new-password" />
         <TextField
           label="Повторите пароль"

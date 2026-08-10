@@ -23,6 +23,8 @@
   background: var(--color-white);
   overflow: auto;
   animation: slideInPanelFromRight 0.35s ease-out;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideInPanelFromRight {

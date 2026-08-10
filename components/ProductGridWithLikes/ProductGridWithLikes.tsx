@@ -78,6 +78,7 @@ export function ProductGridWithLikes({ items, gridClassName, galleryAdvanceSigna
               imageUrls={item.imageUrls}
               collections={item.collections ?? 0}
               likes={item.likes ?? 0}
+              qaMessageCount={item.qaMessageCount ?? 0}
               heartActive={heartActive}
               productLikesBulk={productLikesBulk}
               galleryAdvanceSignal={galleryAdvanceSignal}

@@ -3,12 +3,12 @@ import { Fragment, Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { loadProductCoreData } from '@/lib/product/loadProductPageData';
+import { fetchProductQaMetaBySlug } from '@/lib/server/productQaFetch';
 import {
   mapProductPageView,
   productPageMetadataFromData,
 } from '@/lib/product/mapProductPageView';
 import ProductInteractive from './ProductInteractive';
-import { ProductPageLeftColumn } from './ProductPageLeftColumn';
 import { ProductSetSiblingsRail } from './ProductSetSiblingsRail';
 import { ProductSetSiblingsSkeleton } from './ProductSetSiblingsSkeleton';
 import styles from './ProductPageLayout.module.css';
@@ -38,7 +38,10 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
   const query = await searchParams;
-  const data = await loadProductCoreData(slug, query);
+  const [data, qaMeta] = await Promise.all([
+    loadProductCoreData(slug, query),
+    fetchProductQaMetaBySlug(slug),
+  ]);
   if (!data) {
     notFound();
   }
@@ -68,15 +71,9 @@ export default async function ProductPage({
             <ProductInteractive
               productImages={view.productImages}
               variantImagesMap={view.variantImagesMap}
-              leftColumn={
-                <ProductPageLeftColumn
-                  productId={view.socialProps.productId}
-                  productTitleText={view.productTitleText}
-                  casesLinkedCount={view.socialProps.casesLinkedCount}
-                  likesDisplayCount={view.socialProps.likesDisplayCount}
-                  brand={view.brand ? { name: view.brand.name, href: view.brand.href } : null}
-                />
-              }
+              productTitleText={view.productTitleText}
+              socialProps={view.socialProps}
+              initialQaMessageCount={qaMeta.messageCount}
               initialModificationId={view.initialModificationId}
               selectedVariantId={view.selectedVariantId}
               priceMin={view.priceMinNum}

@@ -35,6 +35,10 @@
   border-top: 1px solid var(--account-hairline-color, #e2e6e8);
 }
 
+#qa {
+  scroll-margin-top: 72px;
+}
+
 .additionalCatsWrap {
   display: flex;
   flex-direction: column;

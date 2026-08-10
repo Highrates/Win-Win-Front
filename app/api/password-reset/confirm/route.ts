@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import { forwardClientIpHeaders } from '@/lib/forwardClientIpHeaders';
 
 export async function POST(request: Request) {
   const url = `${getServerApiBase()}/auth/password-reset/confirm`;
@@ -13,7 +14,11 @@ export async function POST(request: Request) {
   try {
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...forwardClientIpHeaders(request),
+      },
       body: body || '{}',
       cache: 'no-store',
     });

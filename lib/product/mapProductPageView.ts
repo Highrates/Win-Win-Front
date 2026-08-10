@@ -106,6 +106,10 @@ export function mapSetSiblingCards(items: PublicSetSiblingProduct[]): Recommenda
       variantId: it.id,
       imageUrl: imageUrls[0],
       imageUrls: useGallery ? imageUrls : undefined,
+      collections: typeof it.casesLinkedCount === 'number' ? it.casesLinkedCount : 0,
+      likes: typeof it.likesDisplayCount === 'number' ? it.likesDisplayCount : 0,
+      qaMessageCount:
+        typeof it.qaMessageCountPublic === 'number' ? it.qaMessageCountPublic : 0,
       likedByMe: it.likedByMe,
     };
   });

@@ -19,6 +19,7 @@ export type ProductGridItem = {
   imageUrls?: string[];
   collections?: number;
   likes?: number;
+  qaMessageCount?: number;
   likedByMe?: boolean;
 };
 
@@ -52,6 +53,8 @@ export function catalogHitToProductGridItem(hit: CatalogProductSearchHit): Produ
     imageUrls: useGallery ? galleryResolved : undefined,
     collections: hit.casesLinkedCount ?? 0,
     likes: typeof hit.likesDisplayCount === 'number' ? hit.likesDisplayCount : 0,
+    qaMessageCount:
+      typeof hit.qaMessageCountPublic === 'number' ? hit.qaMessageCountPublic : 0,
     likedByMe: hit.likedByMe,
   };
 }
@@ -76,6 +79,8 @@ export function brandProductRowToProductGridItem(p: PublicBrandProductRow): Prod
     imageUrls: useGallery ? galleryUrls : undefined,
     collections: typeof p.casesLinkedCount === 'number' ? p.casesLinkedCount : 0,
     likes: typeof p.likesDisplayCount === 'number' ? p.likesDisplayCount : 0,
+    qaMessageCount:
+      typeof p.qaMessageCountPublic === 'number' ? p.qaMessageCountPublic : 0,
     likedByMe: p.likedByMe,
   };
 }
@@ -94,6 +99,7 @@ export function recommendationItemToProductGridItem(p: RecommendationsStaticItem
     imageUrls: p.imageUrls,
     collections: p.collections ?? 0,
     likes: typeof p.likes === 'number' ? p.likes : 0,
+    qaMessageCount: typeof p.qaMessageCount === 'number' ? p.qaMessageCount : 0,
     likedByMe: p.likedByMe,
   };
 }

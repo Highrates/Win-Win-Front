@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import { normalizeLoginEmailOrPhone } from '@/lib/loginEmailOrPhoneNormalize';
 import { establishUserSessionResponse } from '@/lib/userSessionEstablish';
+import { forwardClientIpHeaders } from '@/lib/forwardClientIpHeaders';
 
 async function readNestError(res: Response): Promise<string | null> {
   try {
@@ -33,7 +34,11 @@ export async function POST(request: Request) {
   try {
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...forwardClientIpHeaders(request),
+      },
       body: JSON.stringify({
         emailOrPhone: normalizeLoginEmailOrPhone(emailOrPhone),
         password,

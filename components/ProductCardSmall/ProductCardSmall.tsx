@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useToggleLike } from '@/hooks/useToggleLike';
 import type { LikesBulkUiState } from '@/lib/likesBulkUi';
+import { PRODUCT_QA_SECTION_ID } from '@/lib/productQa/constants';
 import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
 import { LikeHeartInteract } from '@/components/LikeHeartInteract';
 import {
@@ -22,7 +23,8 @@ export interface ProductCardSmallProps {
   productId?: string;
   collections?: number;
   likes?: number;
-  comments?: number;
+  /** Публичные вопросы по товару (иконка → #product-qa). */
+  qaMessageCount?: number;
   /** Режим выбора в модалке: без перехода по ссылке, подсветка выбранного. */
   pickMode?: boolean;
   selected?: boolean;
@@ -47,7 +49,7 @@ export function ProductCardSmall({
   productId,
   collections = 0,
   likes = 0,
-  comments = 180,
+  qaMessageCount: qaMessageCountProp = 0,
   pickMode,
   selected,
   onPickToggle,
@@ -55,8 +57,10 @@ export function ProductCardSmall({
   likesInteractive = true,
   productLikesBulk,
 }: ProductCardSmallProps) {
+  const qaMessageCount = Math.max(0, qaMessageCountProp);
   const primarySrc = normalizeProductCardImageUrls(imageUrl, imageUrls)[0];
   const productHref = `/product/${encodeURIComponent(slug)}`;
+  const qaHref = `${productHref}#${PRODUCT_QA_SECTION_ID}`;
   const projectsCollectionsHref =
     productId && collections > 0
       ? `/projects?product=${encodeURIComponent(productId)}`
@@ -158,10 +162,26 @@ export function ProductCardSmall({
           </div>
         )}
         {heartBlock}
-        <div className={styles.interactItem}>
-          <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.interactIcon} />
-          <span className={styles.interactValue}>{comments}</span>
-        </div>
+        {pickMode ? (
+          <div className={styles.interactItem}>
+            <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.interactIcon} />
+            {qaMessageCount > 0 ? <span className={styles.interactValue}>{qaMessageCount}</span> : null}
+          </div>
+        ) : (
+          <Link
+            href={qaHref}
+            className={`${styles.interactItem} ${styles.interactItemLink}`}
+            prefetch={false}
+            aria-label={
+              qaMessageCount > 0
+                ? `Вопросы по товару, ${qaMessageCount}`
+                : 'Вопросы по товару'
+            }
+          >
+            <img src="/icons/message.svg" alt="" width={20} height={20} className={styles.interactIcon} />
+            {qaMessageCount > 0 ? <span className={styles.interactValue}>{qaMessageCount}</span> : null}
+          </Link>
+        )}
       </div>
     </div>
   );

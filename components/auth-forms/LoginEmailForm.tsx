@@ -9,6 +9,7 @@ import { navigateAfterUserAuth } from '@/lib/userAuthNavigation';
 import {
   formatDesignerInviteClaimError,
 } from '@/lib/designerInvites/loginHints';
+import { validateEmailRequired } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
 function LoginEmailFormInner() {
@@ -63,6 +64,14 @@ function LoginEmailFormInner() {
   }, [designerInviteToken, prefillEmailFromUrl]);
 
   const inviteEmailHint = designerInviteToken && inviteEmail ? inviteEmail : null;
+
+  const forgotPasswordHref = useMemo(() => {
+    const candidate = identity.trim().toLowerCase();
+    if (candidate.includes('@') && !validateEmailRequired(candidate)) {
+      return `/login/forgot-password?email=${encodeURIComponent(candidate)}`;
+    }
+    return '/login/forgot-password';
+  }, [identity]);
 
   return (
     <form
@@ -158,7 +167,7 @@ function LoginEmailFormInner() {
             Пароль обновлён. Войдите с новым паролем.
           </p>
         ) : null}
-        <Link href="/login/forgot-password" className={styles.authForgotLink}>
+        <Link href={forgotPasswordHref} className={styles.authForgotLink}>
           Забыли пароль
         </Link>
       </div>

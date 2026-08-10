@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import { forwardClientIpHeaders } from '@/lib/forwardClientIpHeaders';
 
 async function proxyPost(request: Request, backendPath: string): Promise<NextResponse> {
   const url = `${getServerApiBase()}/auth/${backendPath}`;
@@ -13,7 +14,11 @@ async function proxyPost(request: Request, backendPath: string): Promise<NextRes
   try {
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...forwardClientIpHeaders(request),
+      },
       body: body || '{}',
       cache: 'no-store',
     });
