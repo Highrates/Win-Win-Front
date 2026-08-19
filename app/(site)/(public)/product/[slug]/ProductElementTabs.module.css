@@ -78,6 +78,11 @@
   gap: 10px;
 }
 
+.tileItem {
+  position: relative;
+  min-width: 0;
+}
+
 .tile {
   appearance: none;
   display: flex;
@@ -111,15 +116,46 @@
   background: var(--color-bright-snow, #f5f7f8);
 }
 
-.tileThumb {
+.tileThumbWrap {
   display: block;
   width: 100%;
   aspect-ratio: 1 / 1;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.tileThumb {
+  display: block;
+  width: 100%;
+  height: 100%;
   border-radius: 2px;
   background-color: var(--color-bright-snow, #f5f7f8);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  transition: transform 180ms ease;
+}
+
+@media (hover: hover) and (min-width: 769px) {
+  .tile:hover .tileThumb {
+    transform: scale(1.08);
+  }
+}
+
+.hoverPreviewPortal {
+  position: fixed;
+  width: 240px;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 6px;
+  background-color: var(--color-bright-snow, #f5f7f8);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 12px 40px rgba(5, 24, 38, 0.18);
+  border: var(--account-hairline-width, 1px) solid var(--account-hairline-color, #e2e6e8);
+  pointer-events: none;
+  z-index: 200;
 }
 
 .tileMeta {

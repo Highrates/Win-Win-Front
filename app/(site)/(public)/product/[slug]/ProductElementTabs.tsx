@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FocusEvent } from 'react';
+import { createPortal } from 'react-dom';
 import type {
   PublicElementAvailabilityApi,
   PublicProductElementApi,
@@ -13,6 +14,12 @@ type Props = {
   /** Текущий выбор material-color по элементам (elementId → brandMaterialColorId). */
   selections: Record<string, string>;
   onSelect: (elementId: string, brandMaterialColorId: string) => void;
+};
+
+type HoverPreview = {
+  url: string;
+  top: number;
+  left: number;
 };
 
 type GroupedAvailabilities = {
@@ -48,7 +55,20 @@ export default function ProductElementTabs({ elements, selections, onSelect }: P
     [elements],
   );
   const [activeId, setActiveId] = useState<string>(() => visibleElements[0]?.id ?? '');
+  const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
   if (visibleElements.length === 0) return null;
+
+  const showHoverPreview = (buttonEl: HTMLButtonElement, url: string) => {
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(hover: hover) and (min-width: 769px)').matches) return;
+    const thumbEl = buttonEl.querySelector(`.${styles.tileThumbWrap}`) as HTMLElement | null;
+    const rect = (thumbEl ?? buttonEl).getBoundingClientRect();
+    setHoverPreview({
+      url,
+      top: rect.top + rect.height / 2,
+      left: rect.left + rect.width / 2,
+    });
+  };
 
   const active = visibleElements.find((el) => el.id === activeId) ?? visibleElements[0]!;
   const groups = groupByMaterial(active.availabilities);
@@ -83,19 +103,25 @@ export default function ProductElementTabs({ elements, selections, onSelect }: P
                 const imageUrl = resolveMediaUrlForClient(a.imageUrl);
                 const isSelected = activeSelectedBmcId === a.brandMaterialColorId;
                 return (
-                  <li key={a.brandMaterialColorId}>
+                  <li key={a.brandMaterialColorId} className={styles.tileItem}>
                     <button
                       type="button"
                       className={`${styles.tile} ${isSelected ? styles.tileSelected : ''}`}
                       aria-pressed={isSelected}
                       aria-label={`${g.materialName}: ${a.colorName}`}
                       onClick={() => onSelect(active.id, a.brandMaterialColorId)}
+                      onMouseEnter={imageUrl ? (e) => showHoverPreview(e.currentTarget, imageUrl) : undefined}
+                      onMouseLeave={() => setHoverPreview(null)}
+                      onFocus={imageUrl ? (e: FocusEvent<HTMLButtonElement>) => showHoverPreview(e.currentTarget, imageUrl) : undefined}
+                      onBlur={() => setHoverPreview(null)}
                     >
-                      <span
-                        className={styles.tileThumb}
-                        style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
-                        aria-hidden
-                      />
+                      <span className={styles.tileThumbWrap}>
+                        <span
+                          className={styles.tileThumb}
+                          style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
+                          aria-hidden
+                        />
+                      </span>
                       <span className={styles.tileMeta}>
                         <span className={styles.tileName}>{a.colorName}</span>
                       </span>
@@ -107,6 +133,21 @@ export default function ProductElementTabs({ elements, selections, onSelect }: P
           </section>
         ))}
       </div>
+
+      {hoverPreview && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className={styles.hoverPreviewPortal}
+              style={{
+                top: hoverPreview.top,
+                left: hoverPreview.left,
+                backgroundImage: `url("${hoverPreview.url}")`,
+              }}
+              aria-hidden
+            />,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

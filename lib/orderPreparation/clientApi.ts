@@ -1,4 +1,5 @@
 import { readUpstreamJsonErrorMessage } from '@/lib/readUpstreamJsonError';
+import { throwIfUserAuthRequired } from '@/lib/userAuthRequiredClient';
 import type { AddOrderPreparationLineBody, OrderPreparationDraftApi } from './types';
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -38,7 +39,8 @@ export async function addOrderPreparationLine(body: AddOrderPreparationLineBody)
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+  throwIfUserAuthRequired(res, 'Войдите в аккаунт, чтобы добавить товар в заказ');
+  if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
   return parseJson<OrderPreparationDraftApi>(res);
 }
 
@@ -52,7 +54,8 @@ export async function patchOrderPreparationLineQuantity(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity }),
   });
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+  throwIfUserAuthRequired(res, 'Войдите в аккаунт, чтобы изменить количество');
+  if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
   return parseJson<OrderPreparationDraftApi>(res);
 }
 
@@ -61,6 +64,7 @@ export async function deleteOrderPreparationLine(lineId: string): Promise<OrderP
     method: 'DELETE',
     credentials: 'same-origin',
   });
+  throwIfUserAuthRequired(res, 'Войдите в аккаунт, чтобы изменить заказ');
   if (!res.ok) throw new Error(await readUpstreamJsonErrorMessage(res));
   return parseJson<OrderPreparationDraftApi>(res);
 }

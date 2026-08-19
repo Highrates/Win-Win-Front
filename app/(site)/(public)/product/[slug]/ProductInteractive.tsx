@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
 import { ProductGallery } from '@/components/ProductGallery';
 import type {
@@ -15,6 +15,7 @@ import { useFlashBanner } from '@/hooks/useFlashBanner';
 import ProductElementTabs from './ProductElementTabs';
 import ProductModifications from './ProductModifications';
 import { ProductCreateProjectModalGate } from './ProductCreateProjectModalLazy';
+import { ProductPdpLoginModal } from './ProductPdpLoginModal';
 import { ProductPdpPurchaseBlock } from './ProductPdpPurchaseBlock';
 import { ProductPageLeftColumn } from './ProductPageLeftColumn';
 import { ProductQaChatPanel } from '@/components/ProductQa/ProductQaChatPanel';
@@ -22,6 +23,7 @@ import { useProductQaRealtime } from '@/hooks/useProductQaRealtime';
 import { useProductConfiguration } from './useProductConfiguration';
 import { useProductPdpActions } from './useProductPdpActions';
 import { PRODUCT_QA_SECTION_ID } from '@/lib/productQa/constants';
+import { invalidateUserClientCaches } from '@/lib/userSessionClient';
 import styles from './ProductInteractive.module.css';
 import purchaseStyles from './ProductPdpPurchaseBlock.module.css';
 import btnStyles from '@/components/Button/Button.module.css';
@@ -125,6 +127,7 @@ export default function ProductInteractive(props: Props) {
     effectiveModificationId,
     matchedVariant,
     configurationReadyForProject,
+    configurationHintMessage,
     priceText,
     galleryImages,
     toggleSelection,
@@ -145,6 +148,9 @@ export default function ProductInteractive(props: Props) {
   const { flash, pushError, dismiss } = useFlashBanner();
   const [projectAddedMessage, setProjectAddedMessage] = useState<string | null>(null);
   const [orderAddedMessage, setOrderAddedMessage] = useState<string | null>(null);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const pendingAfterLoginRef = useRef<(() => void) | null>(null);
+  const loginReturnPath = `/product/${productSlug}`;
 
   const pdpActions = useProductPdpActions({
     productId,
@@ -160,6 +166,10 @@ export default function ProductInteractive(props: Props) {
     priceMin,
     priceMax,
     pushError,
+    onLoginRequired: (retry) => {
+      pendingAfterLoginRef.current = retry;
+      setLoginModalOpen(true);
+    },
     onOrderAdded: () => setOrderAddedMessage('Товар добавлен в заказ'),
     onProjectAdded: (label) => setProjectAddedMessage(`Товар добавлен в проект: ${label}`),
   });
@@ -178,6 +188,10 @@ export default function ProductInteractive(props: Props) {
 
   const orderSplitProps = {
     configurationReadyForProject,
+    configurationHintMessage,
+    onConfigurationHint: () => {
+      if (configurationHintMessage) pushError(configurationHintMessage);
+    },
     projects: pdpActions.designerProjects,
     projectsLoading: pdpActions.designerProjectsLoading,
     projectActionBusy: pdpActions.projectLineSaving,
@@ -185,6 +199,8 @@ export default function ProductInteractive(props: Props) {
     onAddToExistingProject: pdpActions.handleAddToExistingProject,
     onCreateNewProject: pdpActions.handleCreateNewProject,
     onAddToOrder: pdpActions.handleAddToOrder,
+    orderQuantity: pdpActions.orderQuantity,
+    onOrderQuantityDelta: pdpActions.handleOrderQuantityDelta,
     onMenuOpenChange: (open: boolean) => {
       if (open) pdpActions.ensureProjectsLoaded();
     },
@@ -368,6 +384,22 @@ export default function ProductInteractive(props: Props) {
         onClose={pdpActions.closeProjectModal}
         onSaveError={pushError}
         onSaved={pdpActions.handleProjectModalSaved}
+      />
+
+      <ProductPdpLoginModal
+        open={loginModalOpen}
+        callbackUrl={loginReturnPath}
+        onClose={() => {
+          setLoginModalOpen(false);
+          pendingAfterLoginRef.current = null;
+        }}
+        onAuthenticated={() => {
+          invalidateUserClientCaches({ authenticated: true });
+          setLoginModalOpen(false);
+          const retry = pendingAfterLoginRef.current;
+          pendingAfterLoginRef.current = null;
+          retry?.();
+        }}
       />
     </>
   );

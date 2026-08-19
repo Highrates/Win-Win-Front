@@ -8,7 +8,12 @@ import {
   updateDesignerProject,
 } from '@/lib/designerProjects/clientApi';
 import { pdpDraftToLineSnapshot, savePayloadWithAppendedPdpLine } from '@/lib/designerProjects/payload';
-import { addOrderPreparationLine } from '@/lib/orderPreparation/clientApi';
+import {
+  getCachedIsAuthenticated,
+  invalidateUserClientCaches,
+} from '@/lib/userSessionClient';
+import { UserAuthRequiredError } from '@/lib/userAuthRequiredClient';
+import { addOrderPreparationLine, deleteOrderPreparationLine, patchOrderPreparationLineQuantity } from '@/lib/orderPreparation/clientApi';
 import { writePdpProjectDraft, type PdpProjectDraftPayload } from '@/lib/designerProjects/pdpDraft';
 import type {
   PublicProductElementApi,
@@ -31,6 +36,7 @@ type Params = {
   priceMin: number;
   priceMax: number;
   pushError: (message: string) => void;
+  onLoginRequired: (retry: () => void) => void;
   onOrderAdded: () => void;
   onProjectAdded: (projectLabel: string) => void;
 };
@@ -49,6 +55,7 @@ export function useProductPdpActions({
   priceMin,
   priceMax,
   pushError,
+  onLoginRequired,
   onOrderAdded,
   onProjectAdded,
 }: Params) {
@@ -58,6 +65,8 @@ export function useProductPdpActions({
   const projectsFetchStarted = useRef(false);
   const [projectLineSaving, setProjectLineSaving] = useState(false);
   const [orderLineSaving, setOrderLineSaving] = useState(false);
+  const [orderDraftLineId, setOrderDraftLineId] = useState<string | null>(null);
+  const [orderQuantity, setOrderQuantity] = useState<number | null>(null);
   const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
   const [pendingLineDraftForModal, setPendingLineDraftForModal] = useState<PdpProjectDraftPayload | null>(
     null,
@@ -122,13 +131,43 @@ export function useProductPdpActions({
     ensureProjectsLoaded();
   }, [createProjectModalOpen, ensureProjectsLoaded]);
 
+  async function requireAuth(retry: () => void): Promise<boolean> {
+    const authed = await getCachedIsAuthenticated();
+    if (authed) return true;
+    onLoginRequired(retry);
+    return false;
+  }
+
+  function handleAuthFailure(retry: () => void) {
+    invalidateUserClientCaches({ authenticated: false });
+    onLoginRequired(retry);
+  }
+
+  useEffect(() => {
+    setOrderDraftLineId(null);
+    setOrderQuantity(null);
+  }, [matchedVariant?.id, effectiveModificationId, selections]);
+
+  function findMatchingDraftLine(
+    draft: Awaited<ReturnType<typeof addOrderPreparationLine>>,
+    variantId: string | null | undefined,
+  ) {
+    const matches = draft.lines.filter(
+      (line) =>
+        line.productId === productId &&
+        (line.productVariantId ?? null) === (variantId ?? null),
+    );
+    return matches[matches.length - 1] ?? null;
+  }
+
   async function handleAddToOrder() {
     if (!configurationReadyForProject || orderLineSaving) return;
+    if (!(await requireAuth(() => void handleAddToOrder()))) return;
     const draft = buildProjectLineDraft();
     if (!draft) return;
     setOrderLineSaving(true);
     try {
-      await addOrderPreparationLine({
+      const nextDraft = await addOrderPreparationLine({
         productId: draft.productId,
         productVariantId: draft.variantId,
         quantity: 1,
@@ -139,9 +178,62 @@ export function useProductPdpActions({
           productName: draft.productName,
         },
       });
+      const line = findMatchingDraftLine(nextDraft, draft.variantId);
+      if (line) {
+        setOrderDraftLineId(line.id);
+        setOrderQuantity(line.quantity);
+      }
       onOrderAdded();
     } catch (e) {
+      if (e instanceof UserAuthRequiredError) {
+        handleAuthFailure(() => void handleAddToOrder());
+        return;
+      }
       pushError(e instanceof Error ? e.message : 'Не удалось добавить товар в заказ. Попробуйте снова.');
+    } finally {
+      setOrderLineSaving(false);
+    }
+  }
+
+  async function handleOrderQuantityDelta(delta: number) {
+    if (!orderDraftLineId || orderLineSaving || !Number.isFinite(delta) || delta === 0) return;
+    if (!(await requireAuth(() => void handleOrderQuantityDelta(delta)))) return;
+    const currentQty = orderQuantity ?? 1;
+    if (delta < 0 && currentQty <= 1) {
+      setOrderLineSaving(true);
+      try {
+        await deleteOrderPreparationLine(orderDraftLineId);
+        setOrderDraftLineId(null);
+        setOrderQuantity(null);
+      } catch (e) {
+        if (e instanceof UserAuthRequiredError) {
+          handleAuthFailure(() => void handleOrderQuantityDelta(delta));
+          return;
+        }
+        pushError(e instanceof Error ? e.message : 'Не удалось обновить количество');
+      } finally {
+        setOrderLineSaving(false);
+      }
+      return;
+    }
+    const nextQty = Math.max(1, currentQty + delta);
+    if (nextQty === currentQty) return;
+    setOrderLineSaving(true);
+    try {
+      const nextDraft = await patchOrderPreparationLineQuantity(orderDraftLineId, nextQty);
+      const line = nextDraft.lines.find((l) => l.id === orderDraftLineId);
+      if (line) {
+        setOrderQuantity(line.quantity);
+      } else {
+        setOrderDraftLineId(null);
+        setOrderQuantity(null);
+      }
+    } catch (e) {
+      if (e instanceof UserAuthRequiredError) {
+        handleAuthFailure(() => void handleOrderQuantityDelta(delta));
+        return;
+      }
+      pushError(e instanceof Error ? e.message : 'Не удалось обновить количество');
     } finally {
       setOrderLineSaving(false);
     }
@@ -149,6 +241,7 @@ export function useProductPdpActions({
 
   async function handleAddToExistingProject(projectId: string) {
     if (!configurationReadyForProject || projectLineSaving) return;
+    if (!(await requireAuth(() => void handleAddToExistingProject(projectId)))) return;
     const draft = buildProjectLineDraft();
     if (!draft) return;
     setProjectLineSaving(true);
@@ -161,6 +254,10 @@ export function useProductPdpActions({
         void refreshDesignerProjects();
       }
     } catch (e) {
+      if (e instanceof UserAuthRequiredError) {
+        handleAuthFailure(() => void handleAddToExistingProject(projectId));
+        return;
+      }
       pushError(
         e instanceof Error ? e.message : 'Не удалось добавить товар в проект. Попробуйте снова.',
       );
@@ -169,8 +266,9 @@ export function useProductPdpActions({
     }
   }
 
-  function handleCreateNewProject() {
+  async function handleCreateNewProject() {
     if (!configurationReadyForProject) return;
+    if (!(await requireAuth(() => void handleCreateNewProject()))) return;
     const draft = buildProjectLineDraft();
     if (!draft) return;
     writePdpProjectDraft(draft);
@@ -205,6 +303,8 @@ export function useProductPdpActions({
     pendingLineDraftForModal,
     ensureProjectsLoaded,
     handleAddToOrder,
+    handleOrderQuantityDelta,
+    orderQuantity,
     handleAddToExistingProject,
     handleCreateNewProject,
     handleProjectModalSaved,

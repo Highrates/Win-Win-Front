@@ -71,6 +71,31 @@ export function isConfigurationReadyForProject(
   return required.every((el) => Boolean(selections[el.id]));
 }
 
+/** Что пользователь ещё не выбрал (для подсказки на PDP). */
+export function getPdpConfigurationMissingLabels(params: {
+  modifications: { id: string; name: string }[];
+  modificationId: string | null;
+  elements: PublicProductElementApi[];
+  selections: Record<string, string>;
+}): string[] {
+  const missing: string[] = [];
+  if (params.modifications.length > 1 && !params.modificationId) {
+    missing.push('модификацию');
+  }
+  for (const el of params.elements) {
+    if (el.availabilities.length === 0) continue;
+    if (!params.selections[el.id]) {
+      missing.push(`материал «${el.name}»`);
+    }
+  }
+  return missing;
+}
+
+export function formatPdpConfigurationHint(missing: string[]): string {
+  if (missing.length === 0) return '';
+  return `Для добавления выберите: ${missing.join(', ')}.`;
+}
+
 export function resolvePdpPriceText(params: {
   modificationId: string | null;
   matchedVariant: PublicProductVariantApi | null;

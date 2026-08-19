@@ -12,7 +12,14 @@ import {
 import { validateEmailRequired } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
-function LoginEmailFormInner() {
+export type LoginEmailFormProps = {
+  /** Переопределяет callbackUrl из query (модалка на PDP и т.п.). */
+  callbackUrl?: string | null;
+  /** После успешного входа без навигации (остаёмся на странице). */
+  onAuthenticated?: () => void;
+};
+
+function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: LoginEmailFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const designerInviteToken = (searchParams.get('designerInvite') ?? '').trim() || undefined;
@@ -24,7 +31,7 @@ function LoginEmailFormInner() {
     () => (searchParams.get('designerInviteError') ?? '').trim() || '',
     [searchParams],
   );
-  const callbackUrl = searchParams.get('callbackUrl');
+  const callbackUrl = callbackUrlProp ?? searchParams.get('callbackUrl');
   const resetOk = searchParams.get('reset') === 'ok';
   const [inviteEmail, setInviteEmail] = useState(prefillEmailFromUrl);
   const [identity, setIdentity] = useState(prefillEmailFromUrl);
@@ -109,6 +116,11 @@ function LoginEmailFormInner() {
             return;
           }
 
+          if (onAuthenticated) {
+            onAuthenticated();
+            return;
+          }
+
           const nav = await navigateAfterUserAuth(router, {
             callbackUrl,
             user: data.user,
@@ -179,10 +191,10 @@ function LoginEmailFormInner() {
   );
 }
 
-export function LoginEmailForm() {
+export function LoginEmailForm(props: LoginEmailFormProps = {}) {
   return (
     <Suspense fallback={<p className={styles.authOtpHint}>Загрузка…</p>}>
-      <LoginEmailFormInner />
+      <LoginEmailFormInner {...props} />
     </Suspense>
   );
 }

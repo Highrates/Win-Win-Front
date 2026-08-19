@@ -9,6 +9,8 @@ import type {
 import {
   buildInitialSelections,
   findExactVariant,
+  formatPdpConfigurationHint,
+  getPdpConfigurationMissingLabels,
   getSoleModificationId,
   isConfigurationReadyForProject,
   resolvePdpGalleryImages,
@@ -57,6 +59,22 @@ export function useProductConfiguration({
     [elements, effectiveModificationId, selections],
   );
 
+  const configurationMissingLabels = useMemo(
+    () =>
+      getPdpConfigurationMissingLabels({
+        modifications,
+        modificationId,
+        elements,
+        selections,
+      }),
+    [modifications, modificationId, elements, selections],
+  );
+
+  const configurationHintMessage = useMemo(
+    () => formatPdpConfigurationHint(configurationMissingLabels),
+    [configurationMissingLabels],
+  );
+
   const priceText = useMemo(
     () =>
       resolvePdpPriceText({
@@ -100,6 +118,8 @@ export function useProductConfiguration({
     effectiveModificationId,
     matchedVariant,
     configurationReadyForProject,
+    configurationMissingLabels,
+    configurationHintMessage,
     priceText,
     galleryImages,
     toggleSelection,

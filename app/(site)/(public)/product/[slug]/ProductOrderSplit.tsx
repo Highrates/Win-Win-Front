@@ -9,6 +9,8 @@ export type ProductOrderProjectOption = { id: string; name: string };
 
 type ProductOrderSplitProps = {
   configurationReadyForProject: boolean;
+  configurationHintMessage: string;
+  onConfigurationHint: () => void;
   projects: ProductOrderProjectOption[];
   projectsLoading: boolean;
   projectActionBusy: boolean;
@@ -16,6 +18,9 @@ type ProductOrderSplitProps = {
   onAddToExistingProject: (projectId: string) => void | Promise<void>;
   onCreateNewProject: () => void;
   onAddToOrder: () => void | Promise<void>;
+  /** После добавления в заказ — количество и ± (null = кнопка «Добавить к заказу»). */
+  orderQuantity?: number | null;
+  onOrderQuantityDelta?: (delta: number) => void | Promise<void>;
   /** Lazy-load списка проектов при первом открытии меню. */
   onMenuOpenChange?: (open: boolean) => void;
   /** Компактный вид в mobile sticky bar. */
@@ -26,6 +31,8 @@ type ProductOrderSplitProps = {
 
 export function ProductOrderSplit({
   configurationReadyForProject,
+  configurationHintMessage,
+  onConfigurationHint,
   projects,
   projectsLoading,
   projectActionBusy,
@@ -33,6 +40,8 @@ export function ProductOrderSplit({
   onAddToExistingProject,
   onCreateNewProject,
   onAddToOrder,
+  orderQuantity = null,
+  onOrderQuantityDelta,
   onMenuOpenChange,
   inStickyBar = false,
   menuOpensAbove = false,
@@ -63,18 +72,66 @@ export function ProductOrderSplit({
 
   const rootClass = [styles.root, inStickyBar ? styles.inStickyBar : ''].filter(Boolean).join(' ');
   const menuClass = [styles.menu, menuOpensAbove ? styles.menuOpensAbove : ''].filter(Boolean).join(' ');
+  const showOrderQty = orderQuantity != null && orderQuantity > 0;
+
+  const requestConfigurationHint = () => {
+    if (configurationHintMessage) onConfigurationHint();
+  };
+
+  const handleAddToOrderClick = () => {
+    if (!configurationReadyForProject) {
+      requestConfigurationHint();
+      return;
+    }
+    void onAddToOrder();
+  };
+
+  const handleProjectMenuToggle = () => {
+    if (!menuOpen && !configurationReadyForProject) {
+      requestConfigurationHint();
+    }
+    setMenuOpen((o) => !o);
+  };
 
   return (
     <div ref={wrapRef} className={rootClass}>
-      <Button
-        variant="primary"
-        type="button"
-        className={styles.primaryBtn}
-        disabled={!configurationReadyForProject || orderActionBusy}
-        onClick={() => void onAddToOrder()}
-      >
-        Добавить к заказу
-      </Button>
+      {showOrderQty ? (
+        <div className={styles.qtyPrimary} aria-live="polite">
+          <button
+            type="button"
+            className={styles.qtyBtn}
+            aria-label="Уменьшить количество"
+            disabled={orderActionBusy || !onOrderQuantityDelta}
+            onClick={() => void onOrderQuantityDelta?.(-1)}
+          >
+            −
+          </button>
+          <span className={styles.qtyValue}>
+            {orderQuantity}
+            {'\u00A0'}
+            шт
+          </span>
+          <button
+            type="button"
+            className={styles.qtyBtn}
+            aria-label="Увеличить количество"
+            disabled={orderActionBusy || !onOrderQuantityDelta}
+            onClick={() => void onOrderQuantityDelta?.(1)}
+          >
+            +
+          </button>
+        </div>
+      ) : (
+        <Button
+          variant="primary"
+          type="button"
+          className={styles.primaryBtn}
+          disabled={orderActionBusy}
+          onClick={handleAddToOrderClick}
+        >
+          Добавить к заказу
+        </Button>
+      )}
       <div className={styles.divider} aria-hidden />
       <div className={styles.chevronWrap}>
         <button
@@ -83,7 +140,7 @@ export function ProductOrderSplit({
           aria-label="Добавить в проект"
           aria-expanded={menuOpen}
           aria-haspopup="menu"
-          onClick={() => setMenuOpen((o) => !o)}
+          onClick={handleProjectMenuToggle}
         >
           <span className={styles.chevronIcon} aria-hidden>
             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="7" viewBox="0 0 11 7" fill="none">
@@ -94,7 +151,9 @@ export function ProductOrderSplit({
         {menuOpen ? (
           <div className={menuClass} role="menu">
             {!configurationReadyForProject ? (
-              <p className={styles.menuMuted}>Выберите модификацию и материал-цвет по каждому элементу.</p>
+              <p className={styles.menuMuted}>
+                {configurationHintMessage || 'Выберите модификацию и материал-цвет по каждому элементу.'}
+              </p>
             ) : (
               <div className={styles.menuInner}>
                 <div className={styles.menuCol}>

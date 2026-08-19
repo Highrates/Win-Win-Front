@@ -1,20 +1,85 @@
 /* Сплит «К заказу» + меню проектов */
 
 .root {
+  --order-split-segment-height: 44px;
   display: inline-flex;
   align-self: stretch;
   align-items: stretch;
   position: relative;
   border-radius: 100px;
   overflow: visible;
+  min-height: var(--order-split-segment-height);
 }
 
 .primaryBtn {
   border-radius: 100px 0 0 100px !important;
   flex: 1 1 auto;
   min-width: 0;
+  min-height: var(--order-split-segment-height) !important;
+  height: var(--order-split-segment-height) !important;
   align-self: stretch !important;
-  height: auto;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  box-sizing: border-box;
+}
+
+.qtyPrimary {
+  display: inline-flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--order-split-segment-height);
+  height: var(--order-split-segment-height);
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 12px 20px;
+  box-sizing: border-box;
+  background: var(--color-ink-black);
+  color: var(--color-white);
+  border-radius: 100px 0 0 100px;
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.qtyBtn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--text-body);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.qtyBtn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.qtyBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.qtyBtn:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.qtyValue {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  white-space: nowrap;
+  min-width: 3.5ch;
+  text-align: center;
 }
 
 .divider {
@@ -38,6 +103,8 @@
   align-items: center;
   justify-content: center;
   width: 44px;
+  min-height: var(--order-split-segment-height);
+  height: var(--order-split-segment-height);
   padding: 0;
   margin: 0;
   border: none;
@@ -160,9 +227,25 @@
     padding-left: 14px;
     padding-right: 14px;
     font-size: var(--text-caption);
+    min-height: var(--order-split-segment-height) !important;
+    height: var(--order-split-segment-height) !important;
+  }
+
+  .inStickyBar .qtyPrimary {
+    gap: 14px;
+    padding: 12px 14px;
+    font-size: var(--text-caption);
+    min-height: var(--order-split-segment-height);
+    height: var(--order-split-segment-height);
+  }
+
+  .inStickyBar .qtyValue {
+    font-size: var(--text-caption);
   }
 
   .inStickyBar .chevronBtn {
     width: 40px;
+    min-height: var(--order-split-segment-height);
+    height: var(--order-split-segment-height);
   }
 }

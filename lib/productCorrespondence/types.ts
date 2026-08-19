@@ -24,7 +24,7 @@ export type ProductCorrespondenceMessage = {
 };
 
 export type ProductCorrespondenceMessagesResponse = {
-  correspondenceId: string;
+  correspondenceId: string | null;
   productId: string;
   customerUserId: string;
   messages: ProductCorrespondenceMessage[];
