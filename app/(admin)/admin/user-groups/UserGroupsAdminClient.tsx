@@ -42,7 +42,7 @@ export function UserGroupsAdminClient() {
   const error = mutationError ?? loadError;
   const selected = groups.find((g) => g.id === selectedId) ?? null;
   const memberUserIds = useMemo(() => new Set(members.map((m) => m.userId)), [members]);
-  /** Основной профиль — для пользователей без группы; в селекте группы не показываем. */
+  /** Основной профиль ценообразования — для пользователей без группы; в селекте группы не показываем (null = стандарт). */
   const groupPricingProfiles = useMemo(
     () => pricingProfiles.filter((p) => !p.isDefault),
     [pricingProfiles],
@@ -51,22 +51,11 @@ export function UserGroupsAdminClient() {
     () => pricingProfiles.find((p) => p.isDefault)?.id ?? null,
     [pricingProfiles],
   );
-  const groupReferralProfiles = useMemo(
-    () => referralProfiles.filter((p) => !p.isDefault),
-    [referralProfiles],
-  );
-  const groupBonusProfiles = useMemo(
-    () => bonusProfiles.filter((p) => !p.isDefault),
-    [bonusProfiles],
-  );
-  const defaultReferralProfileId = useMemo(
-    () => referralProfiles.find((p) => p.isDefault)?.id ?? null,
-    [referralProfiles],
-  );
-  const defaultBonusProfileId = useMemo(
-    () => bonusProfiles.find((p) => p.isDefault)?.id ?? null,
-    [bonusProfiles],
-  );
+
+  function profileOptionLabel(name: string, id: string, isDefault: boolean): string {
+    const base = name.trim() || id;
+    return isDefault ? `${base} (${t.profilePrimarySuffix})` : base;
+  }
 
   const loadGroups = useCallback(async () => {
     const rows = await adminBackendJson<UserGroupRow[]>('settings/admin/user-groups');
@@ -122,37 +111,19 @@ export function UserGroupsAdminClient() {
     }
     setName(selected.name);
     setLabel(selected.label);
-    const refId = selected.referralProgramProfileId;
-    setReferralProfileId(
-      refId && referralProfiles.some((p) => p.id === refId && p.isDefault)
-        ? (groupReferralProfiles[0]?.id ?? '')
-        : refId,
-    );
-    const bonusId = selected.designerBonusProfileId;
-    setBonusProfileId(
-      bonusId && bonusProfiles.some((p) => p.id === bonusId && p.isDefault)
-        ? (groupBonusProfiles[0]?.id ?? '')
-        : bonusId,
-    );
+    setReferralProfileId(selected.referralProgramProfileId);
+    setBonusProfileId(selected.designerBonusProfileId);
     const pid = selected.pricingProfileId ?? '';
     setPricingProfileId(
       pid && pricingProfiles.some((p) => p.id === pid && p.isDefault) ? '' : pid,
     );
     setMemberPickerOpen(false);
     void loadMembers(selected.id);
-  }, [
-    selected,
-    loadMembers,
-    pricingProfiles,
-    referralProfiles,
-    bonusProfiles,
-    groupReferralProfiles,
-    groupBonusProfiles,
-  ]);
+  }, [selected, loadMembers, pricingProfiles]);
 
   async function createGroup() {
-    const ref = groupReferralProfiles[0];
-    const bonus = groupBonusProfiles[0];
+    const ref = referralProfiles.find((p) => !p.isDefault) ?? referralProfiles[0];
+    const bonus = bonusProfiles.find((p) => !p.isDefault) ?? bonusProfiles[0];
     if (!ref || !bonus) {
       setMutationError(t.errCreateProfiles);
       return;
@@ -181,13 +152,6 @@ export function UserGroupsAdminClient() {
   async function saveGroup() {
     if (!selected) return;
     if (!referralProfileId || !bonusProfileId) {
-      setMutationError(t.errPickProfiles);
-      return;
-    }
-    if (
-      referralProfileId === defaultReferralProfileId ||
-      bonusProfileId === defaultBonusProfileId
-    ) {
       setMutationError(t.errPickProfiles);
       return;
     }
@@ -346,9 +310,9 @@ export function UserGroupsAdminClient() {
                   value={referralProfileId}
                   onChange={(e) => setReferralProfileId(e.target.value)}
                 >
-                  {groupReferralProfiles.map((p) => (
+                  {referralProfiles.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name.trim() || p.id}
+                      {profileOptionLabel(p.name, p.id, p.isDefault)}
                     </option>
                   ))}
                 </AdminSelect>
@@ -358,9 +322,9 @@ export function UserGroupsAdminClient() {
                   value={bonusProfileId}
                   onChange={(e) => setBonusProfileId(e.target.value)}
                 >
-                  {groupBonusProfiles.map((p) => (
+                  {bonusProfiles.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name.trim() || p.id}
+                      {profileOptionLabel(p.name, p.id, p.isDefault)}
                     </option>
                   ))}
                 </AdminSelect>

@@ -17,13 +17,14 @@ type Props = {
 /**
  * Селектор модификаций. Переключение — клиентское (toggle: повторный клик снимает выбор).
  * Для SEO/deep-linking на бэке читаем `?m=`; без query модификация не выбрана.
+ * Одна модификация тоже показывается (раньше скрывалась при length ≤ 1).
  */
 export default function ProductModifications({
   modifications,
   selectedModificationId,
   onSelect,
 }: Props) {
-  if (modifications.length <= 1) return null;
+  if (modifications.length === 0) return null;
   return (
     <div className={styles.select}>
       <span className={styles.title}>Модификация</span>

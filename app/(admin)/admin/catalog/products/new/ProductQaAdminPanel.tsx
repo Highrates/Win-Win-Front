@@ -529,15 +529,17 @@ export function ProductQaAdminPanel({
         </>
       ) : null}
 
-      <ProductQaTopicTabs
-        topics={topics}
-        activeTopicSlug={activeTopicSlug}
-        onSelect={setActiveTopicSlug}
-        idPrefix="admin-product-qa"
-        variant="admin"
-        tabListLabel={s.topicsLabel}
-        formatTabAriaLabel={(t) => s.formatTopicTabAriaLabel(t.title, t.messageCount)}
-      />
+      <div className={isQueue ? qaStyles.queueTopicTabs : undefined}>
+        <ProductQaTopicTabs
+          topics={topics}
+          activeTopicSlug={activeTopicSlug}
+          onSelect={setActiveTopicSlug}
+          idPrefix="admin-product-qa"
+          variant="admin"
+          tabListLabel={s.topicsLabel}
+          formatTabAriaLabel={(t) => s.formatTopicTabAriaLabel(t.title, t.messageCount)}
+        />
+      </div>
 
       {activeTopic && !activeTopic.isDefault && !isQueue ? (
         <div className={qaStyles.topicEditWrap}>
@@ -622,7 +624,13 @@ export function ProductQaAdminPanel({
         </div>
       ) : null}
 
-      <div id={panelA11y.panelId} role="tabpanel" aria-labelledby={activeTabId} tabIndex={0}>
+      <div
+        id={panelA11y.panelId}
+        role="tabpanel"
+        aria-labelledby={activeTabId}
+        tabIndex={0}
+        className={isQueue ? qaStyles.queueChatRegion : undefined}
+      >
         <div className={qaStyles.chatShell}>
           <ChatWindow
             variant="embedded"

@@ -302,7 +302,7 @@ export default function ProductInteractive(props: Props) {
               name: m.name,
               modificationSlug: m.modificationSlug,
             }))}
-            selectedModificationId={modificationId}
+            selectedModificationId={effectiveModificationId}
             onSelect={toggleModification}
           />
 

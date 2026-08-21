@@ -147,6 +147,10 @@
   box-sizing: border-box;
 }
 
+.headerCompact {
+  display: none;
+}
+
 .headerMain {
   flex: 1;
   min-height: 0;
@@ -693,56 +697,28 @@ a.docChip:hover {
   box-sizing: border-box;
 }
 
+.pendingOutgoingImageChip {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 8px 4px 4px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid color-mix(in srgb, var(--color-black) 8%, transparent);
+  box-sizing: border-box;
+}
+
 .pendingOutgoingThumbWrap {
   flex-shrink: 0;
   position: relative;
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.06);
   border: 1px solid color-mix(in srgb, var(--color-black) 10%, transparent);
-}
-
-.pendingOutgoingThumbWrap:hover .pendingOutgoingRemoveBtn,
-.pendingOutgoingRemoveBtn:focus-visible {
-  opacity: 1;
-}
-
-.pendingOutgoingRemoveBtn {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  z-index: 3;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  cursor: pointer;
-  opacity: 0.9;
-  transition: opacity 0.12s ease, background 0.12s ease;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .pendingOutgoingRemoveBtn {
-    opacity: 0;
-  }
-}
-
-.pendingOutgoingRemoveBtn:hover {
-  background: rgba(0, 0, 0, 0.72);
-}
-
-.pendingOutgoingRemoveBtn:focus-visible {
-  outline: 2px solid var(--color-blue);
-  outline-offset: 1px;
 }
 
 .pendingOutgoingRemoveIcon {
@@ -757,6 +733,8 @@ a.docChip:hover {
   height: 100%;
   object-fit: cover;
   display: block;
+  pointer-events: none;
+  user-select: none;
 }
 
 .pendingOutgoingUploadingOverlay {
@@ -805,6 +783,31 @@ a.docChip:hover {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid color-mix(in srgb, var(--color-black) 8%, transparent);
   box-sizing: border-box;
+}
+
+.pendingOutgoingDocRemoveBtn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0 0 0 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--color-ink-black);
+  cursor: pointer;
+}
+
+.pendingOutgoingDocRemoveBtn:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.pendingOutgoingDocRemoveBtn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 1px;
 }
 
 .pendingOutgoingDocName {

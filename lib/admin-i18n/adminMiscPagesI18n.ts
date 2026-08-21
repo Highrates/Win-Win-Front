@@ -320,6 +320,7 @@ export function adminUserGroupsPage(locale: AdminLocale) {
     fieldLabel: pick(locale, 'Лейбл (бейдж в ЛК)', '标签（账户徽章）'),
     fieldReferralProfile: pick(locale, 'Профиль реферальной программы', '推荐计划配置'),
     fieldBonusProfile: pick(locale, 'Профиль бонуса дизайнера', '设计师奖金配置'),
+    profilePrimarySuffix: pick(locale, 'основной', '主要'),
     fieldPricingProfile: pick(locale, 'Профиль ценообразования', '定价配置'),
     pricingProfileNone: pick(locale, 'Не задан (стандартные цены)', '未设置（标准价格）'),
     pricingProfileHint: pick(

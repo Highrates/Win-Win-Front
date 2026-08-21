@@ -78,23 +78,23 @@ export function useProductConfiguration({
   const priceText = useMemo(
     () =>
       resolvePdpPriceText({
-        modificationId,
+        modificationId: effectiveModificationId,
         matchedVariant,
         priceMin,
         priceMax,
       }),
-    [modificationId, matchedVariant, priceMin, priceMax],
+    [effectiveModificationId, matchedVariant, priceMin, priceMax],
   );
 
   const galleryImages = useMemo(
     () =>
       resolvePdpGalleryImages({
-        modificationId,
+        modificationId: effectiveModificationId,
         matchedVariant,
         variantImagesMap,
         productImages,
       }),
-    [modificationId, matchedVariant, variantImagesMap, productImages],
+    [effectiveModificationId, matchedVariant, variantImagesMap, productImages],
   );
 
   function toggleSelection(elementId: string, brandMaterialColorId: string) {
@@ -109,6 +109,11 @@ export function useProductConfiguration({
   }
 
   function toggleModification(id: string) {
+    // Единственную модификацию нельзя снять — она всегда активна.
+    if (modifications.length === 1) {
+      setModificationId(id);
+      return;
+    }
     setModificationId((cur) => (cur === id ? null : id));
   }
 

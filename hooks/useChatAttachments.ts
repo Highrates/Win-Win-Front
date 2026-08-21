@@ -37,7 +37,10 @@ type UseChatAttachmentsOpts = {
 };
 
 function guessAttachmentKind(file: File): 'IMAGE' | 'FILE' {
-  return file.type.startsWith('image/') ? 'IMAGE' : 'FILE';
+  if (file.type.startsWith('image/')) return 'IMAGE';
+  const name = file.name.toLowerCase();
+  if (/\.(jpe?g|png|gif|webp|heic|heif|avif|bmp|svg)$/.test(name)) return 'IMAGE';
+  return 'FILE';
 }
 
 export function useChatAttachments(opts: UseChatAttachmentsOpts) {

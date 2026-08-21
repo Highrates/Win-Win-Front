@@ -125,11 +125,36 @@
 .queuePanelRoot .correspondenceLayout {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+  margin-top: 0;
+}
+
+.queueTopicTabs,
+.queuePanelRoot .pairPublishRow {
+  flex-shrink: 0;
+}
+
+.queueChatRegion {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.queuePanelRoot .threadList {
+  max-height: none;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .queuePanelRoot .chatShell {
+  flex: 1;
   min-height: 0;
-  height: 100%;
+  height: auto;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .filterRow {

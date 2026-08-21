@@ -436,6 +436,7 @@ export function ChatWindow({
     attachPickerDisabled !== undefined ? attachPickerDisabled : composerDisabled;
 
   const fillEmbedded = embedded && embeddedLayout === 'fill';
+  const compactHeader = !title.trim() && hideCloseButton;
 
   const panelSection = (
     <section
@@ -446,7 +447,7 @@ export function ChatWindow({
       aria-labelledby={titleId}
     >
       <div className={styles.panelInner}>
-        <header className={styles.header}>
+        <header className={`${styles.header} ${compactHeader ? styles.headerCompact : ''}`}>
           <div className={styles.headerMain}>
             <h2
               id={titleId}
@@ -561,50 +562,70 @@ export function ChatWindow({
         <footer className={styles.footer}>
           {pendingOutgoing.length > 0 ? (
             <div className={styles.pendingOutgoingStrip} aria-label="Вложения к отправке">
-              {pendingOutgoing.map((a) =>
-                a.kind === 'IMAGE' && (a.imageSrc || a.uploading) ? (
-                  <div key={a.clientKey} className={styles.pendingOutgoingThumbWrap}>
-                    {a.imageSrc ? (
-                      <img
-                        className={styles.pendingOutgoingThumb}
-                        src={a.imageSrc}
-                        alt=""
-                        width={56}
-                        height={56}
-                      />
-                    ) : null}
-                    {a.uploading ? (
-                      <div className={styles.pendingOutgoingUploadingOverlay} aria-hidden>
-                        <span className={styles.pendingOutgoingSpinner} />
+              {pendingOutgoing.map((a) => {
+                const removeBtn =
+                  onRemovePendingAttachment ? (
+                    <button
+                      type="button"
+                      className={styles.pendingOutgoingDocRemoveBtn}
+                      aria-label={
+                        a.kind === 'IMAGE' ? 'Убрать изображение' : `Убрать файл ${a.filename}`
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onRemovePendingAttachment(a.clientKey);
+                      }}
+                    >
+                      <span className={styles.pendingOutgoingRemoveIcon} aria-hidden>
+                        ×
+                      </span>
+                    </button>
+                  ) : null;
+
+                if (a.kind === 'IMAGE' && (a.imageSrc || a.uploading)) {
+                  return (
+                    <div
+                      key={a.clientKey}
+                      className={styles.pendingOutgoingImageChip}
+                      title={a.filename}
+                    >
+                      <div className={styles.pendingOutgoingThumbWrap} aria-hidden>
+                        {a.imageSrc ? (
+                          <img
+                            className={styles.pendingOutgoingThumb}
+                            src={a.imageSrc}
+                            alt=""
+                            width={40}
+                            height={40}
+                          />
+                        ) : null}
+                        {a.uploading ? (
+                          <div className={styles.pendingOutgoingUploadingOverlay}>
+                            <span className={styles.pendingOutgoingSpinner} />
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
-                    {!a.uploading && onRemovePendingAttachment ? (
-                      <button
-                        type="button"
-                        className={styles.pendingOutgoingRemoveBtn}
-                        aria-label="Убрать изображение"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onRemovePendingAttachment(a.clientKey);
-                        }}
-                      >
-                        <span className={styles.pendingOutgoingRemoveIcon} aria-hidden>
-                          ×
-                        </span>
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
+                      <span className={styles.pendingOutgoingDocName}>{a.filename}</span>
+                      {a.uploading ? (
+                        <span className={styles.pendingOutgoingDocSpinner} aria-label="Загрузка" />
+                      ) : null}
+                      {removeBtn}
+                    </div>
+                  );
+                }
+
+                return (
                   <div key={a.clientKey} className={styles.pendingOutgoingDoc} title={a.filename}>
                     <img className={styles.docChipIcon} src="/icons/doc.svg" alt="" width={16} height={16} />
                     <span className={styles.pendingOutgoingDocName}>{a.filename}</span>
                     {a.uploading ? (
                       <span className={styles.pendingOutgoingDocSpinner} aria-label="Загрузка" />
                     ) : null}
+                    {removeBtn}
                   </div>
-                ),
-              )}
+                );
+              })}
             </div>
           ) : null}
           {pendingAttachmentsHint ? (
