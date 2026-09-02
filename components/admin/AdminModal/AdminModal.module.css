@@ -29,6 +29,16 @@
   --admin-modal-max-width: 960px;
 }
 
+.panelAssistant {
+  --admin-modal-max-width: 1120px;
+  height: min(88vh, 820px);
+  max-height: min(88vh, 820px);
+}
+
+.panelAssistant .body {
+  overflow: hidden;
+}
+
 .panelHead {
   flex-shrink: 0;
   display: flex;

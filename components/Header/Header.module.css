@@ -668,6 +668,22 @@
   height: 20px;
 }
 
+.accountTextLink {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.accountTextLink:hover {
+  opacity: 0.8;
+}
+
+.headerMain .accountTextLink {
+  color: var(--color-white, #fff);
+}
+
 @media (max-width: 768px) {
   .rightNav {
     gap: 28px;

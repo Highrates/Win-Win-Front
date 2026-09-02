@@ -8,6 +8,7 @@ import { AuthPageShell } from '@/components/AuthPageShell';
 import { Button } from '@/components/Button';
 import { PhoneField } from '@/components/PhoneField';
 import { TextField } from '@/components/TextField';
+import { TurnstileWidget } from '@/components/TurnstileWidget/TurnstileWidget';
 import {
   registerComplete,
   registerEmailStart,
@@ -20,7 +21,8 @@ import {
   sanitizeCallbackUrl,
 } from '@/lib/authRedirect';
 import { invalidateUserClientCaches } from '@/lib/userSessionClient';
-import { validateEmailRequired, validateE164Phone } from '@/lib/validation';
+import { isTurnstileRequired } from '@/lib/turnstile';
+import { validateEmailRequired, validateE164Phone, validatePassword } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 import flowStyles from './RegisterFlow.module.css';
 
@@ -82,6 +84,9 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const turnstileRequired = isTurnstileRequired();
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   useEffect(() => {
     if (channel === 'email' && prefillEmail) setEmail(prefillEmail);
@@ -112,6 +117,11 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
       return;
     }
 
+    if (turnstileRequired && !turnstileToken) {
+      setFormError('Подтвердите, что вы не робот');
+      return;
+    }
+
     setBusy(true);
     try {
       if (channel === 'phone') {
@@ -126,6 +136,7 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
           phone: normalized,
           consentPersonalData: true,
           consentSms,
+          turnstileToken,
         });
       } else {
         const emailRaw = email.trim() || String(new FormData(e.currentTarget).get('email') ?? '');
@@ -138,11 +149,20 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
           email: normalized,
           consentPersonalData: true,
           consentSms,
+          turnstileToken,
         });
       }
       setStep(2);
+      if (turnstileRequired) {
+        setTurnstileToken(null);
+        setTurnstileResetKey((k) => k + 1);
+      }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Не удалось отправить код');
+      if (turnstileRequired) {
+        setTurnstileToken(null);
+        setTurnstileResetKey((k) => k + 1);
+      }
     } finally {
       setBusy(false);
     }
@@ -177,6 +197,10 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
 
   async function resendCode() {
     setFormError(null);
+    if (turnstileRequired && !turnstileToken) {
+      setFormError('Подтвердите, что вы не робот');
+      return;
+    }
     setBusy(true);
     try {
       if (channel === 'phone') {
@@ -184,16 +208,26 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
           phone,
           consentPersonalData: true,
           consentSms,
+          turnstileToken,
         });
       } else {
         await registerEmailStart({
           email,
           consentPersonalData: true,
           consentSms,
+          turnstileToken,
         });
+      }
+      if (turnstileRequired) {
+        setTurnstileToken(null);
+        setTurnstileResetKey((k) => k + 1);
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Не удалось отправить код повторно');
+      if (turnstileRequired) {
+        setTurnstileToken(null);
+        setTurnstileResetKey((k) => k + 1);
+      }
     } finally {
       setBusy(false);
     }
@@ -209,8 +243,9 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     const fd = new FormData(e.currentTarget);
     const password = String(fd.get('password') ?? '');
     const confirm = String(fd.get('passwordConfirm') ?? '');
-    if (password.length < 8) {
-      setFormError('Пароль не короче 8 символов');
+    const pErr = validatePassword(password);
+    if (pErr) {
+      setFormError(pErr);
       return;
     }
     if (password !== confirm) {
@@ -286,7 +321,7 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
       type="button"
       className={styles.authBack}
       onClick={() => {
-        // /register редиректит на /register/phone, поэтому обычный backHref не работает.
+        // /register редиректит на /register/email, поэтому обычный backHref не работает.
         // Если пользователь пришёл со страницы логина — вернём его туда через history.
         try {
           router.back();
@@ -370,6 +405,9 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
                 Согласен получать информационные SMS
               </label>
             </div>
+            {turnstileRequired ? (
+              <TurnstileWidget resetKey={turnstileResetKey} onToken={setTurnstileToken} />
+            ) : null}
             {formError ? (
               <p className={flowStyles.formError} role="alert">
                 {formError}
@@ -427,6 +465,9 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
               <p className={flowStyles.formError} role="alert">
                 {formError}
               </p>
+            ) : null}
+            {turnstileRequired ? (
+              <TurnstileWidget resetKey={turnstileResetKey} onToken={setTurnstileToken} />
             ) : null}
           </div>
           <Button type="submit" variant="primary" disabled={busy}>

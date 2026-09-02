@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { passwordResetConfirm, passwordResetVerify } from '@/lib/passwordResetApi';
+import { validatePassword } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
 async function clearStaleUserSession(): Promise<void> {
@@ -88,8 +89,9 @@ function ResetPasswordFormInner() {
         const fd = new FormData(e.currentTarget);
         const password = String(fd.get('password') ?? '');
         const confirm = String(fd.get('passwordConfirm') ?? '');
-        if (password.length < 8) {
-          setFormError('Пароль не короче 8 символов');
+        const pwdErr = validatePassword(password);
+        if (pwdErr) {
+          setFormError(pwdErr);
           return;
         }
         if (password !== confirm) {

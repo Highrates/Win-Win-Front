@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { adminCatalogProductsPage } from '@/lib/admin-i18n/adminMiscPagesI18n';
 import { getAdminLocale } from '@/lib/admin-i18n/getAdminLocale';
 import styles from '../catalogAdmin.module.css';
@@ -13,7 +14,9 @@ export default function AdminCatalogProductsPage() {
       <p className={styles.muted} style={{ marginBottom: 16 }}>
         <Link href="/admin/catalog/qa-queue">Очередь Q&A и переписки</Link>
       </p>
-      <ProductsListClient />
+      <Suspense fallback={<p className={styles.muted}>…</p>}>
+        <ProductsListClient />
+      </Suspense>
     </main>
   );
 }

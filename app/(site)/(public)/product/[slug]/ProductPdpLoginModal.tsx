@@ -23,7 +23,7 @@ export function ProductPdpLoginModal({ open, callbackUrl, onClose, onAuthenticat
         <p className={styles.registerHint}>
           Впервые у нас?{' '}
           <Link
-            href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+            href={`/register/email?callbackUrl=${encodeURIComponent(callbackUrl)}`}
             className={authStyles.authLinkAccent}
           >
             Зарегистрироваться

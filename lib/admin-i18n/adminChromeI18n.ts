@@ -63,14 +63,14 @@ export function adminDashboardStrings(locale: AdminLocale) {
   if (locale === 'zh') {
     return {
       title: '仪表板',
-      lead: '请从左侧菜单进入，或点击下方卡片。数据目前通过 API 填充。',
+      lead: '',
       accessDenied: '无权访问此分区。',
       linkMeta,
     };
   }
   return {
     title: 'Дашборд',
-    lead: 'Выберите раздел в меню слева или перейдите по карточкам ниже. Данные пока наполняются через API.',
+    lead: '',
     accessDenied: 'Нет доступа к этому разделу.',
     linkMeta,
   };

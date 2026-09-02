@@ -3,7 +3,7 @@ import { getServerApiBase } from './serverApiBase';
 import { setUserAccessTokenCookie } from './userAuth';
 
 export type EstablishUserSessionOptions = {
-  /** Включить `access_token` в JSON (login/register). По умолчанию true. */
+  /** Включить `access_token` в JSON. По умолчанию false — только httpOnly cookie. */
   includeTokenInJson?: boolean;
   /** Доп. поля ответа (напр. `referralWarning` после register/complete). */
   extraBody?: Record<string, unknown>;
@@ -45,7 +45,7 @@ export async function establishUserSessionResponse(
     resolvedUser = await fetchAuthMeWithToken(token);
   }
 
-  const includeToken = opts?.includeTokenInJson !== false;
+  const includeToken = opts?.includeTokenInJson === true;
   const payload = {
     ok: true as const,
     ...(includeToken ? { access_token: token } : {}),
@@ -68,12 +68,12 @@ export async function establishUserSessionFromAuthJson(
   try {
     parsed = JSON.parse(jsonText) as { access_token?: string; user?: unknown; referralWarning?: string };
   } catch {
-    return NextResponse.json({ message: 'Invalid JSON' }, { status: 502 });
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 502 });
   }
 
   const token = parsed.access_token?.trim();
   if (!token) {
-    return NextResponse.json({ message: 'No access_token in response' }, { status: 502 });
+    return NextResponse.json({ error: 'No access_token in response' }, { status: 502 });
   }
 
   const extraBody: Record<string, unknown> = {};

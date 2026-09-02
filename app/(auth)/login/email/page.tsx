@@ -23,7 +23,7 @@ export default async function LoginEmailPage({
       subtitle={
         <>
           Впервые у нас?{' '}
-          <Link href="/register" className={styles.authLinkAccent}>
+          <Link href="/register/email" className={styles.authLinkAccent}>
             Зарегистрироваться
           </Link>
         </>

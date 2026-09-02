@@ -118,6 +118,7 @@ export type TagStripCategory = {
   name: string;
   sortOrder: number;
   backgroundImageUrl: string | null;
+  productCount?: number;
 };
 
 /** `GET /catalog/tags` — список зон/тегов для навигации. */

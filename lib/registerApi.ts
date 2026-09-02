@@ -9,9 +9,10 @@ async function readApiError(res: Response): Promise<string> {
   }
   const t = await res.text();
   try {
-    const j = JSON.parse(t) as { message?: string | string[] };
+    const j = JSON.parse(t) as { message?: string | string[]; error?: string };
     if (Array.isArray(j.message)) return j.message.join(', ');
     if (typeof j.message === 'string') return j.message;
+    if (typeof j.error === 'string') return j.error;
   } catch {
     /* not JSON */
   }
@@ -33,8 +34,14 @@ export async function registerPhoneStart(body: {
   phone: string;
   consentPersonalData: boolean;
   consentSms: boolean;
+  turnstileToken?: string | null;
 }): Promise<{ message: string }> {
-  return postJson('phone/start', body);
+  return postJson('phone/start', {
+    phone: body.phone,
+    consentPersonalData: body.consentPersonalData,
+    consentSms: body.consentSms,
+    ...(body.turnstileToken?.trim() ? { turnstileToken: body.turnstileToken.trim() } : {}),
+  });
 }
 
 export async function registerPhoneVerify(body: {
@@ -48,8 +55,14 @@ export async function registerEmailStart(body: {
   email: string;
   consentPersonalData: boolean;
   consentSms: boolean;
+  turnstileToken?: string | null;
 }): Promise<{ message: string }> {
-  return postJson('email/start', body);
+  return postJson('email/start', {
+    email: body.email,
+    consentPersonalData: body.consentPersonalData,
+    consentSms: body.consentSms,
+    ...(body.turnstileToken?.trim() ? { turnstileToken: body.turnstileToken.trim() } : {}),
+  });
 }
 
 export async function registerEmailVerify(body: {

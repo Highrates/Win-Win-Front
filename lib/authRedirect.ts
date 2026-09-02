@@ -38,7 +38,7 @@ export function isGuestAuthPath(pathname: string): boolean {
   if (pathname === '/login/forgot-password' || pathname === '/login/reset-password') {
     return false;
   }
-  if (pathname === '/login' || pathname === '/login/email' || pathname === '/login/phone' || pathname === '/login/otp') {
+  if (pathname === '/login' || pathname === '/login/email') {
     return true;
   }
   return pathname === '/register' || pathname === '/register/phone' || pathname === '/register/email';

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
@@ -38,6 +38,11 @@ import {
   type ProductListFilterMeta,
   type ProductListFilters,
 } from './productListFilters';
+import {
+  parseProductAdminHygiene,
+  productHygieneChipLabel,
+  type ProductAdminHygieneKey,
+} from './productHygiene';
 
 export type ProductVisibilityFilter = 'all' | 'catalog' | 'hidden';
 
@@ -60,6 +65,7 @@ function formatPrice(amount: string, currency: string, numberLocale: string): st
 
 export function ProductsListClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminProductsListStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
@@ -75,11 +81,32 @@ export function ProductsListClient() {
   );
 
   const [appliedFilters, setAppliedFilters] = useState<ProductListFilters>(EMPTY_PRODUCT_LIST_FILTERS);
+  const [hygiene, setHygiene] = useState<ProductAdminHygieneKey | ''>(() =>
+    parseProductAdminHygiene(searchParams.get('hygiene')),
+  );
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [filterMeta, setFilterMeta] = useState<ProductListFilterMeta | null>(null);
   const [filterMetaLoading, setFilterMetaLoading] = useState(false);
 
-  const activeFilterCount = countActiveProductListFilters(appliedFilters);
+  const activeFilterCount =
+    countActiveProductListFilters(appliedFilters) + (hygiene ? 1 : 0);
+
+  useEffect(() => {
+    setHygiene(parseProductAdminHygiene(searchParams.get('hygiene')));
+  }, [searchParams]);
+
+  const syncHygieneToUrl = useCallback(
+    (next: ProductAdminHygieneKey | '') => {
+      const sp = new URLSearchParams(searchParams.toString());
+      if (next) sp.set('hygiene', next);
+      else sp.delete('hygiene');
+      const q = sp.toString();
+      router.replace(q ? `/admin/catalog/products?${q}` : '/admin/catalog/products', {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
 
   const loadFilterMeta = useCallback(async () => {
     if (filterMeta || filterMetaLoading) return;
@@ -129,9 +156,20 @@ export function ProductsListClient() {
     [appliedFilters, filterMeta, s],
   );
 
+  const hygieneChipLabel = hygiene
+    ? productHygieneChipLabel(hygiene, {
+        noMods: s.hygieneNoMods,
+        noVariants: s.hygieneNoVariants,
+        activeEmpty: s.hygieneActiveEmpty,
+        elementEmptyPool: s.hygieneElementEmptyPool,
+        compositeIncomplete: s.hygieneCompositeIncomplete,
+      })
+    : null;
+
   const { q, setQ, debouncedQ, page, setPage } = useAdminListSearch(300, [
     visibilityIndex,
     appliedFilters,
+    hygiene,
   ]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
@@ -143,16 +181,18 @@ export function ProductsListClient() {
       page,
       visibility: visibility === 'all' ? undefined : visibility,
       ...productListFiltersToParams(appliedFilters),
+      hygiene: hygiene || undefined,
     }),
-    [debouncedQ, page, visibility, appliedFilters],
+    [debouncedQ, page, visibility, appliedFilters, hygiene],
   );
 
   const listExtraParams = useMemo(() => {
     const params: Record<string, string | undefined> = {};
     if (visibility !== 'all') params.visibility = visibility;
     Object.assign(params, productListFiltersToParams(appliedFilters));
+    if (hygiene) params.hygiene = hygiene;
     return Object.keys(params).length ? params : undefined;
-  }, [visibility, appliedFilters]);
+  }, [visibility, appliedFilters, hygiene]);
 
   const { rows, total, limit, loading, isFetching, error: listError, refetch } = useAdminList<AdminProductRow>({
     queryKey: adminQueryKeys.products.list(listParams),
@@ -168,7 +208,7 @@ export function ProductsListClient() {
 
   useEffect(() => {
     setSelected(new Set());
-  }, [debouncedQ, visibilityIndex, appliedFilters]);
+  }, [debouncedQ, visibilityIndex, appliedFilters, hygiene]);
 
   function onSelectVisibilityTab(index: number) {
     setVisibilityIndex(index);
@@ -185,8 +225,16 @@ export function ProductsListClient() {
     setPage(1);
   }
 
+  function clearHygiene() {
+    setHygiene('');
+    syncHygieneToUrl('');
+    setPage(1);
+  }
+
   function clearAllFilters() {
     setAppliedFilters(EMPTY_PRODUCT_LIST_FILTERS);
+    setHygiene('');
+    syncHygieneToUrl('');
     setPage(1);
   }
 
@@ -298,9 +346,18 @@ export function ProductsListClient() {
               </AdminCompactBtn>
             </div>
           </div>
-          {filterChipLabels.length > 0 ? (
+          {filterChipLabels.length > 0 || hygieneChipLabel ? (
             <div className={filterStyles.activeFilters}>
               <AdminPillChipList aria-label={s.filterTitle}>
+                {hygieneChipLabel ? (
+                  <AdminPillChip
+                    key="hygiene"
+                    onRemove={clearHygiene}
+                    removeAriaLabel={s.removeFilter(hygieneChipLabel)}
+                  >
+                    {hygieneChipLabel}
+                  </AdminPillChip>
+                ) : null}
                 {filterChipLabels.map((chip) => (
                   <AdminPillChip
                     key={chip.key}

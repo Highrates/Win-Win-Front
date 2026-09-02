@@ -9,9 +9,10 @@ async function readApiError(res: Response): Promise<string> {
   }
   const t = await res.text();
   try {
-    const j = JSON.parse(t) as { message?: string | string[] };
+    const j = JSON.parse(t) as { message?: string | string[]; error?: string };
     if (Array.isArray(j.message)) return j.message.join(', ');
     if (typeof j.message === 'string') return j.message;
+    if (typeof j.error === 'string') return j.error;
   } catch {
     /* not JSON */
   }
@@ -31,8 +32,12 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 
 export async function passwordResetRequest(
   email: string,
+  turnstileToken?: string | null,
 ): Promise<{ message: string; sent?: boolean }> {
-  return postJson('request', { email: email.trim().toLowerCase() });
+  return postJson('request', {
+    email: email.trim().toLowerCase(),
+    ...(turnstileToken?.trim() ? { turnstileToken: turnstileToken.trim() } : {}),
+  });
 }
 
 export async function passwordResetVerify(

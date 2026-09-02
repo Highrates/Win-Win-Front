@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import { establishUserSessionFromAuthJson } from '@/lib/userSessionEstablish';
 import { forwardClientIpHeaders } from '@/lib/forwardClientIpHeaders';
+import { guestAuthError } from '@/lib/guestAuthResponse';
 
 function isAllowed(slug: string[]): boolean {
   const s = slug.filter((p) => p.length > 0);
@@ -30,7 +31,7 @@ async function readNestErrorMessage(buf: ArrayBuffer): Promise<string | null> {
 export async function POST(request: NextRequest, { params }: { params: { slug: string[] } }) {
   const slug = params.slug ?? [];
   if (!isAllowed(slug)) {
-    return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+    return guestAuthError('Forbidden', 403, 'FORBIDDEN');
   }
 
   const path = `auth/register/${slug.join('/')}`;
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
   try {
     body = await request.arrayBuffer();
   } catch {
-    return NextResponse.json({ message: 'Bad Request' }, { status: 400 });
+    return guestAuthError('Bad Request', 400, 'BAD_REQUEST');
   }
 
   const headers: Record<string, string> = {
@@ -61,16 +62,14 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Upstream unreachable';
-    return NextResponse.json(
-      { message: `Не удалось связаться с API: ${msg}` },
-      { status: 502 },
-    );
+    return guestAuthError(`Не удалось связаться с API: ${msg}`, 502, 'UPSTREAM');
   }
 
   if (res.status >= 300 && res.status < 400) {
-    return NextResponse.json(
-      { message: 'API вернуло перенаправление; проверьте API_URL (нужен прямой URL Nest).' },
-      { status: 502 },
+    return guestAuthError(
+      'API вернуло перенаправление; проверьте API_URL (нужен прямой URL Nest).',
+      502,
+      'UPSTREAM',
     );
   }
 
@@ -80,11 +79,13 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     return establishUserSessionFromAuthJson(request, new TextDecoder().decode(buf));
   }
 
-  if (isRegisterComplete(slug) && !res.ok) {
+  if (!res.ok) {
     const nestMsg = await readNestErrorMessage(buf);
     if (nestMsg) {
-      return NextResponse.json({ message: nestMsg }, { status: res.status });
+      const code = res.status === 429 ? 'RATE_LIMITED' : undefined;
+      return guestAuthError(nestMsg, res.status, code);
     }
+    return guestAuthError(`Ошибка API (${res.status})`, res.status);
   }
 
   const out = new NextResponse(buf, { status: res.status });

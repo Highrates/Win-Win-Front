@@ -14,6 +14,7 @@ import {
 import { AdminNavBadge } from '@/components/admin/AdminNavBadge/AdminNavBadge';
 import { useAdminOrderChatStaffUnreadEvents } from '@/hooks/useAdminOrderChatStaffUnreadEvents';
 import { AdminProductQaStaffAlerts } from '@/components/admin/AdminProductQaStaffToast/AdminProductQaStaffToast';
+import { AdminAssistantMount } from './AdminAssistantMount';
 import { AdminDeployRecovery } from '@/lib/adminDeployRecovery/AdminDeployRecovery';
 import { AdminConfirmProvider } from '@/lib/adminConfirm/AdminConfirmProvider';
 import { AdminQueryProvider } from '@/lib/adminQuery/AdminQueryProvider';
@@ -78,7 +79,7 @@ function AdminSidebar({
   pathname: string;
   setAdminLocale: (next: AdminLocale) => void;
 }) {
-  const { pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread, productQaPending } =
+  const { pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread, productQaUnread } =
     useAdminSidebarBadges();
   const { canAccessSection, isSuperAdmin, staff, email, loading: permissionsLoading } =
     useAdminPermissions();
@@ -215,8 +216,8 @@ function AdminSidebar({
                   <span className={styles.navLinkLabel}>
                     {getNavLabel(locale, ADMIN_NAV_MANIFEST.catalog.labelKey)}
                     <AdminNavBadge
-                      count={productQaPending ?? 0}
-                      title={badgeTitles.productQaPending}
+                      count={productQaUnread ?? 0}
+                      title={badgeTitles.productQaUnread}
                     />
                   </span>
                 </button>
@@ -238,8 +239,8 @@ function AdminSidebar({
                             {getNavLabel(locale, child.labelKey)}
                             {showProductQaBadge ? (
                               <AdminNavBadge
-                                count={productQaPending ?? 0}
-                                title={badgeTitles.productQaPending}
+                                count={productQaUnread ?? 0}
+                                title={badgeTitles.productQaUnread}
                               />
                             ) : null}
                           </span>
@@ -388,6 +389,7 @@ export function AdminChrome({
               <AdminSidebarBadgesProvider enabled>
                 <AdminShellBody sidebar={<AdminSidebar {...sidebarProps} />}>{children}</AdminShellBody>
                 <AdminProductQaStaffAlerts isLoginRoute={isLoginPage} />
+                <AdminAssistantMount />
               </AdminSidebarBadgesProvider>
             </AdminRouteGuard>
           </AdminPermissionsProvider>

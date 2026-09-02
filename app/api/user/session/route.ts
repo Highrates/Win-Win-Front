@@ -12,8 +12,8 @@ export async function GET(request: Request) {
 }
 
 /**
- * Страховка после login/register на клиенте: записать JWT в httpOnly cookie,
- * если токен уже есть в теле, но cookie ещё не установлена.
+ * Опционально: установить cookie из тела (редко нужно — login/register уже cookie-only BFF).
+ * Ответ без `access_token` в JSON.
  */
 export async function POST(request: Request) {
   let body: { access_token?: string };

@@ -3,6 +3,17 @@
 const EMAIL_RE =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
+/** Синхрон с backend `password-policy.ts`. */
+export const PASSWORD_POLICY_MESSAGE =
+  'Пароль — не менее 8 символов, должен содержать буквы и цифры';
+
+const PASSWORD_POLICY_RE = /^(?=.*[A-Za-zА-Яа-яЁё])(?=.*\d).{8,200}$/s;
+
+export function validatePassword(value: string): string | null {
+  if (!PASSWORD_POLICY_RE.test(value ?? '')) return PASSWORD_POLICY_MESSAGE;
+  return null;
+}
+
 export function validateEmailRequired(value: string): string | null {
   const t = value.trim();
   if (!t) return 'Введите email';

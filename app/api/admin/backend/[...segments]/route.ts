@@ -62,6 +62,7 @@ function isAllowed(segments: string[]): boolean {
   if (segments[0] === 'designer-projects' && segments[1] === 'admin') return true;
   /** Кейсы клиентов: `cases/admin/users/:userId`, `cases/admin/:caseId`, … */
   if (segments[0] === 'cases' && segments[1] === 'admin') return true;
+  if (segments[0] === 'assistant' && segments[1] === 'admin') return true;
   return false;
 }
 

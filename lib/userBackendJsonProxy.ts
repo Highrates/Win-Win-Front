@@ -62,7 +62,7 @@ export async function proxyUserBearer(
     return nextResponseFromUpstream(res, text);
   }
 
-  return establishUserSessionFromAuthJson(request, text, { includeTokenInJson: false });
+  return establishUserSessionFromAuthJson(request, text);
 }
 
 /**

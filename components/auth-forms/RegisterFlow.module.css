@@ -1,6 +1,6 @@
 .labelRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   font-size: var(--text-body, 15px);
   font-weight: var(--text-body-weight, 300);
@@ -9,21 +9,19 @@
 .checkboxForm {
   margin-top: 0;
   flex-shrink: 0;
-  align-self: flex-start;
+  align-self: center;
 }
 
 .labelPd {
   cursor: pointer;
   color: var(--color-black, #000000);
   line-height: 1.45;
-  padding-top: 1px;
 }
 
 .labelSms {
   cursor: pointer;
   color: var(--color-black, #000000);
   line-height: 1.45;
-  padding-top: 1px;
 }
 
 .formError {

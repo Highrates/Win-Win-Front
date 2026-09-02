@@ -63,6 +63,11 @@ export function adminProductsListStrings(locale: AdminLocale) {
     filterChipCollection: pick(locale, 'Подборка', '精选集'),
     filterChipProductSet: pick(locale, 'Комплект', '套装'),
     filterChipNoBrand: pick(locale, 'без бренда', '无品牌'),
+    hygieneNoMods: pick(locale, 'Без модификаций', '无修改项'),
+    hygieneNoVariants: pick(locale, 'Без вариантов', '无变体'),
+    hygieneActiveEmpty: pick(locale, 'Активен, но пустой', '已上架但未填'),
+    hygieneElementEmptyPool: pick(locale, 'Элемент без пула', '部件无材质池'),
+    hygieneCompositeIncomplete: pick(locale, 'Составной недозаполнен', '组合未填完'),
     removeFilter: (label: string) => pick(locale, `Убрать фильтр «${label}»`, `移除筛选「${label}」`),
   };
 }

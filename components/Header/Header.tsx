@@ -110,6 +110,7 @@ export function Header({
   const [mobileMenuCatalogOpen, setMobileMenuCatalogOpen] = useState(false);
   const [mobileMenuZonesOpen, setMobileMenuZonesOpen] = useState(false);
   const [accountEntryHref, setAccountEntryHref] = useState('/login');
+  const [accountAuthenticated, setAccountAuthenticated] = useState(false);
   const mobileMenuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTransitioningRef = useRef(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -374,9 +375,14 @@ export function Header({
         const res = await fetch('/api/user/session', { cache: 'no-store', credentials: 'same-origin' });
         const data = (await res.json().catch(() => ({}))) as { authenticated?: boolean };
         if (cancelled) return;
-        setAccountEntryHref(data.authenticated ? '/account/orders' : '/login');
+        const authed = data.authenticated === true;
+        setAccountAuthenticated(authed);
+        setAccountEntryHref(authed ? '/account/orders' : '/login');
       } catch {
-        if (!cancelled) setAccountEntryHref('/login');
+        if (!cancelled) {
+          setAccountAuthenticated(false);
+          setAccountEntryHref('/login');
+        }
       }
     };
     void load();
@@ -642,8 +648,14 @@ export function Header({
             <button type="button" className={styles.iconBtn} aria-label="Поиск">
               <img src="/icons/search-normal.svg" alt="" width={20} height={20} />
             </button>
-            <Link href={accountEntryHref} className={styles.iconBtn} aria-label="Вход в аккаунт">
-              <img src="/icons/user.svg" alt="" width={20} height={20} />
+            <Link
+              href={accountEntryHref}
+              className={styles.accountTextLink}
+              aria-label={accountAuthenticated ? 'Профиль' : 'Войти'}
+            >
+              <span className={styles.menuItemText}>
+                {accountAuthenticated ? 'Профиль' : 'Войти'}
+              </span>
             </Link>
           </nav>
         </div>
@@ -862,8 +874,7 @@ export function Header({
                 className={styles.mobileMenuLoginLink}
                 onClick={closeMobileMenu}
               >
-                <img src="/icons/user.svg" alt="" width={18} height={18} />
-                <span>Войти в личный кабинет</span>
+                <span>{accountAuthenticated ? 'Профиль' : 'Войти'}</span>
               </Link>
             </div>
           </div>

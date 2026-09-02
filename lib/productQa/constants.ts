@@ -51,6 +51,5 @@ export const ADMIN_PRODUCT_QA_UNREAD_REFRESH_EVENT = 'admin-product-qa-unread-re
 /** DOM: staff_new_question (detail = ProductQaStaffNewQuestionPayload). */
 export const ADMIN_PRODUCT_QA_STAFF_NEW_QUESTION_EVENT = 'admin-product-qa-staff-new-question';
 
-/** Cloudflare Turnstile site key (опционально). */
-export const PRODUCT_QA_TURNSTILE_SITE_KEY =
-  process.env.NEXT_PUBLIC_PRODUCT_QA_TURNSTILE_SITE_KEY?.trim() || '';
+/** Cloudflare Turnstile site key (опционально). Legacy alias — см. `@/lib/turnstile`. */
+export { TURNSTILE_SITE_KEY as PRODUCT_QA_TURNSTILE_SITE_KEY } from '@/lib/turnstile';

@@ -58,6 +58,7 @@ export default async function CatalogIndexPage({ searchParams }: Props) {
       href: `/catalog/${encodeURIComponent(cat.slug)}${tagQuery}`,
       name: cat.name,
       imageSrc: resolveMediaUrlForServer(cat.backgroundImageUrl) || '/images/placeholder.svg',
+      productCount: typeof cat.productCount === 'number' ? cat.productCount : 0,
     }));
 
     return (

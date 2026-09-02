@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
+import { TurnstileWidget } from '@/components/TurnstileWidget/TurnstileWidget';
 import { navigateAfterUserAuth } from '@/lib/userAuthNavigation';
 import {
   formatDesignerInviteClaimError,
 } from '@/lib/designerInvites/loginHints';
+import { isTurnstileRequired } from '@/lib/turnstile';
 import { validateEmailRequired } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
@@ -39,6 +41,9 @@ function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: 
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const turnstileRequired = isTurnstileRequired();
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   useEffect(() => {
     setInviteEmail(prefillEmailFromUrl);
@@ -98,21 +103,35 @@ function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: 
         setPasswordError(pErr);
         if (eErr || pErr) return;
 
+        if (turnstileRequired && !turnstileToken) {
+          setFormError('Подтвердите, что вы не робот');
+          return;
+        }
+
         setBusy(true);
         try {
           const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ emailOrPhone, password }),
+            body: JSON.stringify({
+              emailOrPhone,
+              password,
+              ...(turnstileToken ? { turnstileToken } : {}),
+            }),
             credentials: 'same-origin',
           });
           const data = (await res.json().catch(() => ({}))) as {
             ok?: boolean;
+            message?: string;
             error?: string;
             user?: { profile?: { profileOnboardingPending?: boolean } | null };
           };
           if (!res.ok || data.ok !== true) {
-            setFormError(data.error || 'Не удалось войти');
+            setFormError(data.message || data.error || 'Не удалось войти');
+            if (turnstileRequired) {
+              setTurnstileToken(null);
+              setTurnstileResetKey((k) => k + 1);
+            }
             return;
           }
 
@@ -131,6 +150,10 @@ function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: 
           }
         } catch (err) {
           setFormError(err instanceof Error ? err.message : 'Не удалось войти');
+          if (turnstileRequired) {
+            setTurnstileToken(null);
+            setTurnstileResetKey((k) => k + 1);
+          }
         } finally {
           setBusy(false);
         }
@@ -164,6 +187,9 @@ function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: 
           error={passwordError ?? undefined}
           onChange={() => setPasswordError(null)}
         />
+        {turnstileRequired ? (
+          <TurnstileWidget resetKey={turnstileResetKey} onToken={setTurnstileToken} />
+        ) : null}
         {designerInviteError && !formError ? (
           <p className={styles.authError} role="alert">
             {designerInviteError}

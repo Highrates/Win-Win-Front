@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
+import { validatePassword } from '@/lib/validation';
 import {
   invalidateUserClientCaches,
   resetUserSessionClientCache,
@@ -326,8 +327,9 @@ export function ProfileSettingsTab({ onSessionChanged }: Props) {
       setPasswordError('Введите текущий пароль');
       return;
     }
-    if (newPassword.length < 8) {
-      setPasswordError('Новый пароль — не менее 8 символов');
+    const pwdErr = validatePassword(newPassword);
+    if (pwdErr) {
+      setPasswordError(pwdErr);
       return;
     }
     if (newPassword !== confirmPassword) {
