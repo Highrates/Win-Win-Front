@@ -48,17 +48,29 @@ export const adminQueryKeys = {
   },
   clients: {
     all: ['admin', 'clients'] as const,
-    list: (params: { q: string; page: number }) => ['admin', 'clients', 'list', params] as const,
+    list: (params: { q: string; page: number; from?: string; to?: string }) =>
+      ['admin', 'clients', 'list', params] as const,
   },
   orders: {
     all: ['admin', 'orders'] as const,
-    list: (params: { page: number; q: string; bucket: string; userId?: string }) =>
-      ['admin', 'orders', 'list', params] as const,
+    list: (params: {
+      page: number;
+      q: string;
+      bucket: string;
+      userId?: string;
+      from?: string;
+      to?: string;
+    }) => ['admin', 'orders', 'list', params] as const,
   },
   sourcingRequests: {
     all: ['admin', 'sourcing-requests'] as const,
-    list: (params: { page: number; q: string; bucket: string }) =>
-      ['admin', 'sourcing-requests', 'list', params] as const,
+    list: (params: {
+      page: number;
+      q: string;
+      bucket: string;
+      from?: string;
+      to?: string;
+    }) => ['admin', 'sourcing-requests', 'list', params] as const,
   },
   blog: {
     all: ['admin', 'blog'] as const,
@@ -68,7 +80,10 @@ export const adminQueryKeys = {
   },
   applications: {
     all: ['admin', 'applications'] as const,
-    partnerList: (page: number) => ['admin', 'applications', 'partner-list', { page }] as const,
+    partnerList: (params: number | { page: number; from?: string; to?: string }) => {
+      const p = typeof params === 'number' ? { page: params } : params;
+      return ['admin', 'applications', 'partner-list', p] as const;
+    },
   },
   designerProjects: {
     all: ['admin', 'designer-projects'] as const,

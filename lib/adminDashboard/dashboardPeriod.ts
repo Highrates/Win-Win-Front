@@ -48,3 +48,65 @@ export function parseDateInputValue(raw: string): Date | null {
 export function rangeToQuery(range: DashboardDateRange): { from: string; to: string } {
   return { from: range.from.toISOString(), to: range.to.toISOString() };
 }
+
+function formatYmdRu(ymd: string): string {
+  const [y, m, d] = ymd.split('-');
+  if (!y || !m || !d) return ymd;
+  return `${d}.${m}.${y}`;
+}
+
+/** Диапазон для чипа / инсайтов: `01.09.2026` или `01.09 – 07.09.2026`. */
+export function formatPeriodRange(fromYmd: string, toYmd: string): string {
+  if (fromYmd === toYmd) return formatYmdRu(fromYmd);
+  return `${formatYmdRu(fromYmd)} – ${formatYmdRu(toYmd)}`;
+}
+
+export function startOfCompare(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/** from/to из URL списка (как в дашборде); оба или ничего. */
+export function periodParamsFromSearch(get: (key: string) => string | null): {
+  from?: string;
+  to?: string;
+} {
+  const from = get('from')?.trim() || undefined;
+  const to = get('to')?.trim() || undefined;
+  if (!from || !to) return {};
+  return { from, to };
+}
+
+/** Deep-link с периода дашборда + доп. query. */
+export function hrefWithDashboardPeriod(
+  path: string,
+  range: DashboardDateRange,
+  extra?: Record<string, string | undefined>,
+): string {
+  const q = rangeToQuery(range);
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(extra ?? {})) {
+    if (v != null && v !== '') sp.set(k, v);
+  }
+  sp.set('from', q.from);
+  sp.set('to', q.to);
+  return `${path}?${sp.toString()}`;
+}
+
+/** Сохранить from/to при смене bucket/section на странице списка. */
+export function hrefPreservingPeriod(
+  path: string,
+  searchParams: { get(name: string): string | null },
+  extra: Record<string, string | undefined>,
+): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(extra)) {
+    if (v != null && v !== '') sp.set(k, v);
+  }
+  const { from, to } = periodParamsFromSearch((k) => searchParams.get(k));
+  if (from && to) {
+    sp.set('from', from);
+    sp.set('to', to);
+  }
+  const qs = sp.toString();
+  return qs ? `${path}?${qs}` : path;
+}

@@ -21,6 +21,10 @@ import {
   useAdminListSearch,
   useInvalidateAdminQueries,
 } from '@/lib/adminQuery';
+import {
+  hrefPreservingPeriod,
+  periodParamsFromSearch,
+} from '@/lib/adminDashboard/dashboardPeriod';
 import styles from '../catalog/catalogAdmin.module.css';
 import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
 
@@ -168,14 +172,21 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
   }, [loadUnreadSummary]);
 
   const bucket = BUCKETS[bucketIndex] ?? 'new';
+  const period = useMemo(
+    () => periodParamsFromSearch((k) => searchParams.get(k)),
+    [searchParams],
+  );
+
   const listParams = useMemo(
     () => ({
       page,
       q: debouncedQ,
       bucket,
       userId: filterUserId?.trim() || undefined,
+      from: period.from,
+      to: period.to,
     }),
-    [page, debouncedQ, bucket, filterUserId],
+    [page, debouncedQ, bucket, filterUserId, period.from, period.to],
   );
 
   const {
@@ -201,6 +212,10 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
       });
       if (debouncedQ) qs.set('q', debouncedQ);
       if (filterUserId?.trim()) qs.set('userId', filterUserId.trim());
+      if (period.from && period.to) {
+        qs.set('from', period.from);
+        qs.set('to', period.to);
+      }
       return adminBackendJson<ListResponse>(`orders/admin?${qs}`);
     },
   });
@@ -261,7 +276,10 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
     setPage(1);
     if (!filterUserId?.trim()) {
       const b = BUCKETS[index] ?? 'new';
-      router.replace(`/admin/orders?bucket=${encodeURIComponent(b)}`, { scroll: false });
+      router.replace(
+        hrefPreservingPeriod('/admin/orders', searchParams, { bucket: b }),
+        { scroll: false },
+      );
     }
   }
 

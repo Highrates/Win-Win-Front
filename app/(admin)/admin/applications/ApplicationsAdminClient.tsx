@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
 import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { ADMIN_LIST_DEFAULT_LIMIT, adminSkipTakeParams } from '@/lib/adminListResponse';
+import { periodParamsFromSearch } from '@/lib/adminDashboard/dashboardPeriod';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import {
@@ -87,6 +88,7 @@ export function ApplicationsAdminClient({
   designer: DesignerTableCopy;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { locale: adminLoc } = useAdminLocale();
   const consLocale: 'ru' | 'zh' = adminLoc === 'zh' ? 'zh' : 'ru';
   const invalidate = useInvalidateAdminQueries();
@@ -96,16 +98,29 @@ export function ApplicationsAdminClient({
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionKind, setActionKind] = useState<'accept' | 'reject' | null>(null);
+  const period = useMemo(
+    () => periodParamsFromSearch((k) => searchParams.get(k)),
+    [searchParams],
+  );
 
   const { rows: items, total, loading, isFetching, error: listError, refetch } = useAdminList<PartnerAppRow>({
-    queryKey: adminQueryKeys.applications.partnerList(page),
+    queryKey: adminQueryKeys.applications.partnerList({
+      page,
+      from: period.from,
+      to: period.to,
+    }),
     page,
     paramsMode: 'skipTake',
     errorFallback: designer.errLoad,
     enabled: tab === 'designer',
     queryFn: async () => {
+      const qs = adminSkipTakeParams({ page });
+      if (period.from && period.to) {
+        qs.set('from', period.from);
+        qs.set('to', period.to);
+      }
       const j = await adminBackendJson<{ items: PartnerAppRow[]; total: number }>(
-        `users/admin/partner-applications?${adminSkipTakeParams({ page })}`,
+        `users/admin/partner-applications?${qs}`,
       );
       return {
         items: Array.isArray(j.items) ? j.items : [],

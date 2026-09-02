@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
 import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import { ADMIN_LIST_DEFAULT_LIMIT, adminSkipTakeParams, type AdminListResponse } from '@/lib/adminListResponse';
+import { periodParamsFromSearch } from '@/lib/adminDashboard/dashboardPeriod';
 import { adminClientsStrings } from '@/lib/admin-i18n/adminClientsI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
@@ -32,26 +33,41 @@ type ClientsListData = AdminListResponse<Row> & { designerTotal: number };
 
 export function AdminClientsClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { locale } = useAdminLocale();
   const s = useMemo(() => adminClientsStrings(locale), [locale]);
   const c = useMemo(() => adminCommonI18n(locale), [locale]);
   const dateLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
 
   const { q, setQ, debouncedQ, page, setPage } = useAdminListSearch();
+  const period = useMemo(
+    () => periodParamsFromSearch((k) => searchParams.get(k)),
+    [searchParams],
+  );
 
   const { rows: items, total, data, loading, isFetching, error, refetch } = useAdminList<Row, ClientsListData>({
-    queryKey: adminQueryKeys.clients.list({ q: debouncedQ, page }),
+    queryKey: adminQueryKeys.clients.list({
+      q: debouncedQ,
+      page,
+      from: period.from,
+      to: period.to,
+    }),
     page,
     q: debouncedQ,
     paramsMode: 'skipTake',
     errorFallback: s.errLoadList,
     loginRequired: s.loginRequired,
     queryFn: async () => {
+      const qs = adminSkipTakeParams({ page, q: debouncedQ });
+      if (period.from && period.to) {
+        qs.set('from', period.from);
+        qs.set('to', period.to);
+      }
       const json = await adminBackendJson<{
         items: Row[];
         total: number;
         designerTotal?: number;
-      }>(`users/admin?${adminSkipTakeParams({ page, q: debouncedQ })}`);
+      }>(`users/admin?${qs}`);
       return {
         items: json.items ?? [],
         total: json.total ?? 0,

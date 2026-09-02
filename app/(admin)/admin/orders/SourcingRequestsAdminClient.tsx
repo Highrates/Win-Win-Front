@@ -30,6 +30,10 @@ import {
   useAdminListSearch,
   useInvalidateAdminQueries,
 } from '@/lib/adminQuery';
+import {
+  hrefPreservingPeriod,
+  periodParamsFromSearch,
+} from '@/lib/adminDashboard/dashboardPeriod';
 import styles from '../catalog/catalogAdmin.module.css';
 
 export type { AdminSourcingBucket } from '@/lib/userSourcingRequests/types';
@@ -131,9 +135,14 @@ export function SourcingRequestsAdminClient({ embedded = false }: { embedded?: b
     return () => document.removeEventListener('admin-sourcing-chat-unread-refresh', fn);
   }, [loadUnreadSummary]);
 
+  const period = useMemo(
+    () => periodParamsFromSearch((k) => searchParams.get(k)),
+    [searchParams],
+  );
+
   const listParams = useMemo(
-    () => ({ page, q: debouncedQ, bucket }),
-    [page, debouncedQ, bucket],
+    () => ({ page, q: debouncedQ, bucket, from: period.from, to: period.to }),
+    [page, debouncedQ, bucket, period.from, period.to],
   );
 
   const {
@@ -156,6 +165,8 @@ export function SourcingRequestsAdminClient({ embedded = false }: { embedded?: b
         limit,
         bucket,
         q: debouncedQ || undefined,
+        from: period.from,
+        to: period.to,
       }),
   });
 
@@ -203,7 +214,13 @@ export function SourcingRequestsAdminClient({ embedded = false }: { embedded?: b
     setPage(1);
     if (!embedded) {
       const b = BUCKETS[index] ?? 'new';
-      router.replace(`/admin/orders?section=sourcing&bucket=${encodeURIComponent(b)}`, { scroll: false });
+      router.replace(
+        hrefPreservingPeriod('/admin/orders', searchParams, {
+          section: 'sourcing',
+          bucket: b,
+        }),
+        { scroll: false },
+      );
     }
   }
 

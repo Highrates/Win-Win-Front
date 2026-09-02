@@ -17,6 +17,8 @@ export type FetchAdminSourcingListParams = {
   limit: number;
   bucket: AdminSourcingBucket;
   q?: string;
+  from?: string;
+  to?: string;
 };
 
 export async function fetchAdminSourcingRequestsList(
@@ -28,6 +30,10 @@ export async function fetchAdminSourcingRequestsList(
     bucket: params.bucket,
   });
   if (params.q?.trim()) qs.set('q', params.q.trim());
+  if (params.from?.trim() && params.to?.trim()) {
+    qs.set('from', params.from.trim());
+    qs.set('to', params.to.trim());
+  }
   const raw = await adminBackendJson<unknown>(`sourcing-requests/admin?${qs}`);
   return parseAdminSourcingRequestsList(raw);
 }

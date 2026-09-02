@@ -8,6 +8,7 @@ import { adminNavBadgeTitles } from '@/lib/admin-i18n/adminChromeI18n';
 import { adminOrdersSectionStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { useAdminSidebarBadges } from '@/lib/adminSidebarBadgesContext';
+import { hrefPreservingPeriod } from '@/lib/adminDashboard/dashboardPeriod';
 import { OrdersAdminClient } from './OrdersAdminClient';
 import { SourcingRequestsAdminClient } from './SourcingRequestsAdminClient';
 
@@ -43,13 +44,18 @@ export function AdminOrdersSectionClient() {
       setSectionIndex(index);
       const section = SECTIONS[index] ?? 'orders';
       if (section === 'orders') {
-        const bucket = searchParams.get('bucket');
-        const q = bucket ? `?bucket=${encodeURIComponent(bucket)}` : '';
-        router.replace(`/admin/orders${q}`, { scroll: false });
-      } else {
-        const bucket = searchParams.get('bucket') ?? 'new';
         router.replace(
-          `/admin/orders?section=sourcing&bucket=${encodeURIComponent(bucket)}`,
+          hrefPreservingPeriod('/admin/orders', searchParams, {
+            bucket: searchParams.get('bucket') ?? undefined,
+          }),
+          { scroll: false },
+        );
+      } else {
+        router.replace(
+          hrefPreservingPeriod('/admin/orders', searchParams, {
+            section: 'sourcing',
+            bucket: searchParams.get('bucket') ?? 'new',
+          }),
           { scroll: false },
         );
       }

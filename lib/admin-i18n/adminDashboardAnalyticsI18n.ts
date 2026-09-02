@@ -54,14 +54,14 @@ export function adminDashboardAnalyticsStrings(locale: AdminLocale) {
     catalogNoVariants: pick(locale, 'Без вариантов', '无变体'),
     catalogNoVariantsHint: pick(
       locale,
-      'Модификации есть, но SKU/вариантов нет — нечего продавать и показывать в цене.',
-      '已有修改项，但没有 SKU/变体 — 无法售卖与标价。',
+      'Простой товар: модификации есть, SKU/вариантов нет, элементов нет. Составные — в «Составной недозаполнен».',
+      '简单商品：已有修改项，无 SKU/变体，无部件。组合商品见「组合未填完」。',
     ),
     catalogActiveEmpty: pick(locale, 'Активен, но пустой', '已上架但未填'),
     catalogActiveEmptyHint: pick(
       locale,
-      'Товар «в каталоге», при этом нет модификаций или нет вариантов — витрина с дырой.',
-      '商品已上架，但没有修改项或没有变体 — 前台有洞。',
+      'Товар «в каталоге», при этом нет модификаций или нет вариантов — витрина с дырой (сводка по статусу).',
+      '商品已上架，但没有修改项或没有变体 — 前台有洞（按上架状态汇总）。',
     ),
     catalogElementEmptyPool: pick(locale, 'Элемент без пула', '部件无材质池'),
     catalogElementEmptyPoolHint: pick(
@@ -72,8 +72,15 @@ export function adminDashboardAnalyticsStrings(locale: AdminLocale) {
     catalogCompositeIncomplete: pick(locale, 'Составной недозаполнен', '组合未填完'),
     catalogCompositeIncompleteHint: pick(
       locale,
-      'У товара есть элементы, и при этом пустой пул у какого-то элемента или вовсе нет вариантов.',
-      '商品有部件，且某个部件材质池为空，或完全没有变体。',
+      'У товара есть элементы и заполненные пулы, но вариантов всё ещё нет.',
+      '商品有部件且材质池已填，但仍没有变体。',
     ),
+
+    scopePeriod: pick(locale, 'За период', '按时间段'),
+    scopeSnapshot: pick(locale, 'Сейчас', '当前'),
+
+    periodCancel: pick(locale, 'Отмена', '取消'),
+    dismissAria: pick(locale, 'Закрыть', '关闭'),
+    noSections: pick(locale, 'Нет доступных разделов.', '暂无可用分区。'),
   };
 }

@@ -84,6 +84,40 @@
   grid-template-columns: minmax(0, 1fr) 48px;
 }
 
+.kpiColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.kpiScope {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kpiScopeLabel {
+  margin: 0;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-gray, #9d9d9d);
+}
+
+.kpiScopeBadge {
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-gray, #9d9d9d);
+}
+
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -136,6 +170,10 @@
 }
 
 .catalogSectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
