@@ -111,7 +111,7 @@ describe('AdminDashboardClient', () => {
     });
     expect(screen.queryByRole('heading', { name: /Партнёры/i })).toBeNull();
     expect(screen.getByLabelText('Ассистент')).toBeInTheDocument();
-    expect(screen.getByText('За период')).toBeInTheDocument();
+    expect(screen.queryByText('За период')).toBeNull();
     expect(screen.getByText('Сейчас')).toBeInTheDocument();
   });
 

@@ -40,7 +40,6 @@ export function AdminDashboardKpiColumn({
     <div className={styles.kpiColumn} aria-busy={kpiBusy}>
       {canOrders || canApplications || canClients ? (
         <div className={styles.kpiScope}>
-          <p className={styles.kpiScopeLabel}>{s.scopePeriod}</p>
           <div className={styles.kpiGrid}>
             {canOrders ? (
               <article className={styles.kpi} aria-label={s.ordersTitle}>

@@ -76,7 +76,6 @@ export function adminDashboardAnalyticsStrings(locale: AdminLocale) {
       '商品有部件且材质池已填，但仍没有变体。',
     ),
 
-    scopePeriod: pick(locale, 'За период', '按时间段'),
     scopeSnapshot: pick(locale, 'Сейчас', '当前'),
 
     periodCancel: pick(locale, 'Отмена', '取消'),
