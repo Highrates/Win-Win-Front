@@ -7,7 +7,7 @@ const EMAIL_RE =
 export const PASSWORD_POLICY_MESSAGE =
   'Пароль — не менее 8 символов, должен содержать буквы и цифры';
 
-const PASSWORD_POLICY_RE = /^(?=.*[A-Za-zА-Яа-яЁё])(?=.*\d).{8,200}$/s;
+const PASSWORD_POLICY_RE = /^(?=.*[A-Za-zА-Яа-яЁё])(?=.*\d).{8,200}$/;
 
 export function validatePassword(value: string): string | null {
   if (!PASSWORD_POLICY_RE.test(value ?? '')) return PASSWORD_POLICY_MESSAGE;
