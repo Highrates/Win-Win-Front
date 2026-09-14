@@ -115,7 +115,7 @@
 .headerSuperMenuOpen .headerBar {
   position: relative;
   z-index: 41;
-  /* Строка грида выше навбара из‑за высокого бейджа; «пустота» ниже триггеров всё равно в слое headerBar (25), выше мегапанели (24) и глушит клики по ссылкам superMenuMenu — режем hit-test только у контейнера */
+  /* pointer-events:none на bar — клики доходят до панели (z-index 40); интерактивные зоны ниже снова auto */
   pointer-events: none;
 }
 
@@ -150,16 +150,16 @@
   }
 }
 
-/* Бургер: только на мобильной версии header-main */
+/* Бургер в rightNav — desktop + mobile */
 .burgerBtn {
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-white);
+  color: inherit;
 }
 
 .burgerBtn:hover {
@@ -951,7 +951,7 @@
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
   text-transform: uppercase;
-  color: #00bcd4;
+  color: #ffc0cb;
   text-decoration: none;
   margin-top: 4px;
 }
@@ -1126,6 +1126,328 @@
 
 .mobileMenuTelegram:hover {
   opacity: 0.9;
+}
+
+/* Desktop burger menu — full sitemap; primary nav keeps visual mega */
+.desktopMenuRoot {
+  z-index: 40;
+}
+
+.desktopMenuSlideWrap {
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.desktopMenuPanel {
+  padding-top: 128px;
+  padding-bottom: 0;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.desktopMenuScroll {
+  pointer-events: auto;
+  padding-bottom: 48px;
+}
+
+.desktopMenuPanel :global(.padding-global),
+.desktopMenuInner {
+  pointer-events: auto;
+}
+
+.desktopMenuInner {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 0.75fr)
+    minmax(0, 1fr)
+    minmax(0, 1.1fr)
+    minmax(0, 1.1fr)
+    minmax(0, 1.35fr);
+  gap: 28px 28px;
+  padding-top: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: start;
+}
+
+.desktopMenuCol {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.2s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+}
+
+.desktopMenuCol:nth-child(1) {
+  transition-delay: 0.1s, 0.1s;
+}
+
+.desktopMenuCol:nth-child(2) {
+  transition-delay: 0.16s, 0.16s;
+}
+
+.desktopMenuCol:nth-child(3) {
+  transition-delay: 0.22s, 0.22s;
+}
+
+.desktopMenuCol:nth-child(4) {
+  transition-delay: 0.28s, 0.28s;
+}
+
+.superMenu.superMenuContentRevealed .desktopMenuCol {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.superMenu.superMenuClosing .desktopMenuCol {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.desktopMenuColTitle {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-gray);
+}
+
+.desktopMenuList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.desktopMenuLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  color: var(--color-white);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.35;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.desktopMenuLink:hover {
+  opacity: 0.75;
+}
+
+.desktopMenuShowAll {
+  margin-top: 4px;
+  color: #ffc0cb;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.desktopMenuShowAll:hover {
+  opacity: 0.75;
+}
+
+.desktopMenuSourcing {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  align-self: start;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.34s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.34s;
+}
+
+.superMenu.superMenuContentRevealed .desktopMenuSourcing {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.superMenu.superMenuClosing .desktopMenuSourcing {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.menuSourcingEyebrow {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: #ffc0cb;
+}
+
+.menuSourcingTitle {
+  margin: 0;
+  font-family: var(--font-commissioner);
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+  line-height: 1.2;
+  color: #fff;
+}
+
+.menuSourcingText {
+  margin: 0;
+  font-size: var(--text-body-long-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-long-height);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.menuSourcingBtn {
+  margin-top: 8px;
+}
+
+.menuSourcingPromoMobile {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.32s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.32s;
+}
+
+.mobileMenuContentRevealed .menuSourcingPromoMobile {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobileMenuClosing .menuSourcingPromoMobile {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.desktopMenuUtils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px 28px;
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity 0.55s ease-out 0.4s,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.4s;
+}
+
+.superMenu.superMenuContentRevealed .desktopMenuUtils {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.superMenu.superMenuClosing .desktopMenuUtils {
+  opacity: 0;
+  transform: translateY(56px);
+  transition-duration: 0.28s;
+  transition-delay: 0s;
+}
+
+.desktopMenuUtilBtn,
+.desktopMenuUtilLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-white);
+  font-family: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: opacity 0.2s ease;
+}
+
+.desktopMenuUtilBtn:hover,
+.desktopMenuUtilLink:hover {
+  opacity: 0.75;
+}
+
+.desktopMenuUtilBtn img {
+  display: block;
+  width: 18px;
+  height: 18px;
+  filter: brightness(0) invert(1);
+}
+
+@media (max-width: 1200px) {
+  .desktopMenuInner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 28px;
+  }
+
+  .desktopMenuSourcing {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desktopMenuCol,
+  .desktopMenuSourcing,
+  .desktopMenuUtils {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .superMenu.superMenuClosing .desktopMenuCol,
+  .superMenu.superMenuClosing .desktopMenuSourcing,
+  .superMenu.superMenuClosing .desktopMenuUtils {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Десктоп-меню только >768; на мобилке — mobileMenuOverlay */
+  .desktopMenuScrim,
+  .desktopMenuRoot {
+    display: none !important;
+  }
 }
 
 /* Site search — same slide shell as superMenu */
@@ -1648,11 +1970,7 @@
   filter: brightness(0) invert(1);
 }
 
-/* Бургер в rightNav — всегда виден (desktop + mobile) */
-.rightNav .burgerBtn {
-  display: flex;
-  color: inherit;
-}
+/* Бургер в rightNav — цвет поверх hero */
 .headerMinimal .rightNav .burgerBtn,
 .headerMain .rightNav .burgerBtn {
   color: var(--color-white);

@@ -123,78 +123,81 @@ export function BestBrands({ brands, activeBrandSlug }: BestBrandsProps) {
 
   const animate = !skipAnimRef.current;
   const paneClass = [
-    styles.slidePane,
     animate ? (slideDir === 1 ? styles.slidePaneNext : styles.slidePanePrev) : '',
   ]
     .filter(Boolean)
     .join(' ');
 
+  const paneDragStyle =
+    dragX !== 0
+      ? { transform: `translateX(${dragX * 0.18}px)`, transition: 'none' }
+      : undefined;
+
   return (
     <section className={styles.section} aria-label="Лучшие бренды">
-      <div
-        className={styles.split}
-        style={
-          dragX !== 0
-            ? { transform: `translateX(${dragX * 0.22}px)`, transition: 'none' }
-            : undefined
-        }
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
-      >
-        <div className={styles.infoCol}>
-          <div
-            key={`info-${brand.slug}-${animKey}`}
-            className={`${styles.infoPadWrap} ${paneClass}`.trim()}
-          >
-            <div className={`padding-global ${styles.infoPad}`}>
-              <Link href={`/brands/${brand.slug}`} className={styles.infoLink}>
-                <h3 className={styles.brandName}>{brand.name}</h3>
-                <div className={styles.productPreviewWrap}>
-                  {brand.productPreview ? (
-                    <img
-                      className={styles.productPreview}
-                      src={brand.productPreview}
-                      alt=""
-                      width={640}
-                      height={480}
-                      decoding="async"
-                      fetchPriority="high"
-                    />
-                  ) : (
-                    <span className={styles.productPreviewPlaceholder} aria-hidden />
-                  )}
-                </div>
-                <p className={styles.description}>
-                  {brand.description.trim() || FALLBACK_DESCRIPTION}
-                </p>
-              </Link>
+      <div className={styles.splitWrap}>
+        <div
+          className={styles.split}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
+        >
+          <div className={styles.infoCol}>
+            <div
+              key={`info-${brand.slug}-${animKey}`}
+              className={`${styles.infoPadWrap} ${paneClass}`.trim()}
+              style={paneDragStyle}
+            >
+              <div className={`padding-global ${styles.infoPad}`}>
+                <Link href={`/brands/${brand.slug}`} className={styles.infoLink}>
+                  <h3 className={styles.brandName}>{brand.name}</h3>
+                  <div className={styles.productPreviewWrap}>
+                    {brand.productPreview ? (
+                      <img
+                        className={styles.productPreview}
+                        src={brand.productPreview}
+                        alt=""
+                        width={640}
+                        height={480}
+                        decoding="async"
+                        fetchPriority="high"
+                      />
+                    ) : (
+                      <span className={styles.productPreviewPlaceholder} aria-hidden />
+                    )}
+                  </div>
+                  <p className={styles.description}>
+                    {brand.description.trim() || FALLBACK_DESCRIPTION}
+                  </p>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className={styles.lifestyleCol}>
-          <Link
-            key={`life-${brand.slug}-${animKey}`}
-            href={`/brands/${brand.slug}`}
-            className={`${styles.lifestyleLink} ${paneClass}`.trim()}
-            tabIndex={-1}
-          >
-            {brand.lifestyleImage ? (
-              <img
-                className={styles.lifestyleImage}
-                src={brand.lifestyleImage}
-                alt=""
-                width={960}
-                height={720}
-                decoding="async"
-                fetchPriority="high"
-              />
-            ) : (
-              <span className={styles.lifestylePlaceholder} aria-hidden />
-            )}
-          </Link>
+          <div className={styles.lifestyleCol}>
+            <Link
+              key={`life-${brand.slug}-${animKey}`}
+              href={`/brands/${brand.slug}`}
+              className={`${styles.lifestyleLink} ${paneClass}`.trim()}
+              style={paneDragStyle}
+              tabIndex={-1}
+            >
+              {brand.lifestyleImage ? (
+                <img
+                  className={styles.lifestyleImage}
+                  src={brand.lifestyleImage}
+                  alt=""
+                  width={960}
+                  height={720}
+                  decoding="async"
+                  fetchPriority="high"
+                />
+              ) : (
+                <span className={styles.lifestylePlaceholder} aria-hidden />
+              )}
+            </Link>
+          </div>
         </div>
 
         {canNavigate ? (

@@ -8,6 +8,8 @@ import {
   useSiteTransition,
 } from '@/components/SiteTransition';
 import { highlightSearchTitle } from '@/lib/searchHighlight';
+import { HeaderOverlayShell } from './HeaderOverlayShell';
+import { focusablesIn, useOverlayPanel } from './useOverlayPanel';
 import styles from './Header.module.css';
 
 export type SearchHit = {
@@ -35,19 +37,10 @@ type Props = {
   onNavigate: () => void;
 };
 
-const FOCUSABLE =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 const RECENT_KEY = 'wupapa.search.recent';
 const RECENT_MAX = 6;
 const IDLE_CATEGORY_LIMIT = 6;
 const IDLE_ZONE_LIMIT = 6;
-
-function focusablesIn(root: HTMLElement): HTMLElement[] {
-  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-    (el) => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true',
-  );
-}
 
 function readRecent(): string[] {
   if (typeof window === 'undefined') return [];
@@ -201,12 +194,19 @@ function HitGlyph({ type }: { type: string }) {
 export function HeaderSearchPanel({ open, closing, onClose, onNavigate }: Props) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchPanelInnerRef = useRef<HTMLDivElement>(null);
   const transition = useSiteTransition();
   const abortRef = useRef<AbortController | null>(null);
   const catalogRoots = useCatalogNavRoots();
+  const { panelRef, panelVisible } = useOverlayPanel({
+    open,
+    closing,
+    onClose,
+    trapTab: false,
+    handleEscape: false,
+    enableContentReveal: false,
+  });
 
   const [q, setQ] = useState('');
   const [groups, setGroups] = useState<SearchGroup[]>([]);
@@ -217,7 +217,6 @@ export function HeaderSearchPanel({ open, closing, onClose, onNavigate }: Props)
   const [retryTick, setRetryTick] = useState(0);
   const [recent, setRecent] = useState<string[]>([]);
   const [zoneTags, setZoneTags] = useState<{ slug: string; name: string }[]>([]);
-  const panelVisible = open || closing;
 
   const flatHits = useMemo<FlatHit[]>(
     () =>
@@ -380,21 +379,6 @@ export function HeaderSearchPanel({ open, closing, onClose, onNavigate }: Props)
     setBusy(false);
     setActiveIndex(-1);
   }, [open, closing]);
-
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    if (open && !closing) {
-      panel.removeAttribute('inert');
-      return;
-    }
-    /* Перед inert уводим фокус из панели (на closing open уже false) */
-    const active = document.activeElement;
-    if (active instanceof HTMLElement && panel.contains(active)) {
-      active.blur();
-    }
-    panel.setAttribute('inert', '');
-  }, [open, closing, panelVisible]);
 
   useEffect(() => {
     if (!open) return;
@@ -596,26 +580,17 @@ export function HeaderSearchPanel({ open, closing, onClose, onNavigate }: Props)
   if (!panelVisible) return null;
 
   return (
-    <>
-      <button
-        type="button"
-        className={styles.searchScrim}
-        aria-label="Закрыть поиск"
-        tabIndex={-1}
-        onClick={onClose}
-      />
-      <div
-        id="header-search-panel"
-        ref={panelRef}
-        className={`${styles.superMenu} ${closing ? styles.superMenuClosing : ''}`.trim()}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Поиск по сайту"
-        aria-hidden={!open}
-      >
-        <div className={styles.superMenuSlideWrap}>
-          <div className={styles.superMenuBg} aria-hidden />
-          <div className={`${styles.superMenuPanel} ${styles.searchPanel}`}>
+    <HeaderOverlayShell
+      id="header-search-panel"
+      open={open}
+      closing={closing}
+      contentRevealed={false}
+      onClose={onClose}
+      ariaLabel="Поиск по сайту"
+      panelRef={panelRef}
+      panelClassName={styles.searchPanel}
+      scrimLabel="Закрыть поиск"
+    >
             <div className="padding-global">
               <div className={styles.siteHeaderWrap}>
                 <div className={styles.searchPanelInner} ref={searchPanelInnerRef}>
@@ -1050,9 +1025,6 @@ export function HeaderSearchPanel({ open, closing, onClose, onNavigate }: Props)
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </>
+    </HeaderOverlayShell>
   );
 }

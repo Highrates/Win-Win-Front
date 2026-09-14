@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
-import { TransitionLink, useSiteTransition, MENU_COVERED_EVENT, TRANSITION_ENTER_COMPLETE_EVENT } from '@/components/SiteTransition';
+import { TransitionLink, useSiteTransition, TRANSITION_ENTER_COMPLETE_EVENT } from '@/components/SiteTransition';
 import { LogoPaths } from '@/components/SiteLoader/LogoPaths';
 import {
   animateLogoWaveIn,
@@ -18,8 +18,14 @@ import { SITE_LOGO_SRC, SITE_NAME } from '@/lib/brand';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import { ScrollCatalogStripPanel } from '@/sections/home/ScrollCatalog/ScrollCatalogStripPanel';
 import { USER_SESSION_CHANGED_EVENT } from '@/lib/userSessionClient';
+import { SourcingRequestModal } from '@/components/SourcingRequest/SourcingRequestModal';
+import { useSourcingPromoFlow } from '@/components/SourcingRequest/useSourcingPromoFlow';
 import styles from './Header.module.css';
+import { HeaderDesktopMenu, INFO_LINKS } from './HeaderDesktopMenu';
+import { HeaderMenuSourcingPromo } from './HeaderMenuSourcingPromo';
 import { HeaderSearchPanel } from './HeaderSearchPanel';
+import { MOBILE_MENU_PANEL_ID, useHeaderOverlays } from './useHeaderOverlays';
+import { motionMs } from './useOverlayPanel';
 
 const MENU_SECTIONS = [
   { id: 'categories', href: '/catalog', label: 'Каталог' },
@@ -28,9 +34,6 @@ const MENU_SECTIONS = [
 ] as const;
 
 const SUPER_MENU_PANEL_ID = 'super-menu-panel';
-const MOBILE_MENU_PANEL_ID = 'mobile-menu-panel';
-const BODY_SUPER_MENU_OPEN = 'header-super-menu-open';
-const BODY_MOBILE_MENU_OPEN = 'header-mobile-menu-open';
 
 const SUPER_MENU_FALLBACK_LINKS = [
   'Гостиная',
@@ -42,25 +45,8 @@ const SUPER_MENU_FALLBACK_LINKS = [
   'Сад',
 ] as const;
 
-const MOBILE_INFO_LINKS = [
-  { href: '/about', label: 'О нас' },
-  { href: '/designers', label: 'Дизайнеры' },
-  { href: '/projects', label: 'Проекты и концепции' },
-  { href: '/blog', label: 'Новости и статьи' },
-  { href: '/delivery', label: 'Доставка и оплата' },
-  { href: '/warranty', label: 'Гарантия, обмен и возврат' },
-  { href: '/referral', label: 'Реферальная программа' },
-  { href: '/faq', label: 'FAQ' },
-  { href: '/contacts', label: 'Контакты' },
-] as const;
-
 /** Пока нет URL в настройках — заглушка. */
 const TELEGRAM_HREF = 'https://t.me/';
-
-function motionMs(full: number) {
-  if (typeof window === 'undefined') return full;
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : full;
-}
 
 function MenuChevron({ open }: { open: boolean }) {
   return (
@@ -111,21 +97,10 @@ export function Header({
   const [superMenuClosing, setSuperMenuClosing] = useState(false);
   const [superMenuContentRevealed, setSuperMenuContentRevealed] = useState(false);
   const siteTransition = useSiteTransition();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileMenuContentRevealed, setMobileMenuContentRevealed] = useState(false);
-  const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
   const [mobileMenuCatalogOpen, setMobileMenuCatalogOpen] = useState(false);
   const [mobileMenuZonesOpen, setMobileMenuZonesOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchClosing, setSearchClosing] = useState(false);
   const [accountEntryHref, setAccountEntryHref] = useState('/login');
   const [accountAuthenticated, setAccountAuthenticated] = useState(false);
-  const mobileMenuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchBtnRef = useRef<HTMLButtonElement>(null);
-  const restoreSearchFocusRef = useRef(false);
-  const closeSearchRef = useRef<(opts?: { restoreFocus?: boolean }) => void>(() => {});
-  const dismissMobileMenuInstantRef = useRef<() => void>(() => {});
   const isTransitioningRef = useRef(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeSuperMenuRef = useRef<() => void>(() => {});
@@ -135,7 +110,37 @@ export function Header({
   const superMenuMenuColRef = useRef<HTMLDivElement>(null);
   const superMenuTagsPanelRef = useRef<HTMLDivElement>(null);
   setSuperMenuOpenRef.current = setSuperMenuOpen;
+
+  const {
+    searchBtnRef,
+    burgerBtnRef,
+    searchOpen,
+    searchClosing,
+    openSearch,
+    closeSearch,
+    desktopMenuOpen,
+    desktopMenuClosing,
+    closeDesktopMenu,
+    mobileMenuOpen,
+    mobileMenuClosing,
+    mobileMenuContentRevealed,
+    closeMobileMenu,
+    toggleBurgerMenu,
+    burgerMenuExpanded,
+    burgerAriaControls,
+    searchPanelOpen,
+    desktopMenuPanelOpen,
+  } = useHeaderOverlays({
+    closeSuperMenu: () => closeSuperMenuRef.current(),
+    superMenuOpen,
+    superMenuClosing,
+    onMobileMenuClosed: () => {
+      setMobileMenuCatalogOpen(false);
+      setMobileMenuZonesOpen(false);
+    },
+  });
   const catalogRoots = useCatalogNavRoots();
+  const { openFreshModal, modalProps: sourcingModalProps } = useSourcingPromoFlow();
   const [catalogTags, setCatalogTags] = useState<
     { slug: string; name: string; coverImageUrl: string | null }[]
   >([]);
@@ -339,8 +344,7 @@ export function Header({
   const syncSuperMenuCatalogLayout = useCallback(() => {
     const catalogBtn = catalogMenuTriggerRef.current;
     const menuCol = superMenuMenuColRef.current;
-    const tagsPanel = superMenuTagsPanelRef.current;
-    if (!catalogBtn || !menuCol || !tagsPanel) return;
+    if (!catalogBtn || !menuCol) return;
 
     menuCol.style.marginLeft = '0';
     const catalogLeft = catalogBtn.getBoundingClientRect().left;
@@ -350,12 +354,16 @@ export function Header({
       menuCol.style.marginLeft = `${offset}px`;
     }
 
-    const tagsLeft = tagsPanel.getBoundingClientRect().left;
-    tagsPanel.style.setProperty('--super-menu-strip-left', `${tagsLeft}px`);
-  }, []);
+    const tagsPanel = superMenuTagsPanelRef.current;
+    if (tagsPanel && superMenuSection === 'categories') {
+      const tagsLeft = tagsPanel.getBoundingClientRect().left;
+      tagsPanel.style.setProperty('--super-menu-strip-left', `${tagsLeft}px`);
+    }
+  }, [superMenuSection]);
 
   useLayoutEffect(() => {
-    if (!superMenuOpen || superMenuClosing || superMenuSection !== 'categories') return;
+    if (!superMenuOpen || superMenuClosing) return;
+    if (superMenuSection !== 'categories' && superMenuSection !== 'zones') return;
 
     syncSuperMenuCatalogLayout();
     const raf = requestAnimationFrame(syncSuperMenuCatalogLayout);
@@ -421,100 +429,9 @@ export function Header({
       setSuperMenuOpenRef.current(false);
       setSuperMenuClosing(false);
       isTransitioningRef.current = false;
-    }, 560);
+    }, motionMs(560));
   };
   closeSuperMenuRef.current = closeSuperMenu;
-
-  const dismissMobileMenuInstant = useCallback(() => {
-    if (mobileMenuCloseTimeoutRef.current) {
-      clearTimeout(mobileMenuCloseTimeoutRef.current);
-      mobileMenuCloseTimeoutRef.current = null;
-    }
-    setMobileMenuOpen(false);
-    setMobileMenuClosing(false);
-    setMobileMenuContentRevealed(false);
-  }, []);
-  dismissMobileMenuInstantRef.current = dismissMobileMenuInstant;
-
-  const closeSearch = useCallback((opts?: { restoreFocus?: boolean }) => {
-    if (!searchOpen && !searchClosing) return;
-    const shouldRestore = opts?.restoreFocus === true;
-    restoreSearchFocusRef.current = shouldRestore;
-
-    /* Фокус уводим до open=false → inert, иначе фокус «зависает» в inert-узле */
-    if (shouldRestore) {
-      searchBtnRef.current?.focus();
-    } else {
-      const active = document.activeElement;
-      const panel = document.getElementById('header-search-panel');
-      if (active instanceof HTMLElement && panel?.contains(active)) {
-        active.blur();
-      }
-    }
-
-    setSearchClosing(true);
-    setSearchOpen(false);
-    if (searchCloseTimeoutRef.current) clearTimeout(searchCloseTimeoutRef.current);
-    searchCloseTimeoutRef.current = setTimeout(() => {
-      setSearchClosing(false);
-      searchCloseTimeoutRef.current = null;
-      if (restoreSearchFocusRef.current) {
-        restoreSearchFocusRef.current = false;
-        searchBtnRef.current?.focus();
-      }
-    }, motionMs(560));
-  }, [searchOpen, searchClosing]);
-  closeSearchRef.current = closeSearch;
-
-  const openSearch = useCallback(() => {
-    if (searchClosing) return;
-    closeSuperMenuRef.current();
-    dismissMobileMenuInstant();
-    setSearchOpen(true);
-    setSearchClosing(false);
-  }, [searchClosing, dismissMobileMenuInstant]);
-
-  useEffect(() => {
-    const onHotkey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return;
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      const editable =
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        Boolean(target?.isContentEditable);
-
-      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        if (searchOpen && !searchClosing) {
-          document
-            .querySelector<HTMLInputElement>('#header-search-panel input')
-            ?.focus();
-          return;
-        }
-        openSearch();
-        return;
-      }
-
-      if (e.key === '/' && !editable && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault();
-        openSearch();
-      }
-    };
-    window.addEventListener('keydown', onHotkey);
-    return () => window.removeEventListener('keydown', onHotkey);
-  }, [openSearch, searchOpen, searchClosing]);
-
-  useEffect(() => {
-    const onMenuCovered = () => {
-      closeSuperMenuRef.current();
-      closeSearchRef.current({ restoreFocus: false });
-      dismissMobileMenuInstantRef.current();
-    };
-    window.addEventListener(MENU_COVERED_EVENT, onMenuCovered);
-    return () => window.removeEventListener(MENU_COVERED_EVENT, onMenuCovered);
-  }, []);
 
   const navigateFromSuperMenu = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const href = e.currentTarget.getAttribute('href');
@@ -551,21 +468,14 @@ export function Header({
   }, [superMenuOpen, superMenuClosing]);
 
   useEffect(() => {
-    const anyOverlay =
-      superMenuOpen || superMenuClosing || searchOpen || searchClosing;
-    document.body.classList.toggle(BODY_SUPER_MENU_OPEN, anyOverlay);
-    return () => document.body.classList.remove(BODY_SUPER_MENU_OPEN);
-  }, [superMenuOpen, superMenuClosing, searchOpen, searchClosing]);
-
-  useEffect(() => {
     if (!superMenuOpen && !superMenuClosing) {
       setSuperMenuSection(null);
       return;
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      /* Поиск: Escape обрабатывает HeaderSearchPanel */
-      if (searchOpen) return;
+      /* Поиск / десктоп-меню: Escape обрабатывают свои панели */
+      if (searchOpen || desktopMenuOpen) return;
       closeSuperMenuRef.current();
     };
     const onClickOutside = (e: MouseEvent) => {
@@ -581,7 +491,7 @@ export function Header({
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('click', onClickOutside);
     };
-  }, [superMenuOpen, superMenuClosing, searchOpen]);
+  }, [superMenuOpen, superMenuClosing, searchOpen, desktopMenuOpen]);
 
   // При открытии с minimal: при скролле вниз сразу закрываем супер-меню
   const lastScrollYRef = useRef(0);
@@ -601,7 +511,8 @@ export function Header({
 
   const openSuperMenu = (sectionId: string) => {
     if (sectionId !== 'categories' && sectionId !== 'zones') return;
-    closeSearchRef.current({ restoreFocus: false });
+    closeSearch({ restoreFocus: false });
+    closeDesktopMenu({ restoreFocus: false });
     if (superMenuOpen && superMenuSection === sectionId) {
       closeSuperMenu();
       return;
@@ -624,64 +535,15 @@ export function Header({
     if (superMenuOpen) closeSuperMenu();
   };
 
-  const closeMobileMenu = () => {
-    if (!mobileMenuOpen || mobileMenuClosing) return;
-    setMobileMenuContentRevealed(false);
-    setMobileMenuClosing(true);
-    if (mobileMenuCloseTimeoutRef.current) clearTimeout(mobileMenuCloseTimeoutRef.current);
-    mobileMenuCloseTimeoutRef.current = setTimeout(() => {
-      mobileMenuCloseTimeoutRef.current = null;
-      setMobileMenuOpen(false);
-      setMobileMenuClosing(false);
-      setMobileMenuCatalogOpen(false);
-      setMobileMenuZonesOpen(false);
-    }, 280);
-  };
-  const toggleMobileMenu = () => {
-    if (mobileMenuClosing) return;
-    setMobileMenuOpen((o) => !o);
-  };
-
-  useEffect(() => {
-    if (!mobileMenuOpen || mobileMenuClosing) {
-      setMobileMenuContentRevealed(false);
-      return;
-    }
-    const rafId = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setMobileMenuContentRevealed(true));
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, [mobileMenuOpen, mobileMenuClosing]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeMobileMenu();
-    };
-    document.body.classList.add(BODY_MOBILE_MENU_OPEN);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.classList.remove(BODY_MOBILE_MENU_OPEN);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    return () => {
-      if (mobileMenuCloseTimeoutRef.current) clearTimeout(mobileMenuCloseTimeoutRef.current);
-    };
-  }, []);
-
   // При открытии с minimal остаёмся minimal; с main — без изменений
   const openedFromMinimal = superMenuOpen && variant === 'minimal';
   const superMenuVisible = superMenuOpen || superMenuClosing;
-  const searchPanelOpen = searchOpen || searchClosing;
 
   const className = [
     headerClassMap[variant] ?? styles.header,
     variant === 'main' && isMainOverlayOnHome && styles.headerMainOverlay,
     variant === 'main' && isMainOverlayOnHome && mainOverlayVisible && styles.headerMainOverlayVisible,
-    (superMenuVisible || searchPanelOpen) && styles.headerSuperMenuOpen,
+    (superMenuVisible || searchPanelOpen || desktopMenuPanelOpen) && styles.headerSuperMenuOpen,
   ]
     .filter(Boolean)
     .join(' ');
@@ -764,17 +626,15 @@ export function Header({
               <img src="/icons/search-normal.svg" alt="" width={20} height={20} />
             </button>
             <button
+              ref={burgerBtnRef}
               type="button"
               className={styles.burgerBtn}
-              aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
-              aria-expanded={mobileMenuOpen}
-              aria-controls={MOBILE_MENU_PANEL_ID}
-              onClick={() => {
-                closeSearch({ restoreFocus: false });
-                toggleMobileMenu();
-              }}
+              aria-label={burgerMenuExpanded ? 'Закрыть меню' : 'Открыть меню'}
+              aria-expanded={burgerMenuExpanded}
+              aria-controls={burgerAriaControls}
+              onClick={toggleBurgerMenu}
             >
-              <span className={styles.burgerIcon} aria-hidden data-open={mobileMenuOpen || undefined}>
+              <span className={styles.burgerIcon} aria-hidden data-open={burgerMenuExpanded || undefined}>
                 <img
                   className={styles.burgerIconSvg}
                   src="/icons/wupapa-burger.svg"
@@ -797,6 +657,20 @@ export function Header({
         onClose={() => closeSearch({ restoreFocus: true })}
         onNavigate={() => closeSearch({ restoreFocus: false })}
       />
+
+      <HeaderDesktopMenu
+        open={desktopMenuOpen}
+        closing={desktopMenuClosing}
+        onClose={() => closeDesktopMenu({ restoreFocus: true })}
+        onNavigate={() => closeDesktopMenu({ restoreFocus: false })}
+        onSourcing={() => {
+          openFreshModal();
+          closeDesktopMenu({ restoreFocus: false });
+        }}
+        telegramHref={TELEGRAM_HREF}
+      />
+
+      <SourcingRequestModal {...sourcingModalProps} />
 
       {/* Мобильное меню: раскрывается сверху вниз, на весь экран */}
       <div
@@ -988,7 +862,7 @@ export function Header({
           </div>
           <div className={styles.mobileMenuInner}>
             <nav className={styles.mobileMenuSimpleNav} aria-label="Информация">
-              {MOBILE_INFO_LINKS.map(({ href, label }) => (
+              {INFO_LINKS.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
@@ -999,6 +873,15 @@ export function Header({
                 </Link>
               ))}
             </nav>
+          </div>
+          <div className={styles.mobileMenuInner}>
+            <HeaderMenuSourcingPromo
+              variant="mobile"
+              onClick={() => {
+                openFreshModal();
+                closeMobileMenu();
+              }}
+            />
           </div>
           <div className={styles.mobileMenuInner}>
             <div className={styles.mobileMenuActions}>
@@ -1074,7 +957,10 @@ export function Header({
                       .join(' ')}
                   >
                     <div className={styles.superMenuLogoBlock} />
-                    <div className={styles.superMenuMenuCol} ref={superMenuMenuColRef}>
+                    <div
+                      className={styles.superMenuMenuCol}
+                      ref={superMenuSection === 'categories' ? superMenuMenuColRef : undefined}
+                    >
                       <ul className={styles.superMenuMenu} role="list">
                         {catalogRoots.length > 0 ? (
                           catalogRoots.map((c) => (
@@ -1150,7 +1036,10 @@ export function Header({
                       .join(' ')}
                   >
                     <div className={styles.superMenuLogoBlock} />
-                    <div className={styles.superMenuMenuCol}>
+                    <div
+                      className={styles.superMenuMenuCol}
+                      ref={superMenuSection === 'zones' ? superMenuMenuColRef : undefined}
+                    >
                       <ul className={styles.superMenuMenu} role="list">
                         {catalogTags.length > 0 ? (
                           catalogTags.map((tag) => (
