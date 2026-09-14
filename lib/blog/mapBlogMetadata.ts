@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import type { PublicBlogPostDetail } from '@/lib/blogPublic';
+import { SITE_NAME as SITE } from '@/lib/brand';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 
-const SITE = '588est';
-
-export const BLOG_LIST_DESCRIPTION = 'Статьи, события и материалы 588est';
+export const BLOG_LIST_DESCRIPTION = `Статьи, события и материалы ${SITE}`;
 
 export function blogListMetadata(): Metadata {
   return {

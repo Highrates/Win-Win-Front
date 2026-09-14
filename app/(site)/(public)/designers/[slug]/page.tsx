@@ -79,7 +79,7 @@ export async function generateMetadata({
   const d = await fetchDesigner(slug);
   const name = d?.displayName?.trim() || 'Дизайнер';
   return {
-    title: `${name} — Дизайнер — Win-Win`,
+    title: `${name} — Дизайнер — Wupapa`,
     description: `Страница дизайнера ${name}`,
   };
 }

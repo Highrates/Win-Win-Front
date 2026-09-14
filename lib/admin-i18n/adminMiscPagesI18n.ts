@@ -92,7 +92,7 @@ export function adminApplicationsPage(locale: AdminLocale) {
 export function adminApplicationDetailPage(locale: AdminLocale) {
   return {
     back: pick(locale, '← К списку взаимодействий', '← 返回互动列表'),
-    title: pick(locale, 'Заявка партнёра Win-Win', 'Win-Win 合作申请'),
+    title: pick(locale, 'Заявка партнёра Wupapa', 'Wupapa 合作申请'),
     notFound: pick(locale, 'Пользователь не найден', '未找到用户'),
     errLoad: pick(locale, 'Не удалось загрузить данные', '无法加载数据'),
     aboutTitle: pick(locale, 'Расскажите о себе (сопроводительный текст)', '自我介绍（附信）'),

@@ -62,6 +62,28 @@
   opacity: 0.75;
 }
 
+.columnLinkBtn {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-white);
+  text-decoration: none;
+  text-transform: uppercase;
+  line-height: 1.35;
+  transition: opacity 0.2s ease;
+}
+
+.columnLinkBtn:hover {
+  opacity: 0.75;
+}
+
 .columnMuted {
   font-size: var(--text-caption);
   color: rgba(255, 255, 255, 0.45);
@@ -210,7 +232,7 @@
   width: 100%;
   max-width: none;
   height: auto;
-  aspect-ratio: 725 / 193;
+  aspect-ratio: 444 / 60;
   color: var(--color-ink-black);
   overflow: visible;
 }

@@ -45,10 +45,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const collection = await fetchCuratedProductCollectionBySlug(slug);
   if (!collection) {
-    return { title: 'Коллекция — 588est' };
+    return { title: 'Коллекция — Wupapa' };
   }
   const siteOrigin = await getServerRequestOrigin();
-  const title = `${collection.name} — Коллекции — 588est`;
+  const title = `${collection.name} — Коллекции — Wupapa`;
   return {
     title,
     openGraph: {

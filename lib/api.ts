@@ -1,5 +1,5 @@
 /**
- * API-клиент для Win-Win backend (NestJS).
+ * API-клиент для Wupapa backend (NestJS).
  * BASE_URL задаётся через NEXT_PUBLIC_API_URL (для SSR и клиента).
  */
 const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';

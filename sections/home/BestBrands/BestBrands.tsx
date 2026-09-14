@@ -39,13 +39,19 @@ function getVisibleDotIndices(total: number, activeIndex: number): number[] {
 export function BestBrands({ brands, activeBrandSlug }: BestBrandsProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [dragX, setDragX] = useState(0);
+  const [slideDir, setSlideDir] = useState<1 | -1>(1);
+  const [animKey, setAnimKey] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const dragAxisRef = useRef<'x' | 'y' | null>(null);
+  const skipAnimRef = useRef(true);
 
   useEffect(() => {
     if (activeBrandSlug == null) return;
     const idx = brands.findIndex((b) => b.slug === activeBrandSlug);
-    if (idx >= 0) setActiveIndex(idx);
+    if (idx >= 0) {
+      skipAnimRef.current = true;
+      setActiveIndex(idx);
+    }
   }, [activeBrandSlug, brands]);
 
   const canNavigate = brands.length > 1;
@@ -62,14 +68,22 @@ export function BestBrands({ brands, activeBrandSlug }: BestBrandsProps) {
     }
   }, [brand]);
 
-  function goPrev() {
+  function goTo(nextIndex: number, dir: 1 | -1) {
     if (!canNavigate) return;
-    setActiveIndex((i) => (i - 1 + brands.length) % brands.length);
+    const normalized = (nextIndex + brands.length) % brands.length;
+    if (normalized === activeIndex) return;
+    skipAnimRef.current = false;
+    setSlideDir(dir);
+    setAnimKey((k) => k + 1);
+    setActiveIndex(normalized);
+  }
+
+  function goPrev() {
+    goTo(activeIndex - 1, -1);
   }
 
   function goNext() {
-    if (!canNavigate) return;
-    setActiveIndex((i) => (i + 1) % brands.length);
+    goTo(activeIndex + 1, 1);
   }
 
   function onTouchStart(e: TouchEvent<HTMLDivElement>) {
@@ -107,43 +121,66 @@ export function BestBrands({ brands, activeBrandSlug }: BestBrandsProps) {
 
   if (!brands.length || !brand) return null;
 
+  const animate = !skipAnimRef.current;
+  const paneClass = [
+    styles.slidePane,
+    animate ? (slideDir === 1 ? styles.slidePaneNext : styles.slidePanePrev) : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <section className={styles.section} aria-label="Лучшие бренды">
       <div
         className={styles.split}
+        style={
+          dragX !== 0
+            ? { transform: `translateX(${dragX * 0.22}px)`, transition: 'none' }
+            : undefined
+        }
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
       >
         <div className={styles.infoCol}>
-          <div className={`padding-global ${styles.infoPad}`}>
-            <Link href={`/brands/${brand.slug}`} className={styles.infoLink}>
-              <h3 className={styles.brandName}>{brand.name}</h3>
-              <div className={styles.productPreviewWrap}>
-                {brand.productPreview ? (
-                  <img
-                    className={styles.productPreview}
-                    src={brand.productPreview}
-                    alt=""
-                    width={640}
-                    height={480}
-                    decoding="async"
-                    fetchPriority="high"
-                  />
-                ) : (
-                  <span className={styles.productPreviewPlaceholder} aria-hidden />
-                )}
-              </div>
-              <p className={styles.description}>
-                {brand.description.trim() || FALLBACK_DESCRIPTION}
-              </p>
-            </Link>
+          <div
+            key={`info-${brand.slug}-${animKey}`}
+            className={`${styles.infoPadWrap} ${paneClass}`.trim()}
+          >
+            <div className={`padding-global ${styles.infoPad}`}>
+              <Link href={`/brands/${brand.slug}`} className={styles.infoLink}>
+                <h3 className={styles.brandName}>{brand.name}</h3>
+                <div className={styles.productPreviewWrap}>
+                  {brand.productPreview ? (
+                    <img
+                      className={styles.productPreview}
+                      src={brand.productPreview}
+                      alt=""
+                      width={640}
+                      height={480}
+                      decoding="async"
+                      fetchPriority="high"
+                    />
+                  ) : (
+                    <span className={styles.productPreviewPlaceholder} aria-hidden />
+                  )}
+                </div>
+                <p className={styles.description}>
+                  {brand.description.trim() || FALLBACK_DESCRIPTION}
+                </p>
+              </Link>
+            </div>
           </div>
         </div>
 
         <div className={styles.lifestyleCol}>
-          <Link href={`/brands/${brand.slug}`} className={styles.lifestyleLink} tabIndex={-1}>
+          <Link
+            key={`life-${brand.slug}-${animKey}`}
+            href={`/brands/${brand.slug}`}
+            className={`${styles.lifestyleLink} ${paneClass}`.trim()}
+            tabIndex={-1}
+          >
             {brand.lifestyleImage ? (
               <img
                 className={styles.lifestyleImage}
@@ -199,7 +236,10 @@ export function BestBrands({ brands, activeBrandSlug }: BestBrandsProps) {
                 aria-selected={index === activeIndex}
                 aria-label={item.name}
                 className={`${styles.dot} ${index === activeIndex ? styles.dotActive : ''}`.trim()}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => {
+                  if (index === activeIndex) return;
+                  goTo(index, index > activeIndex ? 1 : -1);
+                }}
               />
             );
           })}

@@ -243,9 +243,9 @@ body.header-super-menu-open {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  /* 588est ~725×193; пропорции подправим отдельно */
+  /* Wupapa wordmark 444×60 */
   width: 280px;
-  height: 75px;
+  height: 38px;
   overflow: hidden;
   color: var(--color-white);
 }
@@ -264,7 +264,7 @@ body.header-super-menu-open {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 725 / 193;
+  aspect-ratio: 444 / 60;
   overflow: hidden;
 }
 

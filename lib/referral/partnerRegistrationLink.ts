@@ -8,5 +8,5 @@ export function buildPartnerRegistrationUrl(referralCode: string, origin?: strin
 
 export function partnerReferralQrFilename(referralCode: string): string {
   const safe = referralCode.trim().replace(/[^\w-]+/g, '_');
-  return `win-win-ref-${safe || 'partner'}.png`;
+  return `wupapa-ref-${safe || 'partner'}.png`;
 }

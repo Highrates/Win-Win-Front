@@ -14,6 +14,7 @@ function isHeroLandingPath(pathname: string, hasTagQuery: boolean) {
   if (pathname === '/') return true;
   // Хаб каталога с fold/hero; `?tag=` — обычная страница без hero
   if (pathname === '/catalog' && !hasTagQuery) return true;
+  if (pathname === '/about') return true;
   return false;
 }
 

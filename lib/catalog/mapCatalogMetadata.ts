@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import type { CatalogCategoryBySlugApi, PublicCatalogTag } from '@/lib/catalogPublic';
+import { SITE_NAME as SITE } from '@/lib/brand';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
-
-const SITE = '588est';
 
 export const CATALOG_HUB_DESCRIPTION = 'Каталог мебели и предметов интерьера';
 

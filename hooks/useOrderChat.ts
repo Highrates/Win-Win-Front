@@ -181,7 +181,7 @@ function mapApiToUi(
   let senderName = m.authorLabel;
   if (variant === 'account') {
     if (isMineCustomer) senderName = 'Вы';
-    else if (isStaff) senderName = 'Менеджер Win-Win';
+    else if (isStaff) senderName = 'Менеджер Wupapa';
   } else {
     if (isMineStaff) senderName = 'Вы';
     else if (!isStaff) senderName = m.authorLabel || 'Клиент';

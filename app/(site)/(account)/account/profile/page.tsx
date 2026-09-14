@@ -260,7 +260,7 @@ function ProfilePageContent() {
                       setPartnerAppModalOpen(true);
                     }}
                   >
-                    Стать партнером Win-Win
+                    Стать партнером Wupapa
                   </button>
                 )}
               </div>

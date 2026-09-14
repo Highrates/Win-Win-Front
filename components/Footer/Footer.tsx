@@ -5,17 +5,23 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useCatalogNavRoots } from '@/components/CatalogNavContext';
 import { LogoPaths } from '@/components/SiteLoader/LogoPaths';
+import { SourcingRequestModal } from '@/components/SourcingRequest/SourcingRequestModal';
+import { useSourcingPromoFlow } from '@/components/SourcingRequest/useSourcingPromoFlow';
+import { SITE_NAME } from '@/lib/brand';
 import {
   getCachedIsAuthenticated,
   USER_SESSION_CHANGED_EVENT,
 } from '@/lib/userSessionClient';
 import styles from './Footer.module.css';
 
-const infoLinks = [
+const infoLinksBeforeSourcing = [
   { href: '/about', label: 'О нас' },
   { href: '/brands', label: 'Бренды' },
   { href: '/designers', label: 'Дизайнеры' },
   { href: '/projects', label: 'Проекты и концепции' },
+] as const;
+
+const infoLinksAfterSourcing = [
   { href: '/blog', label: 'Новости и статьи' },
   { href: '/delivery', label: 'Доставка и оплата' },
   { href: '/warranty', label: 'Гарантия, обмен и возврат' },
@@ -23,7 +29,7 @@ const infoLinks = [
   { href: '/faq', label: 'FAQ' },
   { href: '/contacts', label: 'Контакты' },
   { href: '/sitemap', label: 'Карта сайта' },
-];
+] as const;
 
 const legalLinks = [
   { href: '/privacy', label: 'Политика конфиденциальности' },
@@ -85,6 +91,7 @@ export function Footer() {
   const [tags, setTags] = useState<TagItem[]>([]);
   const [accountHref, setAccountHref] = useState('/login');
   const logoRef = useRef<HTMLDivElement>(null);
+  const { openFreshModal, modalProps } = useSourcingPromoFlow();
 
   const rightBg = useMemo(() => footerRightBackground(pathname), [pathname]);
 
@@ -201,7 +208,7 @@ export function Footer() {
         <div className={styles.left}>
           <nav className={styles.columns} aria-label="Футер">
             <div className={styles.column}>
-              <span className={styles.columnTitle}>588est</span>
+              <span className={styles.columnTitle}>{SITE_NAME}</span>
               <div className={styles.columnLinks}>
                 {catalogLinks.map((link) => (
                   <Link key={link.key} href={link.href}>
@@ -232,7 +239,15 @@ export function Footer() {
             <div className={styles.column}>
               <span className={styles.columnTitle}>Инфо</span>
               <div className={styles.columnLinks}>
-                {infoLinks.map((link) => (
+                {infoLinksBeforeSourcing.map((link) => (
+                  <Link key={link.href} href={link.href}>
+                    {link.label}
+                  </Link>
+                ))}
+                <button type="button" className={styles.columnLinkBtn} onClick={openFreshModal}>
+                  Заказать подбор
+                </button>
+                {infoLinksAfterSourcing.map((link) => (
                   <Link key={link.href} href={link.href}>
                     {link.label}
                   </Link>
@@ -243,7 +258,7 @@ export function Footer() {
 
           <div className={styles.leftBottom}>
             <aside className={styles.partnerCta} aria-label="Партнёрство">
-              <p className={styles.partnerCtaTitle}>Станьте партнёром 588est</p>
+              <p className={styles.partnerCtaTitle}>Станьте партнёром {SITE_NAME}</p>
               <p className={styles.partnerCtaText}>
                 Для дизайнеров, студий и команд —
                 <br />
@@ -263,7 +278,7 @@ export function Footer() {
                   </Link>
                 ))}
               </div>
-              <span className={styles.copyright}>588est. Все права защищены.</span>
+              <span className={styles.copyright}>{SITE_NAME}. Все права защищены.</span>
             </div>
           </div>
         </div>
@@ -284,12 +299,13 @@ export function Footer() {
           </div>
 
           <div className={styles.rightLogoSlot}>
-            <div ref={logoRef} className={styles.rightLogo} aria-label="588est">
+            <div ref={logoRef} className={styles.rightLogo} aria-label={SITE_NAME}>
               <LogoPaths className={styles.rightLogoMark} />
             </div>
           </div>
         </div>
       </div>
+      <SourcingRequestModal {...modalProps} />
     </footer>
   );
 }

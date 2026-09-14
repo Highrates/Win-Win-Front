@@ -1,6 +1,6 @@
 export type MediaLibraryTab = 'all' | 'images' | 'documents' | 'models' | 'videos';
 
-/** Медиатека в админке: раздельно win-win и загрузки пользователей. */
+/** Медиатека в админке: раздельно платформенные и загрузки пользователей. */
 export type MediaLibraryScope = 'winwin' | 'user';
 
 export type MediaFolderRow = {

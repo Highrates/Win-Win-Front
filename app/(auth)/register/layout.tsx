@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Регистрация — Win-Win',
+  title: 'Регистрация — Wupapa',
   description: 'Регистрация по телефону или по email с подтверждением кода',
 };
 

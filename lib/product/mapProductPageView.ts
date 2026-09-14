@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { PublicProductFromApi } from '@/lib/publicProductFromApi';
 import { pickPublicProductVariant } from '@/lib/publicProductFromApi';
 import { parseProductPriceFromApi } from '@/lib/productSpecsFromApi';
+import { SITE_NAME } from '@/lib/brand';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import type { PublicSetSiblingProduct } from '@/lib/catalogPublic';
 import type { RecommendationsStaticItem } from '@/sections/home/Recommendations/recommendationsStaticItem';
@@ -189,7 +190,7 @@ export function mapProductPageView(
 export function buildProductPageMetadata(product: PublicProductFromApi, query: ProductPageQuery) {
   const { variant } = pickPublicProductVariant(product, query.v, query.vs);
   const label = variant?.variantLabel?.trim() || product.name;
-  const title = product.seoTitle?.trim() || `${label} — 588est`;
+  const title = product.seoTitle?.trim() || `${label} — ${SITE_NAME}`;
   const description =
     product.seoDescription?.trim() ||
     product.shortDescription?.trim() ||

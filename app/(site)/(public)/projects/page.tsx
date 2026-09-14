@@ -13,7 +13,7 @@ import listingLayoutStyles from './ProjectsListingLayout.module.css';
 import projectsStyles from './ProjectsPage.module.css';
 
 export const metadata: Metadata = {
-  title: 'Проекты и концепции — Win-Win',
+  title: 'Проекты и концепции — Wupapa',
   description: 'Проекты и концепции интерьеров',
 };
 

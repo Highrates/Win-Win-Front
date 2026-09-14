@@ -13,6 +13,8 @@
   min-height: 560px;
   width: 100%;
   position: relative;
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .infoCol {
@@ -20,6 +22,16 @@
   background: var(--color-bright-snow);
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.infoPadWrap {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
   height: 100%;
 }
 
@@ -115,12 +127,54 @@
   min-height: 0;
   height: 100%;
   background: var(--color-bright-snow);
+  overflow: hidden;
 }
 
 .lifestyleLink {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.slidePaneNext {
+  animation: bestBrandSlideNext 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.slidePanePrev {
+  animation: bestBrandSlidePrev 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes bestBrandSlideNext {
+  from {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes bestBrandSlidePrev {
+  from {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .split {
+    transition: none;
+  }
+
+  .slidePaneNext,
+  .slidePanePrev {
+    animation: none;
+  }
 }
 
 .lifestyleImage {

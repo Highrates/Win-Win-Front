@@ -1,16 +1,17 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import styles from './AboutTeaser.module.css';
+import { SITE_LOGO_SRC, SITE_NAME } from '@/lib/brand';
 
 export function AboutTeaser() {
   return (
     <section className={styles.section} aria-label="О нас">
       <div className={`padding-global ${styles.inner}`}>
         <Image
-          src="/images/logo.svg"
-          alt="588est"
+          src={SITE_LOGO_SRC}
+          alt={SITE_NAME}
           width={190}
-          height={28}
+          height={26}
           className={styles.logo}
           priority={false}
         />

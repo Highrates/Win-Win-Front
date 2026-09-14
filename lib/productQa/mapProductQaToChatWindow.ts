@@ -20,7 +20,7 @@ export function mapProductQaToChatWindow(
   let senderName = m.authorLabel;
   if (variant === 'account') {
     if (isMine) senderName = 'Вы';
-    else if (isStaff) senderName = 'Менеджер Win-Win';
+    else if (isStaff) senderName = 'Менеджер Wupapa';
   } else {
     if (isMine && isStaff) senderName = 'Вы';
     else if (isStaff) senderName = m.authorLabel || 'Сотрудник';

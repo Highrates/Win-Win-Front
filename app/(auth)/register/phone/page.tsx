@@ -4,7 +4,7 @@ import { RegisterFlow } from '@/components/auth-forms/RegisterFlow';
 import { redirectIfUserAuthenticated } from '@/lib/authGuestServer';
 
 export const metadata: Metadata = {
-  title: 'Регистрация по телефону — Win-Win',
+  title: 'Регистрация по телефону — Wupapa',
   description: 'Создание аккаунта по номеру телефона',
 };
 

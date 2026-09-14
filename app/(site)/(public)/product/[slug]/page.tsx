@@ -24,7 +24,7 @@ export async function generateMetadata({
   const query = await searchParams;
   const data = await loadProductCoreData(slug, query);
   if (!data) {
-    return { title: 'Товар — 588est' };
+    return { title: 'Товар — Wupapa' };
   }
   return productPageMetadataFromData(data);
 }

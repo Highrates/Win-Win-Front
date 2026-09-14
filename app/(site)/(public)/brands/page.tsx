@@ -3,8 +3,8 @@ import { fetchPublicBrands } from '@/lib/brandsPublic';
 import { BrandsPageClient } from './BrandsPageClient';
 
 export const metadata: Metadata = {
-  title: 'Бренды — Win-Win',
-  description: 'Каталог брендов Win-Win',
+  title: 'Бренды — Wupapa',
+  description: 'Каталог брендов Wupapa',
 };
 
 export default async function BrandsPage() {

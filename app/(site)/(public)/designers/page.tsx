@@ -38,8 +38,8 @@ async function fetchDesigners(
 }
 
 export const metadata: Metadata = {
-  title: 'Дизайнеры — Win-Win',
-  description: 'Каталог дизайнеров Win-Win',
+  title: 'Дизайнеры — Wupapa',
+  description: 'Каталог дизайнеров Wupapa',
 };
 
 type Props = {

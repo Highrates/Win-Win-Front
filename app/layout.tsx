@@ -1,14 +1,22 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SiteTransitionProvider } from '@/components/SiteTransition';
 import { ClientOnlyOverlays } from '@/components/ClientOnlyOverlays';
+import { SITE_FAVICON_SRC, SITE_NAME, SITE_WEBCLIP_SRC } from '@/lib/brand';
 
 export const metadata: Metadata = {
-  title: '588est — Каталог мебели для дизайнеров',
+  title: `${SITE_NAME} — Каталог мебели для дизайнеров`,
   description: 'Качественный и стильный интерьер из Китая',
   icons: {
-    icon: [{ url: '/images/favicon.svg', type: 'image/svg+xml' }],
+    icon: [{ url: SITE_FAVICON_SRC, type: 'image/svg+xml' }],
+    apple: [{ url: SITE_WEBCLIP_SRC, sizes: '256x256', type: 'image/png' }],
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

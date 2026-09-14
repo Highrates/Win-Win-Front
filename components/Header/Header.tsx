@@ -14,10 +14,12 @@ import {
   prepareLogoWaveIn,
   resetLogoWaveVisible,
 } from '@/components/SiteLoader/logoWave';
+import { SITE_LOGO_SRC, SITE_NAME } from '@/lib/brand';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import { ScrollCatalogStripPanel } from '@/sections/home/ScrollCatalog/ScrollCatalogStripPanel';
 import { USER_SESSION_CHANGED_EVENT } from '@/lib/userSessionClient';
 import styles from './Header.module.css';
+import { HeaderSearchPanel } from './HeaderSearchPanel';
 
 const MENU_SECTIONS = [
   { id: 'categories', href: '/catalog', label: 'Каталог' },
@@ -54,6 +56,11 @@ const MOBILE_INFO_LINKS = [
 
 /** Пока нет URL в настройках — заглушка. */
 const TELEGRAM_HREF = 'https://t.me/';
+
+function motionMs(full: number) {
+  if (typeof window === 'undefined') return full;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : full;
+}
 
 function MenuChevron({ open }: { open: boolean }) {
   return (
@@ -109,9 +116,16 @@ export function Header({
   const [mobileMenuClosing, setMobileMenuClosing] = useState(false);
   const [mobileMenuCatalogOpen, setMobileMenuCatalogOpen] = useState(false);
   const [mobileMenuZonesOpen, setMobileMenuZonesOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchClosing, setSearchClosing] = useState(false);
   const [accountEntryHref, setAccountEntryHref] = useState('/login');
   const [accountAuthenticated, setAccountAuthenticated] = useState(false);
   const mobileMenuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchBtnRef = useRef<HTMLButtonElement>(null);
+  const restoreSearchFocusRef = useRef(false);
+  const closeSearchRef = useRef<(opts?: { restoreFocus?: boolean }) => void>(() => {});
+  const dismissMobileMenuInstantRef = useRef<() => void>(() => {});
   const isTransitioningRef = useRef(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeSuperMenuRef = useRef<() => void>(() => {});
@@ -411,9 +425,92 @@ export function Header({
   };
   closeSuperMenuRef.current = closeSuperMenu;
 
+  const dismissMobileMenuInstant = useCallback(() => {
+    if (mobileMenuCloseTimeoutRef.current) {
+      clearTimeout(mobileMenuCloseTimeoutRef.current);
+      mobileMenuCloseTimeoutRef.current = null;
+    }
+    setMobileMenuOpen(false);
+    setMobileMenuClosing(false);
+    setMobileMenuContentRevealed(false);
+  }, []);
+  dismissMobileMenuInstantRef.current = dismissMobileMenuInstant;
+
+  const closeSearch = useCallback((opts?: { restoreFocus?: boolean }) => {
+    if (!searchOpen && !searchClosing) return;
+    const shouldRestore = opts?.restoreFocus === true;
+    restoreSearchFocusRef.current = shouldRestore;
+
+    /* Фокус уводим до open=false → inert, иначе фокус «зависает» в inert-узле */
+    if (shouldRestore) {
+      searchBtnRef.current?.focus();
+    } else {
+      const active = document.activeElement;
+      const panel = document.getElementById('header-search-panel');
+      if (active instanceof HTMLElement && panel?.contains(active)) {
+        active.blur();
+      }
+    }
+
+    setSearchClosing(true);
+    setSearchOpen(false);
+    if (searchCloseTimeoutRef.current) clearTimeout(searchCloseTimeoutRef.current);
+    searchCloseTimeoutRef.current = setTimeout(() => {
+      setSearchClosing(false);
+      searchCloseTimeoutRef.current = null;
+      if (restoreSearchFocusRef.current) {
+        restoreSearchFocusRef.current = false;
+        searchBtnRef.current?.focus();
+      }
+    }, motionMs(560));
+  }, [searchOpen, searchClosing]);
+  closeSearchRef.current = closeSearch;
+
+  const openSearch = useCallback(() => {
+    if (searchClosing) return;
+    closeSuperMenuRef.current();
+    dismissMobileMenuInstant();
+    setSearchOpen(true);
+    setSearchClosing(false);
+  }, [searchClosing, dismissMobileMenuInstant]);
+
+  useEffect(() => {
+    const onHotkey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const editable =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        Boolean(target?.isContentEditable);
+
+      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        if (searchOpen && !searchClosing) {
+          document
+            .querySelector<HTMLInputElement>('#header-search-panel input')
+            ?.focus();
+          return;
+        }
+        openSearch();
+        return;
+      }
+
+      if (e.key === '/' && !editable && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        openSearch();
+      }
+    };
+    window.addEventListener('keydown', onHotkey);
+    return () => window.removeEventListener('keydown', onHotkey);
+  }, [openSearch, searchOpen, searchClosing]);
+
   useEffect(() => {
     const onMenuCovered = () => {
       closeSuperMenuRef.current();
+      closeSearchRef.current({ restoreFocus: false });
+      dismissMobileMenuInstantRef.current();
     };
     window.addEventListener(MENU_COVERED_EVENT, onMenuCovered);
     return () => window.removeEventListener(MENU_COVERED_EVENT, onMenuCovered);
@@ -454,12 +551,22 @@ export function Header({
   }, [superMenuOpen, superMenuClosing]);
 
   useEffect(() => {
+    const anyOverlay =
+      superMenuOpen || superMenuClosing || searchOpen || searchClosing;
+    document.body.classList.toggle(BODY_SUPER_MENU_OPEN, anyOverlay);
+    return () => document.body.classList.remove(BODY_SUPER_MENU_OPEN);
+  }, [superMenuOpen, superMenuClosing, searchOpen, searchClosing]);
+
+  useEffect(() => {
     if (!superMenuOpen && !superMenuClosing) {
       setSuperMenuSection(null);
       return;
     }
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeSuperMenuRef.current();
+      if (e.key !== 'Escape') return;
+      /* Поиск: Escape обрабатывает HeaderSearchPanel */
+      if (searchOpen) return;
+      closeSuperMenuRef.current();
     };
     const onClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -470,13 +577,11 @@ export function Header({
     };
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('click', onClickOutside);
-    document.body.classList.add(BODY_SUPER_MENU_OPEN);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('click', onClickOutside);
-      document.body.classList.remove(BODY_SUPER_MENU_OPEN);
     };
-  }, [superMenuOpen, superMenuClosing]);
+  }, [superMenuOpen, superMenuClosing, searchOpen]);
 
   // При открытии с minimal: при скролле вниз сразу закрываем супер-меню
   const lastScrollYRef = useRef(0);
@@ -496,6 +601,7 @@ export function Header({
 
   const openSuperMenu = (sectionId: string) => {
     if (sectionId !== 'categories' && sectionId !== 'zones') return;
+    closeSearchRef.current({ restoreFocus: false });
     if (superMenuOpen && superMenuSection === sectionId) {
       closeSuperMenu();
       return;
@@ -569,12 +675,13 @@ export function Header({
   // При открытии с minimal остаёмся minimal; с main — без изменений
   const openedFromMinimal = superMenuOpen && variant === 'minimal';
   const superMenuVisible = superMenuOpen || superMenuClosing;
+  const searchPanelOpen = searchOpen || searchClosing;
 
   const className = [
     headerClassMap[variant] ?? styles.header,
     variant === 'main' && isMainOverlayOnHome && styles.headerMainOverlay,
     variant === 'main' && isMainOverlayOnHome && mainOverlayVisible && styles.headerMainOverlayVisible,
-    superMenuVisible && styles.headerSuperMenuOpen,
+    (superMenuVisible || searchPanelOpen) && styles.headerSuperMenuOpen,
   ]
     .filter(Boolean)
     .join(' ');
@@ -583,23 +690,6 @@ export function Header({
     <header className={className}>
       <div className={`padding-global ${styles.headerBar}`}>
         <div className={styles.siteHeaderWrap}>
-          <button
-            type="button"
-            className={styles.burgerBtn}
-            aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
-            aria-expanded={mobileMenuOpen}
-            aria-controls={MOBILE_MENU_PANEL_ID}
-            onClick={toggleMobileMenu}
-          >
-            <span className={styles.burgerIcon} aria-hidden data-open={mobileMenuOpen || undefined}>
-              <svg className={styles.burgerIconSvg} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              <svg className={styles.closeIconSvg} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          </button>
           <div
             className={[styles.logoBlock, logoFading ? styles.logoBlockFading : '']
               .filter(Boolean)
@@ -609,7 +699,7 @@ export function Header({
               <span className={styles.logoWaveMark} ref={logoWaveRef} aria-hidden={!logoWaveReady}>
                 <LogoPaths className={styles.logoWaveSvg} />
               </span>
-              <span className={styles.srOnly}>588est</span>
+              <span className={styles.srOnly}>{SITE_NAME}</span>
             </Link>
           </div>
           <nav className={styles.siteHeaderNav} aria-label="Основное меню">
@@ -644,10 +734,7 @@ export function Header({
               )}
             </div>
           </nav>
-          <nav className={styles.rightNav} aria-label="Поиск и аккаунт">
-            <button type="button" className={styles.iconBtn} aria-label="Поиск">
-              <img src="/icons/search-normal.svg" alt="" width={20} height={20} />
-            </button>
+          <nav className={styles.rightNav} aria-label="Аккаунт, поиск и меню">
             <Link
               href={accountEntryHref}
               className={styles.accountTextLink}
@@ -657,9 +744,59 @@ export function Header({
                 {accountAuthenticated ? 'Профиль' : 'Войти'}
               </span>
             </Link>
+            <button
+              ref={searchBtnRef}
+              type="button"
+              className={styles.iconBtn}
+              aria-label="Поиск"
+              aria-keyshortcuts="Meta+K Control+K"
+              aria-expanded={searchOpen}
+              aria-controls="header-search-panel"
+              onClick={() => {
+                /* Mobile: тот же openSearch, что и пункт меню (не toggle) */
+                if (searchOpen) {
+                  closeSearch({ restoreFocus: true });
+                  return;
+                }
+                openSearch();
+              }}
+            >
+              <img src="/icons/search-normal.svg" alt="" width={20} height={20} />
+            </button>
+            <button
+              type="button"
+              className={styles.burgerBtn}
+              aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls={MOBILE_MENU_PANEL_ID}
+              onClick={() => {
+                closeSearch({ restoreFocus: false });
+                toggleMobileMenu();
+              }}
+            >
+              <span className={styles.burgerIcon} aria-hidden data-open={mobileMenuOpen || undefined}>
+                <img
+                  className={styles.burgerIconSvg}
+                  src="/icons/wupapa-burger.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                />
+                <svg className={styles.closeIconSvg} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </button>
           </nav>
         </div>
       </div>
+
+      <HeaderSearchPanel
+        open={searchOpen}
+        closing={searchClosing}
+        onClose={() => closeSearch({ restoreFocus: true })}
+        onNavigate={() => closeSearch({ restoreFocus: false })}
+      />
 
       {/* Мобильное меню: раскрывается сверху вниз, на весь экран */}
       <div
@@ -682,10 +819,10 @@ export function Header({
           <div className={styles.mobileMenuHeader}>
             <Link href="/" onClick={closeMobileMenu} className={styles.mobileMenuLogoLink} aria-label="На главную">
               <Image
-                src="/images/logo.svg"
-                alt="588est"
+                src={SITE_LOGO_SRC}
+                alt={SITE_NAME}
                 width={200}
-                height={30}
+                height={27}
                 className={styles.mobileMenuLogoImg}
                 style={{ height: 'auto' }}
               />
@@ -865,7 +1002,12 @@ export function Header({
           </div>
           <div className={styles.mobileMenuInner}>
             <div className={styles.mobileMenuActions}>
-              <button type="button" className={styles.mobileMenuSearchBtn} aria-label="Поиск" onClick={closeMobileMenu}>
+              <button
+                type="button"
+                className={styles.mobileMenuSearchBtn}
+                aria-label="Поиск"
+                onClick={openSearch}
+              >
                 <img src="/icons/search-normal.svg" alt="" width={18} height={18} />
                 <span className={styles.mobileMenuSearchLabel}>Поиск</span>
               </button>

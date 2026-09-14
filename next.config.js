@@ -44,7 +44,9 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      { source: '/favicon.ico', destination: '/images/favicon.svg' },
+      { source: '/favicon.ico', destination: '/images/favicon.wupapa.svg' },
+      { source: '/apple-touch-icon.png', destination: '/images/webclip.png' },
+      { source: '/apple-touch-icon-precomposed.png', destination: '/images/webclip.png' },
       /** Локальные файлы API: браузер грузит с origin Next, не с 127.0.0.1:3001 */
       {
         source: '/uploads/:path*',

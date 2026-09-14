@@ -10,10 +10,10 @@ const HOME_DESCRIPTION =
   'Качественный и стильный интерьер из Китая. Каталог мебели для дизайнеров интерьеров.';
 
 export const metadata: Metadata = {
-  title: '588est — мебель и интерьер из Китая',
+  title: 'Wupapa — мебель и интерьер из Китая',
   description: HOME_DESCRIPTION,
   openGraph: {
-    title: '588est — мебель и интерьер из Китая',
+    title: 'Wupapa — мебель и интерьер из Китая',
     description: HOME_DESCRIPTION,
     type: 'website',
   },

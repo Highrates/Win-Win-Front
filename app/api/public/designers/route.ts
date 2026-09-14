@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
-/** Публичный список дизайнеров-партнёров Win-Win (прокси к Nest). */
+/** Публичный список дизайнеров-партнёров Wupapa (прокси к Nest). */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

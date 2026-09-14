@@ -9,7 +9,7 @@ const BODY_DOCK_OPEN = 'account-mobile-dock-open';
 
 export type CustomerAccountSidebarProps = {
   userName?: string;
-  /** Одобренный партнёр Win-Win (админ): видны Кейсы, Команда, Проекты и т.д. */
+  /** Одобренный партнёр Wupapa (админ): видны Кейсы, Команда, Проекты и т.д. */
   isWinWinPartner?: boolean;
   /** Профиль с сервера загружен — до этого пункты партнёра скрыты, чтобы не мигать лишним доступом */
   profileLoaded?: boolean;
@@ -188,7 +188,7 @@ export function CustomerAccountSidebar({
             {userGroupLabel ? (
               <span className={styles.groupBadge}>{userGroupLabel}</span>
             ) : showDesignerNav ? (
-              <p className={styles.partnerStatus}>Партнер Win-Win</p>
+              <p className={styles.partnerStatus}>Партнер Wupapa</p>
             ) : (
               <p className={styles.partnerStatus} aria-hidden />
             )}

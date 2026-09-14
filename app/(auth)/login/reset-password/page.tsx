@@ -5,7 +5,7 @@ import { ResetPasswordForm } from '@/components/auth-forms/ResetPasswordForm';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
 export const metadata: Metadata = {
-  title: 'Новый пароль — Win-Win',
+  title: 'Новый пароль — Wupapa',
   description: 'Задайте новый пароль для входа в аккаунт',
 };
 

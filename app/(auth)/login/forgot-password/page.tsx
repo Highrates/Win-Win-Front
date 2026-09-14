@@ -5,7 +5,7 @@ import { ForgotPasswordForm } from '@/components/auth-forms';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
 export const metadata: Metadata = {
-  title: 'Забыли пароль — Win-Win',
+  title: 'Забыли пароль — Wupapa',
   description: 'Восстановление доступа к аккаунту',
 };
 

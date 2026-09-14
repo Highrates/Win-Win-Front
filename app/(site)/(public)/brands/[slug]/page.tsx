@@ -27,9 +27,9 @@ export async function generateMetadata({
   const { slug } = await params;
   const row = await fetchPublicBrandBySlug(slug);
   if (!row) {
-    return { title: 'Бренд — Win-Win' };
+    return { title: 'Бренд — Wupapa' };
   }
-  const title = row.seoTitle?.trim() || `${row.name} — Бренд — Win-Win`;
+  const title = row.seoTitle?.trim() || `${row.name} — Бренд — Wupapa`;
   const desc =
     row.seoDescription?.trim() ||
     row.shortDescription?.trim() ||

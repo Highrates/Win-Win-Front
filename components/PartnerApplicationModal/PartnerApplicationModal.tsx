@@ -61,11 +61,11 @@ export function PartnerApplicationModal({
   }, [about, file, referralCode, referralInviteExempt, storedReferralCode, submit]);
 
   return (
-    <SlideInPanelModal open={open} onClose={handleClose} ariaLabel="Заявка на партнёра Win-Win">
+    <SlideInPanelModal open={open} onClose={handleClose} ariaLabel="Заявка на партнёра Wupapa">
       <div className={panelModal.inner}>
         {phase === 'form' ? (
           <>
-            <h3 className={panelModal.title}>Стать партнёром Win-Win</h3>
+            <h3 className={panelModal.title}>Стать партнёром Wupapa</h3>
             <div className={profileSheetStyles.partnerFormField}>
               <label className={profileSheetStyles.fieldLabel} htmlFor="partner-app-about">
                 Расскажите о себе

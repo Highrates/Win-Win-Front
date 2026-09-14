@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { SITE_LOGO_SRC, SITE_NAME } from '@/lib/brand';
 import { fetchBlogCategoriesPublic, fetchBlogPostsPublic } from '@/lib/blogPublicServer';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import { NewsSourcingPromo } from './NewsSourcingPromo';
@@ -19,10 +20,10 @@ export async function News() {
           <div className={`padding-global ${styles.inner}`}>
             <div className={styles.titles}>
               <Image
-                src="/images/logo.svg"
-                alt="588est"
+                src={SITE_LOGO_SRC}
+                alt={SITE_NAME}
                 width={152}
-                height={22}
+                height={21}
                 className={styles.logo}
                 priority
               />

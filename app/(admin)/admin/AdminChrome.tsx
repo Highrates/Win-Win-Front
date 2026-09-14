@@ -24,6 +24,7 @@ import {
   useAdminPermissions,
 } from '@/lib/adminPermissions/AdminPermissionsProvider';
 import { AdminRouteGuard } from '@/lib/adminPermissions/AdminRouteGuard';
+import { SITE_LOGO_SRC, SITE_NAME } from '@/lib/brand';
 import {
   AdminSidebarBadgesProvider,
   useAdminSidebarBadges,
@@ -163,11 +164,11 @@ function AdminSidebar({
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
         <img
-          src="/images/588est.svg"
-          alt="588est"
+          src={SITE_LOGO_SRC}
+          alt={SITE_NAME}
           className={styles.brandLogo}
-          width={56}
-          height={15}
+          width={89}
+          height={12}
         />
       </div>
       <div className={styles.localeBlock}>

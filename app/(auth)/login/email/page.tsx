@@ -6,7 +6,7 @@ import { redirectIfUserAuthenticated } from '@/lib/authGuestServer';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
 export const metadata: Metadata = {
-  title: 'Вход в аккаунт — Win-Win',
+  title: 'Вход в аккаунт — Wupapa',
   description: 'Вход по email или телефону и паролю',
 };
 

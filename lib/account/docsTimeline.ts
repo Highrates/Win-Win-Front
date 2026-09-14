@@ -43,7 +43,7 @@ export const ACCOUNT_DOCS_GROUPS: AccountDocsDateGroup[] = [
     dateISO: '2026-04-17',
     docs: [
       { id: '9', title: 'KYC — подтверждение личности' },
-      { id: '10', title: 'Договор оферты Win-Win' },
+      { id: '10', title: 'Договор оферты Wupapa' },
     ],
   },
 ];
