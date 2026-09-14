@@ -5,7 +5,7 @@ import recommendationsStyles from '@/sections/home/Recommendations/Recommendatio
 import topFoldStyles from '@/sections/home/HomeTopFold.module.css';
 import styles from './AboutPage.module.css';
 
-export const ABOUT_HERO_IMAGE_SRC = '/images/about.webp';
+const ABOUT_HERO_IMAGE_SRC = '/images/about.webp';
 
 export const metadata: Metadata = {
   title: `О нас — ${SITE_NAME}`,
