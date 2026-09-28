@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { useChatAttachments } from '@/hooks/useChatAttachments';
 import { adminBackendPath } from '@/lib/adminBackendFetch';
+import { privateFileHref } from '@/lib/privateFiles';
 import type { ChatWindowMessage } from '@/components/ChatWindow/ChatWindow';
 import {
   CHAT_MESSAGES_PAGE_DEFAULT,
@@ -195,12 +196,17 @@ function mapApiToUi(
   const docs = !deleted
     ? m.attachments
         .filter((a) => a.kind === 'FILE')
-        .map((a) => ({ id: a.id, filename: a.filename, url: a.fileUrl }))
+        .map((a) => ({
+          id: a.id,
+          filename: a.filename,
+          url: privateFileHref(`chat:${a.id}`, variant),
+          inline: a.inline,
+        }))
     : undefined;
   const imgs = !deleted
     ? m.attachments
         .filter((a) => a.kind === 'IMAGE')
-        .map((a) => ({ id: a.id, src: a.fileUrl, alt: '' }))
+        .map((a) => ({ id: a.id, src: privateFileHref(`chat:${a.id}`, variant), alt: '' }))
     : undefined;
 
   const deletable = computeOrderChatMessageDeletableInUi({

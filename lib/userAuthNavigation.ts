@@ -56,6 +56,11 @@ export async function navigateAfterUserAuth(
     opts.callbackUrl,
     opts.fallbackPath ?? defaultPostAuthPath(opts.user),
   );
+  // Возврат к файлу (/api/user/files/…) — не страница приложения, клиентский роутер его не отрисует.
+  if (target.startsWith('/api/') && typeof window !== 'undefined') {
+    window.location.replace(target);
+    return { ok: true };
+  }
   router.replace(target);
   router.refresh();
   return { ok: true };

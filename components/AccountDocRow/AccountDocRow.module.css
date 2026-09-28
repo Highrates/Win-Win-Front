@@ -1,20 +1,16 @@
 .doc {
+  position: relative;
   align-self: stretch;
   padding: 16px;
   border-radius: 8px;
-  display: inline-flex;
-  justify-content: space-between;
+  display: flex;
+  justify-content: flex-start;
   align-items: center;
   gap: 16px;
   font-family: var(--font-commissioner);
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
   color: var(--color-black);
-  text-decoration: none;
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-align: left;
   width: 100%;
   box-sizing: border-box;
 }
@@ -23,7 +19,7 @@
   background: var(--color-bright-snow);
 }
 
-.doc:focus-visible {
+.doc:focus-within {
   outline: 2px solid var(--color-blue);
   outline-offset: 2px;
 }
@@ -33,9 +29,110 @@
   height: 18px;
   flex-shrink: 0;
   display: block;
+  color: var(--color-black);
+}
+
+.iconPdf {
+  color: var(--color-red);
+}
+
+.iconTextDoc {
+  color: var(--color-blue);
+}
+
+.iconMuted {
+  color: var(--color-gray);
+}
+
+.docBadge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: var(--color-bright-snow);
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.doc:hover .docBadge {
+  background: var(--color-white);
+}
+
+.docTrailing {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+  color: var(--color-gray);
+}
+
+.doc:hover .docTrailing,
+.doc:focus-within .docTrailing {
+  color: var(--color-black);
+}
+
+.docMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.docText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .docTitle {
-  flex: 1 1 auto;
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Растянутая ссылка: клик по всей строке открывает файл. */
+.docTitleLink {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.docTitleLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.docMeta {
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.docMetaLink {
+  position: relative;
+  z-index: 1;
+  text-decoration: none;
+  outline: none;
+}
+
+.docMetaLink:hover {
+  color: var(--color-blue);
+  text-decoration: underline;
+}
+
+.docMetaLink:focus-visible {
+  color: var(--color-blue);
+  text-decoration: underline;
 }

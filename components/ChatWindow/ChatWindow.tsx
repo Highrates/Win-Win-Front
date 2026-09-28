@@ -19,9 +19,16 @@ import {
 } from '@/lib/orderChat/formatOrderChatDaySeparator';
 import { openOrderChatPhotoSwipe } from '@/lib/orderChat/openOrderChatPhotoSwipe';
 import { formatEditedAtLabel } from '@/lib/productQa/editHelpers';
+import { privateFileLinkProps } from '@/lib/privateFiles';
 import styles from './ChatWindow.module.css';
 
-export type ChatDocAttachment = { id: string; filename: string; url?: string };
+export type ChatDocAttachment = {
+  id: string;
+  filename: string;
+  url?: string;
+  /** Файл с нашего origin: true — открыть во вкладке (PDF, текст), false — скачать без пустой вкладки. */
+  inline?: boolean;
+};
 export type ChatImageAttachment = { id: string; src: string; alt?: string };
 
 export type ChatWindowMessage = {
@@ -176,9 +183,9 @@ function MessageAttachments({
               <a
                 key={d.id}
                 href={d.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
+                {...(d.inline === undefined
+                  ? { target: '_blank', rel: 'noopener noreferrer', download: true }
+                  : privateFileLinkProps(d.inline))}
                 className={styles.docChip}
                 title={d.filename}
               >

@@ -1,9 +1,11 @@
+/** Файл открывается по `chat:<id>` через `privateFileHref` (адрес хранилища API не отдаёт). */
 export type OrderChatApiAttachment = {
   id: string;
-  fileUrl: string;
   filename: string;
   mimeType: string | null;
   kind: 'FILE' | 'IMAGE';
+  /** Откроется в браузере (PDF, текст, картинки); иначе скачается. */
+  inline: boolean;
 };
 
 export type OrderChatApiMessage = {

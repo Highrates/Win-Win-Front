@@ -8,6 +8,7 @@ import {
   productQaTopicPanelA11y,
 } from '@/components/ProductQa/ProductQaTopicTabs';
 import { ProductQaTurnstile } from '@/components/ProductQaTurnstile/ProductQaTurnstile';
+import { ProductChatStaffBanner } from '@/components/ProductQa/ProductChatStaffBanner';
 import { useProductQaChat } from '@/hooks/useProductQaChat';
 import styles from './ProductQaChatPanel.module.css';
 
@@ -102,7 +103,9 @@ export function ProductQaChatPanel({
       loadingOlderHistory={chat.loadingOlderHistory}
       onLoadOlderHistory={chat.loadOlderChatMessages}
       composerBanner={
-        chat.authenticated !== true ? (
+        chat.viewerIsStaff ? (
+          <ProductChatStaffBanner />
+        ) : chat.authenticated !== true ? (
           chat.authenticated === null ? (
             'Загрузка…'
           ) : (

@@ -21,23 +21,11 @@ import {
   uploadProductQaAttachment,
 } from '@/lib/productQa/productQaApi';
 import { useProductCorrespondenceRealtime } from '@/hooks/useProductCorrespondenceRealtime';
+import { fetchChatViewer } from '@/lib/chatViewer';
 
 function errorMessage(e: unknown, fallback: string): string {
   if (e instanceof Error && e.message.trim()) return e.message;
   return fallback;
-}
-
-async function fetchViewerUserId(): Promise<string | null> {
-  try {
-    const res = await fetch('/api/user/session', { credentials: 'include', cache: 'no-store' });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { authenticated?: boolean; user?: { id?: string } };
-    if (!data.authenticated) return null;
-    const id = data.user?.id?.trim();
-    return id && id.length > 0 ? id : null;
-  } catch {
-    return null;
-  }
 }
 
 function prependMessages(
@@ -66,6 +54,7 @@ export function useProductCorrespondenceChat(opts: {
   const [sending, setSending] = useState(false);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
+  const [viewerIsStaff, setViewerIsStaff] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [correspondenceId, setCorrespondenceId] = useState<string | null>(null);
@@ -174,9 +163,11 @@ export function useProductCorrespondenceChat(opts: {
 
   useEffect(() => {
     void getCachedIsAuthenticated().then(setAuthenticated);
-    void fetchViewerUserId().then((id) => {
+    void fetchChatViewer().then((viewer) => {
+      const id = viewer?.id ?? null;
       viewerRef.current = id;
       setViewerUserId(id);
+      setViewerIsStaff(viewer?.isStaff ?? false);
     });
   }, []);
 
@@ -194,9 +185,9 @@ export function useProductCorrespondenceChat(opts: {
     setLoading(true);
     setError(null);
 
-    void fetchViewerUserId().then((id) => {
+    void fetchChatViewer().then((viewer) => {
       if (cancelled) return;
-      viewerRef.current = id;
+      viewerRef.current = viewer?.id ?? null;
     });
 
     void (async () => {
@@ -247,7 +238,7 @@ export function useProductCorrespondenceChat(opts: {
 
   const sendChatText = useCallback(
     async (text: string) => {
-      if (!productSlug || sending || isCoolingDown || authenticated === false) return;
+      if (!productSlug || sending || isCoolingDown || authenticated === false || viewerIsStaff) return;
       const body = text.trim();
       const readyAttachments = getReadyAttachments();
       if (!body && !readyAttachments.length) return;
@@ -314,12 +305,14 @@ export function useProductCorrespondenceChat(opts: {
       triggerCooldown,
       turnstileRequired,
       turnstileToken,
+      viewerIsStaff,
     ],
   );
 
   const composerDisabled =
     authenticated === false ||
     authenticated === null ||
+    viewerIsStaff ||
     sending ||
     isCoolingDown ||
     uploadBusy;
@@ -329,6 +322,7 @@ export function useProductCorrespondenceChat(opts: {
     rawMessages,
     patchMessage,
     viewerUserId,
+    viewerIsStaff,
     loading,
     error,
     postSuccess,

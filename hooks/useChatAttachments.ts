@@ -65,7 +65,8 @@ export function useChatAttachments(opts: UseChatAttachmentsOpts) {
       clientKey: r.clientToken,
       filename: r.filename,
       kind: r.kind,
-      imageSrc: r.kind === 'IMAGE' ? r.fileUrl || r.localPreviewUrl || null : null,
+      // Локальное превью: у вложений чатов URL хранилища приватный и в <img> не откроется.
+      imageSrc: r.kind === 'IMAGE' ? r.localPreviewUrl || r.fileUrl || null : null,
       uploading: r.uploading,
     }));
   }, [pendingRefs]);

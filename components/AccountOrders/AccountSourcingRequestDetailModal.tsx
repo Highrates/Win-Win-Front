@@ -4,6 +4,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { resolveSourcingProductDisplayName } from '@win-win/sourcing-request';
 import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
+import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
+import { useOrderChat } from '@/hooks/useOrderChat';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import {
   ACCOUNT_WORK_NOTIFICATIONS_EVENT,
@@ -21,6 +23,7 @@ import {
 import { sourcingStatusLabel } from '@/lib/userSourcingRequests/sourcingStatus';
 import type { UserSourcingRequestDetailApi } from '@/lib/userSourcingRequests/types';
 import { AccountGalleryThumb } from '@/components/AccountOrders/AccountGalleryThumb';
+import { privateFileHref, privateFileLinkProps } from '@/lib/privateFiles';
 import styles from './AccountSourcingRequestDetailModal.module.css';
 
 function CloseIcon() {
@@ -133,16 +136,49 @@ function AccountSourcingKpLinesTable({ lines }: { lines: SourcingCommercialPropo
 
 type Props = {
   requestId: string | null;
+  /** Открыть чат заявки сразу при открытии модалки (deep-link из документов). */
+  initialChatOpen?: boolean;
   onClose: () => void;
 };
 
-export function AccountSourcingRequestDetailModal({ requestId, onClose }: Props) {
+export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen = false, onClose }: Props) {
   const panelRef = useRef<HTMLElement>(null);
   const latestOfferRef = useRef<HTMLDivElement | null>(null);
   const [detail, setDetail] = useState<UserSourcingRequestDetailApi | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
   const open = Boolean(requestId);
+  const chatAvailable = detail?.status !== 'CANCELLED';
+
+  const {
+    chatMessages,
+    chatLoading,
+    chatError,
+    chatComposerDisabled,
+    chatAttachPickerDisabled,
+    pendingAttachmentsHint,
+    pendingOutgoingAttachments,
+    canSendAttachmentMessage,
+    sendChatText,
+    attachChatFiles,
+    removePendingChatAttachment,
+    deleteChatMessage,
+    chatHasOlderHistory,
+    chatLoadingOlderHistory,
+    loadOlderChatMessages,
+  } = useOrderChat({
+    orderId: detail?.id ?? null,
+    enabled: chatOpen && chatAvailable,
+    variant: 'account',
+    chatSubject: 'sourcing',
+    timeLocale: 'ru-RU',
+  });
+
+  useEffect(() => {
+    if (!requestId) setChatOpen(false);
+    else if (initialChatOpen) setChatOpen(true);
+  }, [requestId, initialChatOpen]);
 
   const load = useCallback(async (id: string) => {
     setLoading(true);
@@ -246,6 +282,31 @@ export function AccountSourcingRequestDetailModal({ requestId, onClose }: Props)
         aria-labelledby="sourcing-detail-title"
         tabIndex={-1}
       >
+        {chatAvailable ? (
+          <ChatWindow
+            variant="embedded"
+            embeddedLayout="overlay"
+            open={chatOpen}
+            onClose={() => setChatOpen(false)}
+            title={`Чат · ${shortNo}`}
+            messages={chatMessages}
+            messageEmptyHint={chatLoading ? 'Загрузка…' : 'Пока нет сообщений'}
+            errorText={chatError}
+            composerDisabled={chatComposerDisabled}
+            attachPickerDisabled={chatAttachPickerDisabled}
+            attachmentsEnabled
+            pendingAttachmentsHint={pendingAttachmentsHint}
+            pendingOutgoing={pendingOutgoingAttachments}
+            allowEmptySend={canSendAttachmentMessage}
+            onSend={sendChatText}
+            onAttachFiles={attachChatFiles}
+            onRemovePendingAttachment={removePendingChatAttachment}
+            onDeleteMessage={deleteChatMessage}
+            hasOlderHistory={chatHasOlderHistory}
+            loadingOlderHistory={chatLoadingOlderHistory}
+            onLoadOlderHistory={loadOlderChatMessages}
+          />
+        ) : null}
         <header className={panelModal.header}>
           <button type="button" className={panelModal.iconBtn} onClick={onClose} aria-label="Закрыть">
             <CloseIcon />
@@ -381,7 +442,11 @@ export function AccountSourcingRequestDetailModal({ requestId, onClose }: Props)
                   <ul className={styles.attachments}>
                     {detail.attachments.map((a) => (
                       <li key={a.id}>
-                        <a href={a.url} target="_blank" rel="noopener noreferrer" className={styles.link}>
+                        <a
+                          href={privateFileHref(`sourcing:${a.id}`)}
+                          {...privateFileLinkProps(a.inline)}
+                          className={styles.link}
+                        >
                           {a.filename}
                         </a>
                       </li>

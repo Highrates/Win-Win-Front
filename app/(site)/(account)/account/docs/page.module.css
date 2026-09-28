@@ -3,9 +3,52 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
-  gap: 24px;
+  gap: 32px;
   width: 100%;
   max-width: 720px;
+}
+
+.toolbar {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.toolbar:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.toolbarRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.filters {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.viewToggle {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.list {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .dateBlock {
@@ -27,12 +70,24 @@
 }
 
 .dateLabel {
+  margin: 0;
   flex-shrink: 0;
   font-family: var(--font-commissioner);
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
   color: var(--color-gray);
   white-space: nowrap;
+}
+
+.groupTitleLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.groupTitleLink:hover,
+.groupTitleLink:focus-visible {
+  color: var(--color-blue);
+  text-decoration: underline;
 }
 
 .dateLine {
@@ -51,4 +106,47 @@
   justify-content: flex-start;
   align-items: flex-start;
   gap: 2px;
+}
+
+.muted {
+  margin: 0;
+  max-width: 720px;
+  color: var(--color-gray);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.loadMore {
+  display: flex;
+  justify-content: center;
+  align-self: stretch;
+}
+
+.groupMore {
+  display: flex;
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .toolbarRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .viewToggle {
+    align-self: flex-start;
+  }
 }

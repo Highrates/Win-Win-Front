@@ -24,6 +24,7 @@
 .btnSecondary {
   background: var(--color-bright-snow);
   color: var(--color-ink-black);
+  border-radius: 100px;
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
 }

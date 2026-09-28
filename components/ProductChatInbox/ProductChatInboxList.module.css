@@ -38,16 +38,27 @@
 }
 
 .rowBody {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
 }
 
+/* Как ProductCard .productName */
 .productName {
-  font-size: var(--text-base-size, 1rem);
-  font-weight: 600;
+  align-self: stretch;
+  font-size: var(--text-card-16-300);
+  font-weight: 300;
+  line-height: 1.25;
   color: var(--color-ink-black);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .preview {

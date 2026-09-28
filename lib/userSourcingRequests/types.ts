@@ -21,6 +21,15 @@ export type SourcingRequestFileApi = {
   mimeType: string | null;
 };
 
+/** Файл заявки без адреса хранилища: открывается по `sourcing:<id>` через `privateFileHref`. */
+export type SourcingRequestAttachmentApi = {
+  id: string;
+  filename: string;
+  mimeType: string | null;
+  /** Откроется в браузере (PDF, текст); иначе скачается. */
+  inline: boolean;
+};
+
 export type SourcingRequestUserApi = {
   id: string;
   email: string | null;
@@ -83,7 +92,7 @@ export type UserSourcingRequestsListResponse = {
 
 export type UserSourcingRequestDetailApi = SourcingRequestCoreApi & {
   items: SourcingRequestItemApi[];
-  attachments: SourcingRequestFileApi[];
+  attachments: SourcingRequestAttachmentApi[];
   unreadStaffChatCount?: number;
   latestCommercialProposal?: SourcingCommercialProposalApi | null;
   /** Все опубликованные КП, новые первыми. */
@@ -114,7 +123,7 @@ export type AdminSourcingRequestsListResponse = {
 export type AdminSourcingRequestDetailApi = SourcingRequestCoreApi & {
   user: SourcingRequestUserApi;
   items: SourcingRequestItemApi[];
-  attachments: SourcingRequestFileApi[];
+  attachments: SourcingRequestAttachmentApi[];
 };
 
 export type AdminSourcingStatusPatchResponse = Pick<

@@ -23,7 +23,14 @@ import {
 import { mapOrderLineToAccountProduct } from '@/lib/orderPreparation/mapLineToAccountProduct';
 import { takeSelectOnlyPreparationLineIds } from '@/lib/orderPreparation/selectOnlyFromProjectSession';
 import type { OrderPreparationDraftApi, OrderPreparationLineApi } from '@/lib/orderPreparation/types';
-import { ORDER_TABS, orderTabQueryParamForUrl, ACCOUNT_WORK_NOTIFICATIONS_EVENT, ACCOUNT_WORK_FEED_REFRESH_EVENT, type AccountWorkNotificationsDetail } from '@/lib/account/orders';
+import {
+  ORDER_TABS,
+  orderTabQueryParamForUrl,
+  ACCOUNT_WORK_NOTIFICATIONS_EVENT,
+  ACCOUNT_WORK_FEED_REFRESH_EVENT,
+  type AccountOrdersDetailLink,
+  type AccountWorkNotificationsDetail,
+} from '@/lib/account/orders';
 import {
   dismissSourcingWorkPrompt,
   isSourcingWorkPromptDismissed,
@@ -136,7 +143,10 @@ function buildWorkFeed(
   return items.sort((a, b) => workFeedTimestamp(b) - workFeedTimestamp(a));
 }
 
-export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabIndex?: number } = {}) {
+export function AccountOrdersPageClient({
+  initialTabIndex = 0,
+  initialDetail = null,
+}: { initialTabIndex?: number; initialDetail?: AccountOrdersDetailLink | null } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const [selectedIndex, setSelectedIndex] = useState(initialTabIndex);
@@ -172,6 +182,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
     name: false,
     address: false,
   });
+  const [orderDetailsOpen, setOrderDetailsOpen] = useState(true);
   const [inWorkOrders, setInWorkOrders] = useState<UserOrderListItemApi[]>([]);
   const [inWorkSourcing, setInWorkSourcing] = useState<UserSourcingRequestListItemApi[]>([]);
   const [inWorkLoading, setInWorkLoading] = useState(false);
@@ -182,6 +193,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   const [completedError, setCompletedError] = useState<string | null>(null);
   const [workOrderDetailId, setWorkOrderDetailId] = useState<string | null>(null);
   const [workSourcingDetailId, setWorkSourcingDetailId] = useState<string | null>(null);
+  const [detailChatOnOpen, setDetailChatOnOpen] = useState(false);
   const [sourcingModalOpen, setSourcingModalOpen] = useState(false);
   const [sourcingResumeDraft, setSourcingResumeDraft] = useState(false);
   const [sourcingDraftRefreshKey, setSourcingDraftRefreshKey] = useState(0);
@@ -192,6 +204,25 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
   const isPreparationTab = selectedIndex === 0;
   const isInWorkTab = selectedIndex === 1;
   const isCompletedTab = selectedIndex === 2;
+
+  const deepLinkKind = initialDetail?.kind ?? null;
+  const deepLinkId = initialDetail?.id ?? null;
+  const deepLinkChat = initialDetail?.chat ?? false;
+
+  useEffect(() => {
+    if (!deepLinkKind || !deepLinkId) return;
+    if (deepLinkKind === 'order') setWorkOrderDetailId(deepLinkId);
+    else setWorkSourcingDetailId(deepLinkId);
+    setDetailChatOnOpen(deepLinkChat);
+  }, [deepLinkKind, deepLinkId, deepLinkChat]);
+
+  /** После закрытия модалки убрать `?order=` / `?sourcing=`, чтобы обновление страницы не открывало её снова. */
+  const clearDetailDeepLink = useCallback(() => {
+    setDetailChatOnOpen(false);
+    if (!deepLinkId) return;
+    const q = orderTabQueryParamForUrl(selectedIndex);
+    router.replace(q ? `${pathname}?tab=${encodeURIComponent(q)}` : pathname, { scroll: false });
+  }, [deepLinkId, pathname, router, selectedIndex]);
 
   const loadInWorkOrders = useCallback(async () => {
     setInWorkLoading(true);
@@ -485,6 +516,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
     const addr = deliveryAddress.trim();
     if (!name || !addr) {
       setSubmitGateHighlight({ name: !name, address: !addr });
+      setOrderDetailsOpen(true);
       const focusId = !name ? 'order-customer-name' : 'order-delivery-address';
       requestAnimationFrame(() => {
         document.getElementById(focusId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -566,17 +598,23 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
               }}
               aria-label="Скрыть подсказку"
             >
-              ×
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+              </svg>
             </button>
             <p className={styles.sourcingWorkPromptText}>
-              Не нашли нужную модель в каталоге? Опишите задачу — подберём по вашему ТЗ.
+              Не нашли нужную модель в каталоге?{' '}
+              <button
+                type="button"
+                className={styles.sourcingWorkPromptLink}
+                onClick={() => {
+                  setSourcingResumeDraft(false);
+                  setSourcingModalOpen(true);
+                }}
+              >
+                Закажите подбор
+              </button>
             </p>
-            <Button type="button" variant="primary" onClick={() => {
-              setSourcingResumeDraft(false);
-              setSourcingModalOpen(true);
-            }}>
-              Заказать подбор
-            </Button>
           </div>
         </div>
       ) : null}
@@ -713,7 +751,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
             ) : null}
             {!draftLoading ? (
               <>
-            <AccordionBig title="Детали заказа" defaultOpen>
+            <AccordionBig title="Детали заказа" open={orderDetailsOpen} onOpenChange={setOrderDetailsOpen}>
               <div className={styles.orderDetailsFields}>
                 <TextField
                   label="ФИО заказчика"
@@ -774,6 +812,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
                 </div>
                 <Button
                   variant="primary"
+                  className={styles.summarySubmit}
                   disabled={selectedPreviewLines.length < 1 || draftLoading}
                   onClick={openSubmitModal}
                 >
@@ -811,6 +850,7 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
                 </div>
                 <Button
                   variant="primary"
+                  className={styles.summarySubmit}
                   disabled={selectedPreviewLines.length < 1 || draftLoading}
                   onClick={openSubmitModal}
                 >
@@ -966,11 +1006,20 @@ export function AccountOrdersPageClient({ initialTabIndex = 0 }: { initialTabInd
         </div>
       ) : null}
 
-      <AccountOrderDetailModal orderId={workOrderDetailId} onClose={() => setWorkOrderDetailId(null)} />
+      <AccountOrderDetailModal
+        orderId={workOrderDetailId}
+        initialChatOpen={detailChatOnOpen}
+        onClose={() => {
+          setWorkOrderDetailId(null);
+          clearDetailDeepLink();
+        }}
+      />
       <AccountSourcingRequestDetailModal
         requestId={workSourcingDetailId}
+        initialChatOpen={detailChatOnOpen}
         onClose={() => {
           setWorkSourcingDetailId(null);
+          clearDetailDeepLink();
           if (isInWorkTab) void loadInWorkOrders();
         }}
       />

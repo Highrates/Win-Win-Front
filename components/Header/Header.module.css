@@ -280,11 +280,12 @@
   pointer-events: auto;
 }
 
-/* Nav: site-header__nav — колонки 4–11, выравнивание с superMenuMenu */
+/* Nav: site-header__nav — колонки 4–10, выравнивание с superMenuMenu */
 .siteHeaderNav {
   pointer-events: all;
   display: none;
-  grid-column: 4 / -2;
+  grid-column: 4 / -3;
+  min-width: 0;
 }
 
 @media (min-width: 1280px) {
@@ -633,14 +634,17 @@
 }
 
 /* site-header__rightNav — последняя колонка грида */
+/* min-width: 0 — иначе ширина иконок растягивает последний трек 1fr и сдвигает колонки сетки
+   относительно страниц (ЛК, каталог), которые строятся по тем же 12 колонкам. */
 .rightNav {
   display: flex;
   align-items: center;
   gap: 28px;
-  grid-column: -2 / -1;
+  grid-column: -3 / -1;
+  justify-self: end;
+  min-width: 0;
   align-self: center;
   pointer-events: all;
-  margin-left: auto;
 }
 
 /* В hero (header-minimal) бейдж лого высокий — фиксируем иконки сверху строки */

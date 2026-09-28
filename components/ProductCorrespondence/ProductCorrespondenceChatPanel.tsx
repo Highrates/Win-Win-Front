@@ -6,6 +6,7 @@ import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
 import { ChatMessageBodyEdit } from '@/components/ChatWindow/ChatMessageBodyEdit';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { ProductQaTurnstile } from '@/components/ProductQaTurnstile/ProductQaTurnstile';
+import { ProductChatStaffBanner } from '@/components/ProductQa/ProductChatStaffBanner';
 import { useProductCorrespondenceChat } from '@/hooks/useProductCorrespondenceChat';
 import { canUserEditCorrespondenceMessage } from '@/lib/productQa/editHelpers';
 import { patchProductCorrespondenceMessage } from '@/lib/productCorrespondence/correspondenceApi';
@@ -117,7 +118,9 @@ export function ProductCorrespondenceChatPanel({
       loadingOlderHistory={chat.loadingOlderHistory}
       onLoadOlderHistory={chat.loadOlderChatMessages}
       composerBanner={
-        chat.authenticated === false ? (
+        chat.viewerIsStaff ? (
+          <ProductChatStaffBanner />
+        ) : chat.authenticated === false ? (
           <>
             <Link href={loginHref} className={styles.guestLink}>
               Войдите

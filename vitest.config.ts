@@ -13,6 +13,7 @@ export default defineConfig({
       'lib/**/*.test.tsx',
       'components/**/*.test.ts',
       'app/**/*.test.tsx',
+      'app/api/**/*.test.ts',
     ],
     setupFiles: ['./vitest.setup.ts'],
   },

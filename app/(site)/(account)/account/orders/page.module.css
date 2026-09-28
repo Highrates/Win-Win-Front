@@ -34,7 +34,6 @@
   background: transparent;
   color: var(--color-gray);
   cursor: pointer;
-  font-size: 22px;
   line-height: 1;
   padding: 0;
   display: inline-flex;
@@ -55,6 +54,26 @@
   color: var(--color-black);
   font-size: var(--text-body);
   font-family: var(--font-commissioner);
+}
+
+.sourcingWorkPromptLink {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--color-blue);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.sourcingWorkPromptLink:hover {
+  opacity: 0.75;
+}
+
+.sourcingWorkPromptLink:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .inWorkList {
@@ -349,11 +368,16 @@
   gap: 8px;
 }
 
+.summaryBottom .summarySubmit {
+  align-self: stretch;
+  width: 100%;
+}
+
 .bonusRow {
   align-self: stretch;
   padding: 16px 10px;
   background: var(--color-white);
-  border-radius: 8px;
+  border-radius: 100px;
   border: var(--account-hairline-width) solid var(--account-hairline-color);
   display: inline-flex;
   justify-content: center;

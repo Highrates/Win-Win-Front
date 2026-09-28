@@ -16,6 +16,7 @@ import {
   type ProductQaTopic,
 } from '@/lib/adminProductQa/adminProductQaApi';
 import {
+  ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT,
   PRODUCT_QA_BODY_MAX_CHARS,
   PRODUCT_QA_DEFAULT_TOPIC_SLUG,
   PRODUCT_QA_MESSAGES_PAGE_DEFAULT,
@@ -288,6 +289,7 @@ export function useAdminProductQaChat(opts: {
           );
         }
         void loadTopics();
+        document.dispatchEvent(new Event(ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT));
       } catch (e) {
         const msg =
           e instanceof AdminBackendRequestError

@@ -10,6 +10,11 @@ type AccountProjectTabsProps = {
   ariaLabel?: string;
   /** Красная точка у вкладки (как в боковом меню ЛК), по индексу */
   tabHasNotification?: readonly boolean[];
+  /**
+   * `tabs` — tablist (переключает панели); `toggle` — группа кнопок с aria-pressed
+   * для фильтров и режимов вида, у которых нет своей tabpanel.
+   */
+  mode?: 'tabs' | 'toggle';
 };
 
 export function AccountProjectTabs({
@@ -18,8 +23,10 @@ export function AccountProjectTabs({
   onSelect,
   ariaLabel = 'Проекты',
   tabHasNotification,
+  mode = 'tabs',
 }: AccountProjectTabsProps) {
   const list = projects.length ? projects : ACCOUNT_PROJECT_NAMES;
+  const isTabs = mode === 'tabs';
   const onTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     // Windows mouse wheel usually emits deltaY; map it to horizontal scroll.
@@ -30,14 +37,20 @@ export function AccountProjectTabs({
   };
 
   return (
-    <div className={styles.tabsWrapper} role="tablist" aria-label={ariaLabel} onWheel={onTabsWheel}>
+    <div
+      className={styles.tabsWrapper}
+      role={isTabs ? 'tablist' : 'group'}
+      aria-label={ariaLabel}
+      onWheel={onTabsWheel}
+    >
       <div className={styles.tabsInner}>
         {list.map((label, index) => (
           <button
             key={`${label}-${index}`}
             type="button"
-            role="tab"
-            aria-selected={index === selectedIndex}
+            role={isTabs ? 'tab' : undefined}
+            aria-selected={isTabs ? index === selectedIndex : undefined}
+            aria-pressed={isTabs ? undefined : index === selectedIndex}
             className={`${styles.tab} ${index === selectedIndex ? styles.tabActive : ''}`}
             onClick={() => onSelect(index)}
           >

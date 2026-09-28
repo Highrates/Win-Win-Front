@@ -63,8 +63,18 @@ function isAllowed(segments: string[]): boolean {
   /** Кейсы клиентов: `cases/admin/users/:userId`, `cases/admin/:caseId`, … */
   if (segments[0] === 'cases' && segments[1] === 'admin') return true;
   if (segments[0] === 'assistant' && segments[1] === 'admin') return true;
+  /** Персональные файлы (вложения чатов и заявок): `files/:ref`, доступ проверяет бэкенд. */
+  if (segments[0] === 'files' && segments.length === 2) return true;
   return false;
 }
+
+const PASS_RESPONSE_HEADERS = [
+  'content-type',
+  'content-disposition',
+  'content-length',
+  'cache-control',
+  'x-content-type-options',
+] as const;
 
 async function proxy(request: NextRequest, segments: string[], method: string) {
   if (!isAllowed(segments)) {
@@ -124,9 +134,17 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
       { status: 502 },
     );
   }
+  const location = res.headers.get('location');
+  if (method === 'GET' && location && res.status >= 300 && res.status < 400) {
+    return NextResponse.redirect(new URL(location, target).href, 302);
+  }
   const out = new NextResponse(res.body, { status: res.status });
-  const ct = res.headers.get('content-type');
-  if (ct) out.headers.set('content-type', ct);
+  const encoded = res.headers.has('content-encoding');
+  for (const name of PASS_RESPONSE_HEADERS) {
+    if (name === 'content-length' && encoded) continue;
+    const value = res.headers.get(name);
+    if (value) out.headers.set(name, value);
+  }
   return out;
 }
 

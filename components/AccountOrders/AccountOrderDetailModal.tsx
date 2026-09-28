@@ -368,13 +368,15 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
 
 type Props = {
   orderId: string | null;
+  /** Открыть чат сразу при открытии модалки (deep-link из документов). */
+  initialChatOpen?: boolean;
   onClose: () => void;
 };
 
 /** Сколько строк КП считать «много»: при открытии прокручиваем к актуальному блоку */
 const KP_LINES_SCROLL_THRESHOLD = 5;
 
-export function AccountOrderDetailModal({ orderId, onClose }: Props) {
+export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onClose }: Props) {
   const panelRef = useRef<HTMLElement>(null);
   const [order, setOrder] = useState<UserOrderDetailApi | null>(null);
   const [loading, setLoading] = useState(false);
@@ -405,6 +407,10 @@ export function AccountOrderDetailModal({ orderId, onClose }: Props) {
     }
     void load(orderId);
   }, [orderId, load]);
+
+  useEffect(() => {
+    if (orderId && initialChatOpen) setChatOpen(true);
+  }, [orderId, initialChatOpen]);
 
   useEffect(() => {
     if (!order?.id || loading) return;

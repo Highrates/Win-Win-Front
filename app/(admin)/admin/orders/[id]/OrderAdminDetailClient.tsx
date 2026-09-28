@@ -35,7 +35,6 @@ type AdminOrderDetail = {
   comment: string | null;
   customerName: string | null;
   deliveryAddress: string | null;
-  documentUrls: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
   user: {

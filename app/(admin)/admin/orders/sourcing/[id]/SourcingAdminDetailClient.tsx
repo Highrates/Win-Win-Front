@@ -24,6 +24,7 @@ import styles from '../../../catalog/catalogAdmin.module.css';
 import clientsStyles from '../../../clients/clients.module.css';
 import pn from '../../../catalog/products/new/productNew.module.css';
 import od from '../../[id]/orderAdminDetail.module.css';
+import { privateFileHref, privateFileLinkProps } from '@/lib/privateFiles';
 import { AdminOrdersConfirmModal } from '../../AdminOrdersConfirmModal';
 import { AdminSourcingSideChat } from './AdminSourcingSideChat';
 import { AdminSourcingProductAccordion } from './AdminSourcingProductAccordion';
@@ -307,7 +308,11 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {detail.attachments.map((a) => (
                   <li key={a.id}>
-                    <a href={a.url} target="_blank" rel="noopener noreferrer" className={styles.backLink}>
+                    <a
+                      href={privateFileHref(`sourcing:${a.id}`, 'admin')}
+                      {...privateFileLinkProps(a.inline)}
+                      className={styles.backLink}
+                    >
                       {a.filename}
                     </a>
                   </li>

@@ -10,6 +10,7 @@ import {
   postAdminCorrespondenceReply,
 } from '@/lib/adminProductCorrespondence/adminProductCorrespondenceApi';
 import {
+  ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT,
   PRODUCT_QA_BODY_MAX_CHARS,
   PRODUCT_QA_DEFAULT_TOPIC_SLUG,
   PRODUCT_QA_MESSAGES_PAGE_DEFAULT,
@@ -247,6 +248,7 @@ export function useAdminProductCorrespondenceChat(opts: {
           return next;
         });
         void loadThreads();
+        document.dispatchEvent(new Event(ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT));
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Не удалось отправить');
       } finally {

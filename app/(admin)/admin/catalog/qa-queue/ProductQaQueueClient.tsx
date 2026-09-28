@@ -165,7 +165,10 @@ export function ProductQaQueueClient() {
           productId={selected.productId}
           productName={selected.productName}
           initialTab={initialTab}
-          onClose={() => setSelected(null)}
+          onClose={() => {
+            setSelected(null);
+            void load(null, false);
+          }}
         />
       ) : null}
     </>

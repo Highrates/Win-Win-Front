@@ -18,6 +18,13 @@ export const sourcingRequestFileSchema = z.object({
   mimeType: z.string().nullable(),
 });
 
+const sourcingRequestAttachmentSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  mimeType: z.string().nullable(),
+  inline: z.boolean(),
+});
+
 const sourcingRequestItemSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -59,7 +66,7 @@ const commercialProposalOfferSchema = z
 
 export const userSourcingRequestDetailSchema = sourcingRequestCoreSchema.extend({
   items: z.array(sourcingRequestItemSchema),
-  attachments: z.array(sourcingRequestFileSchema),
+  attachments: z.array(sourcingRequestAttachmentSchema),
   unreadStaffChatCount: z.number().optional(),
   latestCommercialProposal: sourcingCommercialProposalSchema.nullable().optional(),
   publishedCommercialProposals: z.array(sourcingCommercialProposalSchema).optional(),
@@ -99,7 +106,7 @@ const sourcingRequestUserSchema = z.object({
 export const adminSourcingRequestDetailSchema = sourcingRequestCoreSchema.extend({
   user: sourcingRequestUserSchema,
   items: z.array(sourcingRequestItemSchema),
-  attachments: z.array(sourcingRequestFileSchema),
+  attachments: z.array(sourcingRequestAttachmentSchema),
 });
 
 export const adminSourcingRequestsListSchema = z.object({

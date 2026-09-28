@@ -29,23 +29,11 @@ import { mapCorrespondenceToChatWindow } from '@/lib/productCorrespondence/mapCo
 import type { ProductCorrespondenceMessage } from '@/lib/productCorrespondence/types';
 import type { ProductQaMessage, ProductQaTopic } from '@/lib/productQa/types';
 import { useProductCorrespondenceRealtime } from '@/hooks/useProductCorrespondenceRealtime';
+import { fetchChatViewer } from '@/lib/chatViewer';
 
 function errorMessage(e: unknown, fallback: string): string {
   if (e instanceof Error && e.message.trim()) return e.message;
   return fallback;
-}
-
-async function fetchViewerUserId(): Promise<string | null> {
-  try {
-    const res = await fetch('/api/user/session', { credentials: 'include', cache: 'no-store' });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { authenticated?: boolean; user?: { id?: string } };
-    if (!data.authenticated) return null;
-    const id = data.user?.id?.trim();
-    return id && id.length > 0 ? id : null;
-  } catch {
-    return null;
-  }
 }
 
 export function useProductQaChat(opts: {
@@ -82,6 +70,7 @@ export function useProductQaChat(opts: {
   const [preModerationEnabled, setPreModerationEnabled] = useState(false);
   const [displayCount, setDisplayCount] = useState(initialMessageCount);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [viewerIsStaff, setViewerIsStaff] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [correspondenceRaw, setCorrespondenceRaw] = useState<ProductCorrespondenceMessage[]>([]);
@@ -185,8 +174,9 @@ export function useProductQaChat(opts: {
   useEffect(() => {
     if (!enabled) return;
     void getCachedIsAuthenticated().then(setAuthenticated);
-    void fetchViewerUserId().then((id) => {
-      viewerRef.current = id;
+    void fetchChatViewer().then((viewer) => {
+      viewerRef.current = viewer?.id ?? null;
+      setViewerIsStaff(viewer?.isStaff ?? false);
       syncDisplayMessages(rawMessagesRef.current, correspondenceRawRef.current);
     });
   }, [enabled, syncDisplayMessages]);
@@ -303,9 +293,10 @@ export function useProductQaChat(opts: {
     setActiveTopicSlug(initialTopicSlug);
     activeTopicSlugRef.current = initialTopicSlug;
 
-    void fetchViewerUserId().then((id) => {
+    void fetchChatViewer().then((viewer) => {
       if (cancelled) return;
-      viewerRef.current = id;
+      viewerRef.current = viewer?.id ?? null;
+      setViewerIsStaff(viewer?.isStaff ?? false);
     });
 
     void (async () => {
@@ -419,7 +410,7 @@ export function useProductQaChat(opts: {
 
   const sendChatText = useCallback(
     async (text: string) => {
-      if (!productSlug || sending || isCoolingDown || authenticated === false) return;
+      if (!productSlug || sending || isCoolingDown || authenticated === false || viewerIsStaff) return;
       const body = text.trim();
       const readyAttachments = getReadyAttachments();
       if (!body && !readyAttachments.length) return;
@@ -525,6 +516,7 @@ export function useProductQaChat(opts: {
       turnstileRequired,
       turnstileToken,
       postToCorrespondence,
+      viewerIsStaff,
     ],
   );
 
@@ -540,6 +532,7 @@ export function useProductQaChat(opts: {
   const composerDisabled =
     authenticated === false ||
     authenticated === null ||
+    viewerIsStaff ||
     sending ||
     isCoolingDown ||
     uploadBusy;
@@ -554,6 +547,7 @@ export function useProductQaChat(opts: {
     preModerationEnabled,
     displayCount,
     authenticated,
+    viewerIsStaff,
     hasOlderHistory,
     loadingOlderHistory,
     loadOlderChatMessages,

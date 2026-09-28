@@ -1,8 +1,21 @@
-import { orderTabIndexFromQuery } from '@/lib/account/orders';
+import { accountOrdersDetailFromQuery, orderTabIndexFromQuery } from '@/lib/account/orders';
 import { AccountOrdersPageClient } from './AccountOrdersPageClient';
 
-export default function OrdersPage({ searchParams }: { searchParams: { tab?: string } }) {
+type OrdersSearchParams = {
+  tab?: string;
+  order?: string | string[];
+  sourcing?: string | string[];
+  chat?: string | string[];
+};
+
+export default function OrdersPage({ searchParams }: { searchParams: OrdersSearchParams }) {
   const raw = searchParams?.tab;
   const tab = typeof raw === 'string' ? raw : undefined;
-  return <AccountOrdersPageClient initialTabIndex={orderTabIndexFromQuery(tab)} />;
+  const detail = accountOrdersDetailFromQuery(searchParams ?? {});
+  return (
+    <AccountOrdersPageClient
+      initialTabIndex={orderTabIndexFromQuery(tab)}
+      initialDetail={detail}
+    />
+  );
 }

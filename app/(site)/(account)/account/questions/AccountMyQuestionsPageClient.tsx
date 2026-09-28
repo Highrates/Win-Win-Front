@@ -1,14 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ProductQaChatPanel } from '@/components/ProductQa/ProductQaChatPanel';
 import {
   ProductChatInboxList,
   type ProductChatInboxItem,
 } from '@/components/ProductChatInbox/ProductChatInboxList';
+import { AccountErrorState } from '@/components/AccountErrorState/AccountErrorState';
+import { accountLoadErrorText } from '@/lib/account/loadErrorMessage';
 import { fetchMyCorrespondenceProducts } from '@/lib/productCorrespondence/correspondenceApi';
 import type { ProductCorrespondenceMyProductItem } from '@/lib/productCorrespondence/types';
 import styles from './page.module.css';
+
+/** Фоновое обновление статусов «Ожидает ответа» / «Есть ответ», пока вкладка видима. */
+const INBOX_POLL_MS = 30_000;
 
 function toInboxItem(item: ProductCorrespondenceMyProductItem): ProductChatInboxItem {
   const badges: ProductChatInboxItem['badges'] = [];
@@ -33,18 +38,25 @@ export function AccountMyQuestionsPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [openSlug, setOpenSlug] = useState<string | null>(null);
   const [openName, setOpenName] = useState('');
+  const loadedOnceRef = useRef(false);
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const reload = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent && loadedOnceRef.current;
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const data = await fetchMyCorrespondenceProducts();
       setItems(data.items ?? []);
+      setError(null);
+      loadedOnceRef.current = true;
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить список');
+      if (silent) return;
+      setError(accountLoadErrorText(e, 'вопросы'));
       setItems([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -52,21 +64,24 @@ export function AccountMyQuestionsPageClient() {
     void reload();
   }, [reload]);
 
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') void reload({ silent: true });
+    };
+    const timer = window.setInterval(refreshIfVisible, INBOX_POLL_MS);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
+  }, [reload]);
+
   const inboxItems = useMemo(() => items.map(toInboxItem), [items]);
 
   return (
     <div className={styles.page}>
       {loading ? <p className={styles.muted}>Загрузка…</p> : null}
-      {error ? (
-        <div className={styles.errorBlock}>
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-          <button type="button" className={styles.retryBtn} onClick={() => void reload()}>
-            Повторить
-          </button>
-        </div>
-      ) : null}
+      {error ? <AccountErrorState message={error} onRetry={() => void reload()} /> : null}
 
       {!loading && !error ? (
         <ProductChatInboxList
@@ -86,7 +101,10 @@ export function AccountMyQuestionsPageClient() {
           key={openSlug}
           presentation="overlay"
           chatOpen
-          onChatClose={() => setOpenSlug(null)}
+          onChatClose={() => {
+            setOpenSlug(null);
+            void reload({ silent: true });
+          }}
           enabled
           productSlug={openSlug}
           chatTitle={openName}
