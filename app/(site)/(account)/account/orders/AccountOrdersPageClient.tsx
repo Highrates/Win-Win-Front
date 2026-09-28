@@ -224,9 +224,16 @@ export function AccountOrdersPageClient({
     router.replace(q ? `${pathname}?tab=${encodeURIComponent(q)}` : pathname, { scroll: false });
   }, [deepLinkId, pathname, router, selectedIndex]);
 
-  const loadInWorkOrders = useCallback(async () => {
-    setInWorkLoading(true);
-    setInWorkError(null);
+  /**
+   * `background`: без скелетона и без очистки списка при ошибке — карточки (и открытый в них чат
+   * с file input) не размонтируются, когда вкладка получает focus после системного выбора файла.
+   */
+  const loadInWorkOrders = useCallback(async (opts?: { background?: boolean }) => {
+    const background = opts?.background ?? false;
+    if (!background) {
+      setInWorkLoading(true);
+      setInWorkError(null);
+    }
     try {
       const [ordersRes, sourcingRes] = await Promise.all([
         fetchUserOrdersList(1, 50, { scope: 'work' }),
@@ -234,12 +241,14 @@ export function AccountOrdersPageClient({
       ]);
       setInWorkOrders(sortUserOrdersByUpdatedDesc(ordersRes.items));
       setInWorkSourcing(sortSourcingRequestsByUpdatedDesc(sourcingRes.items));
+      setInWorkError(null);
     } catch (e) {
+      if (background) return;
       setInWorkError(e instanceof Error ? e.message : 'Не удалось загрузить заказы');
       setInWorkOrders([]);
       setInWorkSourcing([]);
     } finally {
-      setInWorkLoading(false);
+      if (!background) setInWorkLoading(false);
     }
   }, []);
 
@@ -248,9 +257,12 @@ export function AccountOrdersPageClient({
     [inWorkOrders, inWorkSourcing],
   );
 
-  const loadCompletedOrders = useCallback(async () => {
-    setCompletedLoading(true);
-    setCompletedError(null);
+  const loadCompletedOrders = useCallback(async (opts?: { background?: boolean }) => {
+    const background = opts?.background ?? false;
+    if (!background) {
+      setCompletedLoading(true);
+      setCompletedError(null);
+    }
     try {
       const [ordersRes, sourcingRes] = await Promise.all([
         fetchUserOrdersList(1, 50, { scope: 'completed' }),
@@ -258,12 +270,14 @@ export function AccountOrdersPageClient({
       ]);
       setCompletedOrders(sortUserOrdersByUpdatedDesc(ordersRes.items));
       setCompletedSourcing(sortSourcingRequestsByUpdatedDesc(sourcingRes.items));
+      setCompletedError(null);
     } catch (e) {
+      if (background) return;
       setCompletedError(e instanceof Error ? e.message : 'Не удалось загрузить заказы');
       setCompletedOrders([]);
       setCompletedSourcing([]);
     } finally {
-      setCompletedLoading(false);
+      if (!background) setCompletedLoading(false);
     }
   }, []);
 
@@ -358,8 +372,8 @@ export function AccountOrdersPageClient({
 
   useEffect(() => {
     const refreshWorkFeed = () => {
-      if (isInWorkTab) void loadInWorkOrders();
-      if (isCompletedTab) void loadCompletedOrders();
+      if (isInWorkTab) void loadInWorkOrders({ background: true });
+      if (isCompletedTab) void loadCompletedOrders({ background: true });
       void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
     };
     window.addEventListener(ACCOUNT_WORK_FEED_REFRESH_EVENT, refreshWorkFeed);
@@ -370,7 +384,7 @@ export function AccountOrdersPageClient({
     if (!isInWorkTab) return;
     const refresh = () => {
       if (document.visibilityState !== 'visible') return;
-      void loadInWorkOrders();
+      void loadInWorkOrders({ background: true });
       void fetchOrderChatUnreadWorkScope().then(setWorkTabUnread);
     };
     window.addEventListener('focus', refresh);
@@ -1020,7 +1034,7 @@ export function AccountOrdersPageClient({
         onClose={() => {
           setWorkSourcingDetailId(null);
           clearDetailDeepLink();
-          if (isInWorkTab) void loadInWorkOrders();
+          if (isInWorkTab) void loadInWorkOrders({ background: true });
         }}
       />
       <SourcingRequestModal
