@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { CustomerAccountSidebar } from './CustomerAccountSidebar';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { teardownOrderChatWsForLogout } from '@/lib/orderChat/orderChatWsShared';
+import { invalidateUserClientCaches } from '@/lib/userSessionClient';
 import { ACCOUNT_WORK_NOTIFICATIONS_EVENT, dispatchAccountWorkFeedRefreshEvent } from '@/lib/account/orders';
+import { CustomerAccountSidebar } from './CustomerAccountSidebar';
 
 type ProfileMe = {
   firstName?: string | null;
   lastName?: string | null;
   winWinPartnerApproved?: boolean;
   userGroupLabel?: string | null;
-  partnerApplicationSubmittedAt?: string | null;
-  partnerApplicationRejectedAt?: string | null;
 };
 
 function displayName(firstName: string | null | undefined, lastName: string | null | undefined): string {
@@ -19,12 +20,14 @@ function displayName(firstName: string | null | undefined, lastName: string | nu
 }
 
 export function CustomerAccountSidebarContainer() {
+  const router = useRouter();
   const [userName, setUserName] = useState('Имя пользователя');
   const [isWinWinPartner, setIsWinWinPartner] = useState(false);
   const [userGroupLabel, setUserGroupLabel] = useState<string | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [orderChatNotify, setOrderChatNotify] = useState(false);
   const [workTabNotify, setWorkTabNotify] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const prevWorkUnreadRef = useRef(0);
 
   useEffect(() => {
@@ -97,6 +100,24 @@ export function CustomerAccountSidebarContainer() {
     };
   }, []);
 
+  const handleLogout = useCallback(async () => {
+    setLoggingOut(true);
+    try {
+      await fetch('/api/user/logout', { method: 'POST', credentials: 'same-origin' });
+      teardownOrderChatWsForLogout('account');
+      invalidateUserClientCaches({ authenticated: false });
+      router.push('/');
+      router.refresh();
+    } catch {
+      teardownOrderChatWsForLogout('account');
+      invalidateUserClientCaches({ authenticated: false });
+      router.push('/');
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  }, [router]);
+
   const menuHrefOverrides = workTabNotify ? { '/account/orders': '/account/orders?tab=work' } : {};
 
   return (
@@ -107,6 +128,8 @@ export function CustomerAccountSidebarContainer() {
       profileLoaded={profileLoaded}
       menuItemsWithNotification={orderChatNotify ? ['/account/orders'] : []}
       menuHrefOverrides={menuHrefOverrides}
+      onLogout={() => void handleLogout()}
+      loggingOut={loggingOut}
     />
   );
 }

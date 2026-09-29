@@ -29,6 +29,8 @@ export type CoverGridFieldProps = {
   onFileRemove: CoverFileRemoveHandlers;
   /** If false, the «Выберите сетку…» line is not rendered (e.g. designer profile cover). */
   showGridLayoutLabel?: boolean;
+  /** Какие форматы показывать. По умолчанию оба; для профиля — только `['16:9']`. */
+  allowedLayouts?: CoverGrid[];
 };
 
 export function CoverGridField({
@@ -43,125 +45,153 @@ export function CoverGridField({
   onFileChange,
   onFileRemove,
   showGridLayoutLabel = true,
+  allowedLayouts = ['4:3', '16:9'],
 }: CoverGridFieldProps) {
+  const show43 = allowedLayouts.includes('4:3');
+  const show169 = allowedLayouts.includes('16:9');
+  const showLayoutPicker = allowedLayouts.length > 1;
+
+  const upload169 = (
+    <label
+      className={`${styles.uploadBox169} ${coverGrid !== '16:9' ? styles.uploadBoxDisabled : ''}`}
+      style={cover169Preview ? { backgroundImage: `url(${cover169Preview})` } : undefined}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <input
+        type="file"
+        accept="image/*"
+        className={styles.uploadInput}
+        disabled={coverGrid !== '16:9'}
+        onChange={(e) => onFileChange.onChange169(e.target.files?.[0] ?? null)}
+      />
+      <span className={styles.uploadCaption}>{cover169 ? cover169.name : 'Загрузить фото'}</span>
+      {cover169 || cover169Preview ? (
+        <button
+          type="button"
+          className={styles.uploadRemove}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onFileRemove.onRemove169();
+          }}
+        >
+          Удалить
+        </button>
+      ) : null}
+    </label>
+  );
+
+  if (!showLayoutPicker && show169 && !show43) {
+    return (
+      <div className={styles.field}>
+        {showGridLayoutLabel ? (
+          <span className={styles.label}>Обложка кейса — 1 изображение</span>
+        ) : (
+          <span className={styles.label}>Обложка кейса</span>
+        )}
+        <div className={styles.gridOptions}>
+          <div className={styles.gridOptionStatic}>{upload169}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.field}>
       {showGridLayoutLabel ? (
         <span className={styles.label}>Выберите сетку отображения обложки кейса</span>
       ) : null}
       <div className={styles.gridOptions}>
-        <button
-          type="button"
-          className={styles.gridOption}
-          onClick={() => onCoverGridChange('4:3')}
-          aria-pressed={coverGrid === '4:3'}
-        >
-          <span className={styles.gridOptionTop}>
-            <span className={styles.gridOptionLeft}>
-              <span className={`${styles.gridRadio} ${coverGrid === '4:3' ? styles.gridRadioChecked : ''}`} />
-              <span>2 изображения 4:3</span>
-            </span>
-            <span className={styles.gridRatio}>4:3</span>
-          </span>
-          <span className={styles.uploadGrid43}>
-            <label
-              className={`${styles.uploadBox43} ${coverGrid !== '4:3' ? styles.uploadBoxDisabled : ''}`}
-              style={cover43aPreview ? { backgroundImage: `url(${cover43aPreview})` } : undefined}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <input
-                type="file"
-                accept="image/*"
-                className={styles.uploadInput}
-                disabled={coverGrid !== '4:3'}
-                onChange={(e) => onFileChange.onChange43a(e.target.files?.[0] ?? null)}
-              />
-              <span className={styles.uploadCaption}>{cover43a ? cover43a.name : 'Загрузить фото'}</span>
-              {cover43a ? (
-                <button
-                  type="button"
-                  className={styles.uploadRemove}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onFileRemove.onRemove43a();
-                  }}
-                >
-                  Удалить
-                </button>
-              ) : null}
-            </label>
-            <label
-              className={`${styles.uploadBox43} ${coverGrid !== '4:3' ? styles.uploadBoxDisabled : ''}`}
-              style={cover43bPreview ? { backgroundImage: `url(${cover43bPreview})` } : undefined}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <input
-                type="file"
-                accept="image/*"
-                className={styles.uploadInput}
-                disabled={coverGrid !== '4:3'}
-                onChange={(e) => onFileChange.onChange43b(e.target.files?.[0] ?? null)}
-              />
-              <span className={styles.uploadCaption}>{cover43b ? cover43b.name : 'Загрузить фото'}</span>
-              {cover43b ? (
-                <button
-                  type="button"
-                  className={styles.uploadRemove}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onFileRemove.onRemove43b();
-                  }}
-                >
-                  Удалить
-                </button>
-              ) : null}
-            </label>
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className={styles.gridOption}
-          onClick={() => onCoverGridChange('16:9')}
-          aria-pressed={coverGrid === '16:9'}
-        >
-          <span className={styles.gridOptionTop}>
-            <span className={styles.gridOptionLeft}>
-              <span className={`${styles.gridRadio} ${coverGrid === '16:9' ? styles.gridRadioChecked : ''}`} />
-              <span>1 изображение 16:9</span>
-            </span>
-            <span className={styles.gridRatio}>16:9</span>
-          </span>
-          <label
-            className={`${styles.uploadBox169} ${coverGrid !== '16:9' ? styles.uploadBoxDisabled : ''}`}
-            style={cover169Preview ? { backgroundImage: `url(${cover169Preview})` } : undefined}
-            onClick={(e) => e.stopPropagation()}
+        {show43 ? (
+          <button
+            type="button"
+            className={styles.gridOption}
+            onClick={() => onCoverGridChange('4:3')}
+            aria-pressed={coverGrid === '4:3'}
           >
-            <input
-              type="file"
-              accept="image/*"
-              className={styles.uploadInput}
-              disabled={coverGrid !== '16:9'}
-              onChange={(e) => onFileChange.onChange169(e.target.files?.[0] ?? null)}
-            />
-            <span className={styles.uploadCaption}>{cover169 ? cover169.name : 'Загрузить фото'}</span>
-            {cover169 ? (
-              <button
-                type="button"
-                className={styles.uploadRemove}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onFileRemove.onRemove169();
-                }}
+            <span className={styles.gridOptionTop}>
+              <span className={styles.gridOptionLeft}>
+                <span className={`${styles.gridRadio} ${coverGrid === '4:3' ? styles.gridRadioChecked : ''}`} />
+                <span>2 изображения 4:3</span>
+              </span>
+              <span className={styles.gridRatio}>4:3</span>
+            </span>
+            <span className={styles.uploadGrid43}>
+              <label
+                className={`${styles.uploadBox43} ${coverGrid !== '4:3' ? styles.uploadBoxDisabled : ''}`}
+                style={cover43aPreview ? { backgroundImage: `url(${cover43aPreview})` } : undefined}
+                onClick={(e) => e.stopPropagation()}
               >
-                Удалить
-              </button>
-            ) : null}
-          </label>
-        </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className={styles.uploadInput}
+                  disabled={coverGrid !== '4:3'}
+                  onChange={(e) => onFileChange.onChange43a(e.target.files?.[0] ?? null)}
+                />
+                <span className={styles.uploadCaption}>{cover43a ? cover43a.name : 'Загрузить фото'}</span>
+                {cover43a ? (
+                  <button
+                    type="button"
+                    className={styles.uploadRemove}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onFileRemove.onRemove43a();
+                    }}
+                  >
+                    Удалить
+                  </button>
+                ) : null}
+              </label>
+              <label
+                className={`${styles.uploadBox43} ${coverGrid !== '4:3' ? styles.uploadBoxDisabled : ''}`}
+                style={cover43bPreview ? { backgroundImage: `url(${cover43bPreview})` } : undefined}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className={styles.uploadInput}
+                  disabled={coverGrid !== '4:3'}
+                  onChange={(e) => onFileChange.onChange43b(e.target.files?.[0] ?? null)}
+                />
+                <span className={styles.uploadCaption}>{cover43b ? cover43b.name : 'Загрузить фото'}</span>
+                {cover43b ? (
+                  <button
+                    type="button"
+                    className={styles.uploadRemove}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onFileRemove.onRemove43b();
+                    }}
+                  >
+                    Удалить
+                  </button>
+                ) : null}
+              </label>
+            </span>
+          </button>
+        ) : null}
+
+        {show169 ? (
+          <button
+            type="button"
+            className={styles.gridOption}
+            onClick={() => onCoverGridChange('16:9')}
+            aria-pressed={coverGrid === '16:9'}
+          >
+            <span className={styles.gridOptionTop}>
+              <span className={styles.gridOptionLeft}>
+                <span className={`${styles.gridRadio} ${coverGrid === '16:9' ? styles.gridRadioChecked : ''}`} />
+                <span>1 изображение 16:9</span>
+              </span>
+              <span className={styles.gridRatio}>16:9</span>
+            </span>
+            {upload169}
+          </button>
+        ) : null}
       </div>
     </div>
   );

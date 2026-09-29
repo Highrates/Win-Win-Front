@@ -1,15 +1,15 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { DESIGNER_PUBLIC_REVALIDATE_SECONDS } from '@/lib/designersPublicShared';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
-/** Плоский список публичных кейсов партнёров (Nest `GET /designers/cases[?product=]`). */
+/** Плоский список публичных кейсов партнёров (Nest `GET /designers/cases`). */
 export async function GET(req: NextRequest) {
   try {
     const base = getServerApiBase();
-    const product = req.nextUrl.searchParams.get('product');
-    const qs = product && product.trim() ? `?product=${encodeURIComponent(product.trim())}` : '';
-    const res = await fetch(`${base}/designers/cases${qs}`, {
-      next: { revalidate: 60 },
+    const qs = req.nextUrl.searchParams.toString();
+    const res = await fetch(`${base}/designers/cases${qs ? `?${qs}` : ''}`, {
+      next: { revalidate: DESIGNER_PUBLIC_REVALIDATE_SECONDS },
     });
     const text = await res.text();
     const out = new NextResponse(text, { status: res.status });

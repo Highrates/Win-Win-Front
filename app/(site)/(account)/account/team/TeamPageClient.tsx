@@ -171,7 +171,7 @@ export function TeamPageClient() {
 
       <div className={styles.summaryColumn}>
         <div className={styles.summaryRowTop}>
-          <p className={styles.partnerStatus}>Партнер Win-win</p>
+          <p className={styles.partnerStatus}>Партнёр Wupapa</p>
           <Link href="/referral" className={styles.programLink}>
             Подробнее о программе Win Win
           </Link>

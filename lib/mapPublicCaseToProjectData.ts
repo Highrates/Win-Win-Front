@@ -40,7 +40,7 @@ export type PublicCasePayload = {
   /** Метки помещений из кейса (для фильтра на /projects); с бэка или из parseRoomTypesArray */
   roomTypes?: string[];
   descriptionHtml: string | null;
-  coverLayout: '4:3' | '16:9';
+  coverLayout: '4:3' | '16:9' | '9:16';
   coverImageUrls: string[];
   products: PublicCaseProduct[];
   likesDisplayCount: number;
@@ -51,13 +51,14 @@ export function mapPublicCaseToProjectData(
   designer?: { slug: string; name: string; photoUrl: string | null },
 ): ProjectData {
   const layout = c.coverLayout;
+  const singleCover = layout === '16:9' || layout === '9:16';
   const rawUrls = c.coverImageUrls;
-  const urls = layout === '16:9' ? rawUrls.slice(0, 1) : rawUrls.slice(0, 2);
+  const urls = singleCover ? rawUrls.slice(0, 1) : rawUrls.slice(0, 2);
   const coverImage = urls[0]?.trim()
     ? resolveMediaUrlForServer(urls[0])
     : '/images/placeholder.svg';
   const coverImage2 =
-    layout === '16:9'
+    singleCover
       ? undefined
       : urls[1]?.trim()
         ? resolveMediaUrlForServer(urls[1])

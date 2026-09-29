@@ -5,6 +5,7 @@ import type { ProjectData } from '../designers/DesignerProjectsSection';
 import { ProjectsMarketSection } from './ProjectsMarketSection';
 import { mapPublicCaseToProjectData } from '@/lib/mapPublicCaseToProjectData';
 import { parseNestPublicCaseItem } from '@/lib/parseNestPublicCase';
+import { DESIGNER_PUBLIC_REVALIDATE_SECONDS, PUBLIC_CASES_PAGE_SIZE } from '@/lib/designersPublicShared';
 import { getServerApiBase } from '@/lib/serverApiBase';
 /**
  * Общие стили превью, маркета и карточек проектов (те же классы, что на странице дизайнера).
@@ -38,20 +39,23 @@ async function fetchProductTitleForFilter(productId: string): Promise<string | n
   }
 }
 
-async function fetchPublicProjectsListing(productFilterId?: string | null): Promise<ProjectData[]> {
+async function fetchPublicProjectsListing(
+  productFilterId?: string | null,
+): Promise<{ projects: ProjectData[]; total: number }> {
   const base = getServerApiBase();
-  const qs =
-    productFilterId && productFilterId.trim()
-      ? `?product=${encodeURIComponent(productFilterId.trim())}`
-      : '';
+  const qs = new URLSearchParams({
+    page: '1',
+    limit: String(PUBLIC_CASES_PAGE_SIZE),
+  });
+  if (productFilterId?.trim()) qs.set('product', productFilterId.trim());
   try {
-    const res = await fetch(`${base}/designers/cases${qs}`, {
-      next: { revalidate: 120 },
+    const res = await fetch(`${base}/designers/cases?${qs}`, {
+      next: { revalidate: DESIGNER_PUBLIC_REVALIDATE_SECONDS },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return { projects: [], total: 0 };
     const raw = (await res.json()) as Record<string, unknown>;
     const rawItems = raw.items;
-    if (!Array.isArray(rawItems)) return [];
+    if (!Array.isArray(rawItems)) return { projects: [], total: 0 };
     const out: ProjectData[] = [];
     for (const row of rawItems) {
       const parsed = parseNestPublicCaseItem(row, { requireDesignerMeta: true });
@@ -64,9 +68,12 @@ async function fetchPublicProjectsListing(productFilterId?: string | null): Prom
         }),
       );
     }
-    return out;
+    return {
+      projects: out,
+      total: typeof raw.total === 'number' ? raw.total : out.length,
+    };
   } catch {
-    return [];
+    return { projects: [], total: 0 };
   }
 }
 
@@ -77,7 +84,7 @@ export default async function ProjectsPage({
 }) {
   const productQuery = searchParams ? (await searchParams)?.product : undefined;
   const productIdTrimmed = productQuery?.trim() || '';
-  const [projects, productTitle] = await Promise.all([
+  const [listing, productTitle] = await Promise.all([
     fetchPublicProjectsListing(productQuery),
     productIdTrimmed ? fetchProductTitleForFilter(productIdTrimmed) : Promise.resolve(null),
   ]);
@@ -135,9 +142,15 @@ export default async function ProjectsPage({
         <div className="padding-global">
           <div className={listingLayoutStyles.marketSectionInner}>
             <ProjectsMarketSection
-              projects={projects}
+              projects={listing.projects}
               stylesModule={listingLayoutStyles}
               productFilter={productFilter}
+              casesPagination={{
+                mode: 'public',
+                productId: productIdTrimmed || null,
+                total: listing.total,
+                pageSize: PUBLIC_CASES_PAGE_SIZE,
+              }}
             />
           </div>
         </div>

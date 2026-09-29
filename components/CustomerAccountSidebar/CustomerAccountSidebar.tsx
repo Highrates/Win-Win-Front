@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/Button';
+import { useModalBodyLock } from '@/hooks/useModalBodyLock';
+import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
+import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import styles from './CustomerAccountSidebar.module.css';
 
 const BODY_DOCK_OPEN = 'account-mobile-dock-open';
@@ -19,6 +23,8 @@ export type CustomerAccountSidebarProps = {
   menuHrefOverrides?: Partial<Record<string, string>>;
   /** Лейбл группы пользователя (бейдж в шапке меню). */
   userGroupLabel?: string | null;
+  onLogout?: () => void;
+  loggingOut?: boolean;
 };
 
 /** ЛК: чёрный stroke; избранное/проекты — account-sidebar (в /icons/heart и collections — серый для карточек) */
@@ -35,6 +41,14 @@ const ICON = {
 } as const;
 
 type MenuDef = { href: string; iconSrc: string; label: string };
+
+function CloseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function isMenuItemActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
@@ -108,14 +122,35 @@ export function CustomerAccountSidebar({
   menuItemsWithNotification = [],
   menuHrefOverrides = {},
   userGroupLabel = null,
+  onLogout,
+  loggingOut = false,
 }: CustomerAccountSidebarProps) {
   const pathname = usePathname() ?? '';
   const notifySet = new Set(menuItemsWithNotification);
   const hrefFor = (baseHref: string) => menuHrefOverrides[baseHref] ?? baseHref;
   const [moreOpen, setMoreOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const logoutPanelRef = useRef<HTMLDivElement>(null);
   const sheetId = useId();
 
   const showDesignerNav = profileLoaded && isWinWinPartner;
+
+  const closeLogoutConfirm = useCallback(() => {
+    if (loggingOut) return;
+    setLogoutConfirmOpen(false);
+  }, [loggingOut]);
+
+  useModalBodyLock(logoutConfirmOpen, closeLogoutConfirm);
+  useModalFocusTrap(logoutConfirmOpen, logoutPanelRef);
+
+  const openLogoutConfirm = useCallback(() => {
+    setMoreOpen(false);
+    setLogoutConfirmOpen(true);
+  }, []);
+
+  const confirmLogout = useCallback(() => {
+    onLogout?.();
+  }, [onLogout]);
 
   const { primaryItems, moreTopItems, moreBottomItems } = useMemo(() => {
     const primary: MenuDef[] = [
@@ -188,7 +223,7 @@ export function CustomerAccountSidebar({
             {userGroupLabel ? (
               <span className={styles.groupBadge}>{userGroupLabel}</span>
             ) : showDesignerNav ? (
-              <p className={styles.partnerStatus}>Партнер Wupapa</p>
+              <p className={styles.partnerStatus}>Партнёр Wupapa</p>
             ) : (
               <p className={styles.partnerStatus} aria-hidden />
             )}
@@ -259,6 +294,22 @@ export function CustomerAccountSidebar({
                 />
               ))}
             </div>
+
+            {onLogout ? (
+              <>
+                <hr className={styles.divider} aria-hidden />
+                <div className={styles.sidebarFooter}>
+                  <button
+                    type="button"
+                    className={styles.footerLogoutBtn}
+                    onClick={openLogoutConfirm}
+                    disabled={loggingOut}
+                  >
+                    {loggingOut ? 'Выход…' : 'Выйти'}
+                  </button>
+                </div>
+              </>
+            ) : null}
           </nav>
         )}
       </aside>
@@ -423,9 +474,70 @@ export function CustomerAccountSidebar({
                   onNavigate={closeMore}
                 />
               ))}
+              <hr className={styles.sheetDivider} aria-hidden />
+              {onLogout ? (
+                <button
+                  type="button"
+                  className={styles.footerLogoutBtn}
+                  disabled={loggingOut}
+                  onClick={openLogoutConfirm}
+                >
+                  {loggingOut ? 'Выход…' : 'Выйти'}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
+      ) : null}
+
+      {logoutConfirmOpen ? (
+        <>
+          <button
+            type="button"
+            className={styles.logoutConfirmBackdrop}
+            aria-label="Закрыть"
+            onClick={closeLogoutConfirm}
+          />
+          <div
+            ref={logoutPanelRef}
+            className={styles.logoutConfirmPanel}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sidebar-logout-title"
+            tabIndex={-1}
+          >
+            <header className={styles.logoutConfirmHeader}>
+              <button
+                type="button"
+                className={panelModal.iconBtn}
+                onClick={closeLogoutConfirm}
+                aria-label="Закрыть"
+                disabled={loggingOut}
+              >
+                <CloseIcon />
+              </button>
+            </header>
+            <div className={styles.logoutConfirmBody}>
+              <h3 id="sidebar-logout-title" className={styles.logoutConfirmTitle}>
+                Выйти из аккаунта?
+              </h3>
+              <p className={styles.logoutConfirmText}>Сессия на этом устройстве будет завершена.</p>
+              <div className={styles.logoutConfirmActions}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={closeLogoutConfirm}
+                  disabled={loggingOut}
+                >
+                  Отмена
+                </Button>
+                <Button type="button" variant="primary" disabled={loggingOut} onClick={confirmLogout}>
+                  {loggingOut ? 'Выход…' : 'Выйти'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       ) : null}
     </>
   );

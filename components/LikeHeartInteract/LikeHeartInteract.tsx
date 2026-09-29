@@ -157,17 +157,20 @@ export function LikeHeartInteract({
   return (
     <button
       type="button"
-      className={`${cn.interactItem} ${burstStyles.wrap}`}
+      className={cn.interactItem}
       disabled={disabled}
       aria-label={liked ? unlikeAriaLabel : likeAriaLabel}
       onClick={wrapClick(handleToggle)}
     >
-      <LikeBurstOverlay burstId={burstId} />
-      {liked ? (
-        <LikeHeartSvg active className={cn.heartIconActive ?? cn.interactIcon} />
-      ) : (
-        <LikeHeartSvg className={cn.interactIcon} />
-      )}
+      {/* wrap на внутреннем span — иначе position:relative с burst перебивает absolute у cover-like */}
+      <span className={burstStyles.wrap}>
+        <LikeBurstOverlay burstId={burstId} />
+        {liked ? (
+          <LikeHeartSvg active className={cn.heartIconActive ?? cn.interactIcon} />
+        ) : (
+          <LikeHeartSvg className={cn.interactIcon} />
+        )}
+      </span>
       {valueCn ? <span className={valueCn}>{displayCount}</span> : null}
     </button>
   );

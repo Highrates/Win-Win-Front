@@ -1,0 +1,175 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.4);
+  transition: opacity 0.2s ease;
+}
+
+.panel {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 31;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  border-radius: 10px;
+  background: var(--color-white);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideIn 0.35s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .panel {
+    left: auto;
+    right: 8px;
+    width: 75%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    width: 50%;
+  }
+}
+
+.panelFullscreen {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+@media (min-width: 768px) {
+  .panelFullscreen {
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
+}
+
+.header {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 31;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--account-hairline-width, 0.7px) solid var(--account-hairline-color, rgba(0, 0, 0, 0.12));
+  background: var(--color-white);
+  padding: 8px 0;
+}
+
+/* Одинаковые горизонтальные отступы у шапки и контента. */
+.headerPadding {
+  box-sizing: border-box;
+  width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  align-self: stretch;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+@media (max-width: 768px) {
+  .headerPadding {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+.headerTitle {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-card-16-300);
+  font-weight: 400;
+  color: var(--color-ink-black);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-ink-black);
+  border-radius: 8px;
+}
+
+.iconBtn:hover {
+  background: var(--color-bright-snow);
+}
+
+.iconBtn img,
+.iconBtn svg {
+  display: block;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.content {
+  padding: 0;
+}
+
+.contentPad {
+  box-sizing: border-box;
+  width: 100%;
+  padding-top: 24px;
+  padding-bottom: 24px;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+@media (max-width: 768px) {
+  .contentPad {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+}

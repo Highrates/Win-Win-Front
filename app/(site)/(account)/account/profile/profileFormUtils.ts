@@ -9,8 +9,6 @@ export const DEFAULT_SERVICE_OPTIONS = [
   'Планировка',
 ] as const;
 
-export const CITY_OPTIONS = ['Москва', 'Санкт-Петербург', 'Казань', 'Сочи'] as const;
-
 export function parseStringArray(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return v.filter((x): x is string => typeof x === 'string');
@@ -31,13 +29,16 @@ export type CoverFormState = {
   cover169Preview: string | null;
 };
 
-export function coverFormStateFromProfile(p: ProfileDto): CoverFormState {
-  const layout = (p.coverLayout === '16:9' ? '16:9' : '4:3') as CoverGrid;
+export function coverFormStateFromProfile(
+  p: ProfileDto,
+  opts?: { forceHorizontal?: boolean },
+): CoverFormState {
   const urls = parseStringArray(p.coverImageUrls);
-  if (layout === '16:9') {
+  const force169 = Boolean(opts?.forceHorizontal) || p.coverLayout === '16:9';
+  if (force169) {
     const u0 = urls[0] ?? null;
     return {
-      coverGrid: layout,
+      coverGrid: '16:9',
       remoteCoverA: null,
       remoteCoverB: null,
       remoteCover169: u0,
@@ -49,7 +50,7 @@ export function coverFormStateFromProfile(p: ProfileDto): CoverFormState {
   const a = urls[0] ?? null;
   const b = urls[1] ?? null;
   return {
-    coverGrid: layout,
+    coverGrid: '4:3',
     remoteCoverA: a,
     remoteCoverB: b,
     remoteCover169: null,

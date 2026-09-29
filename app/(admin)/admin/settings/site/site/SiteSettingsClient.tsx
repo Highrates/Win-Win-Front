@@ -15,6 +15,7 @@ type SiteSettingsAdminPayload = {
   heroImageUrls: string[];
   designerServiceOptions: string[];
   caseRoomTypeOptions: string[];
+  designerCityOptions: string[];
 };
 
 type TabKey = 'hero' | 'other' | 'designerBonusProfiles';
@@ -30,6 +31,7 @@ export function SiteSettingsClient() {
   const [heroImageUrls, setHeroImageUrls] = useState<string[]>([]);
   const [designerServiceOptions, setDesignerServiceOptions] = useState<string[]>([]);
   const [caseRoomTypeOptions, setCaseRoomTypeOptions] = useState<string[]>([]);
+  const [designerCityOptions, setDesignerCityOptions] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -46,6 +48,11 @@ export function SiteSettingsClient() {
       setCaseRoomTypeOptions(
         Array.isArray(data?.caseRoomTypeOptions) && data.caseRoomTypeOptions.length
           ? data.caseRoomTypeOptions.filter((x) => typeof x === 'string' && x.trim().length > 0)
+          : [''],
+      );
+      setDesignerCityOptions(
+        Array.isArray(data?.designerCityOptions) && data.designerCityOptions.length
+          ? data.designerCityOptions.filter((x) => typeof x === 'string' && x.trim().length > 0)
           : [''],
       );
     } catch (e) {
@@ -133,17 +140,35 @@ export function SiteSettingsClient() {
     setCaseRoomTypeOptions((prev) => (prev.length <= 1 ? [''] : prev.filter((_, i) => i !== index)));
   }
 
+  function addCityRow() {
+    setDesignerCityOptions((prev) => [...prev, '']);
+  }
+
+  function setCityAt(index: number, value: string) {
+    setDesignerCityOptions((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }
+
+  function removeCityAt(index: number) {
+    setDesignerCityOptions((prev) => (prev.length <= 1 ? [''] : prev.filter((_, i) => i !== index)));
+  }
+
   async function saveOther() {
     setSaving(true);
     setSaveError(null);
     try {
       const list = designerServiceOptions.map((x) => x.trim()).filter((x) => x.length > 0);
       const roomTypes = caseRoomTypeOptions.map((x) => x.trim()).filter((x) => x.length > 0);
+      const cities = designerCityOptions.map((x) => x.trim()).filter((x) => x.length > 0);
       const res = await adminBackendFetch('settings/admin/site', {
         method: 'PATCH',
         body: JSON.stringify({
           designerServiceOptions: list,
           caseRoomTypeOptions: roomTypes,
+          designerCityOptions: cities,
         }),
       });
       const j = (await res.json().catch(() => ({}))) as { message?: string };
@@ -317,6 +342,47 @@ export function SiteSettingsClient() {
                         variant="danger"
                         onClick={() => removeRoomTypeAt(index)}
                       >
+                        Удалить
+                      </AdminCompactBtn>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <h2 className={catalogStyles.groupHeading} style={{ marginTop: 24 }}>
+            Города
+          </h2>
+          <p className={catalogStyles.muted}>
+            Список городов отображается в поле «Город» в редактировании профиля дизайнера.
+          </p>
+          <div className={catalogStyles.formActions}>
+            <AdminCompactBtn type="button" onClick={addCityRow} disabled={saving}>
+              Добавить строку
+            </AdminCompactBtn>
+          </div>
+          <div className={`${catalogStyles.tableWrap} ${styles.tableAfterActions}`}>
+            <table className={catalogStyles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Город</th>
+                  <th className={catalogStyles.tableCellActions} scope="col" />
+                </tr>
+              </thead>
+              <tbody>
+                {designerCityOptions.map((row, index) => (
+                  <tr key={index}>
+                    <td>
+                      <AdminTextField
+                        value={row}
+                        onChange={(e) => setCityAt(index, e.target.value)}
+                        placeholder="Название города"
+                        aria-label={`Город ${index + 1}`}
+                      />
+                    </td>
+                    <td className={catalogStyles.tableCellActions}>
+                      <AdminCompactBtn type="button" variant="danger" onClick={() => removeCityAt(index)}>
                         Удалить
                       </AdminCompactBtn>
                     </td>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { ProjectData } from '../designers/DesignerProjectsSection';
+import type { CasesPagination, ProjectData } from '../designers/DesignerProjectsSection';
 import { DesignerProjectsSection } from '../designers/DesignerProjectsSection';
 import { ProjectsRoomFilter } from './ProjectsRoomFilter';
 
@@ -25,6 +25,7 @@ type Props = {
   productFilter?: { id: string; label: string } | null;
   /** Скрыть переключатель вида, всегда сетка (страница лайков в ЛК). */
   gridOnly?: boolean;
+  casesPagination?: CasesPagination;
 };
 
 export function ProjectsMarketSection({
@@ -32,6 +33,7 @@ export function ProjectsMarketSection({
   stylesModule,
   productFilter,
   gridOnly = false,
+  casesPagination,
 }: Props) {
   const roomChips = useMemo(() => buildRoomChips(projects), [projects]);
   const [activeRoom, setActiveRoom] = useState(ALL_SPACES_LABEL);
@@ -55,6 +57,7 @@ export function ProjectsMarketSection({
       stylesModule={stylesModule}
       defaultView="grid"
       gridOnly={gridOnly}
+      casesPagination={activeRoom === ALL_SPACES_LABEL ? casesPagination : undefined}
       titlesLeft={
         <ProjectsRoomFilter
           roomChips={roomChips}

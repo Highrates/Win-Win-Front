@@ -1,189 +1,34 @@
 'use client';
 
-import Link from 'next/link';
-import {
-  useState,
-  useCallback,
-  useRef,
-  useLayoutEffect,
-  useEffect,
-  useMemo,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { buildLikesBulkUiProp } from '@/lib/buildLikesBulkUiProp';
 import { markCaseListLikesStale } from '@/lib/caseListLikesStale';
 import { markProductListLikesStale } from '@/lib/productListLikesStale';
 import { useLikesBulk } from '@/hooks/useLikesBulk';
-import type { LikesBulkUiState } from '@/lib/likesBulkUi';
-import { ProductCardSmall } from '@/components/ProductCardSmall';
-import { CaseAudienceSocial } from '@/components/CaseAudienceSocial/CaseAudienceSocial';
-import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
-import { useToggleLike } from '@/hooks/useToggleLike';
-import { LikeHeartInteract } from '@/components/LikeHeartInteract';
+import { UnderlineTabs } from '@/components/UnderlineTabs';
 import { DesignerViewToggle, type ViewMode } from './[slug]/DesignerViewToggle';
-import { MoreAboutProjectModal, type ProjectProduct } from './[slug]/MoreAboutProjectModal';
+import { MoreAboutProjectModal } from './[slug]/MoreAboutProjectModal';
+import { DesignerProjectsListView } from './DesignerProjectsListView';
+import { DesignerProjectsMasonryGrid } from './DesignerProjectsMasonryGrid';
+import {
+  PRODUCT_FILTER_TABS,
+  type CasesPagination,
+  type ProductFilterTab,
+  type ProjectData,
+} from './designerProjectsTypes';
+import { useCasesPagination } from './useCasesPagination';
 
-export type ProjectDesignerLink = {
-  name: string;
-  slug: string;
-  avatarSrc: string;
-};
-
-export type ProjectData = {
-  /** Стабильный ключ списка/сетки (id кейса) */
-  id?: string;
-  title: string;
-  places: string;
-  /** Типы помещений из кейса (для фильтра на /projects) */
-  roomTypes?: string[];
-  description: string;
-  /** HTML описания кейса (RichBlock) для модалки */
-  descriptionHtml?: string | null;
-  products: ProjectProduct[];
-  coverImage: string;
-  /** Second image for grid block (optional) */
-  coverImage2?: string;
-  /** Обложка для вида «сетка» (только кейсы; обычно первая из обложек) */
-  gridCoverImage?: string;
-  /** Ссылка на дизайнера (страница проектов и т.п.) */
-  designer?: ProjectDesignerLink;
-  /** Публичный счётчик лайков кейса */
-  likesDisplayCount: number;
-};
-
-function CaseCoverLikeButton({
-  caseId,
-  likesDisplayCount,
-  classNames,
-  caseLikesBulk,
-}: {
-  caseId: string;
-  likesDisplayCount: number;
-  classNames: {
-    btn: string;
-    icon: string;
-    iconActive: string;
-    value: string;
-  };
-  caseLikesBulk?: LikesBulkUiState;
-}) {
-  const bulkReady = caseLikesBulk?.status === 'ready';
-  const bulkLoading = caseLikesBulk?.status === 'loading';
-  const bulkError = caseLikesBulk?.status === 'error';
-
-  const like = useToggleLike({
-    kind: 'case',
-    id: caseId,
-    likesDisplayCount,
-    enabled: true,
-    mode: bulkReady ? 'controlled' : 'uncontrolled',
-    controlledLiked: bulkReady ? caseLikesBulk.liked : undefined,
-    setControlledLiked: bulkReady ? caseLikesBulk.onLikedChange : undefined,
-  });
-
-  return (
-    <LikeHeartInteract
-      state={like}
-      classNames={{
-        interactItem: classNames.btn,
-        interactIcon: classNames.icon,
-        interactValue: classNames.value,
-        heartIconActive: classNames.iconActive,
-      }}
-      suppressMicroLoadUi={bulkReady}
-      bulkLoading={bulkLoading}
-      bulkError={bulkError}
-      stopPropagation
-    />
-  );
-}
+export type { CasesPagination, ProjectData, ProjectDesignerLink } from './designerProjectsTypes';
 
 type Props = {
   projects: ProjectData[];
   stylesModule: Record<string, string>;
-  /** Вместо заголовка «Проекты» в строке с переключателем вида */
   titlesLeft?: ReactNode;
-  /** Стартовый режим списка/сетки (на `/projects` — `grid`). */
   defaultView?: ViewMode;
-  /** Только сетка, без переключателя «список / сетка» (вкладка лайков в ЛК). */
   gridOnly?: boolean;
+  productFilterTabs?: boolean;
+  casesPagination?: CasesPagination;
 };
-
-/** Градиент и подсказка скролла — только если контент реально не помещается по высоте. */
-function ProjectProductsWithScrollCue({
-  stylesModule,
-  children,
-}: {
-  stylesModule: Record<string, string>;
-  children: ReactNode;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const innerRef = useRef<HTMLDivElement>(null);
-  const [showCue, setShowCue] = useState(false);
-
-  const measure = useCallback(() => {
-    const outer = scrollRef.current;
-    if (!outer) return;
-    setShowCue(outer.scrollHeight > Math.ceil(outer.clientHeight) + 1);
-  }, []);
-
-  useLayoutEffect(() => {
-    const outer = scrollRef.current;
-    const inner = innerRef.current;
-    if (!outer || !inner) return;
-    measure();
-    const ro = new ResizeObserver(() => measure());
-    ro.observe(inner);
-    ro.observe(outer);
-    window.addEventListener('resize', measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [measure, children]);
-
-  return (
-    <div className={stylesModule.projectProductsWrapper}>
-      <div ref={scrollRef} className={stylesModule.projectProductsScroll}>
-        <div ref={innerRef} className={stylesModule.projectProductsScrollInner}>
-          {children}
-        </div>
-      </div>
-      {showCue ? (
-        <>
-          <div className={stylesModule.projectProductsScrollFade} aria-hidden />
-          <div className={stylesModule.projectProductsScrollHint} aria-hidden>
-            <svg
-              className={stylesModule.projectProductsScrollHintIcon}
-              width="24"
-              height="24"
-              viewBox="0 0 22 22"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M8.25 16.5L13.75 11L8.25 5.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-function SliderCoverArrow() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <circle cx="24" cy="24" r="24" fill="rgba(255,255,255,0.2)" />
-      <path d="M20 24h8M24 20l4 4-4 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export function DesignerProjectsSection({
   projects,
@@ -191,9 +36,29 @@ export function DesignerProjectsSection({
   titlesLeft,
   defaultView = 'list',
   gridOnly = false,
+  productFilterTabs = false,
+  casesPagination,
 }: Props) {
-  const [activeView, setActiveView] = useState<ViewMode>(gridOnly ? 'grid' : defaultView);
+  const forceGrid = gridOnly || productFilterTabs;
+  const [activeView, setActiveView] = useState<ViewMode>(forceGrid ? 'grid' : defaultView);
+  const [productFilter, setProductFilter] = useState<ProductFilterTab>('all');
   const [modalProject, setModalProject] = useState<ProjectData | null>(null);
+
+  const { items, filterLoading, hasMore, sentinelRef, clientFilterWithProducts } = useCasesPagination({
+    initialProjects: projects,
+    casesPagination,
+    productFilter,
+    productFilterTabs,
+  });
+
+  const visibleProjects = useMemo(() => {
+    if (clientFilterWithProducts) return items.filter((p) => p.products.length > 0);
+    return items;
+  }, [items, clientFilterWithProducts]);
+
+  useEffect(() => {
+    if (forceGrid) setActiveView('grid');
+  }, [forceGrid]);
 
   const openProjectModal = useCallback((project: ProjectData) => {
     setModalProject(project);
@@ -204,19 +69,19 @@ export function DesignerProjectsSection({
   }, []);
 
   const caseIds = useMemo(
-    () => projects.map((p) => p.id?.trim()).filter((id): id is string => Boolean(id)),
-    [projects],
+    () => items.map((p) => p.id?.trim()).filter((id): id is string => Boolean(id)),
+    [items],
   );
   const productIds = useMemo(() => {
     const s = new Set<string>();
-    for (const p of projects) {
+    for (const p of items) {
       for (const pr of p.products) {
         const id = pr.productId?.trim();
         if (id) s.add(id);
       }
     }
     return Array.from(s);
-  }, [projects]);
+  }, [items]);
 
   const caseBulk = useLikesBulk('case', caseIds);
   const productBulk = useLikesBulk('product', productIds);
@@ -247,13 +112,8 @@ export function DesignerProjectsSection({
     [productBulk, onProductLikedChange],
   );
 
-  useEffect(() => {
-    if (gridOnly) setActiveView('grid');
-  }, [gridOnly]);
-
   const showBulkStatus =
     (caseBulk.auth === true && caseIds.length > 0) || (productBulk.auth === true && productIds.length > 0);
-  const bulkLoading = showBulkStatus && (caseBulk.status === 'loading' || productBulk.status === 'loading');
   const bulkError = showBulkStatus && (caseBulk.status === 'error' || productBulk.status === 'error');
 
   const retryBulk = useCallback(() => {
@@ -261,224 +121,60 @@ export function DesignerProjectsSection({
     if (productBulk.status === 'error') productBulk.retry();
   }, [caseBulk, productBulk]);
 
+  const showList = !forceGrid && activeView === 'list' && visibleProjects.length > 0;
+  const showGrid = (forceGrid || activeView === 'grid') && visibleProjects.length > 0;
+
   return (
     <>
-      <div className={stylesModule.titlesWrapper}>
-        {titlesLeft ?? <h5 className={stylesModule.titlesWrapperH5}>Проекты</h5>}
-        {projects.length > 0 && !gridOnly ? (
-          <DesignerViewToggle
-            styles={stylesModule}
-            activeView={activeView}
-            onViewChange={setActiveView}
-          />
-        ) : null}
-      </div>
+      {productFilterTabs ? (
+        <UnderlineTabs
+          ariaLabel="Фильтр проектов"
+          tabs={PRODUCT_FILTER_TABS}
+          activeId={productFilter}
+          onSelect={(id) => setProductFilter(id as ProductFilterTab)}
+        />
+      ) : (
+        <div className={stylesModule.titlesWrapper}>
+          {titlesLeft ?? <h5 className={stylesModule.titlesWrapperH5}>Проекты</h5>}
+          {items.length > 0 && !forceGrid ? (
+            <DesignerViewToggle
+              styles={stylesModule}
+              activeView={activeView}
+              onViewChange={setActiveView}
+            />
+          ) : null}
+        </div>
+      )}
 
-      {projects.length === 0 ? (
+      {!filterLoading && items.length === 0 && productFilter === 'all' ? (
         <p className={stylesModule.projectsEmpty}>У дизайнера пока нет опубликованных кейсов.</p>
       ) : null}
 
-      {bulkLoading ? (
-        <p className={stylesModule.projectsLikesBulkStatus} role="status" aria-live="polite">
-          Загружаем лайки…
-        </p>
+      {!filterLoading && items.length === 0 && productFilter === 'with-products' ? (
+        <p className={stylesModule.projectsEmpty}>Нет проектов с товарами.</p>
       ) : null}
 
-      {!gridOnly && activeView === 'list' && projects.length > 0 ? (
-        <div className={stylesModule.projectsList}>
-          {projects.map((project, index) => {
-            const isReversed = index % 2 === 1;
-            const secondCoverUrl = project.coverImage2?.trim() ?? '';
-            const hasTwoCovers = secondCoverUrl.length > 0;
-            const blockLeft = (
-              <div key="left" className={stylesModule.projectBlockLeft}>
-                <div className={stylesModule.projectTitlesWrapper}>
-                  <div className={stylesModule.projectTitlesStack}>
-                    <div className={stylesModule.projectTitlesInner}>
-                      <div className={stylesModule.projectTitlesCol}>
-                        <div className={stylesModule.projectTitleBlock}>
-                          <h3 className={stylesModule.projectTitleName}>{project.title}</h3>
-                          <span className={stylesModule.projectTitlePlaces}>{project.places}</span>
-                        </div>
-                        <p className={stylesModule.projectDescription}>{project.description}</p>
-                        <div className={stylesModule.projectInteractWrapper}>
-                          {project.id ? (
-                            <CaseAudienceSocial
-                              caseId={project.id}
-                              likesDisplayCount={project.likesDisplayCount}
-                              caseLikesBulk={caseBulkUi(project.id)}
-                              classNames={{
-                                interactItem: stylesModule.projectInteractItem,
-                                interactIcon: stylesModule.projectInteractIcon,
-                                interactValue: stylesModule.projectInteractValue,
-                                heartActive: stylesModule.projectHeartActive,
-                              }}
-                            />
-                          ) : (
-                            <>
-                              <div className={stylesModule.projectInteractItem}>
-                                <LikeHeartSvg className={stylesModule.projectInteractIcon} />
-                                <span className={stylesModule.projectInteractValue}>
-                                  {project.likesDisplayCount ?? 0}
-                                </span>
-                              </div>
-                              <div className={stylesModule.projectInteractItem}>
-                                <img
-                                  src="/icons/message.svg"
-                                  alt=""
-                                  width={20}
-                                  height={20}
-                                  className={stylesModule.projectInteractIcon}
-                                />
-                                <span className={stylesModule.projectInteractValue}>0</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <MoreAboutProjectModal
-                        project={{
-                          title: project.title,
-                          places: project.places,
-                          descriptionHtml: project.descriptionHtml ?? null,
-                          products: project.products,
-                        }}
-                        linkClassName={stylesModule.moreAboutProjectLink}
-                        textClassName={stylesModule.moreAboutProjectText}
-                        arrowClassName={stylesModule.moreAboutProjectArrow}
-                      />
-                    </div>
-                    {project.designer && (
-                      <Link
-                        href={`/designers/${project.designer.slug}`}
-                        className={stylesModule.designerLinkWrapper}
-                        aria-label={`Перейти к дизайнеру ${project.designer.name}`}
-                      >
-                        <img
-                          src={project.designer.avatarSrc}
-                          alt=""
-                          width={43}
-                          height={42}
-                          className={stylesModule.designerLinkAvatar}
-                        />
-                        <span className={stylesModule.designerLinkName}>{project.designer.name}</span>
-                        <svg
-                          className={stylesModule.designerLinkArrow}
-                          viewBox="0 0 22 22"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                          aria-hidden
-                        >
-                          <path
-                            d="M8.25 16.5L13.75 11L8.25 5.5"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </Link>
-                    )}
-                  </div>
-                </div>
-                <div className={stylesModule.projectImagesWrapper}>
-                  {hasTwoCovers ? (
-                    <>
-                      <div className={stylesModule.projectThumbSlot}>
-                        <img
-                          src={project.coverImage}
-                          alt=""
-                          className={stylesModule.projectThumbImg}
-                        />
-                      </div>
-                      <div className={stylesModule.projectThumbSlot}>
-                        <img src={secondCoverUrl} alt="" className={stylesModule.projectThumbImg} />
-                      </div>
-                    </>
-                  ) : (
-                    <div
-                      className={`${stylesModule.projectThumbSlot} ${stylesModule.projectThumbSlotDouble}`}
-                    >
-                      <img
-                        src={project.coverImage}
-                        alt=""
-                        className={stylesModule.projectThumbImg}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-            const hasProducts = project.products.length > 0;
-            const productsWrapper = hasProducts ? (
-              <ProjectProductsWithScrollCue key="products" stylesModule={stylesModule}>
-                {project.products.map((p) => (
-                  <ProductCardSmall
-                    key={p.productId ?? p.slug}
-                    slug={p.slug}
-                    name={p.name}
-                    price={p.price}
-                    imageUrl={p.imageUrl}
-                    productId={p.productId}
-                    collections={p.collections}
-                    likes={p.likes}
-                    qaMessageCount={p.qaMessageCount}
-                    productLikesBulk={productBulkUi(p.productId)}
-                  />
-                ))}
-              </ProjectProductsWithScrollCue>
-            ) : (
-              <div key="products" className={stylesModule.projectProductsWrapper}>
-                <div className={stylesModule.projectProductsScroll}>
-                  <p className={stylesModule.projectProductsScrollEmpty}>Список товаров пуст</p>
-                </div>
-              </div>
-            );
-            return (
-              <div key={project.id ?? project.title} className={stylesModule.projectWrapper}>
-                {isReversed ? [productsWrapper, blockLeft] : [blockLeft, productsWrapper]}
-              </div>
-            );
-          })}
-        </div>
+      {!filterLoading && clientFilterWithProducts && items.length > 0 && visibleProjects.length === 0 ? (
+        <p className={stylesModule.projectsEmpty}>Нет проектов с товарами.</p>
       ) : null}
 
-      {(gridOnly || activeView === 'grid') && projects.length > 0 ? (
-        <div className={stylesModule.sliderCoversGrid}>
-          {projects.map((project) => (
-            <div key={project.id ?? project.title} className={stylesModule.sliderCoverCard}>
-              <img
-                src={project.gridCoverImage ?? project.coverImage}
-                alt=""
-                className={stylesModule.sliderCoverImg}
-              />
-              {project.id ? (
-                <CaseCoverLikeButton
-                  caseId={project.id}
-                  likesDisplayCount={project.likesDisplayCount}
-                  caseLikesBulk={caseBulkUi(project.id)}
-                  classNames={{
-                    btn: stylesModule.sliderCoverLikeBtn,
-                    icon: stylesModule.sliderCoverLikeIcon,
-                    iconActive: stylesModule.sliderCoverLikeIconActive,
-                    value: stylesModule.sliderCoverLikeValue,
-                  }}
-                />
-              ) : null}
-              <span className={stylesModule.sliderCoverOverlay} aria-hidden />
-              <span className={stylesModule.sliderCoverArrow}>
-                <SliderCoverArrow />
-              </span>
-              <button
-                key={`${project.id ?? project.title}-open`}
-                type="button"
-                className={stylesModule.sliderCoverOpenBtn}
-                onClick={() => openProjectModal(project)}
-                aria-label={`О проекте: ${project.title}`}
-              />
-            </div>
-          ))}
-        </div>
+      {showList ? (
+        <DesignerProjectsListView
+          projects={visibleProjects}
+          stylesModule={stylesModule}
+          caseBulkUi={caseBulkUi}
+          productBulkUi={productBulkUi}
+        />
+      ) : null}
+
+      {showGrid ? (
+        <DesignerProjectsMasonryGrid
+          projects={visibleProjects}
+          stylesModule={stylesModule}
+          caseBulkUi={caseBulkUi}
+          onOpenProject={openProjectModal}
+          ariaBusy={filterLoading}
+        />
       ) : null}
 
       {bulkError ? (
@@ -489,6 +185,8 @@ export function DesignerProjectsSection({
         </div>
       ) : null}
 
+      {hasMore ? <div ref={sentinelRef} aria-hidden style={{ height: 1 }} /> : null}
+
       {modalProject && (
         <MoreAboutProjectModal
           project={{
@@ -496,12 +194,17 @@ export function DesignerProjectsSection({
             places: modalProject.places,
             descriptionHtml: modalProject.descriptionHtml ?? null,
             products: modalProject.products,
+            coverImages: [
+              modalProject.gridCoverImage ?? modalProject.coverImage,
+              ...(modalProject.coverImage2?.trim() ? [modalProject.coverImage2.trim()] : []),
+            ],
           }}
           linkClassName={stylesModule.moreAboutProjectLink}
           textClassName={stylesModule.moreAboutProjectText}
           arrowClassName={stylesModule.moreAboutProjectArrow}
           controlledOpen
           onClose={closeProjectModal}
+          productLikesBulkFor={productBulkUi}
         />
       )}
     </>

@@ -4,6 +4,7 @@ import {
   ADMIN_TOKEN_MAX_AGE_SEC,
   adminCookieSecure,
 } from '@/lib/adminAuth';
+import { forwardClientIpHeaders } from '@/lib/forwardClientIpHeaders';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
 async function readNestError(res: Response): Promise<string | null> {
@@ -39,7 +40,10 @@ export async function POST(request: Request) {
   try {
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...forwardClientIpHeaders(request),
+      },
       body: JSON.stringify({
         emailOrPhone: emailOrPhone.includes('@') ? emailOrPhone.toLowerCase() : emailOrPhone,
         password,

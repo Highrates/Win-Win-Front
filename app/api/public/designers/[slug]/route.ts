@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
+import { DESIGNER_PUBLIC_REVALIDATE_SECONDS } from '@/lib/designersPublicShared';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
 type Params = { slug: string };
 
 /** Публичная карточка дизайнера (прокси к Nest). */
-export async function GET(_request: Request, context: { params: Promise<Params> }) {
+export async function GET(request: Request, context: { params: Promise<Params> }) {
   const { slug } = await context.params;
   try {
     const base = getServerApiBase();
-    const res = await fetch(`${base}/designers/${encodeURIComponent(slug)}`, {
-      next: { revalidate: 60 },
-    });
+    const incoming = new URL(request.url);
+    const qs = incoming.searchParams.toString();
+    const res = await fetch(
+      `${base}/designers/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`,
+      { next: { revalidate: DESIGNER_PUBLIC_REVALIDATE_SECONDS } },
+    );
     const text = await res.text();
     const out = new NextResponse(text, { status: res.status });
     const ct = res.headers.get('content-type');

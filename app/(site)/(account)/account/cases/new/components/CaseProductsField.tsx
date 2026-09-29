@@ -1,43 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
 import { ProductCardSmall } from '@/components/ProductCardSmall';
 import { SearchBox } from '@/components/SearchBox/SearchBox';
+import { useModalBodyLock } from '@/hooks/useModalBodyLock';
+import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import type { CatalogProductSearchHit, CatalogProductSearchResponse } from '@/lib/catalogPublic';
 import styles from './CaseProductsField.module.css';
 
 export type CaseProductPick = { id: string; slug: string; name: string };
 
-type TabKey = 'all' | 'orders';
-
 const PAGE_SIZE = 32;
 const MAX_PICK = 80;
-
-/** Заглушка вкладки «Заказы» (позже — реальные заказы дизайнера). */
-const MOCK_ORDER_HITS: CatalogProductSearchHit[] = [
-  {
-    id: 'demo-order-1',
-    slug: 'catalog',
-    name: 'Заказ № 10482 — пример',
-    priceMin: 156_000,
-    thumbUrl: '/images/placeholder.svg',
-  },
-  {
-    id: 'demo-order-2',
-    slug: 'catalog',
-    name: 'Заказ № 10491 — пример',
-    priceMin: 48_900,
-    thumbUrl: '/images/placeholder.svg',
-  },
-  {
-    id: 'demo-order-3',
-    slug: 'catalog',
-    name: 'Заказ № 10503 — пример',
-    priceMin: 2_120_000,
-    thumbUrl: '/images/placeholder.svg',
-  },
-];
 
 function hitToPick(hit: CatalogProductSearchHit): CaseProductPick {
   return { id: String(hit.id), slug: hit.slug, name: hit.name };
@@ -69,15 +44,19 @@ type Props = {
 
 export function CaseProductsField({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<TabKey>('all');
   const [searchRaw, setSearchRaw] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const [hits, setHits] = useState<CatalogProductSearchHit[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  const closeModal = useCallback(() => setOpen(false), []);
+  useModalBodyLock(open, closeModal);
+  useModalFocusTrap(open, panelRef);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQ(searchRaw), 300);
@@ -86,25 +65,6 @@ export function CaseProductsField({ value, onChange }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', onKey);
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtml = html.style.overflow;
-    const prevBody = body.style.overflow;
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      html.style.overflow = prevHtml;
-      body.style.overflow = prevBody;
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || tab !== 'all') return;
     let cancelled = false;
     setLoading(true);
     setHits([]);
@@ -131,16 +91,10 @@ export function CaseProductsField({ value, onChange }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, tab, debouncedQ]);
-
-  const orderHits = useMemo(() => {
-    const q = searchRaw.trim().toLowerCase();
-    if (!q) return MOCK_ORDER_HITS;
-    return MOCK_ORDER_HITS.filter((h) => h.name.toLowerCase().includes(q));
-  }, [searchRaw]);
+  }, [open, debouncedQ]);
 
   const loadMore = useCallback(async () => {
-    if (tab !== 'all' || loading || loadingMore) return;
+    if (loading || loadingMore) return;
     if (hits.length >= total) return;
     const nextPage = Math.floor(hits.length / PAGE_SIZE) + 1;
     setLoadingMore(true);
@@ -164,20 +118,19 @@ export function CaseProductsField({ value, onChange }: Props) {
     } finally {
       setLoadingMore(false);
     }
-  }, [tab, loading, loadingMore, hits.length, total, debouncedQ]);
+  }, [loading, loadingMore, hits.length, total, debouncedQ]);
 
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
-    if (!el || tab !== 'all') return;
+    if (!el) return;
     if (loading || loadingMore) return;
     if (hits.length >= total) return;
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
       void loadMore();
     }
-  }, [tab, loading, loadingMore, hits.length, total, loadMore]);
+  }, [loading, loadingMore, hits.length, total, loadMore]);
 
   const openModal = () => {
-    setTab('all');
     setSearchRaw('');
     setDebouncedQ('');
     setHits([]);
@@ -205,7 +158,12 @@ export function CaseProductsField({ value, onChange }: Props) {
     onChange(value.filter((v) => v.id !== id));
   };
 
-  const listForGrid = tab === 'all' ? hits : orderHits;
+  const selectedLabel =
+    value.length === 0
+      ? 'Ничего не выбрано'
+      : value.length === 1
+        ? 'Выбран 1 товар'
+        : `Выбрано: ${value.length}`;
 
   return (
     <div className={styles.field}>
@@ -234,83 +192,75 @@ export function CaseProductsField({ value, onChange }: Props) {
       ) : null}
 
       {open ? (
-        <div
-          className={styles.overlay}
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-        >
-          <div className={styles.panel} role="dialog" aria-modal="true" aria-labelledby="case-products-modal-title">
+        <>
+          <button type="button" className={styles.overlay} aria-label="Закрыть" onClick={closeModal} />
+          <div
+            ref={panelRef}
+            className={styles.panel}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="case-products-modal-title"
+            tabIndex={-1}
+          >
             <div className={styles.panelHead}>
-              <h2 id="case-products-modal-title" className={styles.panelTitle}>
-                Товары в кейсе
-              </h2>
-              <button type="button" className={styles.closeBtn} onClick={() => setOpen(false)} aria-label="Закрыть">
+              <div className={styles.panelHeadText}>
+                <h2 id="case-products-modal-title" className={styles.panelTitle}>
+                  Товары в кейсе
+                </h2>
+                <p className={styles.panelSubtitle}>{selectedLabel}</p>
+              </div>
+              <button type="button" className={styles.closeBtn} onClick={closeModal} aria-label="Закрыть">
                 <CloseIcon />
-              </button>
-            </div>
-            <div className={styles.tabs}>
-              <button
-                type="button"
-                className={styles.tab}
-                data-active={tab === 'all' || undefined}
-                onClick={() => setTab('all')}
-              >
-                Все товары
-              </button>
-              <button
-                type="button"
-                className={styles.tab}
-                data-active={tab === 'orders' || undefined}
-                onClick={() => setTab('orders')}
-              >
-                Заказы
               </button>
             </div>
             <div className={styles.toolbar}>
               <SearchBox
                 className={styles.toolbarSearch}
-                placeholder={tab === 'all' ? 'Поиск по каталогу' : 'Поиск по заказам'}
-                ariaLabel={tab === 'all' ? 'Поиск по каталогу' : 'Поиск по заказам'}
+                placeholder="Поиск по каталогу"
+                ariaLabel="Поиск по каталогу"
                 value={searchRaw}
                 onChange={(e) => setSearchRaw(e.target.value)}
               />
             </div>
             <div ref={scrollRef} className={styles.scroll} onScroll={onScroll}>
-              {tab === 'all' && loading ? <div className={styles.loadingRow}>Загрузка…</div> : null}
-              <div className={styles.grid}>
-                {listForGrid.map((hit) => (
-                  <ProductCardSmall
-                    key={hit.id}
-                    slug={hit.slug}
-                    name={hit.name}
-                    price={hitPrice(hit)}
-                    imageUrl={
-                      typeof hit.thumbUrl === 'string' && hit.thumbUrl.trim() ? hit.thumbUrl : undefined
-                    }
-                    imageUrls={hit.imageUrls}
-                    pickMode
-                    selected={value.some((v) => v.id === hit.id)}
-                    onPickToggle={() => toggleHit(hit)}
-                  />
-                ))}
-              </div>
-              {tab === 'all' && !loading && hits.length === 0 ? (
-                <div className={styles.endRow}>Ничего не найдено</div>
-              ) : null}
-              {tab === 'all' && loadingMore ? <div className={styles.loadingRow}>Подгрузка…</div> : null}
-              {tab === 'all' && !loading && hits.length > 0 && hits.length >= total ? (
+              {loading ? <div className={styles.loadingRow}>Загрузка…</div> : null}
+              {!loading && hits.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <p className={styles.emptyStateTitle}>Ничего не найдено</p>
+                  <p className={styles.emptyStateHint}>Попробуйте другой запрос или сбросьте поиск.</p>
+                </div>
+              ) : (
+                <div className={styles.grid}>
+                  {hits.map((hit) => (
+                    <ProductCardSmall
+                      key={hit.id}
+                      slug={hit.slug}
+                      name={hit.name}
+                      price={hitPrice(hit)}
+                      imageUrl={
+                        typeof hit.thumbUrl === 'string' && hit.thumbUrl.trim() ? hit.thumbUrl : undefined
+                      }
+                      imageUrls={hit.imageUrls}
+                      pickMode
+                      selected={value.some((v) => v.id === hit.id)}
+                      onPickToggle={() => toggleHit(hit)}
+                    />
+                  ))}
+                </div>
+              )}
+              {loadingMore ? <div className={styles.loadingRow}>Подгрузка…</div> : null}
+              {!loading && hits.length > 0 && hits.length >= total ? (
                 <div className={styles.endRow}>Показаны все товары по запросу</div>
               ) : null}
             </div>
             <div className={styles.panelFooter}>
-              <Button type="button" variant="primary" className={styles.confirmBtn} onClick={() => setOpen(false)}>
-                Выбрать
+              <p className={styles.footerCount}>{selectedLabel}</p>
+              <Button type="button" variant="primary" className={styles.confirmBtn} onClick={closeModal}>
+                Готово
               </Button>
             </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );

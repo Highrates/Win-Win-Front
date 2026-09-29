@@ -10,7 +10,7 @@ import {
   slideInPanelModalStyles as panelModal,
 } from '@/components/SlideInPanelModal/SlideInPanelModal';
 import { usePartnerApplication } from '@/hooks/usePartnerApplication';
-import profileSheetStyles from '@/app/(site)/(account)/account/profile/page.module.css';
+import profileSheetStyles from '@/app/(site)/(account)/account/profile/profileForm.module.css';
 
 export type PartnerApplicationModalProps = {
   open: boolean;

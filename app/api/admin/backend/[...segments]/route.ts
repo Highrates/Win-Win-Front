@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/adminAuth';
+import { forwardClientIpHeaders } from '@/lib/forwardClientIpHeaders';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
 export const runtime = 'nodejs';
@@ -89,7 +90,10 @@ async function proxy(request: NextRequest, segments: string[], method: string) {
   const url = new URL(request.url);
   const target = `${getServerApiBase()}/${path}${url.search}`;
 
-  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    ...forwardClientIpHeaders(request),
+  };
   const init: RequestInit = { method, headers, cache: 'no-store' };
 
   let bodyBackup: ArrayBuffer | null = null;

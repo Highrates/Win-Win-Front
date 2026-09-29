@@ -38,6 +38,21 @@
   color: var(--color-black);
 }
 
+.gridOptionStatic {
+  align-self: stretch;
+  width: 100%;
+  border: var(--account-hairline-width) solid var(--account-hairline-color);
+  border-radius: 8px;
+  background: var(--color-white);
+  padding: 12px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 12px;
+  color: var(--color-black);
+}
+
 .gridOptionTop {
   display: inline-flex;
   justify-content: space-between;

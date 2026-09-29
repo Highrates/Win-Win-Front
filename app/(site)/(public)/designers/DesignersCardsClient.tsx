@@ -58,7 +58,7 @@ export function DesignersCardsClient({ items }: { items: DesignersListItem[] }) 
             <div className={styles.designerCardInner}>
               <img
                 src={avatar}
-                alt=""
+                alt={designer.displayName}
                 className={styles.designerCardAvatar}
                 width={132}
                 height={132}
@@ -70,15 +70,21 @@ export function DesignersCardsClient({ items }: { items: DesignersListItem[] }) 
                   <span className={styles.designerCardCity}>{designer.city ?? ''}</span>
                 </div>
                 <div className={styles.interactWrapper}>
-                  <div className={styles.interactItem}>
+                  <div
+                    className={styles.interactItem}
+                    aria-label={`Проектов: ${Math.max(0, designer.casesCount ?? 0)}`}
+                  >
                     <img
                       src="/icons/collections.svg"
                       alt=""
                       width={20}
                       height={20}
                       className={styles.interactIcon}
+                      aria-hidden
                     />
-                    <span className={styles.interactValue}>{Math.max(0, designer.casesCount ?? 0)}</span>
+                    <span className={styles.interactValue} aria-hidden>
+                      {Math.max(0, designer.casesCount ?? 0)}
+                    </span>
                   </div>
                   {designer.id ? (
                     <div style={{ position: 'relative', zIndex: 3, pointerEvents: 'auto' }}>

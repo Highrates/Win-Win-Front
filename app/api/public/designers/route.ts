@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { DESIGNER_PUBLIC_REVALIDATE_SECONDS } from '@/lib/designersPublicShared';
 import { getServerApiBase } from '@/lib/serverApiBase';
 
 /** Публичный список дизайнеров-партнёров Wupapa (прокси к Nest). */
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
     const qs = new URLSearchParams({ page, limit });
     if (q) qs.set('q', q);
     const res = await fetch(`${base}/designers?${qs.toString()}`, {
-      next: { revalidate: 60 },
+      next: { revalidate: DESIGNER_PUBLIC_REVALIDATE_SECONDS },
     });
     const text = await res.text();
     const out = new NextResponse(text, { status: res.status });

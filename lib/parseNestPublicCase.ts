@@ -82,7 +82,10 @@ export function parseNestPublicCaseItem(
     placesLine: typeof o.placesLine === 'string' ? o.placesLine : null,
     roomTypes: parseRoomTypesArray(o.roomTypes),
     descriptionHtml: typeof o.descriptionHtml === 'string' ? o.descriptionHtml : null,
-    coverLayout: o.coverLayout === '16:9' ? '16:9' : '4:3',
+    coverLayout:
+      o.coverLayout === '16:9' || o.coverLayout === '9:16'
+        ? (o.coverLayout as '16:9' | '9:16')
+        : '4:3',
     coverImageUrls: parseCoverUrls(o.coverImageUrls),
     products: parseProductsArray(o.products),
     likesDisplayCount,

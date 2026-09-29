@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Fragment, Suspense } from 'react';
 import type { Metadata } from 'next';
 import { getServerApiBase } from '@/lib/serverApiBase';
+import { DESIGNER_PUBLIC_REVALIDATE_SECONDS } from '@/lib/designersPublicShared';
 import { fetchPublicSiteSettings } from '@/lib/siteSettingsPublic';
 import { DesignersSearchBox } from './DesignersSearchBox';
 import { DesignersMarketClient } from './DesignersMarketClient';
@@ -28,7 +29,9 @@ async function fetchDesigners(
   try {
     const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (q?.trim()) qs.set('q', q.trim());
-    const res = await fetch(`${base}/designers?${qs.toString()}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${base}/designers?${qs.toString()}`, {
+      next: { revalidate: DESIGNER_PUBLIC_REVALIDATE_SECONDS },
+    });
     if (!res.ok) return { items: [], total: 0 };
     const data = (await res.json()) as { items?: ListItem[]; total?: number };
     return { items: data.items ?? [], total: typeof data.total === 'number' ? data.total : 0 };

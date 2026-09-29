@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import type { ProfileDto } from '@/app/(site)/(account)/account/profile/profileTypes';
+import type { ProfileDto, ProfilePatch } from '@/app/(site)/(account)/account/profile/profileTypes';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 
 /**
- * Загрузка и PATCH `/api/user/profile` без лишних мутаций на GET (бэкенд читает профиль только из БД).
+ * Единый источник профиля ЛК: GET/PATCH `/api/user/profile`.
  */
 export function useAccountProfile() {
   const [profile, setProfile] = useState<ProfileDto | null>(null);
@@ -34,7 +34,7 @@ export function useAccountProfile() {
     }
   }, []);
 
-  const patchProfile = useCallback(async (patch: Record<string, unknown>): Promise<ProfileDto> => {
+  const patchProfile = useCallback(async (patch: ProfilePatch): Promise<ProfileDto> => {
     const res = await fetch('/api/user/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

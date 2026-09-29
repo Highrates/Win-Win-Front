@@ -1,8 +1,6 @@
-/** Этап 4: Страница редактирования профиля */
+import { redirect } from 'next/navigation';
+
+/** Заглушка: редактирование профиля — модалка на `/account/profile?profileEdit=1`. */
 export default function EditProfilePage() {
-  return (
-    <div>
-      <h1>Редактирование профиля</h1>
-    </div>
-  );
+  redirect('/account/profile?profileEdit=1');
 }

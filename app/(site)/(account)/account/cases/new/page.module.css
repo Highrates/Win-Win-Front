@@ -25,6 +25,13 @@
   background: var(--color-white);
 }
 
+.headerActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .headerRow {
     top: calc(42px + env(safe-area-inset-top, 0px));
@@ -416,5 +423,48 @@
 @media (max-width: 768px) {
   .form {
     gap: 24px;
+  }
+}
+
+.skeletonShimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-bright-snow) 0%,
+    rgba(255, 255, 255, 0.95) 45%,
+    var(--color-bright-snow) 90%
+  );
+  background-size: 200% 100%;
+  animation: caseFormShimmer 1.2s ease-in-out infinite;
+}
+
+.skeletonLine {
+  border-radius: 6px;
+}
+
+.skeletonBlock {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.skeletonCover {
+  width: min(240px, 100%);
+  aspect-ratio: 9 / 16;
+  border-radius: 8px;
+}
+
+.skeletonField {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@keyframes caseFormShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }

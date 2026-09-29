@@ -23,3 +23,15 @@ export type ProfileDto = {
   designerCasesCount?: number | null;
   designerOwnCatalogBonusPercent?: number;
 };
+
+/** Тело PATCH `/api/user/profile` (согласовано с Nest UpdateUserProfileDto). */
+export type ProfilePatch = {
+  firstName?: string | null;
+  lastName?: string | null;
+  city?: string | null;
+  services?: string[] | null;
+  aboutHtml?: string | null;
+  coverLayout?: CoverGridValue | null;
+  coverImageUrls?: string[] | null;
+  avatarUrl?: string | null;
+};

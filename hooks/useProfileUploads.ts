@@ -39,9 +39,16 @@ async function readProfileUploadFailMessage(res: Response, kind: 'avatar' | 'cov
 
 export function useProfileUploads() {
   const postMultipart = useCallback(
-    async (url: string, file: File, kind: 'avatar' | 'cover' | 'rich' = 'cover'): Promise<{ publicUrl: string }> => {
+    async (
+      url: string,
+      file: File,
+      kind: 'avatar' | 'cover' | 'rich' = 'cover',
+    ): Promise<{ publicUrl: string }> => {
       const fd = new FormData();
       fd.set('file', file);
+      if (url.includes('/api/user/cases/media')) {
+        fd.set('kind', kind === 'cover' ? 'cover' : 'rich');
+      }
       const res = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
       if (!res.ok) {
         throw new Error(await readProfileUploadFailMessage(res, kind));

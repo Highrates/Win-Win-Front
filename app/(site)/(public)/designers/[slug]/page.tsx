@@ -7,68 +7,14 @@ import { DesignerProjectsSection } from '../DesignerProjectsSection';
 import { MoreAboutDesignerModal } from './MoreAboutDesignerModal';
 import { DesignerLikeInteract } from '@/components/DesignerLikeInteract/DesignerLikeInteract';
 import { LikeHeartSvg } from '@/components/LikeHeartSvg/LikeHeartSvg';
-import { getServerApiBase } from '@/lib/serverApiBase';
 import {
-  mapPublicCaseToProjectData,
-  parseCoverUrls,
-  type PublicCasePayload,
-} from '@/lib/mapPublicCaseToProjectData';
-import { parseNestPublicCaseItem } from '@/lib/parseNestPublicCase';
+  DESIGNER_CASES_PAGE_SIZE,
+  designerPageMetadata,
+  designerProjectsFromPayload,
+  loadPublicDesignerBySlug,
+} from '@/lib/designersPublicServer';
+import { getServerRequestOrigin } from '@/lib/serverRequestOrigin';
 import styles from './DesignerPage.module.css';
-
-type PublicDesignerPayload = {
-  id: string;
-  slug: string;
-  displayName: string;
-  photoUrl: string | null;
-  city: string | null;
-  servicesLine: string | null;
-  likesDisplayCount: number;
-  casesCount: number;
-  coverLayout: '4:3' | '16:9';
-  coverImageUrls: string[];
-  aboutHtml: string | null;
-  cases: PublicCasePayload[];
-};
-
-async function fetchDesigner(slug: string): Promise<PublicDesignerPayload | null> {
-  const base = getServerApiBase();
-  try {
-    const res = await fetch(`${base}/designers/${encodeURIComponent(slug)}`, {
-      next: { revalidate: 120 },
-    });
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    const raw = (await res.json()) as Record<string, unknown>;
-    const coverUrls = parseCoverUrls(raw.coverImageUrls);
-    const layoutRaw = raw.coverLayout === '16:9' ? '16:9' : '4:3';
-    const cases: PublicCasePayload[] = [];
-    if (Array.isArray(raw.cases)) {
-      for (const row of raw.cases) {
-        const parsed = parseNestPublicCaseItem(row);
-        if (parsed) cases.push(parsed.case);
-      }
-    }
-    const casesCount =
-      typeof raw.casesCount === 'number' ? raw.casesCount : Array.isArray(raw.cases) ? cases.length : 0;
-    return {
-      id: String(raw.id ?? ''),
-      slug: String(raw.slug ?? slug),
-      displayName: String(raw.displayName ?? ''),
-      photoUrl: typeof raw.photoUrl === 'string' ? raw.photoUrl : null,
-      city: typeof raw.city === 'string' ? raw.city : null,
-      servicesLine: typeof raw.servicesLine === 'string' ? raw.servicesLine : null,
-      likesDisplayCount: typeof raw.likesDisplayCount === 'number' ? raw.likesDisplayCount : 0,
-      casesCount,
-      coverLayout: layoutRaw,
-      coverImageUrls: coverUrls,
-      aboutHtml: typeof raw.aboutHtml === 'string' ? raw.aboutHtml : null,
-      cases,
-    };
-  } catch {
-    return null;
-  }
-}
 
 export async function generateMetadata({
   params,
@@ -76,12 +22,12 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const d = await fetchDesigner(slug);
-  const name = d?.displayName?.trim() || 'Дизайнер';
-  return {
-    title: `${name} — Дизайнер — Wupapa`,
-    description: `Страница дизайнера ${name}`,
-  };
+  const result = await loadPublicDesignerBySlug(slug);
+  if (result.status !== 'ok') {
+    return { title: 'Дизайнер — Wupapa' };
+  }
+  const siteOrigin = await getServerRequestOrigin();
+  return designerPageMetadata(result.designer, { siteOrigin });
 }
 
 export default async function DesignerPage({
@@ -90,17 +36,15 @@ export default async function DesignerPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const designer = await fetchDesigner(slug);
-  if (!designer) notFound();
+  const result = await loadPublicDesignerBySlug(slug);
+  if (result.status === 'not_found') notFound();
+  if (result.status === 'error') {
+    throw new Error(result.message);
+  }
+  const designer = result.designer;
 
   const avatarSrc = designer.photoUrl?.trim() ? designer.photoUrl.trim() : '/images/placeholder.svg';
-
-  const coverUrlsForPreview =
-    designer.coverLayout === '16:9'
-      ? designer.coverImageUrls.slice(0, 1)
-      : designer.coverImageUrls.slice(0, 2);
-  const showPreviewImages = coverUrlsForPreview.length > 0;
-  const isSinglePreviewImageWide = coverUrlsForPreview.length === 1;
+  const previewCoverUrl = designer.coverImageUrls[0]?.trim() || null;
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -117,18 +61,11 @@ export default async function DesignerPage({
               <nav className={styles.breadcrumbs} aria-label="Хлебные крошки">
                 {breadcrumbs.map((item, i) => (
                   <Fragment key={`${item.href}-${i}`}>
-                    {i > 0 && (
-                      <span className={styles.breadcrumbsSep}>/</span>
-                    )}
+                    {i > 0 && <span className={styles.breadcrumbsSep}>/</span>}
                     {item.current ? (
-                      <span className={styles.breadcrumbsCurrent}>
-                        {item.label}
-                      </span>
+                      <span className={styles.breadcrumbsCurrent}>{item.label}</span>
                     ) : (
-                      <Link
-                        href={item.href}
-                        className={styles.breadcrumbsLink}
-                      >
+                      <Link href={item.href} className={styles.breadcrumbsLink}>
                         {item.label}
                       </Link>
                     )}
@@ -140,22 +77,18 @@ export default async function DesignerPage({
                   <div className={styles.previewPageTitlesRow}>
                     <img
                       src={avatarSrc}
-                      alt=""
+                      alt={designer.displayName}
                       className={styles.designerAvatar}
                       width={82}
                       height={82}
                     />
                     <div className={styles.designerTitlesCol}>
                       {designer.city && (
-                        <span className={styles.designerCity}>
-                          {designer.city}
-                        </span>
+                        <span className={styles.designerCity}>{designer.city}</span>
                       )}
                       <h1 className={styles.designerName}>{designer.displayName}</h1>
                       {designer.servicesLine && (
-                        <span className={styles.designerServices}>
-                          {designer.servicesLine}
-                        </span>
+                        <span className={styles.designerServices}>{designer.servicesLine}</span>
                       )}
                     </div>
                   </div>
@@ -169,15 +102,21 @@ export default async function DesignerPage({
                     >
                       Связаться
                     </Button>
-                    <div className={styles.interactItem}>
+                    <div
+                      className={styles.interactItem}
+                      aria-label={`Проектов: ${Math.max(0, designer.casesCount ?? 0)}`}
+                    >
                       <img
                         src="/icons/collections.svg"
                         alt=""
                         width={20}
                         height={20}
                         className={styles.interactIcon}
+                        aria-hidden
                       />
-                      <span className={styles.interactValue}>{Math.max(0, designer.casesCount ?? 0)}</span>
+                      <span className={styles.interactValue} aria-hidden>
+                        {Math.max(0, designer.casesCount ?? 0)}
+                      </span>
                     </div>
                     {designer.id ? (
                       <DesignerLikeInteract
@@ -198,11 +137,6 @@ export default async function DesignerPage({
                     )}
                   </div>
                   <MoreAboutDesignerModal
-                    designer={{
-                      name: designer.displayName,
-                      city: designer.city ?? '',
-                      services: designer.servicesLine ?? '',
-                    }}
                     aboutHtml={designer.aboutHtml}
                     linkClassName={styles.moreAboutDesignerLink}
                     textClassName={styles.moreAboutDesignerText}
@@ -211,18 +145,15 @@ export default async function DesignerPage({
                 </div>
               </div>
             </div>
-            {showPreviewImages ? (
+            {previewCoverUrl ? (
               <div className={styles.previewImages}>
-                {coverUrlsForPreview.map((url, i) => (
-                  <div
-                    key={`${url}-${i}`}
-                    className={`${styles.previewImageSlot} ${
-                      isSinglePreviewImageWide && i === 0 ? styles.previewImageSlotDouble : ''
-                    }`}
-                  >
-                    <img src={url} alt="" className={styles.previewImage} />
-                  </div>
-                ))}
+                <div className={styles.previewImageSlot}>
+                  <img
+                    src={previewCoverUrl}
+                    alt={`Обложка профиля ${designer.displayName}`}
+                    className={styles.previewImage}
+                  />
+                </div>
               </div>
             ) : null}
           </div>
@@ -233,8 +164,16 @@ export default async function DesignerPage({
         <div className="padding-global">
           <div className={styles.marketSectionInner}>
             <DesignerProjectsSection
-              projects={designer.cases.map((c) => mapPublicCaseToProjectData(c))}
+              projects={designerProjectsFromPayload(designer)}
               stylesModule={styles}
+              gridOnly
+              productFilterTabs
+              casesPagination={{
+                mode: 'designer',
+                designerSlug: designer.slug,
+                total: designer.casesTotal,
+                pageSize: DESIGNER_CASES_PAGE_SIZE,
+              }}
             />
           </div>
         </div>

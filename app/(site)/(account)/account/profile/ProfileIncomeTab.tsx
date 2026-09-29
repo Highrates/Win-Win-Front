@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AccountErrorState } from '@/components/AccountErrorState/AccountErrorState';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { TBtn } from '@/components/TBtn/TBtn';
 import {
@@ -30,10 +31,14 @@ export function ProfileIncomeTab() {
   const [summary, setSummary] = useState<PartnerProgramSummaryApi | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const reload = useCallback(() => setReloadToken((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoadErr(null);
     void fetchPartnerProgramSummary()
       .then((s) => {
         if (cancelled) return;
@@ -52,7 +57,7 @@ export function ProfileIncomeTab() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   const designerRows = useMemo(
     () => filterDesignerOwnOrderLines(summary?.personalLines ?? []),
@@ -72,20 +77,22 @@ export function ProfileIncomeTab() {
       : DASH;
 
   const statusLabel = summary?.isWinWinPartner
-    ? 'Партнер Win-win'
+    ? 'Партнёр Wupapa'
     : summary && summary.designerBonus.bonusPercent > 0
       ? `Бонус со своего заказа: ${summary.designerBonus.bonusPercent}%`
       : null;
 
+  if (loadErr) {
+    return (
+      <div className={styles.incomeTab}>
+        <AccountErrorState message={loadErr} onRetry={reload} />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.incomeTab}>
       {statusLabel ? <p className={teamStyles.partnerStatus}>{statusLabel}</p> : null}
-
-      {loadErr ? (
-        <p className={teamStyles.partnerStatus} role="alert" style={{ color: 'var(--color-red, #c53029)' }}>
-          {loadErr}
-        </p>
-      ) : null}
 
       <div className={`${teamStyles.sheetWrapper} ${styles.incomeSheetWrapper}`}>
         <div className={teamStyles.sheetToolbar}>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { ProfileDto } from '@/app/(site)/(account)/account/profile/profileTypes';
+import type { ProfileDto, ProfilePatch } from '@/app/(site)/(account)/account/profile/profileTypes';
 import flowStyles from '@/components/auth-forms/RegisterFlow.module.css';
 import { Button } from '@/components/Button';
 import { RichBlock } from '@/components/RichBlock/RichBlock';
@@ -38,7 +38,7 @@ export type ProfileAboutModalProps = {
   onClose: () => void;
   initialAboutHtml: string;
   onSuccess: (profile: ProfileDto) => void;
-  patchProfile: (patch: Record<string, unknown>) => Promise<ProfileDto>;
+  patchProfile: (patch: ProfilePatch) => Promise<ProfileDto>;
 };
 
 export function ProfileAboutModal({

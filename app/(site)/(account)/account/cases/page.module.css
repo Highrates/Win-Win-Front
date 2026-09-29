@@ -67,17 +67,6 @@
   filter: invert(18%) sepia(95%) saturate(5000%) hue-rotate(340deg) brightness(0.95);
 }
 
-.casesList {
-  align-self: stretch;
-  width: 100%;
-  margin-top: 32px;
-  display: inline-flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 16px;
-}
-
 .selectAllButton {
   font-family: var(--font-commissioner);
   font-size: var(--text-body);
@@ -93,35 +82,167 @@
   color: inherit;
 }
 
-.iconBlack {
+.selectAllButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.emptySearch {
+  margin: 16px 0 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
+/* Masonry как на витрине: колонки через JS (round-robin) */
+.casesGrid {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  align-items: flex-start;
+  margin-top: 32px;
+}
+
+.casesColumn {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.caseCard {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  padding: 0;
+  border: none;
+  background: var(--color-bright-snow);
+}
+
+.caseCardImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.caseCardPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bright-snow);
+  display: block;
+}
+
+.caseCardOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 24, 38, 0) 40%,
+    rgba(5, 24, 38, 0.55) 100%
+  );
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.caseCard:hover .caseCardOverlay {
+  opacity: 1;
+  background: rgba(5, 24, 38, 0.45);
+}
+
+.caseCardCaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 14px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.caseCardTitle {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: 400;
+  color: var(--color-white);
+  line-height: 1.25;
+}
+
+.caseCardMeta {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.3;
+}
+
+.caseCardOpenBtn,
+.caseCardOpenLink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.caseCardEditHint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-ink-black);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  white-space: nowrap;
+}
+
+.caseCard:hover .caseCardEditHint {
+  opacity: 1;
+}
+
+.caseCardEditHintIcon {
   display: block;
   filter: brightness(0);
 }
 
-.casesWrapper {
-  align-self: stretch;
-  width: 100%;
-  padding: 32px;
-  background: var(--color-bright-snow);
-  border-radius: 10px;
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 40px;
-  box-sizing: border-box;
-}
-
 .caseCheckbox {
-  flex-shrink: 0;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
   width: 20px;
   height: 20px;
   margin: 0;
-  margin-top: 2px;
   appearance: none;
   box-sizing: border-box;
-  border: 1.3px solid var(--color-gray);
+  border: 1.3px solid rgba(255, 255, 255, 0.9);
   border-radius: 4px;
-  background: var(--color-white);
+  background: rgba(255, 255, 255, 0.92);
   cursor: pointer;
 }
 
@@ -139,122 +260,9 @@
   outline-offset: 2px;
 }
 
-.casesWrapperInner {
-  align-self: stretch;
-  flex: 1 1 0;
-  min-width: 0;
-  display: inline-flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 0;
-}
-
-.caseHead {
-  display: inline-flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.editCaseButton {
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--color-gray);
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.caseTitle {
-  font-size: var(--text-card-20-400);
-  font-weight: 400;
-  color: var(--color-black);
-}
-
-.caseMeta {
-  color: var(--color-gray);
-  font-size: var(--text-caption);
-  font-weight: var(--text-caption-weight);
-}
-
-.caseDescription {
-  margin-top: 16px;
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-  color: var(--color-black);
-}
-
-/* Превью обложек кейса — как на account/profile (previewImages) */
-.previewImages {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 406px));
-  gap: 16px;
+.caseSkeletonCard {
   width: 100%;
-  max-width: 100%;
-  align-items: start;
-  justify-content: start;
-  margin-top: 16px;
-}
-
-.previewImageSlot:not(.previewImageSlotDouble) {
-  max-width: 406px;
-}
-
-.previewImageSlot {
-  position: relative;
-  min-width: 0;
-  width: 100%;
-}
-
-.previewImageSlotDouble {
-  grid-column: 1 / -1;
-  max-width: min(100%, 800px) !important;
-  justify-self: start;
-}
-
-.previewImage {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 406 / 393;
-  max-width: 406px;
-  border-radius: 10px;
-  object-fit: cover;
-}
-
-.previewImageSlotDouble .previewImage {
-  display: block;
-  width: 100%;
-  max-width: 800px;
-  height: 393px;
-  object-fit: cover;
-  object-position: center;
-  aspect-ratio: unset;
-}
-
-.caseSkeletonWrapper {
-  align-self: stretch;
-  width: 100%;
-  padding: 32px;
-  background: var(--color-bright-snow);
-  border-radius: 10px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.skeletonLine {
-  height: 14px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: linear-gradient(
     90deg,
     rgba(5, 24, 38, 0.06) 0%,
@@ -265,35 +273,6 @@
   animation: caseSkShimmer 1.1s ease-in-out infinite;
 }
 
-.skeletonTitle {
-  width: 55%;
-  height: 22px;
-  border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    rgba(5, 24, 38, 0.07) 0%,
-    rgba(5, 24, 38, 0.14) 50%,
-    rgba(5, 24, 38, 0.07) 100%
-  );
-  background-size: 200% 100%;
-  animation: caseSkShimmer 1.1s ease-in-out infinite;
-}
-
-.skeletonMeta {
-  width: 35%;
-  height: 14px;
-}
-
-.skeletonDesc {
-  width: 100%;
-  height: 14px;
-}
-
-.skeletonDescShort {
-  width: 72%;
-  height: 14px;
-}
-
 @keyframes caseSkShimmer {
   0% {
     background-position: 200% 0;
@@ -301,34 +280,6 @@
   100% {
     background-position: -200% 0;
   }
-}
-
-.interactWrapper {
-  margin-top: 16px;
-  align-self: stretch;
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 32px;
-}
-
-.interactItem {
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 6px;
-}
-
-.interactIcon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-.interactValue {
-  font-size: var(--text-caption);
-  font-weight: var(--text-caption-weight);
-  color: var(--color-black);
 }
 
 @media (max-width: 768px) {
@@ -347,33 +298,16 @@
     margin-top: 24px;
   }
 
-  .page .casesList {
+  .casesGrid {
     margin-top: 24px;
+    gap: 12px;
   }
 
-  .casesWrapper {
-    flex-direction: column;
-    gap: 16px;
-    padding: 20px;
+  .casesColumn {
+    gap: 12px;
   }
 
-  .previewImages {
-    grid-template-columns: 1fr;
-  }
-
-  .previewImageSlot,
-  .previewImageSlotDouble {
-    grid-column: auto;
-    max-width: none;
-    width: 100%;
-  }
-
-  .previewImage {
-    max-width: none;
-  }
-
-  .previewImageSlotDouble .previewImage {
-    height: 393px;
-    max-width: 100%;
+  .caseCardEditHint {
+    display: none;
   }
 }
