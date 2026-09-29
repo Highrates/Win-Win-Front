@@ -90,9 +90,9 @@ export function AccountCasesPageClient() {
           setSelectedIds((prev) => {
             if (!prev.size) return prev;
             const next = new Set<string>();
-            for (const id of prev) {
+            Array.from(prev).forEach((id) => {
               if (list.some((it) => it.id === id)) next.add(id);
-            }
+            });
             return next;
           });
         }
