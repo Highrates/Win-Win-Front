@@ -230,10 +230,10 @@
 }
 
 .marketSectionInner {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 32px;
   width: 100%;
 }

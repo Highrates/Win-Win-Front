@@ -1,5 +1,10 @@
+import { Suspense } from 'react';
 import { FavoritesPageClient } from './FavoritesPageClient';
 
 export default function FavoritesPage() {
-  return <FavoritesPageClient />;
+  return (
+    <Suspense fallback={null}>
+      <FavoritesPageClient />
+    </Suspense>
+  );
 }

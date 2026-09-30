@@ -104,9 +104,173 @@
   color: var(--color-red);
 }
 
+.brandProjectsBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.brandProjectsLabel {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
+}
+
+.brandProjectsChips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.brandProjectsChipLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  font-family: inherit;
+  border: var(--account-hairline-width) solid var(--color-ink-black);
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-sizing: border-box;
+}
+
+.brandProjectsChipLink:hover,
+.brandProjectsChipLink:focus-visible {
+  text-decoration: none;
+  color: var(--color-ink-black);
+}
+
+.brandProjectsChipLink:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.brandProjectsChipLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brandProjectsChipArrow {
+  display: block;
+  flex-shrink: 0;
+  width: 12px;
+  height: 7px;
+  color: currentColor;
+}
+
+.previewMediaCol {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: min(100%, 768px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.previewCatalogDoc {
+  align-self: stretch;
+  width: 100%;
+}
+
+.aboutBrandSheet {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  width: 100%;
+}
+
+.aboutBrandIntro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+.aboutBrandLogo {
+  display: block;
+  max-width: 160px;
+  max-height: 64px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.aboutBrandShort {
+  margin: 0;
+  font-size: var(--text-body-long-size);
+  line-height: var(--text-body-long-height);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+}
+
+.aboutBrandGallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.aboutBrandGalleryImg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-4);
+  background: var(--color-bright-snow, #f5f5f5);
+}
+
+.aboutBrandFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: var(--account-hairline-width) solid rgba(0, 0, 0, 0.12);
+}
+
+.aboutBrandSiteLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  text-decoration: none;
+  border-bottom: var(--account-hairline-width) solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.aboutBrandSiteLink:hover {
+  border-bottom-color: var(--color-ink-black);
+}
+
+.aboutBrandSiteArrow {
+  display: block;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
 /* RichContent inside modal uses global .rich-content styles */
 .richContent {
   padding: 0;
+  width: 100%;
 }
 
 .breadcrumbs {
@@ -148,7 +312,7 @@
 }
 
 .marketSection {
-  margin-top: 180px;
+  margin-top: 48px;
 }
 
 .marketSectionInner {
@@ -254,7 +418,7 @@
   }
 
   .marketSection {
-    margin-top: 96px;
+    margin-top: 48px;
   }
 
   .marketSectionRowLeft {

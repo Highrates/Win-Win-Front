@@ -10,6 +10,8 @@ export type PublicBrandListRow = {
   logoUrl: string | null;
   coverImageUrl: string | null;
   backgroundImageUrl: string | null;
+  catalogPdfUrl?: string | null;
+  siteUrl?: string | null;
   sortOrder: number;
   isActive: boolean;
   _count?: { products: number };
@@ -49,6 +51,8 @@ export type PublicBrandDetailPayload = PublicBrandListRow & {
   seoDescription: string | null;
   galleryImageUrls: unknown;
   products: PublicBrandProductRow[];
+  /** Число проектов бренда на витрине. */
+  casesCount?: number;
 };
 
 /** Обложка на витрине: как в админке — приоритет backgroundImageUrl. */

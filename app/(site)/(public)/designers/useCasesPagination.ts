@@ -11,8 +11,8 @@ import type { CasesPagination, ProductFilterTab, ProjectData } from './designerP
 
 type Args = {
   initialProjects: ProjectData[];
-  casesPagination?: CasesPagination;
-  /** Серверный фильтр «с товарами» (только mode: designer). */
+  /** designer | public; projects-feed обрабатывает `useProjectsFeedPagination`. */
+  casesPagination?: Exclude<CasesPagination, { mode: 'projects-feed' }>;
   productFilter: ProductFilterTab;
   productFilterTabs: boolean;
 };
@@ -29,6 +29,7 @@ function tabKey(hasProducts: boolean): TabCacheKey {
   return hasProducts ? 'with-products' : 'all';
 }
 
+/** Пагинация кейсов дизайнера и публичного списка (не unified feed). */
 export function useCasesPagination({
   initialProjects,
   casesPagination,
@@ -43,11 +44,11 @@ export function useCasesPagination({
   const loadingMoreRef = useRef(false);
   const filterRequestId = useRef(0);
   const cacheRef = useRef<Partial<Record<TabCacheKey, TabCache>>>({});
+  const didMountFilter = useRef(false);
 
   const hasProducts = productFilterTabs && productFilter === 'with-products';
   const serverFilter =
     Boolean(casesPagination && casesPagination.mode === 'designer' && productFilterTabs);
-  const didMountFilter = useRef(false);
 
   const persistTab = useCallback((key: TabCacheKey, entry: TabCache) => {
     cacheRef.current[key] = entry;
@@ -61,13 +62,12 @@ export function useCasesPagination({
     persistTab('all', { items: initialProjects, total, loadedPage: 1 });
     delete cacheRef.current['with-products'];
     didMountFilter.current = false;
-  }, [initialProjects, casesPagination?.total, casesPagination?.mode, persistTab]);
+  }, [initialProjects, casesPagination?.total, casesPagination?.mode, persistTab, casesPagination]);
 
   const designerSlug =
     casesPagination?.mode === 'designer' ? casesPagination.designerSlug : null;
   const pageSize = casesPagination?.pageSize;
 
-  /** Смена таба — из кэша мгновенно; иначе optimistic + API без размонтирования сетки. */
   useEffect(() => {
     if (!serverFilter || !designerSlug || pageSize == null) return;
     if (!didMountFilter.current) {
@@ -85,7 +85,6 @@ export function useCasesPagination({
       return;
     }
 
-    // Сразу показываем подмножество уже загруженного «Все», пока идёт серверный ответ.
     if (hasProducts) {
       setItems((prev) => prev.filter((p) => p.products.length > 0));
     }
@@ -165,7 +164,6 @@ export function useCasesPagination({
     filterLoading,
     hasMore,
     sentinelRef,
-    /** Клиентский fallback, если нет серверной пагинации дизайнера. */
     clientFilterWithProducts: !serverFilter && productFilterTabs && hasProducts,
   };
 }

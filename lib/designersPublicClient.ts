@@ -100,32 +100,91 @@ export async function fetchPublicCasesPageClient(params: {
   const qs = new URLSearchParams({
     page: String(Math.max(1, params.page)),
     limit: String(Math.min(60, Math.max(1, params.limit ?? PUBLIC_CASES_PAGE_SIZE))),
+    source: 'designers',
   });
   const product = params.productId?.trim();
   if (product) qs.set('product', product);
   try {
-    const res = await fetch(`/api/public/designers/cases?${qs}`, { cache: 'no-store' });
+    const res = await fetch(`/api/public/projects/cases?${qs}`, { cache: 'no-store' });
     if (!res.ok) return { projects: [], total: 0 };
-    const raw = (await res.json()) as Record<string, unknown>;
-    const rawItems = raw.items;
-    if (!Array.isArray(rawItems)) return { projects: [], total: 0 };
-    const projects: ProjectData[] = [];
-    for (const row of rawItems) {
-      const parsed = parseNestPublicCaseItem(row, { requireDesignerMeta: true });
-      if (!parsed?.designer) continue;
-      projects.push(
-        mapPublicCaseToProjectData(parsed.case, {
-          slug: parsed.designer.slug,
-          name: parsed.designer.name,
-          photoUrl: parsed.designer.photoUrl,
-        }),
-      );
-    }
-    return {
-      projects,
-      total: typeof raw.total === 'number' ? raw.total : projects.length,
-    };
+    return parseProjectsFeedResponse(await res.json());
   } catch {
     return { projects: [], total: 0 };
   }
+}
+
+export async function fetchProjectsFeedPageClient(params: {
+  page: number;
+  limit?: number;
+  productId?: string | null;
+  brandSlug?: string | null;
+  productBrandSlug?: string | null;
+  source: 'all' | 'designers' | 'brands';
+  room?: string | null;
+  hasProducts?: boolean;
+}): Promise<{ projects: ProjectData[]; total: number; rooms: string[] }> {
+  const qs = new URLSearchParams({
+    page: String(Math.max(1, params.page)),
+    limit: String(Math.min(60, Math.max(1, params.limit ?? PUBLIC_CASES_PAGE_SIZE))),
+    source: params.source,
+  });
+  const product = params.productId?.trim();
+  if (product) qs.set('product', product);
+  const brand = params.brandSlug?.trim();
+  if (brand) qs.set('brand', brand);
+  const productBrand = params.productBrandSlug?.trim();
+  if (productBrand) qs.set('productBrand', productBrand);
+  const room = params.room?.trim();
+  if (room) qs.set('room', room);
+  if (params.hasProducts) qs.set('hasProducts', '1');
+  try {
+    const res = await fetch(`/api/public/projects/cases?${qs}`, { cache: 'no-store' });
+    if (!res.ok) return { projects: [], total: 0, rooms: [] };
+    return parseProjectsFeedResponse(await res.json());
+  } catch {
+    return { projects: [], total: 0, rooms: [] };
+  }
+}
+
+function parseProjectsFeedResponse(raw: unknown): {
+  projects: ProjectData[];
+  total: number;
+  rooms: string[];
+} {
+  if (!raw || typeof raw !== 'object') return { projects: [], total: 0, rooms: [] };
+  const data = raw as Record<string, unknown>;
+  const rawItems = data.items;
+  if (!Array.isArray(rawItems)) return { projects: [], total: 0, rooms: [] };
+  const projects: ProjectData[] = [];
+  for (const row of rawItems) {
+    const parsed = parseNestPublicCaseItem(row);
+    if (!parsed) continue;
+    if (!parsed.designer && !parsed.brand) continue;
+    projects.push(
+      mapPublicCaseToProjectData(parsed.case, {
+        designer: parsed.designer
+          ? {
+              slug: parsed.designer.slug,
+              name: parsed.designer.name,
+              photoUrl: parsed.designer.photoUrl,
+            }
+          : undefined,
+        brand: parsed.brand
+          ? {
+              slug: parsed.brand.slug,
+              name: parsed.brand.name,
+              logoUrl: parsed.brand.logoUrl,
+            }
+          : undefined,
+      }),
+    );
+  }
+  const rooms = Array.isArray(data.rooms)
+    ? data.rooms.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : [];
+  return {
+    projects,
+    total: typeof data.total === 'number' ? data.total : projects.length,
+    rooms,
+  };
 }

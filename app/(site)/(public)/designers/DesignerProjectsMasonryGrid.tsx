@@ -5,6 +5,12 @@ import type { LikesBulkUiState } from '@/lib/likesBulkUi';
 import { CaseCoverLikeButton } from './CaseCoverLikeButton';
 import { GRID_CARD_ASPECTS, type ProjectData } from './designerProjectsTypes';
 
+/** В сетке чередуем GRID_CARD_ASPECTS; 9:16 только у бренд-обложек (портрет). */
+function aspectForProject(project: ProjectData, index: number): string {
+  if (project.coverLayout === '9:16') return '9 / 16';
+  return GRID_CARD_ASPECTS[index % GRID_CARD_ASPECTS.length];
+}
+
 function SliderCoverArrow() {
   return (
     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -74,7 +80,7 @@ export function DesignerProjectsMasonryGrid({
             <div
               key={project.id ?? project.title}
               className={stylesModule.sliderCoverCard}
-              style={{ aspectRatio: GRID_CARD_ASPECTS[index % GRID_CARD_ASPECTS.length] }}
+              style={{ aspectRatio: aspectForProject(project, index) }}
             >
               <img
                 src={project.gridCoverImage ?? project.coverImage}

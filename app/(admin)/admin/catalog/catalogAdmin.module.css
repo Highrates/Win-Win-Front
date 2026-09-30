@@ -108,6 +108,11 @@
   flex-shrink: 0;
 }
 
+.detailTitleActions[data-visible='false'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .coverActions {
   display: flex;
   flex-wrap: wrap;
@@ -598,6 +603,60 @@
 
 .sectionHead .groupHeading {
   margin: 0;
+}
+
+/** Секции табов «Материалы» / «Проекты» на странице бренда — без верхней полосы. */
+.tabPanelSection {
+  border: none;
+  border-top: none;
+  margin-top: 16px;
+  padding-top: 0;
+}
+
+/** Стабильная высота при переключении табов бренда: все панели в одной ячейке. */
+.brandTabPanels {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+}
+
+.brandTabPanel {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  width: 100%;
+  align-self: start;
+}
+
+.brandTabPanel[data-active='false'] {
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.brandTabPanel[data-active='true'] {
+  visibility: visible;
+  z-index: 1;
+  position: relative;
+}
+
+.materialsColorsBlock {
+  margin-top: 12px;
+}
+
+.materialsColorsHeading {
+  margin: 0 0 8px;
+  color: var(--admin-muted, #666);
+  font-size: var(--text-caption, 13px);
+}
+
+.materialsColorRow {
+  margin-bottom: 8px;
+}
+
+.materialsMsg {
+  margin-top: 8px;
 }
 
 .grid {

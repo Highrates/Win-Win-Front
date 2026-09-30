@@ -40,9 +40,11 @@ function CloseIcon() {
 type Props = {
   value: CaseProductPick[];
   onChange: (next: CaseProductPick[]) => void;
+  /** Ограничить поиск товарами бренда (админка проектов бренда). */
+  brandId?: string | null;
 };
 
-export function CaseProductsField({ value, onChange }: Props) {
+export function CaseProductsField({ value, onChange, brandId }: Props) {
   const [open, setOpen] = useState(false);
   const [searchRaw, setSearchRaw] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
@@ -73,6 +75,8 @@ export function CaseProductsField({ value, onChange }: Props) {
       const qs = new URLSearchParams({ page: '1', limit: String(PAGE_SIZE) });
       const q = debouncedQ.trim();
       if (q) qs.set('q', q);
+      const bid = brandId?.trim();
+      if (bid) qs.set('brandId', bid);
       try {
         const res = await fetch(`/api/public/catalog/products/search?${qs}`, { cache: 'no-store' });
         const data = (await res.json()) as CatalogProductSearchResponse;
@@ -91,7 +95,7 @@ export function CaseProductsField({ value, onChange }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, debouncedQ]);
+  }, [open, debouncedQ, brandId]);
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore) return;
@@ -102,6 +106,8 @@ export function CaseProductsField({ value, onChange }: Props) {
       const qs = new URLSearchParams({ page: String(nextPage), limit: String(PAGE_SIZE) });
       const q = debouncedQ.trim();
       if (q) qs.set('q', q);
+      const bid = brandId?.trim();
+      if (bid) qs.set('brandId', bid);
       const res = await fetch(`/api/public/catalog/products/search?${qs}`, { cache: 'no-store' });
       const data = (await res.json()) as CatalogProductSearchResponse;
       const chunk = Array.isArray(data.hits) ? data.hits : [];
@@ -118,7 +124,7 @@ export function CaseProductsField({ value, onChange }: Props) {
     } finally {
       setLoadingMore(false);
     }
-  }, [loading, loadingMore, hits.length, total, debouncedQ]);
+  }, [loading, loadingMore, hits.length, total, debouncedQ, brandId]);
 
   const onScroll = useCallback(() => {
     const el = scrollRef.current;

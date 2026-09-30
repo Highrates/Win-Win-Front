@@ -74,10 +74,18 @@ function mapCases(rawCases: unknown[]): ProjectData[] {
     if (!parsed) continue;
     const designer = parsed.designer;
     mapped.push(
-      mapPublicCaseToProjectData(
-        parsed.case,
-        designer ? { slug: designer.slug, name: designer.name, photoUrl: designer.photoUrl } : undefined,
-      ),
+      mapPublicCaseToProjectData(parsed.case, {
+        designer: designer
+          ? { slug: designer.slug, name: designer.name, photoUrl: designer.photoUrl }
+          : undefined,
+        brand: parsed.brand
+          ? {
+              slug: parsed.brand.slug,
+              name: parsed.brand.name,
+              logoUrl: parsed.brand.logoUrl,
+            }
+          : undefined,
+      }),
     );
   }
   return mapped;

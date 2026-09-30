@@ -48,7 +48,10 @@ export type PublicCasePayload = {
 
 export function mapPublicCaseToProjectData(
   c: PublicCasePayload,
-  designer?: { slug: string; name: string; photoUrl: string | null },
+  opts?: {
+    designer?: { slug: string; name: string; photoUrl: string | null };
+    brand?: { slug: string; name: string; logoUrl: string | null };
+  },
 ): ProjectData {
   const layout = c.coverLayout;
   const singleCover = layout === '16:9' || layout === '9:16';
@@ -71,6 +74,7 @@ export function mapPublicCaseToProjectData(
     roomTypes: c.roomTypes?.length ? [...c.roomTypes] : [],
     description: c.shortDescription?.trim() ?? '',
     descriptionHtml: c.descriptionHtml,
+    coverLayout: layout,
     products: c.products
       .filter((p) => p.slug.trim().length > 0)
       .map((p) => ({
@@ -88,12 +92,23 @@ export function mapPublicCaseToProjectData(
     gridCoverImage,
     likesDisplayCount: c.likesDisplayCount,
   };
+  const designer = opts?.designer;
   if (designer) {
     out.designer = {
       slug: designer.slug,
       name: designer.name,
       avatarSrc: designer.photoUrl?.trim()
         ? resolveMediaUrlForServer(designer.photoUrl)
+        : '/images/placeholder.svg',
+    };
+  }
+  const brand = opts?.brand;
+  if (brand) {
+    out.brand = {
+      slug: brand.slug,
+      name: brand.name,
+      avatarSrc: brand.logoUrl?.trim()
+        ? resolveMediaUrlForServer(brand.logoUrl)
         : '/images/placeholder.svg',
     };
   }

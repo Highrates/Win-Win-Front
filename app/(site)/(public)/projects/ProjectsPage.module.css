@@ -6,7 +6,13 @@ section.projectsPageMarketSection {
 }
 
 .projectsPreviewTitlesTight {
-  gap: 56px;
+  gap: 32px;
+}
+
+@media (max-width: 768px) {
+  .projectsPreviewTitlesTight {
+    gap: 32px;
+  }
 }
 
 .projectsPageHeroOuter {
@@ -25,15 +31,16 @@ section.projectsPageMarketSection {
   text-transform: uppercase;
 }
 
-/* Колонка: опционально тег товара, затем строка с чипами помещений */
+/* Колонка: опционально тег товара, затем строка табов + switch/чипы */
 .marketRoomToolbar {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: stretch;
+  gap: 16px;
   flex: 1 1 auto;
   min-width: 0;
-  max-width: min(100%, 1200px);
+  max-width: 100%;
+  width: 100%;
 }
 
 .marketProductFilterRow {
@@ -46,8 +53,8 @@ section.projectsPageMarketSection {
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  padding: 8px 16px 8px 16px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 100px;
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
   font-family: inherit;
@@ -84,131 +91,150 @@ section.projectsPageMarketSection {
   color: var(--color-ink-black);
 }
 
-/* Как DesignersPage_marketSectionRowLeft + группа выбора */
-.marketSectionRowLeft {
-  display: inline-flex;
-  justify-content: flex-start;
+.marketRoomToolbarRow {
+  display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 32px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-/* Десктоп: чипы помещений, max 1200px + горизонтальный скролл */
-.marketRoomGroupDesktop {
-  display: block;
-  min-width: 0;
-  flex: 1 1 auto;
-  max-width: min(100%, 1200px);
-}
-
-.marketRoomGroupWrap {
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-}
-
-.marketRoomGroupWrap::-webkit-scrollbar {
-  height: 6px;
-}
-
-.marketRoomGroup {
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
-  padding-bottom: 0;
-}
-
-/* Мобилка: пока только подпись + стрелка (меню выбора — позже) */
-.marketRoomGroupMobile {
-  display: none;
-  flex-direction: column;
-  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
   width: 100%;
   min-width: 0;
 }
 
-.marketRoomMobileTrigger {
+/* Выше специфичность, чем у UnderlineTabs.tabsWrapper (justify-content: center) */
+.marketRoomToolbarRow .marketRoomTabs {
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+}
+
+.marketRoomToolbarEnd {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.withProductsSwitch {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
   font-family: inherit;
-  color: var(--color-ink-black);
-  text-align: left;
 }
 
-.marketRoomMobileTriggerLabel {
-  min-width: 0;
+.withProductsSwitchInput {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.withProductsSwitchTrack {
+  position: relative;
+  display: block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--account-hairline-color, #e2e6e8);
+  transition: background 0.2s ease;
+}
+
+.withProductsSwitchThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-white);
+  box-shadow: 0 1px 2px rgba(5, 24, 38, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.withProductsSwitchInput:checked + .withProductsSwitchTrack {
+  background: var(--color-ink-black);
+}
+
+.withProductsSwitchInput:checked + .withProductsSwitchTrack .withProductsSwitchThumb {
+  transform: translateX(16px);
+}
+
+.withProductsSwitchInput:focus-visible + .withProductsSwitchTrack {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.withProductsSwitchLabel {
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+  white-space: nowrap;
 }
 
-.marketRoomMobileChevron {
-  flex-shrink: 0;
+.sourceChips {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: none;
+}
+
+.sourceChipBtn {
+  appearance: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sourceChipBtn:focus-visible {
+  outline: 2px solid var(--color-ink-black);
+  outline-offset: 2px;
+}
+
+.sourceChipActive {
+  border-color: var(--color-ink-black);
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+}
+
+.sourceChipInactive {
+  border-color: transparent;
+  background: transparent;
   color: var(--color-gray);
 }
 
-/* Как DesignersPage: marketFilterGroup */
-.marketFilterGroup {
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-}
-
-.marketFilterGroup button {
-  display: inline-flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-.marketRoomBtn,
-.marketRoomBtnActive {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  padding: 8px 16px;
-  border-radius: var(--radius-4);
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-  font-family: inherit;
-  cursor: pointer;
-  border: var(--account-hairline-width) solid var(--account-hairline-color);
-  background: var(--color-white);
+.sourceChipInactive:hover {
   color: var(--color-ink-black);
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
-}
-
-.marketRoomBtn:hover {
-  border-color: rgba(0, 0, 0, 0.35);
   background: var(--color-bright-snow);
 }
 
-.marketRoomBtnActive {
-  border-color: var(--color-ink-black);
-  background: var(--color-bright-snow);
+@media (max-width: 900px) {
+  .marketRoomToolbarRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .marketRoomToolbarRow .marketRoomTabs {
+    width: 100%;
+  }
+
+  .marketRoomToolbarEnd {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -217,20 +243,42 @@ section.projectsPageMarketSection {
     width: 100%;
   }
 
-  .marketSectionRowLeft {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
-    row-gap: 12px;
+  .withProductsSwitchLabel {
+    font-size: var(--text-caption);
   }
+}
 
-  .marketRoomGroupDesktop {
-    display: none;
-  }
+.listingStatus {
+  margin: 0;
+  opacity: 0.7;
+}
 
-  /* /projects: на мобилке без полосы тегов (чипы только на десктопе) */
-  .marketRoomGroupMobile {
-    display: none;
-  }
+.listingFiltersAboveHint {
+  margin-bottom: 16px;
+}
+
+.listingError {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.listingRetryBtn {
+  appearance: none;
+  border: 1px solid var(--color-ink-black, #111);
+  background: transparent;
+  color: var(--color-ink-black, #111);
+  padding: 8px 14px;
+  font: inherit;
+  font-size: var(--text-caption, 13px);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.listingRetryBtn:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }

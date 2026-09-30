@@ -7,9 +7,17 @@ export type NestPublicCaseDesignerMeta = {
   photoUrl: string | null;
 };
 
+export type NestPublicCaseBrandMeta = {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+};
+
 export type ParseNestPublicCaseOptions = {
   /** Без пары designerSlug + designerDisplayName вернёт `null` (ответ `GET /designers/cases`). */
   requireDesignerMeta?: boolean;
+  /** Без brandSlug + brandDisplayName вернёт `null`. */
+  requireBrandMeta?: boolean;
 };
 
 function parseProductRow(q: Record<string, unknown>): PublicCaseProduct {
@@ -52,7 +60,11 @@ function parseProductsArray(raw: unknown): PublicCaseProduct[] {
 export function parseNestPublicCaseItem(
   row: unknown,
   opts?: ParseNestPublicCaseOptions,
-): { case: PublicCasePayload; designer: NestPublicCaseDesignerMeta | null } | null {
+): {
+  case: PublicCasePayload;
+  designer: NestPublicCaseDesignerMeta | null;
+  brand: NestPublicCaseBrandMeta | null;
+} | null {
   if (!row || typeof row !== 'object') return null;
   const o = row as Record<string, unknown>;
   const id = typeof o.id === 'string' ? o.id : '';
@@ -70,7 +82,20 @@ export function parseNestPublicCaseItem(
         }
       : null;
 
+  const brandSlug = typeof o.brandSlug === 'string' ? o.brandSlug.trim() : '';
+  const brandDisplayName =
+    typeof o.brandDisplayName === 'string' ? o.brandDisplayName.trim() : '';
+  const brand: NestPublicCaseBrandMeta | null =
+    brandSlug && brandDisplayName
+      ? {
+          slug: brandSlug,
+          name: brandDisplayName,
+          logoUrl: typeof o.brandLogoUrl === 'string' ? o.brandLogoUrl : null,
+        }
+      : null;
+
   if (opts?.requireDesignerMeta && !designer) return null;
+  if (opts?.requireBrandMeta && !brand) return null;
 
   const ldc = o.likesDisplayCount;
   const likesDisplayCount =
@@ -91,5 +116,5 @@ export function parseNestPublicCaseItem(
     likesDisplayCount,
   };
 
-  return { case: casePayload, designer };
+  return { case: casePayload, designer, brand };
 }

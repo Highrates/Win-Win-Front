@@ -1,98 +1,106 @@
 import Link from 'next/link';
-import React, { Fragment } from 'react';
+import React, { Fragment, Suspense } from 'react';
 import type { Metadata } from 'next';
-import type { ProjectData } from '../designers/DesignerProjectsSection';
-import { ProjectsMarketSection } from './ProjectsMarketSection';
-import { mapPublicCaseToProjectData } from '@/lib/mapPublicCaseToProjectData';
-import { parseNestPublicCaseItem } from '@/lib/parseNestPublicCase';
+import { ProjectsListingSection } from './ProjectsListingSection';
+import {
+  fetchProductTitleForFilter,
+  fetchPublicProjectsListing,
+} from '@/lib/publicProjectsListing';
 import { DESIGNER_PUBLIC_REVALIDATE_SECONDS, PUBLIC_CASES_PAGE_SIZE } from '@/lib/designersPublicShared';
 import { getServerApiBase } from '@/lib/serverApiBase';
-/**
- * Общие стили превью, маркета и карточек проектов (те же классы, что на странице дизайнера).
- */
 import listingLayoutStyles from './ProjectsListingLayout.module.css';
 import projectsStyles from './ProjectsPage.module.css';
 
-export const metadata: Metadata = {
-  title: 'Проекты и концепции — Wupapa',
-  description: 'Проекты и концепции интерьеров',
-};
+const DEFAULT_TITLE = 'Проекты и концепции — Wupapa';
+const DEFAULT_DESCRIPTION = 'Проекты и концепции интерьеров';
 
-async function fetchProductTitleForFilter(productId: string): Promise<string | null> {
-  const id = productId.trim();
-  if (!id) return null;
-  const base = getServerApiBase();
-  try {
-    const res = await fetch(`${base}/catalog/products/resolve-ids`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: [id] }),
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { items?: Array<{ id: string; name: string }> };
-    const item = data.items?.find((i) => i.id === id);
-    const name = item?.name?.trim();
-    return name && name.length > 0 ? name : null;
-  } catch {
-    return null;
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams?: Promise<{ brand?: string; productBrand?: string }>;
+}): Promise<Metadata> {
+  const sp = searchParams ? await searchParams : undefined;
+  const brandSlug = sp?.brand?.trim() || sp?.productBrand?.trim() || '';
+  if (!brandSlug) {
+    return { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION };
   }
-}
-
-async function fetchPublicProjectsListing(
-  productFilterId?: string | null,
-): Promise<{ projects: ProjectData[]; total: number }> {
-  const base = getServerApiBase();
-  const qs = new URLSearchParams({
-    page: '1',
-    limit: String(PUBLIC_CASES_PAGE_SIZE),
-  });
-  if (productFilterId?.trim()) qs.set('product', productFilterId.trim());
   try {
-    const res = await fetch(`${base}/designers/cases?${qs}`, {
+    const res = await fetch(`${getServerApiBase()}/brands/${encodeURIComponent(brandSlug)}`, {
       next: { revalidate: DESIGNER_PUBLIC_REVALIDATE_SECONDS },
     });
-    if (!res.ok) return { projects: [], total: 0 };
-    const raw = (await res.json()) as Record<string, unknown>;
-    const rawItems = raw.items;
-    if (!Array.isArray(rawItems)) return { projects: [], total: 0 };
-    const out: ProjectData[] = [];
-    for (const row of rawItems) {
-      const parsed = parseNestPublicCaseItem(row, { requireDesignerMeta: true });
-      if (!parsed?.designer) continue;
-      out.push(
-        mapPublicCaseToProjectData(parsed.case, {
-          slug: parsed.designer.slug,
-          name: parsed.designer.name,
-          photoUrl: parsed.designer.photoUrl,
-        }),
-      );
-    }
+    if (!res.ok) return { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION };
+    const data = (await res.json()) as { name?: string } | null;
+    const name = data?.name?.trim();
+    if (!name) return { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION };
+    const title = sp?.brand?.trim()
+      ? `Проекты ${name} — Wupapa`
+      : `Проекты с товарами ${name} — Wupapa`;
     return {
-      projects: out,
-      total: typeof raw.total === 'number' ? raw.total : out.length,
+      title,
+      description: `Проекты и концепции: ${name}`,
+      openGraph: { title, description: `Проекты и концепции: ${name}` },
     };
   } catch {
-    return { projects: [], total: 0 };
+    return { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION };
   }
 }
 
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ product?: string }>;
+  searchParams?: Promise<{ product?: string; brand?: string; productBrand?: string; source?: string }>;
 }) {
-  const productQuery = searchParams ? (await searchParams)?.product : undefined;
+  const sp = searchParams ? await searchParams : undefined;
+  const productQuery = sp?.product;
+  const brandSlug = sp?.brand?.trim() || '';
+  const productBrandSlug = sp?.productBrand?.trim() || '';
+  const sourceParam =
+    sp?.source === 'designers' || sp?.source === 'brands' || sp?.source === 'all'
+      ? sp.source
+      : undefined;
   const productIdTrimmed = productQuery?.trim() || '';
-  const [listing, productTitle] = await Promise.all([
-    fetchPublicProjectsListing(productQuery),
+  const brandNameSlug = brandSlug || productBrandSlug;
+  const [listing, productTitle, brandRow] = await Promise.all([
+    fetchPublicProjectsListing({
+      brandSlug: brandSlug || null,
+      productBrandSlug: productBrandSlug || null,
+      productId: productQuery,
+      source: sourceParam,
+    }),
     productIdTrimmed ? fetchProductTitleForFilter(productIdTrimmed) : Promise.resolve(null),
+    brandNameSlug
+      ? fetch(`${getServerApiBase()}/brands/${encodeURIComponent(brandNameSlug)}`, {
+          next: { revalidate: DESIGNER_PUBLIC_REVALIDATE_SECONDS },
+        })
+          .then(async (res) => {
+            if (!res.ok) return null;
+            const data = (await res.json()) as { name?: string; slug?: string } | null;
+            return data?.slug ? data : null;
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
   ]);
   const productFilter =
     productIdTrimmed.length > 0
       ? {
           id: productIdTrimmed,
           label: productTitle ?? 'Товар',
+        }
+      : null;
+  const brandFilter =
+    brandSlug.length > 0
+      ? {
+          slug: brandSlug,
+          label: brandRow?.name?.trim() || brandSlug,
+        }
+      : null;
+  const productBrandFilter =
+    productBrandSlug.length > 0
+      ? {
+          slug: productBrandSlug,
+          label: brandRow?.name?.trim()
+            ? `Товары ${brandRow.name.trim()}`
+            : `Товары ${productBrandSlug}`,
         }
       : null;
 
@@ -141,17 +149,20 @@ export default async function ProjectsPage({
       >
         <div className="padding-global">
           <div className={listingLayoutStyles.marketSectionInner}>
-            <ProjectsMarketSection
-              projects={listing.projects}
-              stylesModule={listingLayoutStyles}
-              productFilter={productFilter}
-              casesPagination={{
-                mode: 'public',
-                productId: productIdTrimmed || null,
-                total: listing.total,
-                pageSize: PUBLIC_CASES_PAGE_SIZE,
-              }}
-            />
+            <Suspense fallback={null}>
+              <ProjectsListingSection
+                projects={listing.projects}
+                stylesModule={listingLayoutStyles}
+                productFilter={productFilter}
+                brandFilter={brandFilter}
+                productBrandFilter={productBrandFilter}
+                initialSource={sourceParam ?? (productBrandFilter ? 'designers' : brandFilter ? 'brands' : 'all')}
+                initialTotal={listing.total}
+                pageSize={PUBLIC_CASES_PAGE_SIZE}
+                initialRooms={listing.rooms}
+                loadError={!listing.ok}
+              />
+            </Suspense>
           </div>
         </div>
       </section>

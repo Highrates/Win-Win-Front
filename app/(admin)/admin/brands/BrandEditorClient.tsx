@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
 import { AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { RichBlock } from '@/components/RichBlock/RichBlock';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
@@ -25,6 +26,8 @@ import type {
   AdminBrandMaterialColor,
   BrandAdminDetail,
 } from './adminBrandTypes';
+import { BrandProjectsPanel } from './BrandProjectsPanel';
+import { BrandEditorMaterialsPanel } from './BrandEditorMaterialsPanel';
 
 type MaterialRow = {
   id: string;
@@ -105,6 +108,8 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
   const [productPreviewImageUrl, setProductPreviewImageUrl] = useState('');
   const [galleryFrames, setGalleryFrames] = useState<ProductGalleryFrame[]>([]);
+  const [catalogPdfUrl, setCatalogPdfUrl] = useState('');
+  const [siteUrl, setSiteUrl] = useState('');
   const [shortDescription, setShortDescription] = useState('');
   const [description, setDescription] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
@@ -119,6 +124,7 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     | 'logo'
     | 'background'
     | 'productPreview'
+    | 'catalogPdf'
     | { kind: 'brandColor'; materialId: string; colorId: string }
     | { kind: 'brandColorBatch'; materialId: string }
     | null
@@ -129,6 +135,17 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   const [materialsLoaded, setMaterialsLoaded] = useState(false);
   const [materialsSaving, setMaterialsSaving] = useState(false);
   const [materialsMsg, setMaterialsMsg] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'info' | 'materials' | 'projects'>('info');
+  const tabPanelsRef = useRef<HTMLDivElement>(null);
+
+  const editorTabs = useMemo(() => {
+    const items: { id: 'info' | 'materials' | 'projects'; label: string }[] = [
+      { id: 'info', label: 'Инфо' },
+      { id: 'materials', label: 'Материалы и цвета' },
+    ];
+    if (isEdit) items.push({ id: 'projects', label: 'Проекты' });
+    return items;
+  }, [isEdit]);
 
   const load = useCallback(async () => {
     if (!brandId) return;
@@ -143,6 +160,8 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setBackgroundImageUrl(row.backgroundImageUrl ?? '');
       setProductPreviewImageUrl(row.productPreviewImageUrl ?? '');
       setGalleryFrames(galleryUrlsToFrames(row.galleryImageUrls));
+      setCatalogPdfUrl(row.catalogPdfUrl ?? '');
+      setSiteUrl(row.siteUrl ?? '');
       setShortDescription(row.shortDescription ?? '');
       setDescription(row.description ?? '');
       setSeoTitle(row.seoTitle ?? '');
@@ -175,6 +194,29 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
   useEffect(() => {
     if (isEdit) void loadMaterials();
   }, [isEdit, loadMaterials]);
+
+  /** Высота контейнера табов = max(панели), чтобы переключение не дёргало layout. */
+  useLayoutEffect(() => {
+    const root = tabPanelsRef.current;
+    if (!root) return;
+
+    const measure = () => {
+      const panels = root.querySelectorAll<HTMLElement>('[data-brand-tab-panel]');
+      let max = 0;
+      panels.forEach((panel) => {
+        max = Math.max(max, panel.scrollHeight);
+      });
+      if (max > 0) root.style.minHeight = `${max}px`;
+    };
+
+    measure();
+    const ro = new ResizeObserver(() => measure());
+    root.querySelectorAll('[data-brand-tab-panel]').forEach((el) => ro.observe(el));
+    return () => {
+      ro.disconnect();
+      root.style.minHeight = '';
+    };
+  }, [isEdit, brandId, materials.length, materialsLoaded, loading]);
 
   const pickMediaFromLibrary = useCallback(
     (kind: 'image' | 'video') =>
@@ -210,8 +252,19 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
     setPicker({ filter: 'image', title: s.pickerProductPreview });
   }
 
+  function openCatalogPdfPicker() {
+    richPickResolver.current = null;
+    brandTargetRef.current = 'catalogPdf';
+    setSaveMsg(null);
+    setPicker({ filter: 'all', title: s.pickerCatalogPdf });
+  }
+
   function clearProductPreview() {
     setProductPreviewImageUrl('');
+  }
+
+  function clearCatalogPdf() {
+    setCatalogPdfUrl('');
   }
 
   function handlePickerPick(sel: { url: string; id: string; originalName?: string }) {
@@ -230,6 +283,8 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       setBackgroundImageUrl(sel.url);
     } else if (t === 'productPreview') {
       setProductPreviewImageUrl(sel.url);
+    } else if (t === 'catalogPdf') {
+      setCatalogPdfUrl(sel.url);
     } else if (t && typeof t === 'object' && t.kind === 'brandColor') {
       setMaterials((prev) =>
         prev.map((m) =>
@@ -399,6 +454,8 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
       backgroundImageUrl: backgroundImageUrl.trim() || null,
       productPreviewImageUrl: productPreviewImageUrl.trim() || null,
       galleryImageUrls: galleryUrls,
+      catalogPdfUrl: catalogPdfUrl.trim() || null,
+      siteUrl: siteUrl.trim() || null,
       shortDescription: shortDescription.trim().slice(0, 400) || null,
       description: description.trim() || null,
       seoTitle: seoTitle.trim() || null,
@@ -462,14 +519,20 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
 
       <div className={styles.detailTitleRow}>
         <h1 className={styles.detailTitle}>{isEdit ? name || s.titleFallback : s.titleNew}</h1>
-        <AdminCompactBtn
-          type="submit"
-          form={FORM_ID}
-          variant="accent"
-          disabled={saving || !name.trim()}
+        <div
+          className={styles.detailTitleActions}
+          data-visible={activeTab === 'info' ? 'true' : 'false'}
+          aria-hidden={activeTab !== 'info'}
         >
-          {saving ? s.saving : isEdit ? s.save : s.create}
-        </AdminCompactBtn>
+          <AdminCompactBtn
+            type="submit"
+            form={FORM_ID}
+            variant="accent"
+            disabled={saving || !name.trim()}
+          >
+            {saving ? s.saving : isEdit ? s.save : s.create}
+          </AdminCompactBtn>
+        </div>
       </div>
 
       {saveMsg ? <p className={styles.error}>{saveMsg}</p> : null}
@@ -480,6 +543,20 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         </p>
       ) : null}
 
+      <AdminTabs
+        items={editorTabs}
+        activeId={activeTab}
+        onChange={setActiveTab}
+        ariaLabel="Разделы бренда"
+      />
+
+      <div className={styles.brandTabPanels} ref={tabPanelsRef}>
+      <div
+        className={styles.brandTabPanel}
+        data-brand-tab-panel=""
+        data-active={activeTab === 'info' ? 'true' : 'false'}
+        aria-hidden={activeTab !== 'info'}
+      >
       <form id={FORM_ID} className={`${styles.form} ${pn.formWide}`} onSubmit={submit}>
         <AdminTextField
           label={s.brandName}
@@ -516,6 +593,14 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         <p className={styles.muted} style={{ margin: '0 0 4px' }}>
           {shortDescription.length}/400
         </p>
+
+        <AdminTextField
+          label={s.siteUrlLabel}
+          value={siteUrl}
+          onChange={(e) => setSiteUrl(e.target.value)}
+          placeholder={s.siteUrlPlaceholder}
+          type="url"
+        />
 
         <div>
           <h2 className={styles.groupHeading}>{s.sectionLogo}</h2>
@@ -624,6 +709,28 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         </div>
 
         <div>
+          <h2 className={styles.groupHeading}>{s.sectionCatalogPdf}</h2>
+          <p className={styles.muted} style={{ margin: '0 0 8px' }}>
+            {s.catalogPdfHint}
+          </p>
+          <div className={styles.coverActions}>
+            <AdminCompactBtn type="button" onClick={openCatalogPdfPicker}>
+              {common.mediaLibrary}
+            </AdminCompactBtn>
+            {catalogPdfUrl ? (
+              <AdminCompactBtn type="button" variant="danger" onClick={clearCatalogPdf}>
+                {s.removeCatalogPdf}
+              </AdminCompactBtn>
+            ) : null}
+          </div>
+          {catalogPdfUrl ? (
+            <p className={styles.muted} style={{ margin: '8px 0 0', wordBreak: 'break-all' }}>
+              {catalogPdfUrl}
+            </p>
+          ) : null}
+        </div>
+
+        <div>
           <h2 className={styles.groupHeading}>{s.sectionRich}</h2>
           <RichBlock
             value={description}
@@ -632,112 +739,6 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
             pickMediaFromLibrary={pickMediaFromLibrary}
           />
         </div>
-
-        {isEdit ? (
-          <div className={pn.section}>
-            <div className={styles.sectionHead}>
-              <h2 className={styles.groupHeading}>{s.sectionMaterials}</h2>
-              <AdminCompactBtn
-                type="button"
-                variant="accent"
-                onClick={() => {
-                  void saveMaterials();
-                }}
-                disabled={materialsSaving || !materialsLoaded}
-              >
-                {materialsSaving ? s.saving : s.saveMaterials}
-              </AdminCompactBtn>
-            </div>
-
-            {!materialsLoaded ? (
-              <p className={styles.muted}>{s.loadingMaterials}</p>
-            ) : (
-              <div className={pn.repeatList}>
-                {materials.map((m) => (
-                  <div key={m.id} className={pn.elementCard}>
-                    <div className={pn.repeatRow}>
-                      <AdminTextField
-                        className={pn.modFieldGrow}
-                        placeholder={s.materialNamePh}
-                        value={m.name}
-                        onChange={(e) => updateMaterialName(m.id, e.target.value)}
-                        aria-label={s.materialNamePh}
-                      />
-                      <AdminCompactBtn type="button" variant="danger" onClick={() => removeMaterial(m.id)}>
-                        {s.deleteMaterial}
-                      </AdminCompactBtn>
-                    </div>
-                    <div style={{ marginTop: 12 }}>
-                      <p className={styles.muted} style={{ margin: '0 0 8px' }}>
-                        {s.colorsHeading}
-                      </p>
-                      {m.colors.map((c) => (
-                        <div
-                          key={c.id}
-                          className={`${pn.repeatRow} ${pn.galleryRowLayout}`}
-                          style={{ marginBottom: 8 }}
-                        >
-                          {c.imageUrl ? (
-                            <img className={pn.galleryThumb} src={c.imageUrl} alt="" />
-                          ) : (
-                            <div className={pn.galleryThumb} aria-hidden />
-                          )}
-                          <AdminTextField
-                            className={pn.modFieldGrow}
-                            placeholder={s.colorNamePh}
-                            value={c.name}
-                            onChange={(e) => updateColor(m.id, c.id, { name: e.target.value })}
-                            aria-label={s.colorNamePh}
-                          />
-                          <div className={pn.rowActions}>
-                            <AdminCompactBtn
-                              type="button"
-                              onClick={() => openBrandColorImagePicker(m.id, c.id)}
-                            >
-                              {common.mediaLibrary}
-                            </AdminCompactBtn>
-                            <AdminCompactBtn
-                              type="button"
-                              variant="danger"
-                              onClick={() => removeColorFromMaterial(m.id, c.id)}
-                            >
-                              {s.delete}
-                            </AdminCompactBtn>
-                          </div>
-                        </div>
-                      ))}
-                      <div className={styles.formActions}>
-                        <AdminCompactBtn type="button" onClick={() => openBrandColorBatchPicker(m.id)}>
-                          {s.addColorFromLib}
-                        </AdminCompactBtn>
-                        <AdminCompactBtn type="button" onClick={() => addColorToMaterial(m.id)}>
-                          {s.addColorEmpty}
-                        </AdminCompactBtn>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {materialsMsg ? (
-              <p
-                className={materialsMsg === s.materialsSaved ? styles.muted : styles.error}
-                style={{ marginTop: 8 }}
-              >
-                {materialsMsg}
-              </p>
-            ) : null}
-
-            <div className={styles.formActions}>
-              <AdminCompactBtn type="button" onClick={addMaterial}>
-                {s.addMaterial}
-              </AdminCompactBtn>
-            </div>
-          </div>
-        ) : (
-          <p className={styles.muted}>{s.materialsAfterCreate}</p>
-        )}
 
         <div className={pn.section}>
           <h2 className={styles.groupHeading}>SEO</h2>
@@ -765,6 +766,62 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
           </AdminCompactBtnLink>
         </div>
       </form>
+      </div>
+
+      <div
+        className={styles.brandTabPanel}
+        data-brand-tab-panel=""
+        data-active={activeTab === 'materials' ? 'true' : 'false'}
+        aria-hidden={activeTab !== 'materials'}
+      >
+        <BrandEditorMaterialsPanel
+          isEdit={isEdit}
+          strings={{
+            sectionMaterials: s.sectionMaterials,
+            saveMaterials: s.saveMaterials,
+            saving: s.saving,
+            loadingMaterials: s.loadingMaterials,
+            materialNamePh: s.materialNamePh,
+            deleteMaterial: s.deleteMaterial,
+            colorsHeading: s.colorsHeading,
+            colorNamePh: s.colorNamePh,
+            delete: s.delete,
+            addColorFromLib: s.addColorFromLib,
+            addColorEmpty: s.addColorEmpty,
+            addMaterial: s.addMaterial,
+            materialsSaved: s.materialsSaved,
+            materialsAfterCreate: s.materialsAfterCreate,
+            mediaLibrary: common.mediaLibrary,
+          }}
+          materials={materials}
+          materialsLoaded={materialsLoaded}
+          materialsSaving={materialsSaving}
+          materialsMsg={materialsMsg}
+          onSave={() => {
+            void saveMaterials();
+          }}
+          onAddMaterial={addMaterial}
+          onRemoveMaterial={removeMaterial}
+          onUpdateMaterialName={updateMaterialName}
+          onAddColor={addColorToMaterial}
+          onRemoveColor={removeColorFromMaterial}
+          onUpdateColorName={(mid, cid, name) => updateColor(mid, cid, { name })}
+          onOpenColorImagePicker={openBrandColorImagePicker}
+          onOpenColorBatchPicker={openBrandColorBatchPicker}
+        />
+      </div>
+
+      {isEdit && brandId ? (
+        <div
+          className={styles.brandTabPanel}
+          data-brand-tab-panel=""
+          data-active={activeTab === 'projects' ? 'true' : 'false'}
+          aria-hidden={activeTab !== 'projects'}
+        >
+          <BrandProjectsPanel brandId={brandId} brandSlug={slug} />
+        </div>
+      ) : null}
+      </div>
     </main>
   );
 }

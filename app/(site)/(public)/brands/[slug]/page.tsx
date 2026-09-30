@@ -3,6 +3,7 @@ import { Fragment, Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import type { CollectionProductRow } from '@/app/(site)/(public)/collections/[slug]/CollectionProductsGrid';
+import { AccountDocRow } from '@/components/AccountDocRow/AccountDocRow';
 import {
   normalizeCatalogPriceRange,
   parseCatalogPriceBound,
@@ -13,11 +14,41 @@ import { loadCatalogTags } from '@/lib/catalog/loadCatalogPageData';
 import { parseCatalogTagSlugs } from '@/lib/catalog/parseCatalogTagSlugs';
 import { fetchHomeCatalogRoots } from '@/lib/homeCatalog';
 import { brandCoverImageUrl, plainTextExcerptFromHtml } from '@/lib/brandsPublic';
+import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import { fetchPublicBrandBySlug } from '@/lib/server/brandAuthFetch';
 import { brandProductRowToProductGridItem } from '@/lib/productGridItem';
 import { BrandPageMarketClient } from './BrandPageMarketClient';
 import { MoreAboutBrandModal } from './MoreAboutBrandModal';
 import styles from './BrandPage.module.css';
+
+function ChipArrow() {
+  return (
+    <svg
+      className={styles.brandProjectsChipArrow}
+      width="12"
+      height="7"
+      viewBox="0 0 12 7"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        d="M8.17993 5.62L10.7399 3.06L8.17993 0.5"
+        stroke="currentColor"
+        strokeMiterlimit="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M0.5 3.06006H10.67"
+        stroke="currentColor"
+        strokeMiterlimit="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export async function generateMetadata({
   params,
@@ -89,6 +120,19 @@ export default async function BrandPage({
   const excerpt = short || plainTextExcerptFromHtml(row.description, 280);
   const heroSrc = brandCoverImageUrl(row) ?? '/images/placeholder.svg';
   const richHtml = row.description?.trim() || '';
+  const logoSrc = row.logoUrl?.trim()
+    ? resolveMediaUrlForServer(row.logoUrl.trim())
+    : null;
+  const catalogPdfRaw = row.catalogPdfUrl?.trim() || '';
+  const catalogPdfHref = catalogPdfRaw ? resolveMediaUrlForServer(catalogPdfRaw) : '';
+  const siteUrl = row.siteUrl?.trim() || '';
+  const casesCount = typeof row.casesCount === 'number' ? Math.max(0, row.casesCount) : 0;
+  const galleryUrls = Array.isArray(row.galleryImageUrls)
+    ? row.galleryImageUrls
+        .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+        .map((u) => resolveMediaUrlForServer(u.trim()))
+        .slice(0, 3)
+    : [];
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -142,21 +186,62 @@ export default async function BrandPage({
                     </div>
                   ) : null}
                   <MoreAboutBrandModal
+                    brandName={name}
                     linkClassName={styles.moreAboutBrandLink}
                     textClassName={styles.moreAboutBrandText}
                     arrowClassName={styles.moreAboutBrandArrow}
                     bodyHtml={richHtml}
+                    shortDescription={short || null}
+                    logoUrl={logoSrc}
+                    siteUrl={siteUrl || null}
+                    galleryUrls={galleryUrls}
+                    catalogPdfHref={catalogPdfHref || null}
                   />
+                  <div className={styles.brandProjectsBlock}>
+                    <span className={styles.brandProjectsLabel}>Проекты:</span>
+                    <div className={styles.brandProjectsChips} role="group" aria-label="Проекты бренда">
+                      <Link
+                        href={`/projects?source=designers&productBrand=${encodeURIComponent(slug)}`}
+                        className={styles.brandProjectsChipLink}
+                        prefetch={false}
+                      >
+                        <span className={styles.brandProjectsChipLabel}>от дизайнеров</span>
+                        <ChipArrow />
+                      </Link>
+                      {casesCount > 0 ? (
+                        <Link
+                          href={`/projects?brand=${encodeURIComponent(slug)}`}
+                          className={styles.brandProjectsChipLink}
+                          prefetch={false}
+                        >
+                          <span className={styles.brandProjectsChipLabel}>от бренда</span>
+                          <ChipArrow />
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <img
-              src={heroSrc}
-              alt=""
-              width={768}
-              height={393}
-              className={styles.previewImage}
-            />
+            <div className={styles.previewMediaCol}>
+              <img
+                src={heroSrc}
+                alt={name}
+                width={768}
+                height={393}
+                className={styles.previewImage}
+              />
+              {catalogPdfHref ? (
+                <div className={styles.previewCatalogDoc}>
+                  <AccountDocRow
+                    title="КАТАЛОГ БРЕНДА"
+                    fileType={{ kind: 'pdf', badge: 'PDF' }}
+                    href={catalogPdfHref}
+                    action="open"
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </section>

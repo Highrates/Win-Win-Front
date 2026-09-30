@@ -3,7 +3,8 @@ import { z } from 'zod';
 /** Ответ Nest `Case` (JSON): даты строками, Json-поля как unknown. */
 export const apiCaseSchema = z.object({
   id: z.string(),
-  userId: z.string(),
+  userId: z.string().nullable().optional(),
+  brandId: z.string().nullable().optional(),
   title: z.string(),
   shortDescription: z.string().nullable(),
   location: z.string().nullable(),

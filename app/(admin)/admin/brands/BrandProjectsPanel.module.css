@@ -1,0 +1,104 @@
+.layout {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+  margin-top: 8px;
+  grid-template-columns: 1fr;
+}
+
+.layoutSplit {
+  grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.4fr);
+}
+
+@media (max-width: 900px) {
+  .layoutSplit {
+    grid-template-columns: 1fr;
+  }
+}
+
+.headActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.vitrineLink {
+  font-size: var(--text-caption, 13px);
+  color: var(--color-ink-black, #111);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.metaLine {
+  margin: 4px 0 0;
+}
+
+.formLead {
+  margin: 0;
+}
+
+.publishLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.charCount {
+  margin: 4px 0 0;
+}
+
+.yearField {
+  max-width: 120px;
+}
+
+.coverHint {
+  margin: 0 0 8px;
+}
+
+.coverWarn {
+  margin: 8px 0 0;
+  color: #a65c00;
+}
+
+.coverPreview {
+  margin-top: 10px;
+  width: 120px;
+  max-width: 100%;
+  aspect-ratio: 9 / 16;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-bright-snow, #f5f5f5);
+}
+
+.coverPreviewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.listThumb {
+  width: 40px;
+  aspect-ratio: 9 / 16;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--color-bright-snow, #f5f5f5);
+}
+
+.listThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.listCardActive {
+  outline: 2px solid var(--color-black, #111);
+  outline-offset: 2px;
+}
+
+.deleteBody {
+  margin: 0;
+}

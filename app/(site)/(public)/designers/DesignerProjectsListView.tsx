@@ -195,6 +195,37 @@ export function DesignerProjectsListView({
                     </svg>
                   </Link>
                 )}
+                {!project.designer && project.brand && (
+                  <Link
+                    href={`/brands/${project.brand.slug}`}
+                    className={stylesModule.designerLinkWrapper}
+                    aria-label={`Перейти к бренду ${project.brand.name}`}
+                  >
+                    <img
+                      src={project.brand.avatarSrc}
+                      alt=""
+                      width={43}
+                      height={42}
+                      className={stylesModule.designerLinkAvatar}
+                    />
+                    <span className={stylesModule.designerLinkName}>{project.brand.name}</span>
+                    <svg
+                      className={stylesModule.designerLinkArrow}
+                      viewBox="0 0 22 22"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden
+                    >
+                      <path
+                        d="M8.25 16.5L13.75 11L8.25 5.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </Link>
+                )}
               </div>
             </div>
             <div className={stylesModule.projectImagesWrapper}>

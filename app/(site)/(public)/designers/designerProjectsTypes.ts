@@ -6,6 +6,12 @@ export type ProjectDesignerLink = {
   avatarSrc: string;
 };
 
+export type ProjectBrandLink = {
+  name: string;
+  slug: string;
+  avatarSrc: string;
+};
+
 export type ProjectData = {
   /** Стабильный ключ списка/сетки (id кейса) */
   id?: string;
@@ -22,15 +28,32 @@ export type ProjectData = {
   coverImage2?: string;
   /** Обложка для вида «сетка» (только кейсы; обычно первая из обложек) */
   gridCoverImage?: string;
+  /** Формат обложки с бэка — для aspect в masonry. */
+  coverLayout?: '4:3' | '16:9' | '9:16';
   /** Ссылка на дизайнера (страница проектов и т.п.) */
   designer?: ProjectDesignerLink;
+  /** Ссылка на бренд (проекты бренда) */
+  brand?: ProjectBrandLink;
   /** Публичный счётчик лайков кейса */
   likesDisplayCount: number;
 };
 
 export type CasesPagination =
   | { mode: 'designer'; designerSlug: string; total: number; pageSize: number }
-  | { mode: 'public'; productId?: string | null; total: number; pageSize: number };
+  | { mode: 'public'; productId?: string | null; total: number; pageSize: number }
+  | {
+      mode: 'projects-feed';
+      total: number;
+      pageSize: number;
+      productId?: string | null;
+      brandSlug?: string | null;
+      productBrandSlug?: string | null;
+      source: 'all' | 'designers' | 'brands';
+      room?: string | null;
+      hasProducts?: boolean;
+      /** Фасеты помещений (без учёта room-фильтра). */
+      rooms?: string[];
+    };
 
 export type ProductFilterTab = 'all' | 'with-products';
 
