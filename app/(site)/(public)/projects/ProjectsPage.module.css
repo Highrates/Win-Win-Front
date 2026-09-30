@@ -6,12 +6,12 @@ section.projectsPageMarketSection {
 }
 
 .projectsPreviewTitlesTight {
-  gap: 32px;
+  gap: 48px;
 }
 
 @media (max-width: 768px) {
   .projectsPreviewTitlesTight {
-    gap: 32px;
+    gap: 48px;
   }
 }
 

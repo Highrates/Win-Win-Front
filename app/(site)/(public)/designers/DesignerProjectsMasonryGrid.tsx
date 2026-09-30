@@ -5,9 +5,8 @@ import type { LikesBulkUiState } from '@/lib/likesBulkUi';
 import { CaseCoverLikeButton } from './CaseCoverLikeButton';
 import { GRID_CARD_ASPECTS, type ProjectData } from './designerProjectsTypes';
 
-/** В сетке чередуем GRID_CARD_ASPECTS; 9:16 только у бренд-обложек (портрет). */
-function aspectForProject(project: ProjectData, index: number): string {
-  if (project.coverLayout === '9:16') return '9 / 16';
+/** В сетке всегда чередуем пропорции — coverLayout (в т.ч. 9:16) только для модалки/формы. */
+function aspectForProject(_project: ProjectData, index: number): string {
   return GRID_CARD_ASPECTS[index % GRID_CARD_ASPECTS.length];
 }
 
