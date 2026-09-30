@@ -87,7 +87,20 @@ export function useToggleLike(options: UseToggleLikeOptions) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!enabled || !id || isControlled) {
+    if (!enabled || !id) {
+      setLikedFromApi(null);
+      setLoadLoading(false);
+      setLoadError(false);
+      return;
+    }
+
+    // Auth нужен и в controlled (ЛК /favorites): иначе LikeHeartInteract держит кнопку disabled.
+    void (async () => {
+      const ok = pageAuth ?? (await getCachedIsAuthenticated());
+      if (!cancelled) setAuth(ok);
+    })();
+
+    if (isControlled) {
       setLikedFromApi(null);
       setLoadLoading(false);
       setLoadError(false);

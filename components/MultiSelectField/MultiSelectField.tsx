@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import textFieldStyles from '@/components/TextField/TextField.module.css';
 import styles from './MultiSelectField.module.css';
 
@@ -12,6 +13,8 @@ type MultiSelectFieldProps = {
   onToggleOpen: () => void;
   onToggleOption: (value: string) => void;
   onRemoveOption: (value: string) => void;
+  /** Закрыть при клике снаружи (для controlled open). */
+  onClose?: () => void;
 };
 
 export function MultiSelectField({
@@ -23,9 +26,30 @@ export function MultiSelectField({
   onToggleOpen,
   onToggleOption,
   onRemoveOption,
+  onClose,
 }: MultiSelectFieldProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocPointer = (e: MouseEvent | TouchEvent) => {
+      const root = rootRef.current;
+      if (!root) return;
+      const target = e.target;
+      if (!(target instanceof Node) || root.contains(target)) return;
+      if (onClose) onClose();
+      else if (open) onToggleOpen();
+    };
+    document.addEventListener('mousedown', onDocPointer);
+    document.addEventListener('touchstart', onDocPointer);
+    return () => {
+      document.removeEventListener('mousedown', onDocPointer);
+      document.removeEventListener('touchstart', onDocPointer);
+    };
+  }, [open, onClose, onToggleOpen]);
+
   return (
-    <div className={styles.root}>
+    <div className={styles.root} ref={rootRef}>
       <span className={styles.label}>{label}</span>
       <div className={styles.multiSelect}>
         <button

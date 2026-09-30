@@ -7,6 +7,7 @@ type CaseRoomTypeSelectProps = {
   selectedRooms: string[];
   roomsOpen: boolean;
   onToggleOpen: () => void;
+  onClose: () => void;
   onToggleRoom: (room: string) => void;
   onRemoveRoom: (room: string) => void;
 };
@@ -16,6 +17,7 @@ export function CaseRoomTypeSelect({
   selectedRooms,
   roomsOpen,
   onToggleOpen,
+  onClose,
   onToggleRoom,
   onRemoveRoom,
 }: CaseRoomTypeSelectProps) {
@@ -27,6 +29,7 @@ export function CaseRoomTypeSelect({
       selected={selectedRooms}
       open={roomsOpen}
       onToggleOpen={onToggleOpen}
+      onClose={onClose}
       onToggleOption={onToggleRoom}
       onRemoveOption={onRemoveRoom}
     />

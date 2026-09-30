@@ -551,6 +551,7 @@ export function CaseFormEditor({ mode, caseId: caseIdProp }: Props) {
           selectedRooms={selectedRooms}
           roomsOpen={roomsOpen}
           onToggleOpen={() => setRoomsOpen((prev) => !prev)}
+          onClose={() => setRoomsOpen(false)}
           onToggleRoom={toggleRoom}
           onRemoveRoom={removeRoom}
         />

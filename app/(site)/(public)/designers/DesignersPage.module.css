@@ -293,6 +293,20 @@ button.interactItem:disabled {
     margin-top: 78px;
   }
 
+  .designerCard {
+    padding: 8px 10px 8px 8px;
+    gap: 10px;
+  }
+
+  .designerCardInner {
+    gap: 12px;
+  }
+
+  .designerCardAvatar {
+    width: 96px;
+    height: 96px;
+  }
+
   .designerCardArrow {
     display: none;
   }
