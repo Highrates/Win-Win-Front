@@ -55,9 +55,12 @@ function ProfilePageContent() {
 
   const winWinPartnerApproved = Boolean(profile?.winWinPartnerApproved);
   const designerBonusPercent = profile?.designerOwnCatalogBonusPercent ?? 0;
-  const { items: activeInvites, reload: reloadActiveInvites } = useActiveDesignerInvites(
-    winWinPartnerApproved && !loading,
-  );
+  const {
+    items: activeInvites,
+    loading: activeInvitesLoading,
+    error: activeInvitesError,
+    reload: reloadActiveInvites,
+  } = useActiveDesignerInvites(winWinPartnerApproved && !loading);
   const showIncomeTab = winWinPartnerApproved || designerBonusPercent > 0;
   const availableTabKeys = useMemo<readonly ProfileTabKey[]>(
     () => (showIncomeTab ? (['info', 'income', 'settings'] as const) : (['info', 'settings'] as const)),
@@ -150,6 +153,9 @@ function ProfilePageContent() {
         <ProfileInfoTab
           profile={profile}
           activeInvites={activeInvites}
+          activeInvitesLoading={activeInvitesLoading}
+          activeInvitesError={activeInvitesError}
+          onRetryActiveInvites={() => void reloadActiveInvites()}
           onOpenProfileEdit={openProfileEdit}
           onOpenAboutEdit={() => setAboutModalOpen(true)}
           onOpenPartnerApply={() => openPartnerApply(undefined)}

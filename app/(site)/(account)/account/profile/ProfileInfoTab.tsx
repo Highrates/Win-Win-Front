@@ -11,6 +11,9 @@ import styles from './page.module.css';
 type Props = {
   profile: ProfileDto;
   activeInvites: ActiveDesignerInviteApi[];
+  activeInvitesLoading?: boolean;
+  activeInvitesError?: string | null;
+  onRetryActiveInvites?: () => void;
   onOpenProfileEdit: () => void;
   onOpenAboutEdit: () => void;
   onOpenPartnerApply: () => void;
@@ -20,6 +23,9 @@ type Props = {
 export function ProfileInfoTab({
   profile,
   activeInvites,
+  activeInvitesLoading = false,
+  activeInvitesError = null,
+  onRetryActiveInvites,
   onOpenProfileEdit,
   onOpenAboutEdit,
   onOpenPartnerApply,
@@ -146,7 +152,14 @@ export function ProfileInfoTab({
         </div>
       </div>
 
-      {winWinPartnerApproved ? <ActiveDesignerInvites items={activeInvites} /> : null}
+      {winWinPartnerApproved ? (
+        <ActiveDesignerInvites
+          items={activeInvites}
+          loading={activeInvitesLoading}
+          error={activeInvitesError}
+          onRetry={onRetryActiveInvites}
+        />
+      ) : null}
 
       {coverPreviewUrl ? (
         <div

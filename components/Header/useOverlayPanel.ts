@@ -102,7 +102,9 @@ export function useOverlayPanel({
     const t = window.setTimeout(() => {
       const panel = panelRef.current;
       if (!panel) return;
-      focusablesIn(panel)[0]?.focus();
+      /* Фокус на диалог, не на первую ссылку — иначе синяя рамка на «Каталог». */
+      if (!panel.hasAttribute('tabindex')) panel.tabIndex = -1;
+      panel.focus({ preventScroll: true });
     }, 80);
     return () => window.clearTimeout(t);
   }, [autoFocus, open, closing]);

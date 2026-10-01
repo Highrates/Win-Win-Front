@@ -15,7 +15,7 @@ import {
   type PartnerProgramBonusLineApi,
   type PartnerProgramSummaryApi,
 } from '@/lib/referrals/partnerProgramSummary';
-import teamStyles from '../team/page.module.css';
+import report from '@/components/styles/PartnerReportTable.module.css';
 import styles from './page.module.css';
 
 const INCOME_RANGE_TABS = ['1 мес', '3 мес', '6 мес', 'За все время'] as const;
@@ -92,12 +92,17 @@ export function ProfileIncomeTab() {
 
   return (
     <div className={styles.incomeTab}>
-      {statusLabel ? <p className={teamStyles.partnerStatus}>{statusLabel}</p> : null}
+      {statusLabel ? <p className={report.partnerStatus}>{statusLabel}</p> : null}
+      {summary?.linesMayBeIncomplete ? (
+        <p className={report.linesIncompleteHint} role="status">
+          Показаны недавние начисления (до 120 заказов). Полная история может быть больше.
+        </p>
+      ) : null}
 
-      <div className={`${teamStyles.sheetWrapper} ${styles.incomeSheetWrapper}`}>
-        <div className={teamStyles.sheetToolbar}>
-          <div className={teamStyles.toolbarRowPrimary}>
-            <div className={teamStyles.toolbarLeft}>
+      <div className={`${report.sheetWrapper} ${styles.incomeSheetWrapper}`}>
+        <div className={report.sheetToolbar}>
+          <div className={report.toolbarRowPrimary}>
+            <div className={report.toolbarLeft}>
               <TBtn type="button" aria-label="Выбрать период" trailingChevronDown>
                 26 янв - 26 фев.
               </TBtn>
@@ -112,35 +117,35 @@ export function ProfileIncomeTab() {
           </div>
         </div>
 
-        <div className={teamStyles.tableFrame}>
-          <div className={teamStyles.tableSummary}>
-            <div className={teamStyles.tableSummaryLeft}>
-              <span className={teamStyles.tableSummaryLabel}>Бонус со своих заказов:</span>
-              <span className={teamStyles.tableSummaryAmount}>{designerTotalLabel}</span>
+        <div className={report.tableFrame}>
+          <div className={report.tableSummary}>
+            <div className={report.tableSummaryLeft}>
+              <span className={report.tableSummaryLabel}>Бонус со своих заказов:</span>
+              <span className={report.tableSummaryAmount}>{designerTotalLabel}</span>
             </div>
-            <div className={teamStyles.tableSummaryRight}>
+            <div className={report.tableSummaryRight}>
               <TBtn type="button" variant="ghost">
                 Запросить выплату
               </TBtn>
             </div>
           </div>
 
-          <table className={teamStyles.table}>
+          <table className={report.table}>
             <thead>
               <tr>
-                <th scope="col" className={teamStyles.thLeftTight}>
+                <th scope="col" className={report.thLeftTight}>
                   Дата
                 </th>
-                <th scope="col" className={teamStyles.thDesigner}>
+                <th scope="col" className={report.thDesigner}>
                   № Заказа
                 </th>
-                <th scope="col" className={teamStyles.thRightTightFirst}>
+                <th scope="col" className={report.thRightTightFirst}>
                   Сумма
                 </th>
-                <th scope="col" className={teamStyles.thCenterPercent}>
+                <th scope="col" className={report.thCenterPercent}>
                   %
                 </th>
-                <th scope="col" className={teamStyles.thRightTight}>
+                <th scope="col" className={report.thRightTight}>
                   Вознаграждение
                 </th>
               </tr>
@@ -148,18 +153,18 @@ export function ProfileIncomeTab() {
             <tbody>
               {designerRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className={teamStyles.tdLeftTight}>
+                  <td colSpan={5} className={report.tdLeftTight}>
                     {loading ? 'Загрузка…' : 'Нет бонусов по завершённым собственным заказам'}
                   </td>
                 </tr>
               ) : (
                 designerRows.map((row) => (
                   <tr key={partnerLineKey(row)}>
-                    <td className={teamStyles.tdLeftTight}>{formatPartnerTableDate(row.orderUpdatedAt)}</td>
-                    <td className={teamStyles.tdDesigner}>{partnerLineOrderLabel(row)}</td>
-                    <td className={teamStyles.tdRightTightFirst}>{formatPartnerRubWhole(row.catalogTotalRub)}</td>
-                    <td className={teamStyles.tdCenterPercent}>{row.percentApplied}%</td>
-                    <td className={teamStyles.tdRightTight}>{formatPartnerRubWhole(row.bonusRub)}</td>
+                    <td className={report.tdLeftTight}>{formatPartnerTableDate(row.orderUpdatedAt)}</td>
+                    <td className={report.tdDesigner}>{partnerLineOrderLabel(row)}</td>
+                    <td className={report.tdRightTightFirst}>{formatPartnerRubWhole(row.catalogTotalRub)}</td>
+                    <td className={report.tdCenterPercent}>{row.percentApplied}%</td>
+                    <td className={report.tdRightTight}>{formatPartnerRubWhole(row.bonusRub)}</td>
                   </tr>
                 ))
               )}
@@ -168,17 +173,17 @@ export function ProfileIncomeTab() {
         </div>
 
         {summary?.isWinWinPartner ? (
-          <div className={teamStyles.tableFrame}>
-            <div className={`${teamStyles.tableSummary} ${styles.incomeTeamSummary}`}>
-              <div className={teamStyles.tableSummaryLeft}>
-                <span className={teamStyles.tableSummaryLabel}>Доход от команды:</span>
-                <span className={teamStyles.tableSummaryAmount}>{teamIncomeLabel}</span>
+          <div className={report.tableFrame}>
+            <div className={`${report.tableSummary} ${styles.incomeTeamSummary}`}>
+              <div className={report.tableSummaryLeft}>
+                <span className={report.tableSummaryLabel}>Доход от команды:</span>
+                <span className={report.tableSummaryAmount}>{teamIncomeLabel}</span>
                 <Link href="/account/team" className={styles.incomeTeamDetailsLink}>
                   Детали
                   <img src="/icons/arrow-right.svg" alt="" width={12} height={7} aria-hidden />
                 </Link>
               </div>
-              <div className={teamStyles.tableSummaryRight}>
+              <div className={report.tableSummaryRight}>
                 <TBtn type="button" variant="ghost">
                   Запросить выплату
                 </TBtn>

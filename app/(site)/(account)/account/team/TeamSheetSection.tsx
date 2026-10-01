@@ -1,109 +1,152 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
-import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
-import { TBtn } from '@/components/TBtn/TBtn';
-import type { TeamBranchCard } from '@/lib/account/teamTeammateLeadMock';
-import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AccountErrorState } from '@/components/AccountErrorState/AccountErrorState';
+import type { TeamBranchCard } from '@/lib/winWinTeam';
+import {
+  defaultCustomRangeYmd,
+  filterPartnerLinesByPeriod,
+  partnerPeriodForPreset,
+  partnerPeriodFromInclusiveYmd,
+  type PartnerReportPeriod,
+  type PartnerReportRangePreset,
+} from '@/lib/account/partnerReportPeriod';
+import { downloadPartnerTeamPdf } from '@/lib/account/exportPartnerTeamPdf';
 import {
   filterCompletedPartnerLines,
   filterReferralL1Lines,
   formatPartnerRubWhole,
-  formatPartnerTableDate,
-  partnerLineOrderLabel,
+  partnerLinePurchaserLabel,
   sumPartnerLinesBonusRub,
-  type PartnerProgramBonusLineApi,
   type PartnerProgramSummaryApi,
 } from '@/lib/referrals/partnerProgramSummary';
-import styles from './page.module.css';
-
-const TEAM_RANGE_TABS = ['1 мес', '3 мес', '6 мес', 'За все время'] as const;
+import { toDateInputValue } from '@/lib/adminDashboard/dashboardPeriod';
+import report from '@/components/styles/PartnerReportTable.module.css';
+import { PartnerIncomeTables } from './PartnerIncomeTables';
+import { TeamPeriodToolbar } from './TeamPeriodToolbar';
+import { TeamTree } from './TeamTree';
 
 const DASH = '—';
 
-function teamLineKey(line: PartnerProgramBonusLineApi): string {
-  return `${line.orderId}-${line.orderUpdatedAt}-${line.tier}-${line.bonusRub}`;
-}
-
-function TeammateBranchRow({ card }: { card: TeamBranchCard }) {
-  const [open, setOpen] = useState(false);
-  const branchListId = useId();
-
-  return (
-    <div className={styles.teammateBranchBlock}>
-      <button
-        type="button"
-        className={`${styles.teammateCard} ${styles.teammateCardTrigger}`}
-        aria-expanded={open}
-        aria-controls={branchListId}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <svg
-          className={`${styles.teammateCardChevron} ${open ? styles.teammateCardChevronOpen : ''}`}
-          viewBox="0 0 22 22"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden
-        >
-          <path
-            d="M8.25 16.5L13.75 11L8.25 5.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        <div className={styles.teammateCardMain}>
-          <img
-            src={card.avatarSrc}
-            alt=""
-            width={52}
-            height={52}
-            className={styles.teammateAvatar}
-            loading="lazy"
-          />
-          <div className={styles.teammateTexts}>
-            <span className={styles.teammateName}>{card.name}</span>
-            <span className={styles.teammateCity}>{card.city}</span>
-          </div>
-        </div>
-        <span className={styles.teammateBranchCount}>{card.branchCount} человек</span>
-      </button>
-
-      {open ? (
-        <div id={branchListId} className={styles.teammateExpandList} role="region" aria-label="Участники ветки">
-          {card.members.map((m) => (
-            <div key={m.id} className={styles.teammateTexts}>
-              <span className={styles.teammateName}>{m.name}</span>
-              <span className={styles.teammateCity}>{m.city}</span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+type L2LevelFilter = 'all' | 1 | 2;
 
 export function TeamSheetSection({
   branchCards,
+  searchActive = false,
   partnerSummary,
   partnerIncomeLoading = false,
+  partnerIncomeError = null,
+  onRetryPartnerIncome,
 }: {
   branchCards: TeamBranchCard[];
+  searchActive?: boolean;
   partnerSummary: PartnerProgramSummaryApi | null;
   partnerIncomeLoading?: boolean;
+  partnerIncomeError?: string | null;
+  onRetryPartnerIncome?: () => void;
 }) {
   const [rangeIndex, setRangeIndex] = useState(0);
+  const [period, setPeriod] = useState<PartnerReportPeriod>(() => partnerPeriodForPreset(0));
+  const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
+  const [draftFrom, setDraftFrom] = useState(() => defaultCustomRangeYmd().fromYmd);
+  const [draftTo, setDraftTo] = useState(() => defaultCustomRangeYmd().toYmd);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [designerFilterId, setDesignerFilterId] = useState<string | null>(null);
+  const [levelFilter, setLevelFilter] = useState<L2LevelFilter>('all');
+  const [designerMenuOpen, setDesignerMenuOpen] = useState(false);
+  const [levelMenuOpen, setLevelMenuOpen] = useState(false);
+  const periodMenuRef = useRef<HTMLDivElement>(null);
+  const designerMenuRef = useRef<HTMLDivElement>(null);
+  const levelMenuRef = useRef<HTMLDivElement>(null);
 
-  const l1Rows = useMemo(
+  useEffect(() => {
+    if (!periodMenuOpen && !designerMenuOpen && !levelMenuOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (periodMenuOpen && periodMenuRef.current && !periodMenuRef.current.contains(t)) {
+        setPeriodMenuOpen(false);
+      }
+      if (designerMenuOpen && designerMenuRef.current && !designerMenuRef.current.contains(t)) {
+        setDesignerMenuOpen(false);
+      }
+      if (levelMenuOpen && levelMenuRef.current && !levelMenuRef.current.contains(t)) {
+        setLevelMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setPeriodMenuOpen(false);
+      setDesignerMenuOpen(false);
+      setLevelMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [periodMenuOpen, designerMenuOpen, levelMenuOpen]);
+
+  const selectPreset = (index: number) => {
+    const preset = Math.min(3, Math.max(0, index)) as PartnerReportRangePreset;
+    const next = partnerPeriodForPreset(preset);
+    setRangeIndex(preset);
+    setPeriod(next);
+    setDraftFrom(toDateInputValue(next.from));
+    setDraftTo(toDateInputValue(new Date(next.toExclusive.getTime() - 1)));
+    setPeriodMenuOpen(false);
+    setExportError(null);
+  };
+
+  const applyCustomRange = () => {
+    const next = partnerPeriodFromInclusiveYmd(draftFrom, draftTo);
+    if (!next) return;
+    setPeriod(next);
+    setRangeIndex(-1);
+    setPeriodMenuOpen(false);
+    setExportError(null);
+  };
+
+  const l1All = useMemo(
     () => filterReferralL1Lines(partnerSummary?.personalLines ?? []),
     [partnerSummary?.personalLines],
   );
-
-  const teamRows = useMemo(
+  const l2All = useMemo(
     () => filterCompletedPartnerLines(partnerSummary?.teamLines ?? []),
     [partnerSummary?.teamLines],
   );
+
+  const l1Rows = useMemo(() => filterPartnerLinesByPeriod(l1All, period), [l1All, period]);
+  const teamInPeriod = useMemo(() => filterPartnerLinesByPeriod(l2All, period), [l2All, period]);
+
+  const designerOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of teamInPeriod) {
+      if (map.has(row.purchaserUserId)) continue;
+      map.set(row.purchaserUserId, partnerLinePurchaserLabel(row));
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  }, [teamInPeriod]);
+
+  useEffect(() => {
+    if (designerFilterId && !designerOptions.some((o) => o.id === designerFilterId)) {
+      setDesignerFilterId(null);
+    }
+  }, [designerFilterId, designerOptions]);
+
+  const teamRows = useMemo(() => {
+    let rows = teamInPeriod;
+    if (designerFilterId) {
+      rows = rows.filter((r) => r.purchaserUserId === designerFilterId);
+    }
+    if (levelFilter !== 'all') {
+      rows = rows.filter((r) => r.tier === levelFilter);
+    }
+    return rows;
+  }, [teamInPeriod, designerFilterId, levelFilter]);
 
   const l1IncomeTotalLabel =
     partnerIncomeLoading && !partnerSummary
@@ -116,151 +159,104 @@ export function TeamSheetSection({
     partnerIncomeLoading && !partnerSummary
       ? '…'
       : partnerSummary
-        ? formatPartnerRubWhole(partnerSummary.totals.teamCompletedRub)
+        ? formatPartnerRubWhole(sumPartnerLinesBonusRub(teamRows))
         : DASH;
 
+  const designerFilterLabel = designerFilterId
+    ? (designerOptions.find((o) => o.id === designerFilterId)?.name ?? 'По дизайнеру')
+    : 'По дизайнеру';
+  const levelFilterLabel =
+    levelFilter === 'all' ? 'По уровню' : levelFilter === 1 ? 'Уровень L1' : 'Уровень L2';
+
+  const onExportPdf = async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      await downloadPartnerTeamPdf({
+        period,
+        l1Lines: l1Rows,
+        l2Lines: teamRows,
+      });
+    } catch {
+      setExportError('Не удалось сформировать PDF. Попробуйте ещё раз.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
-    <div className={styles.sheetWrapper}>
-      <div className={styles.sheetToolbar}>
-        <div className={styles.toolbarRowPrimary}>
-          <div className={styles.toolbarLeft}>
-            <TBtn type="button" aria-label="Выбрать период" trailingChevronDown>
-              26 янв - 26 фев.
-            </TBtn>
-            <AccountProjectTabs
-              projects={TEAM_RANGE_TABS}
-              selectedIndex={rangeIndex}
-              onSelect={setRangeIndex}
-              ariaLabel="Период отчёта"
-            />
-          </div>
-          <TBtn type="button">Экспортировать CSV</TBtn>
-        </div>
-      </div>
+    <div className={report.sheetWrapper}>
+      {partnerIncomeError ? (
+        <AccountErrorState message={partnerIncomeError} onRetry={onRetryPartnerIncome} />
+      ) : (
+        <>
+          {partnerSummary?.linesMayBeIncomplete ? (
+            <p className={report.linesIncompleteHint} role="status">
+              Показаны недавние начисления (до 120 заказов). Полная история может быть больше.
+            </p>
+          ) : null}
+          <TeamPeriodToolbar
+            periodLabel={period.label}
+            periodMenuOpen={periodMenuOpen}
+            periodMenuRef={periodMenuRef}
+            draftFrom={draftFrom}
+            draftTo={draftTo}
+            onDraftFromChange={setDraftFrom}
+            onDraftToChange={setDraftTo}
+            onTogglePeriodMenu={() => {
+              if (periodMenuOpen) {
+                setPeriodMenuOpen(false);
+                return;
+              }
+              setDraftFrom(toDateInputValue(period.from));
+              setDraftTo(toDateInputValue(new Date(period.toExclusive.getTime() - 1)));
+              setPeriodMenuOpen(true);
+            }}
+            onApplyCustomRange={applyCustomRange}
+            rangeIndex={rangeIndex}
+            onSelectPreset={selectPreset}
+            onExportPdf={() => void onExportPdf()}
+            exporting={exporting}
+            exportDisabled={partnerIncomeLoading}
+            exportError={exportError}
+          />
+          <PartnerIncomeTables
+            l1Rows={l1Rows}
+            teamRows={teamRows}
+            l1IncomeTotalLabel={l1IncomeTotalLabel}
+            teamIncomeTotalLabel={teamIncomeTotalLabel}
+            partnerIncomeLoading={partnerIncomeLoading}
+            designerFilterId={designerFilterId}
+            designerFilterLabel={designerFilterLabel}
+            designerOptions={designerOptions}
+            designerMenuOpen={designerMenuOpen}
+            designerMenuRef={designerMenuRef}
+            onToggleDesignerMenu={() => {
+              setDesignerMenuOpen((o) => !o);
+              setLevelMenuOpen(false);
+            }}
+            onSelectDesigner={(id) => {
+              setDesignerFilterId(id);
+              setDesignerMenuOpen(false);
+            }}
+            levelFilter={levelFilter}
+            levelFilterLabel={levelFilterLabel}
+            levelMenuOpen={levelMenuOpen}
+            levelMenuRef={levelMenuRef}
+            onToggleLevelMenu={() => {
+              setLevelMenuOpen((o) => !o);
+              setDesignerMenuOpen(false);
+            }}
+            onSelectLevel={(level) => {
+              setLevelFilter(level);
+              setLevelMenuOpen(false);
+            }}
+          />
+        </>
+      )}
 
-      <div className={styles.tableFrame}>
-        <div className={styles.tableSummary}>
-          <div className={styles.tableSummaryLeft}>
-            <span className={styles.tableSummaryLabel}>Доход от прямых рефералов (L1):</span>
-            <span className={styles.tableSummaryAmount}>{l1IncomeTotalLabel}</span>
-          </div>
-        </div>
-
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col" className={styles.thLeftTight}>
-                Дата
-              </th>
-              <th scope="col" className={styles.thDesigner}>
-                № заказа
-              </th>
-              <th scope="col" className={styles.thRightTightFirst}>
-                Оборот
-              </th>
-              <th scope="col" className={styles.thCenterPercent}>
-                %
-              </th>
-              <th scope="col" className={styles.thRightTight}>
-                Вознаграждение
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {l1Rows.length === 0 ? (
-              <tr>
-                <td className={styles.tdLeftTight} colSpan={5}>
-                  {partnerIncomeLoading ? 'Загрузка…' : 'Нет начислений по прямым рефералам (L1)'}
-                </td>
-              </tr>
-            ) : (
-              l1Rows.map((row) => (
-                <tr key={teamLineKey(row)}>
-                  <td className={styles.tdLeftTight}>{formatPartnerTableDate(row.orderUpdatedAt)}</td>
-                  <td className={styles.tdDesigner}>{partnerLineOrderLabel(row)}</td>
-                  <td className={styles.tdRightTightFirst}>{formatPartnerRubWhole(row.catalogTotalRub)}</td>
-                  <td className={styles.tdCenterPercent}>{row.percentApplied}%</td>
-                  <td className={styles.tdRightTight}>{formatPartnerRubWhole(row.bonusRub)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className={styles.tableFrame}>
-        <div className={styles.tableSummary}>
-          <div className={styles.tableSummaryLeft}>
-            <span className={styles.tableSummaryLabel}>Доход от команды (L2):</span>
-            <span className={styles.tableSummaryAmount}>{teamIncomeTotalLabel}</span>
-          </div>
-          <div className={styles.tableSummaryRight}>
-            <TBtn type="button" variant="ghost" trailingChevronDown>
-              По дизайнеру
-            </TBtn>
-            <TBtn type="button" variant="ghost" trailingChevronDown>
-              По уровню
-            </TBtn>
-          </div>
-        </div>
-
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col" className={styles.thLeftTight}>
-                Дата
-              </th>
-              <th scope="col" className={styles.thDesigner}>
-                Дизайнер
-              </th>
-              <th scope="col" className={styles.thCenterLevel}>
-                Уровень
-              </th>
-              <th scope="col" className={styles.thRightTightFirst}>
-                Оборот
-              </th>
-              <th scope="col" className={styles.thCenterPercent}>
-                %
-              </th>
-              <th scope="col" className={styles.thRightTight}>
-                Вознаграждение
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {teamRows.length === 0 ? (
-              <tr>
-                <td className={styles.tdLeftTight} colSpan={6}>
-                  {partnerIncomeLoading ? 'Загрузка…' : 'Нет начислений по завершённым заказам команды (L2)'}
-                </td>
-              </tr>
-            ) : (
-              teamRows.map((row) => (
-                <tr key={teamLineKey(row)}>
-                  <td className={styles.tdLeftTight}>{formatPartnerTableDate(row.orderUpdatedAt)}</td>
-                  <td className={styles.tdDesigner}>{formatOrderDisplayId(row.purchaserUserId)}</td>
-                  <td className={styles.tdCenterLevel}>L{row.tier}</td>
-                  <td className={styles.tdRightTightFirst}>{formatPartnerRubWhole(row.catalogTotalRub)}</td>
-                  <td className={styles.tdCenterPercent}>{row.percentApplied}%</td>
-                  <td className={styles.tdRightTight}>{formatPartnerRubWhole(row.bonusRub)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className={styles.headingCardWrap}>
-        <h1 className={styles.pageTitle}>Команда</h1>
-
-        <div className={styles.teammateBranchesStack}>
-          {branchCards.length > 0 ? (
-            branchCards.map((card) => <TeammateBranchRow key={card.id} card={card} />)
-          ) : (
-            <p className={styles.teamEmptyHint}>В вашей команде пока нет дизайнеров</p>
-          )}
-        </div>
-      </div>
+      <TeamTree branchCards={branchCards} searchActive={searchActive} />
     </div>
   );
 }

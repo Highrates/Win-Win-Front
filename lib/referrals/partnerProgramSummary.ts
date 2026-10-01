@@ -6,6 +6,8 @@ export type PartnerProgramBonusLineApi = {
   orderUpdatedAt: string;
   catalogTotalRub: string;
   purchaserUserId: string;
+  /** Имя покупателя с бэка; null/пусто — не показывать userId как «имя». */
+  purchaserName?: string | null;
   tier: 1 | 2;
   percentApplied: number;
   bonusRub: string;
@@ -37,6 +39,8 @@ export type PartnerProgramSummaryApi = {
   };
   personalLines: PartnerProgramBonusLineApi[];
   teamLines: PartnerProgramBonusLineApi[];
+  /** Выборки заказов упёрлись в лимит — таблицы/суммы могут быть неполными. */
+  linesMayBeIncomplete?: boolean;
 };
 
 function parseMoneyToNumber(raw: string): number {
@@ -86,6 +90,12 @@ export function sumPartnerLinesBonusRub(lines: PartnerProgramBonusLineApi[]): nu
 
 export function partnerLineOrderLabel(line: PartnerProgramBonusLineApi): string {
   return formatOrderDisplayId(line.orderId);
+}
+
+/** Имя дизайнера/покупателя для L2; без сырого userId. */
+export function partnerLinePurchaserLabel(line: PartnerProgramBonusLineApi): string {
+  const name = line.purchaserName?.trim();
+  return name && name.length > 0 ? name : 'Дизайнер';
 }
 
 export async function fetchPartnerProgramSummary(): Promise<PartnerProgramSummaryApi | null> {

@@ -21,6 +21,13 @@
   color: var(--color-gray);
 }
 
+.statusMuted {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--color-gray);
+}
+
 .list {
   list-style: none;
   margin: 0;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig';
 import { dispatchAccountWorkNotificationsEvent, ACCOUNT_WORK_NOTIFICATIONS_EVENT, type AccountWorkNotificationsDetail } from '@/lib/account/orders';
-import teamPageStyles from '@/app/(site)/(account)/account/team/page.module.css';
+import report from '@/components/styles/PartnerReportTable.module.css';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
 import { useOrderChat } from '@/hooks/useOrderChat';
@@ -147,21 +147,21 @@ function AccountOrderItemsTable({
     return <p className={styles.muted}>Нет позиций</p>;
   }
   return (
-    <div className={`${teamPageStyles.tableFrame} ${styles.orderTableFrame}`}>
-      <table className={teamPageStyles.table}>
+    <div className={`${report.tableFrame} ${styles.orderTableFrame}`}>
+      <table className={report.table}>
         <thead>
           <tr>
-            <th scope="col" className={teamPageStyles.thLeftTight} style={{ width: 116 }} aria-hidden />
-            <th scope="col" className={teamPageStyles.thDesigner}>
+            <th scope="col" className={report.thLeftTight} style={{ width: 116 }} aria-hidden />
+            <th scope="col" className={report.thDesigner}>
               {positionHeader}
             </th>
-            <th scope="col" className={teamPageStyles.thCenterLevel}>
+            <th scope="col" className={report.thCenterLevel}>
               Кол-во
             </th>
-            <th scope="col" className={teamPageStyles.thRightTightFirst}>
+            <th scope="col" className={report.thRightTightFirst}>
               Цена
             </th>
-            <th scope="col" className={teamPageStyles.thRightTight}>
+            <th scope="col" className={report.thRightTight}>
               Сумма
             </th>
           </tr>
@@ -175,7 +175,7 @@ function AccountOrderItemsTable({
             const img = itemImageUrl(row);
             return (
               <tr key={row.id}>
-                <td className={`${teamPageStyles.tdLeftTight} ${styles.tdTopAlign}`}>
+                <td className={`${report.tdLeftTight} ${styles.tdTopAlign}`}>
                   <div className={styles.thumbWrap}>
                     {img ? (
                       <AccountGalleryThumb
@@ -190,7 +190,7 @@ function AccountOrderItemsTable({
                     )}
                   </div>
                 </td>
-                <td className={`${teamPageStyles.tdDesigner} ${styles.tdTopAlign}`}>
+                <td className={`${report.tdDesigner} ${styles.tdTopAlign}`}>
                   <div className={styles.lineName}>{itemTitle(row)}</div>
                   {row.product?.brand?.name ? <div className={styles.brandNote}>{row.product.brand.name}</div> : null}
                   {meta.length > 0 ? (
@@ -203,11 +203,11 @@ function AccountOrderItemsTable({
                     </ul>
                   ) : null}
                 </td>
-                <td className={teamPageStyles.tdCenterLevel}>
+                <td className={report.tdCenterLevel}>
                   {row.quantity} шт.
                 </td>
-                <td className={teamPageStyles.tdRightTightFirst}>{formatRub(row.price, order.currency)}</td>
-                <td className={teamPageStyles.tdRightTight}>
+                <td className={report.tdRightTightFirst}>{formatRub(row.price, order.currency)}</td>
+                <td className={report.tdRightTight}>
                   {Number.isFinite(lineTotal) ? formatRub(lineTotal, order.currency) : '—'}
                 </td>
               </tr>
@@ -216,12 +216,12 @@ function AccountOrderItemsTable({
           <tr className={styles.tableFooterRow}>
             <td
               colSpan={4}
-              className={`${teamPageStyles.tdRightTightFirst}${footerMuted ? ` ${styles.tableFooterMuted}` : ''}`}
+              className={`${report.tdRightTightFirst}${footerMuted ? ` ${styles.tableFooterMuted}` : ''}`}
             >
               Ожидаемая сумма заказа
             </td>
             <td
-              className={`${teamPageStyles.tdRightTight} ${styles.tableFooterValue}${footerMuted ? ` ${styles.tableFooterMuted}` : ''}`}
+              className={`${report.tdRightTight} ${styles.tableFooterValue}${footerMuted ? ` ${styles.tableFooterMuted}` : ''}`}
             >
               {formatRub(order.totalAmount, order.currency)}
             </td>
@@ -243,21 +243,21 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
   const hasDiscount = totals.oldTotalRub !== totals.newTotalRub || totals.avgDiscountPercent > 0;
 
   return (
-    <div className={`${teamPageStyles.tableFrame} ${styles.orderTableFrame}`}>
-      <table className={teamPageStyles.table}>
+    <div className={`${report.tableFrame} ${styles.orderTableFrame}`}>
+      <table className={report.table}>
         <thead>
           <tr>
-            <th scope="col" className={teamPageStyles.thLeftTight} style={{ width: 116 }} aria-hidden />
-            <th scope="col" className={teamPageStyles.thDesigner}>
+            <th scope="col" className={report.thLeftTight} style={{ width: 116 }} aria-hidden />
+            <th scope="col" className={report.thDesigner}>
               Позиция
             </th>
-            <th scope="col" className={teamPageStyles.thCenterLevel}>
+            <th scope="col" className={report.thCenterLevel}>
               Кол-во
             </th>
-            <th scope="col" className={teamPageStyles.thRightTightFirst}>
+            <th scope="col" className={report.thRightTightFirst}>
               Цена
             </th>
-            <th scope="col" className={teamPageStyles.thRightTight}>
+            <th scope="col" className={report.thRightTight}>
               Сумма
             </th>
             <th scope="col" className={styles.kpGrossColHead}>
@@ -279,7 +279,7 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
             const newUnit = kpLineUnitAfterDiscount(line);
             return (
               <tr key={line.id}>
-                <td className={`${teamPageStyles.tdLeftTight} ${styles.tdTopAlign}`}>
+                <td className={`${report.tdLeftTight} ${styles.tdTopAlign}`}>
                   <div className={styles.thumbWrap}>
                     {img ? (
                       <AccountGalleryThumb
@@ -294,7 +294,7 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
                     )}
                   </div>
                 </td>
-                <td className={teamPageStyles.tdDesigner}>
+                <td className={report.tdDesigner}>
                   <div className={styles.lineName}>{name}</div>
                   {meta.length ? (
                     <ul className={styles.muted} style={{ margin: '6px 0 0', paddingLeft: 18 }}>
@@ -311,10 +311,10 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
                     </div>
                   ) : null}
                 </td>
-                <td className={teamPageStyles.tdCenterLevel}>
+                <td className={report.tdCenterLevel}>
                   {line.quantity} {line.unit}
                 </td>
-                <td className={teamPageStyles.tdRightTightFirst}>
+                <td className={report.tdRightTightFirst}>
                   <div className={styles.kpPriceStack}>
                     {hasDisc ? (
                       <>
@@ -327,7 +327,7 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
                     )}
                   </div>
                 </td>
-                <td className={teamPageStyles.tdRightTight}>{formatRub(lineTotal, order.currency)}</td>
+                <td className={report.tdRightTight}>{formatRub(lineTotal, order.currency)}</td>
                 <td className={styles.kpGrossCol}>
                   <KpGrossDisplay snapshot={snap} />
                 </td>

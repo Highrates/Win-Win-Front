@@ -319,7 +319,7 @@
 }
 
 
-/* ——— Профиль: вкладка «Доход» (layout; таблица — классы из team/page.module.css) ——— */
+/* ——— Профиль: вкладка «Доход» (layout; таблица — PartnerReportTable.module.css) ——— */
 .incomeTab {
   display: flex;
   flex-direction: column;

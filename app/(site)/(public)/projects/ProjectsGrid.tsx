@@ -26,6 +26,8 @@ type Props = {
   projects: ProjectData[];
   stylesModule: Record<string, string>;
   titlesLeft?: ReactNode;
+  /** Скрыть строку заголовка/табов (заголовок снаружи, напр. на главной). */
+  hideTitles?: boolean;
   defaultView?: ViewMode;
   gridOnly?: boolean;
   productFilterTabs?: boolean;
@@ -39,6 +41,7 @@ export function ProjectsGrid({
   projects,
   stylesModule,
   titlesLeft,
+  hideTitles = false,
   defaultView = 'list',
   gridOnly = false,
   productFilterTabs = false,
@@ -151,7 +154,7 @@ export function ProjectsGrid({
 
   return (
     <div className={gridStyles.root}>
-      {productFilterTabs ? (
+      {hideTitles ? null : productFilterTabs ? (
         <UnderlineTabs
           ariaLabel="Фильтр проектов"
           tabs={PRODUCT_FILTER_TABS}

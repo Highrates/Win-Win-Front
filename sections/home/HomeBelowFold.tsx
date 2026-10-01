@@ -7,6 +7,7 @@ import { BestBrands } from './BestBrands/BestBrands';
 import { AboutTeaser } from './AboutTeaser/AboutTeaser';
 import { News } from './News/News';
 import { NewsSkeleton } from './News/NewsSkeleton';
+import { HomeProjects } from './HomeProjects/HomeProjects';
 import { HomeProductCollections } from './HomeProductCollections';
 import { HomeProductLikesScope } from './HomeProductLikesScope';
 
@@ -22,6 +23,9 @@ export async function HomeBelowFold() {
       <AboutTeaser />
       <Suspense fallback={<NewsSkeleton />}>
         <News />
+      </Suspense>
+      <Suspense fallback={null}>
+        <HomeProjects />
       </Suspense>
       <HomeProductCollections
         sections={sections.recommendationsRail ? [sections.recommendationsRail] : []}

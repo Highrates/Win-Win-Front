@@ -16,17 +16,22 @@ export function dispatchDesignerInvitesChanged(): void {
 export function useActiveDesignerInvites(enabled: boolean) {
   const [items, setItems] = useState<ActiveDesignerInviteApi[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!enabled) {
       setItems([]);
+      setError(null);
+      setLoading(false);
       return;
     }
     setLoading(true);
+    setError(null);
     try {
       setItems(await fetchActiveDesignerInvites());
-    } catch {
+    } catch (e) {
       setItems([]);
+      setError(e instanceof Error ? e.message : 'Не удалось загрузить приглашения');
     } finally {
       setLoading(false);
     }
@@ -43,5 +48,5 @@ export function useActiveDesignerInvites(enabled: boolean) {
     return () => window.removeEventListener(DESIGNER_INVITES_CHANGED_EVENT, onChanged);
   }, [enabled, reload]);
 
-  return { items, loading, reload };
+  return { items, loading, error, reload };
 }

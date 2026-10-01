@@ -64,6 +64,7 @@ export function HeaderOverlayShell({
         aria-modal="true"
         aria-label={ariaLabel}
         aria-hidden={!open}
+        tabIndex={-1}
       >
         <div
           className={[styles.superMenuSlideWrap, slideWrapClassName].filter(Boolean).join(' ')}

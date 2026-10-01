@@ -9,24 +9,17 @@ import { InviteDesignerModal } from '@/components/InviteDesignerModal/InviteDesi
 import { ActiveDesignerInvites } from '@/components/ActiveDesignerInvites/ActiveDesignerInvites';
 import { readApiErrorMessage } from '@/lib/readApiErrorMessage';
 import { useActiveDesignerInvites } from '@/hooks/useActiveDesignerInvites';
-import { mapWinWinL1ToBranchCards, type WinWinTeamOverviewDto } from '@/lib/winWinTeam';
+import {
+  filterTeamBranchCards,
+  mapWinWinL1ToBranchCards,
+  russianPluralChelovek,
+  type WinWinTeamOverviewDto,
+} from '@/lib/winWinTeam';
 import { fetchPartnerProgramSummary, type PartnerProgramSummaryApi } from '@/lib/referrals/partnerProgramSummary';
+import report from '@/components/styles/PartnerReportTable.module.css';
 import { TeamSheetSection } from './TeamSheetSection';
+import { TeamPageSkeleton } from './TeamPageSkeleton';
 import styles from './page.module.css';
-
-function normalizeSearch(q: string): string {
-  return q.trim().toLowerCase();
-}
-
-function russianPluralChelovek(count: number): string {
-  const n = Math.abs(Math.floor(Number(count)));
-  const mod100 = n % 100;
-  const mod10 = n % 10;
-  if (mod100 >= 11 && mod100 <= 14) return 'человек';
-  if (mod10 === 1) return 'человек';
-  if (mod10 >= 2 && mod10 <= 4) return 'человека';
-  return 'человек';
-}
 
 type ProfileRefDto = { winWinReferralCode?: string | null };
 
@@ -42,9 +35,28 @@ export function TeamPageClient() {
   const [myWinWinReferral, setMyWinWinReferral] = useState<string | null>(null);
   const [partnerSummary, setPartnerSummary] = useState<PartnerProgramSummaryApi | null>(null);
   const [partnerIncomeLoading, setPartnerIncomeLoading] = useState(false);
+  const [partnerIncomeError, setPartnerIncomeError] = useState<string | null>(null);
   const [inviteDesignerModalOpen, setInviteDesignerModalOpen] = useState(false);
   const teamLoaded = !loading && !error && Boolean(data);
-  const { items: activeInvites, reload: reloadActiveInvites } = useActiveDesignerInvites(teamLoaded);
+  const {
+    items: activeInvites,
+    loading: activeInvitesLoading,
+    error: activeInvitesError,
+    reload: reloadActiveInvites,
+  } = useActiveDesignerInvites(teamLoaded);
+
+  const loadPartnerIncome = useCallback(async () => {
+    setPartnerIncomeLoading(true);
+    setPartnerIncomeError(null);
+    try {
+      setPartnerSummary(await fetchPartnerProgramSummary());
+    } catch (e) {
+      setPartnerSummary(null);
+      setPartnerIncomeError(e instanceof Error ? e.message : 'Не удалось загрузить доход');
+    } finally {
+      setPartnerIncomeLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +67,7 @@ export function TeamPageClient() {
         setError('forbidden');
         setData(null);
         setPartnerSummary(null);
+        setPartnerIncomeError(null);
         setPartnerIncomeLoading(false);
         return;
       }
@@ -62,25 +75,22 @@ export function TeamPageClient() {
         setError(await readApiErrorMessage(res));
         setData(null);
         setPartnerSummary(null);
+        setPartnerIncomeError(null);
         setPartnerIncomeLoading(false);
         return;
       }
       setData((await res.json()) as WinWinTeamOverviewDto);
-      setPartnerIncomeLoading(true);
-      setPartnerSummary(null);
-      void fetchPartnerProgramSummary()
-        .then((s) => setPartnerSummary(s))
-        .catch(() => setPartnerSummary(null))
-        .finally(() => setPartnerIncomeLoading(false));
+      void loadPartnerIncome();
     } catch {
       setError('Не удалось загрузить данные команды. Попробуйте позже.');
       setData(null);
       setPartnerSummary(null);
+      setPartnerIncomeError(null);
       setPartnerIncomeLoading(false);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadPartnerIncome]);
 
   useEffect(() => {
     void load();
@@ -107,15 +117,11 @@ export function TeamPageClient() {
   }, [data]);
 
   const branchCards = useMemo(() => (data?.l1 ? mapWinWinL1ToBranchCards(data.l1) : []), [data]);
-
-  const filteredBranchCards = useMemo(() => {
-    const q = normalizeSearch(search);
-    if (!q) return branchCards;
-    return branchCards.filter((c) => {
-      const hay = `${c.name} ${c.city} ${c.members.map((m) => `${m.name} ${m.city}`).join(' ')}`.toLowerCase();
-      return hay.includes(q);
-    });
-  }, [branchCards, search]);
+  const searchActive = search.trim().length > 0;
+  const filteredBranchCards = useMemo(
+    () => filterTeamBranchCards(branchCards, search),
+    [branchCards, search],
+  );
 
   const inviterHref =
     data?.inviter?.designerSlug && data.inviter.designerSlug.length > 0
@@ -123,12 +129,13 @@ export function TeamPageClient() {
       : null;
 
   if (loading) {
-    return <p className={styles.pageLeadMuted}>Загрузка…</p>;
+    return <TeamPageSkeleton />;
   }
 
   if (error === 'forbidden') {
     return (
       <div className={styles.page}>
+        <h1 className={styles.pageTitle}>Команда</h1>
         <p className={styles.partnerGateText}>
           Раздел «Команда» доступен одобренным партнёрам Win‑Win.
         </p>
@@ -142,6 +149,7 @@ export function TeamPageClient() {
   if (error || !data) {
     return (
       <div className={styles.page}>
+        <h1 className={styles.pageTitle}>Команда</h1>
         <p className={styles.partnerGateText} role="alert">
           {error ?? 'Не удалось загрузить данные'}
         </p>
@@ -154,6 +162,8 @@ export function TeamPageClient() {
 
   return (
     <div className={styles.page}>
+      <h1 className={styles.pageTitle}>Команда</h1>
+
       <div className={styles.topBar}>
         <SearchBox
           placeholder="Поиск по членам команды"
@@ -167,11 +177,16 @@ export function TeamPageClient() {
         </Button>
       </div>
 
-      <ActiveDesignerInvites items={activeInvites} />
+      <ActiveDesignerInvites
+        items={activeInvites}
+        loading={activeInvitesLoading}
+        error={activeInvitesError}
+        onRetry={() => void reloadActiveInvites()}
+      />
 
       <div className={styles.summaryColumn}>
         <div className={styles.summaryRowTop}>
-          <p className={styles.partnerStatus}>Партнёр Wupapa</p>
+          <p className={report.partnerStatus}>Партнёр Wupapa</p>
           <Link href="/referral" className={styles.programLink}>
             Подробнее о программе Win Win
           </Link>
@@ -209,8 +224,11 @@ export function TeamPageClient() {
 
       <TeamSheetSection
         branchCards={filteredBranchCards}
+        searchActive={searchActive}
         partnerSummary={partnerSummary}
         partnerIncomeLoading={partnerIncomeLoading}
+        partnerIncomeError={partnerIncomeError}
+        onRetryPartnerIncome={() => void loadPartnerIncome()}
       />
 
       <InviteDesignerModal

@@ -4,6 +4,7 @@ export { BestBrands } from './BestBrands/BestBrands';
 export type { BestBrandsBrandItem, BestBrandsProps } from './BestBrands/BestBrands';
 export { AboutTeaser } from './AboutTeaser/AboutTeaser';
 export { News } from './News/News';
+export { HomeProjects } from './HomeProjects/HomeProjects';
 export { Recommendations } from './Recommendations/Recommendations';
 export { HomeProductCollections } from './HomeProductCollections';
 export type { RecommendationsStaticItem } from './Recommendations/recommendationsStaticItem';

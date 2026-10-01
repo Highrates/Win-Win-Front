@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import btnStyles from '@/components/Button/Button.module.css';
@@ -25,11 +25,19 @@ export type InviteDesignerModalProps = {
 
 type InviteTab = 'email' | 'public';
 
+const TAB_ORDER: InviteTab[] = ['email', 'public'];
+
 export function InviteDesignerModal({ open, onClose, referralCode, onSent }: InviteDesignerModalProps) {
   const invite = useInviteDesigner();
   const { reset, resetForAnother, submit, setEmail, setError, setCopied, email, sending, error, done, sentEmail, inviteLink, copied } =
     invite;
   const [tab, setTab] = useState<InviteTab>('email');
+  const emailTabId = useId();
+  const publicTabId = useId();
+  const emailPanelId = useId();
+  const publicPanelId = useId();
+  const emailTabRef = useRef<HTMLButtonElement>(null);
+  const publicTabRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -66,6 +74,30 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
     },
     [submit],
   );
+
+  const focusTab = (next: InviteTab) => {
+    setTab(next);
+    window.setTimeout(() => {
+      (next === 'email' ? emailTabRef : publicTabRef).current?.focus();
+    }, 0);
+  };
+
+  const onTabListKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
+    e.preventDefault();
+    const idx = TAB_ORDER.indexOf(tab);
+    if (e.key === 'Home') {
+      focusTab(TAB_ORDER[0]!);
+      return;
+    }
+    if (e.key === 'End') {
+      focusTab(TAB_ORDER[TAB_ORDER.length - 1]!);
+      return;
+    }
+    const delta = e.key === 'ArrowRight' ? 1 : -1;
+    const next = TAB_ORDER[(idx + delta + TAB_ORDER.length) % TAB_ORDER.length]!;
+    focusTab(next);
+  };
 
   const isFieldValidationError =
     error === 'Введите email' || error === 'Некорректный email';
@@ -106,20 +138,33 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
         ) : (
           <>
             <h3 className={panelModal.title}>Пригласить дизайнера</h3>
-            <div className={styles.tabList} role="tablist" aria-label="Способ приглашения">
+            <div
+              className={styles.tabList}
+              role="tablist"
+              aria-label="Способ приглашения"
+              onKeyDown={onTabListKeyDown}
+            >
               <button
+                ref={emailTabRef}
                 type="button"
+                id={emailTabId}
                 role="tab"
                 aria-selected={tab === 'email'}
+                aria-controls={emailPanelId}
+                tabIndex={tab === 'email' ? 0 : -1}
                 className={`${styles.tab} ${tab === 'email' ? styles.tabActive : ''}`}
                 onClick={() => setTab('email')}
               >
                 По email
               </button>
               <button
+                ref={publicTabRef}
                 type="button"
+                id={publicTabId}
                 role="tab"
                 aria-selected={tab === 'public'}
+                aria-controls={publicPanelId}
+                tabIndex={tab === 'public' ? 0 : -1}
                 className={`${styles.tab} ${tab === 'public' ? styles.tabActive : ''}`}
                 onClick={() => setTab('public')}
               >
@@ -127,7 +172,13 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
               </button>
             </div>
             {tab === 'email' ? (
-              <form onSubmit={submitInviteDesigner} noValidate>
+              <form
+                id={emailPanelId}
+                role="tabpanel"
+                aria-labelledby={emailTabId}
+                onSubmit={submitInviteDesigner}
+                noValidate
+              >
                 <div className={profileSheetStyles.partnerFormField}>
                   <TextField
                     label="Email"
@@ -160,7 +211,9 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
                 </div>
               </form>
             ) : (
-              <PartnerReferralLinkTab referralCode={referralCode} />
+              <div id={publicPanelId} role="tabpanel" aria-labelledby={publicTabId}>
+                <PartnerReferralLinkTab referralCode={referralCode} />
+              </div>
             )}
           </>
         )}

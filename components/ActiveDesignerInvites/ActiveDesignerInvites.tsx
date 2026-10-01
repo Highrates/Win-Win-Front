@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { AccountErrorState } from '@/components/AccountErrorState/AccountErrorState';
 import btnStyles from '@/components/Button/Button.module.css';
 import profileSheetStyles from '@/app/(site)/(account)/account/profile/page.module.css';
 import { copyTextToClipboard } from '@/lib/copyToClipboard';
@@ -14,9 +15,18 @@ type ActiveDesignerInvitesProps = {
   items: ActiveDesignerInviteApi[];
   /** Компактный вариант — в одну строку с кнопкой приглашения */
   compact?: boolean;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 };
 
-export function ActiveDesignerInvites({ items, compact = false }: ActiveDesignerInvitesProps) {
+export function ActiveDesignerInvites({
+  items,
+  compact = false,
+  loading = false,
+  error = null,
+  onRetry,
+}: ActiveDesignerInvitesProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const copyLink = useCallback(async (item: ActiveDesignerInviteApi) => {
@@ -28,6 +38,29 @@ export function ActiveDesignerInvites({ items, compact = false }: ActiveDesigner
       setCopiedId(null);
     }
   }, []);
+
+  if (error) {
+    return (
+      <section
+        className={compact ? styles.wrapCompact : styles.wrap}
+        aria-label="Активные приглашения дизайнеров"
+      >
+        <AccountErrorState message={error} onRetry={onRetry} />
+      </section>
+    );
+  }
+
+  if (loading && items.length === 0) {
+    return (
+      <section
+        className={compact ? styles.wrapCompact : styles.wrap}
+        aria-label="Активные приглашения дизайнеров"
+        aria-busy="true"
+      >
+        <p className={styles.statusMuted}>Загрузка приглашений…</p>
+      </section>
+    );
+  }
 
   if (items.length === 0) return null;
 
