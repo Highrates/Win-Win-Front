@@ -33,8 +33,8 @@ export function adminProductSetsListStrings(locale: AdminLocale) {
     thCount: pick(locale, 'Кол-во позиций', '条目数'),
     thVis: pick(locale, 'Доступность', '可见性'),
     selectOne: (name: string) => pick(locale, `Выбрать ${name}`, `选择 ${name}`),
-    inCatalog: pick(locale, 'В каталоге', '目录中'),
-    hidden: pick(locale, 'Скрыт', '已隐藏'),
+    published: pick(locale, 'Опубликовано', '已发布'),
+    hidden: pick(locale, 'Скрыто', '已隐藏'),
   };
 }
 
@@ -74,6 +74,8 @@ export function adminProductSetEditorStrings(locale: AdminLocale) {
     brandNone: pick(locale, '— Не выбран —', '— 未选择 —'),
     activeAria: pick(locale, 'Доступен на витрине', '在前台可见'),
     activeLabel: pick(locale, 'Доступен на витрине', '在前台可见'),
+    published: pick(locale, 'Опубликовано', '已发布'),
+    hidden: pick(locale, 'Скрыто', '已隐藏'),
     seoHeading: pick(locale, 'SEO', 'SEO'),
     seoTitle: pick(locale, 'SEO title (витрина)', 'SEO 标题（前台）'),
     seoDesc: pick(locale, 'SEO description (витрина)', 'SEO 描述（前台）'),

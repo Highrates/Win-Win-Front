@@ -372,7 +372,16 @@ export function MediaLibraryPickerModal({
       return <div className={libStyles.thumbPlaceholder}>3D модель</div>;
     }
     if (row.category === 'VIDEO') {
-      return <div className={libStyles.thumbPlaceholder}>Видео</div>;
+      return (
+        <video
+          className={libStyles.thumbVideo}
+          src={`${row.publicUrl}#t=0.001`}
+          muted
+          playsInline
+          preload="metadata"
+          aria-hidden
+        />
+      );
     }
     return <div className={libStyles.thumbPlaceholder}>Файл</div>;
   }

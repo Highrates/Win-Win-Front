@@ -16,6 +16,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import Link from 'next/link';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
 import { adminCollectionsListStrings } from '@/lib/admin-i18n/adminCollectionsI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import styles from '../catalog/catalogAdmin.module.css';
@@ -44,7 +45,7 @@ function SortableRow({
   };
 
   return (
-    <tr ref={setNodeRef} style={style}>
+    <tr ref={setNodeRef} style={style} className={!row.isActive ? styles.rowInactive : undefined}>
       <td className={styles.dragHandle} {...attributes} {...listeners} title={t.drag}>
         ⋮⋮
       </td>
@@ -63,9 +64,11 @@ function SortableRow({
       <td>{kindLabel}</td>
       <td>{row.itemCount}</td>
       <td>
-        <span className={`${styles.badge} ${row.isActive ? styles.badgeOn : styles.badgeOff}`}>
-          {row.isActive ? t.inCatalog : t.hidden}
-        </span>
+        <AdminCatalogVisibilityBadge
+          isActive={row.isActive}
+          publishedLabel={t.published}
+          hiddenLabel={t.hidden}
+        />
       </td>
     </tr>
   );

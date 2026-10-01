@@ -58,6 +58,9 @@ export function adminCategoryTableStrings(locale: AdminLocale) {
     ),
     thSubcats: pick(locale, 'Подкатегорий', '子类别数'),
     thProducts: pick(locale, 'Товаров', '商品'),
+    thVis: pick(locale, 'Доступность', '可见性'),
+    published: pick(locale, 'Опубликовано', '已发布'),
+    hidden: pick(locale, 'Скрыто', '已隐藏'),
     selectAllCats: pick(locale, 'Выбрать все категории', '全选类别'),
   };
 }
@@ -106,7 +109,9 @@ export function adminCategoryDetailStrings(locale: AdminLocale) {
     noProducts: pick(locale, 'В этой категории пока нет товаров.', '该类别暂无商品。'),
     thName: pick(locale, 'Название', '名称'),
     thPrice: pick(locale, 'Цена', '价格'),
-    thActive: pick(locale, 'Активен', '启用'),
+    thActive: pick(locale, 'Доступность', '可见性'),
+    published: pick(locale, 'Опубликовано', '已发布'),
+    hidden: pick(locale, 'Скрыто', '已隐藏'),
     yes: pick(locale, 'да', '是'),
     no: pick(locale, 'нет', '否'),
   };

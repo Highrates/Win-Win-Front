@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
 import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import { AdminTableRemoveButton } from '@/components/admin/AdminTableRemoveButton/AdminTableRemoveButton';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
@@ -431,7 +432,14 @@ export function ProductSetEditorClient({ setId }: { setId?: string }) {
       ) : null}
 
       <div className={styles.detailTitleRow}>
-        <h1 className={styles.title}>{isEdit ? s.titleEdit : s.titleNew}</h1>
+        <div className={styles.detailTitleWithBadge}>
+          <h1 className={styles.title}>{isEdit ? s.titleEdit : s.titleNew}</h1>
+          <AdminCatalogVisibilityBadge
+            isActive={isActive}
+            publishedLabel={s.published}
+            hiddenLabel={s.hidden}
+          />
+        </div>
         <AdminCompactBtn
           type="submit"
           form={PRODUCT_SET_FORM_ID}

@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
 import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import { AdminTableRemoveButton } from '@/components/admin/AdminTableRemoveButton/AdminTableRemoveButton';
 import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
@@ -533,7 +534,14 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
       ) : null}
 
       <div className={styles.detailTitleRow}>
-        <h1 className={styles.title}>{isEdit ? str.titleEdit : str.titleNew}</h1>
+        <div className={styles.detailTitleWithBadge}>
+          <h1 className={styles.title}>{isEdit ? str.titleEdit : str.titleNew}</h1>
+          <AdminCatalogVisibilityBadge
+            isActive={isActive}
+            publishedLabel={str.published}
+            hiddenLabel={str.hidden}
+          />
+        </div>
         <AdminCompactBtn
           type="submit"
           form={COLLECTION_FORM_ID}

@@ -110,6 +110,7 @@ type ObjectsLibraryClientProps = {
 
 type UploadBatchItem = {
   previewUrl: string | null;
+  previewKind: 'image' | 'video' | null;
   fileName: string;
   status: 'pending' | 'uploading' | 'done' | 'error' | 'cancelled';
   error?: string;
@@ -614,11 +615,16 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
     e.target.value = '';
     if (!list.length) return;
 
-    const batchItems: UploadBatchItem[] = list.map((file) => ({
-      fileName: file.name,
-      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-      status: 'pending',
-    }));
+    const batchItems: UploadBatchItem[] = list.map((file) => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      return {
+        fileName: file.name,
+        previewUrl: isImage || isVideo ? URL.createObjectURL(file) : null,
+        previewKind: isImage ? 'image' : isVideo ? 'video' : null,
+        status: 'pending',
+      };
+    });
 
     uploadCancelledRef.current = false;
     uploadAbortRef.current = null;
@@ -727,7 +733,16 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
       return <div className={styles.thumbPlaceholder}>{s.thumbModel3d}</div>;
     }
     if (row.category === 'VIDEO') {
-      return <div className={styles.thumbPlaceholder}>{s.thumbVideo}</div>;
+      return (
+        <video
+          className={styles.thumbVideo}
+          src={`${row.publicUrl}#t=0.001`}
+          muted
+          playsInline
+          preload="metadata"
+          aria-hidden
+        />
+      );
     }
     return <div className={styles.thumbPlaceholder}>{s.fileGeneric}</div>;
   }
@@ -1267,8 +1282,16 @@ export function ObjectsLibraryClient({ lead }: ObjectsLibraryClientProps) {
                     }`}
                   >
                     <div className={styles.uploadProgressThumb}>
-                      {item.previewUrl ? (
+                      {item.previewUrl && item.previewKind === 'image' ? (
                         <img src={item.previewUrl} alt="" />
+                      ) : item.previewUrl && item.previewKind === 'video' ? (
+                        <video
+                          src={`${item.previewUrl}#t=0.001`}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          aria-hidden
+                        />
                       ) : (
                         <span className={styles.uploadProgressThumbPlaceholder}>{s.fileGeneric}</span>
                       )}

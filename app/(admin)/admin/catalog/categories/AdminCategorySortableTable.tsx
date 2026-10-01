@@ -17,6 +17,7 @@ import { CSS } from '@dnd-kit/utilities';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
 import { adminCategoryTableStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import type { AdminCategoryRow } from './adminCategoryTypes';
@@ -68,6 +69,13 @@ function SortableRow({
         {row.recursiveProductCount}
       </td>
       <td>{row._count.children}</td>
+      <td>
+        <AdminCatalogVisibilityBadge
+          isActive={row.isActive}
+          publishedLabel={t.published}
+          hiddenLabel={t.hidden}
+        />
+      </td>
     </tr>
   );
 }
@@ -96,6 +104,7 @@ function TableHead({
         <th>{t.thParent}</th>
         <th title={t.thProductsTotalTitle}>{t.thProductsTotal}</th>
         <th>{t.thSubcats}</th>
+        <th>{t.thVis}</th>
       </tr>
     </thead>
   );

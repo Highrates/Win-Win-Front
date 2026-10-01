@@ -45,8 +45,8 @@ export function adminCollectionsListStrings(locale: AdminLocale) {
     thCount: pick(locale, 'Кол-во позиций', '条目数'),
     thVis: pick(locale, 'Доступность', '可见性'),
     selectOne: (name: string) => pick(locale, `Выбрать ${name}`, `选择 ${name}`),
-    inCatalog: pick(locale, 'В каталоге', '目录中'),
-    hidden: pick(locale, 'Скрыта', '已隐藏'),
+    published: pick(locale, 'Опубликовано', '已发布'),
+    hidden: pick(locale, 'Скрыто', '已隐藏'),
   };
 }
 
@@ -93,6 +93,8 @@ export function adminCollectionEditorStrings(locale: AdminLocale) {
     removeCover: pick(locale, 'Убрать обложку', '移除封面'),
     activeAria: pick(locale, 'Доступна на витрине', '在前台可见'),
     activeLabel: pick(locale, 'Доступна на витрине', '在前台可见'),
+    published: pick(locale, 'Опубликовано', '已发布'),
+    hidden: pick(locale, 'Скрыто', '已隐藏'),
     seoHeading: pick(locale, 'SEO', 'SEO'),
     seoTitle: pick(locale, 'SEO title (витрина)', 'SEO 标题（前台）'),
     seoDesc: pick(locale, 'SEO description (витрина)', 'SEO 描述（前台）'),

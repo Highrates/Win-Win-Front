@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
 import { AdminListPagination } from '@/components/admin/AdminListPagination/AdminListPagination';
 import { AdminListShell } from '@/components/admin/AdminListShell/AdminListShell';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
@@ -445,9 +446,11 @@ export function ProductsListClient() {
               </td>
               <td>{formatPrice(r.price, r.currency, numberLocale)}</td>
               <td>
-                <span className={`${styles.badge} ${r.isActive ? styles.badgeOn : styles.badgeOff}`}>
-                  {r.isActive ? s.inCatalog : s.hidden}
-                </span>
+                <AdminCatalogVisibilityBadge
+                  isActive={r.isActive}
+                  publishedLabel={s.published}
+                  hiddenLabel={s.hidden}
+                />
               </td>
             </tr>
           ))}

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
 import { adminCategoryTableStrings } from '@/lib/admin-i18n/adminCategoriesI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import type { AdminCategoryRow } from './adminCategoryTypes';
@@ -44,6 +45,7 @@ export function AdminCategorySearchTable({
             <th>{t.thParent}</th>
             <th title={t.thProductsTotalTitle}>{t.thProductsTotal}</th>
             <th>{t.thSubcats}</th>
+            <th>{t.thVis}</th>
           </tr>
         </thead>
         <tbody>
@@ -68,6 +70,13 @@ export function AdminCategorySearchTable({
                 {r.recursiveProductCount}
               </td>
               <td>{r._count.children}</td>
+              <td>
+                <AdminCatalogVisibilityBadge
+                  isActive={r.isActive}
+                  publishedLabel={t.published}
+                  hiddenLabel={t.hidden}
+                />
+              </td>
             </tr>
           ))}
         </tbody>

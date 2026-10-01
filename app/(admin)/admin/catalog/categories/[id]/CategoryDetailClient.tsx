@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
@@ -207,7 +208,14 @@ export function CategoryDetailClient({ id }: { id: string }) {
 
       <div className={styles.detailHero}>
         <div className={styles.detailTitleRow}>
-          <h1 className={styles.title}>{name}</h1>
+          <div className={styles.detailTitleWithBadge}>
+            <h1 className={styles.title}>{name}</h1>
+            <AdminCatalogVisibilityBadge
+              isActive={isActive}
+              publishedLabel={s.published}
+              hiddenLabel={s.hidden}
+            />
+          </div>
           <div className={styles.detailTitleActions}>
             <AdminCompactBtn
               type="submit"
@@ -349,7 +357,13 @@ export function CategoryDetailClient({ id }: { id: string }) {
                       </a>
                     </td>
                     <td>{formatPrice(p.price, p.currency, numberLocale)}</td>
-                    <td>{p.isActive ? s.yes : s.no}</td>
+                    <td>
+                      <AdminCatalogVisibilityBadge
+                        isActive={p.isActive}
+                        publishedLabel={s.published}
+                        hiddenLabel={s.hidden}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
