@@ -1,6 +1,6 @@
 'use client';
 
-import type { RefObject } from 'react';
+import type { Ref } from 'react';
 import { TBtn } from '@/components/TBtn/TBtn';
 import {
   formatPartnerRubWhole,
@@ -29,13 +29,13 @@ type Props = {
   designerFilterLabel: string;
   designerOptions: DesignerOption[];
   designerMenuOpen: boolean;
-  designerMenuRef: RefObject<HTMLDivElement | null>;
+  designerMenuRef: Ref<HTMLDivElement>;
   onToggleDesignerMenu: () => void;
   onSelectDesigner: (id: string | null) => void;
   levelFilter: L2LevelFilter;
   levelFilterLabel: string;
   levelMenuOpen: boolean;
-  levelMenuRef: RefObject<HTMLDivElement | null>;
+  levelMenuRef: Ref<HTMLDivElement>;
   onToggleLevelMenu: () => void;
   onSelectLevel: (level: L2LevelFilter) => void;
 };

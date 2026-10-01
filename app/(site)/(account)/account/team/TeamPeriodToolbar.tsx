@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, type RefObject } from 'react';
+import { useRef, type Ref } from 'react';
 import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProjectTabs';
 import { TBtn } from '@/components/TBtn/TBtn';
 import { PARTNER_REPORT_RANGE_TABS, partnerPeriodFromInclusiveYmd } from '@/lib/account/partnerReportPeriod';
@@ -10,7 +10,7 @@ import report from '@/components/styles/PartnerReportTable.module.css';
 type Props = {
   periodLabel: string;
   periodMenuOpen: boolean;
-  periodMenuRef: RefObject<HTMLDivElement | null>;
+  periodMenuRef: Ref<HTMLDivElement>;
   draftFrom: string;
   draftTo: string;
   onDraftFromChange: (value: string) => void;
