@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { accountOrdersDetailHref, accountOrdersTabForStatus } from './orders';
+import {
+  accountOrdersDetailHref,
+  accountOrdersTabForStatus,
+  buildAccountOrdersHref,
+} from './orders';
 
 describe('accountOrdersTabForStatus', () => {
   it('orders: draft → preparation, completed → completed, the rest → work', () => {
@@ -21,13 +25,50 @@ describe('accountOrdersTabForStatus', () => {
 describe('accountOrdersDetailHref', () => {
   it('puts the tab of the source status under the modal', () => {
     expect(accountOrdersDetailHref({ kind: 'order', id: 'o1', chat: true, status: 'COMPLETED' })).toBe(
-      '/account/orders?tab=completed&order=o1&chat=1',
+      '/account/orders?tab=completed&order=o1&status=COMPLETED&chat=1',
     );
     expect(accountOrdersDetailHref({ kind: 'sourcing', id: 's1', chat: false, status: 'PENDING_REVIEW' })).toBe(
-      '/account/orders?tab=work&sourcing=s1',
+      '/account/orders?tab=work&sourcing=s1&status=PENDING_REVIEW',
     );
     expect(accountOrdersDetailHref({ kind: 'order', id: 'd1', chat: false, status: 'DRAFT' })).toBe(
-      '/account/orders?order=d1',
+      '/account/orders?order=d1&status=DRAFT',
     );
   });
 });
+
+describe('buildAccountOrdersHref', () => {
+  it('syncs tab + order + chat', () => {
+    expect(
+      buildAccountOrdersHref({
+        tabIndex: 1,
+        detail: { kind: 'order', id: 'o1', chat: true },
+      }),
+    ).toBe('/account/orders?tab=work&order=o1&chat=1');
+  });
+
+  it('прокидывает status в query для round-trip вкладки', () => {
+    expect(
+      buildAccountOrdersHref({
+        tabIndex: 2,
+        detail: { kind: 'order', id: 'o1', chat: false, status: 'COMPLETED' },
+      }),
+    ).toBe('/account/orders?tab=completed&order=o1&status=COMPLETED');
+  });
+
+  it('clears detail and keeps work tab', () => {
+    expect(buildAccountOrdersHref({ tabIndex: 1, detail: null })).toBe('/account/orders?tab=work');
+  });
+});
+
+describe('accountOrdersDetailFromQuery', () => {
+  it('читает status из query', async () => {
+    const { accountOrdersDetailFromQuery } = await import('./orders');
+    expect(accountOrdersDetailFromQuery({ order: 'o1', status: 'COMPLETED' })).toEqual({
+      kind: 'order',
+      id: 'o1',
+      chat: false,
+      status: 'COMPLETED',
+    });
+  });
+});
+

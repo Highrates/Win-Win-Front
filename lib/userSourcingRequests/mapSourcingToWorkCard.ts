@@ -113,7 +113,8 @@ export function mapSourcingRequestToWorkCard(
     chatSubject: 'sourcing' as const,
     metaRows,
     productThumbSrcs: hasPublishedKp ? kpThumbs : requestThumbs,
-    hideMoreMenu: false,
+    /** Архив только у заказов — меню ⋯ у заявок не показываем. */
+    hideMoreMenu: true,
     cornerChipLabel: 'Подбор',
     staffUnreadCount: request.unreadStaffChatCount ?? 0,
     hasUnseenCommercialProposal: request.hasUnseenCommercialProposal ?? false,
@@ -123,5 +124,10 @@ export function mapSourcingRequestToWorkCard(
     statusNotice: isCompleted ? COMPLETED_CHAT_NOTICE : isCancelled ? CANCELLED_CHAT_NOTICE : undefined,
     statusRejected: isCancelled,
     chatEnabled: !isCancelled,
+    canDownloadCommercialProposalPdf:
+      Boolean(request.hasPublishedCommercialProposal) ||
+      (request.publishedCommercialProposalVersion != null &&
+        request.publishedCommercialProposalVersion >= 1) ||
+      Boolean(request.commercialProposalOffer),
   };
 }

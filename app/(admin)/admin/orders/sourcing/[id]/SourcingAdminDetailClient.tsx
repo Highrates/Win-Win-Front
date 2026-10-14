@@ -10,6 +10,7 @@ import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings, adminSourcingStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { adminSourcingKpStrings } from '@/lib/admin-i18n/adminSourcingKpI18n';
 import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
+import { downloadSourcingCommercialProposalPdf } from '@/lib/commercialProposal/downloadSourcingCommercialProposalPdf';
 import { sourcingKpLineTotalRub, sourcingKpOrderTotalRub } from '@/lib/sourcingCommercialProposal/kpLineTotals';
 import type { SourcingCommercialProposalApi, SourcingCommercialProposalSummaryApi } from '@/lib/sourcingCommercialProposal/types';
 import {
@@ -341,13 +342,33 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
                       : '—';
                     return (
                       <div key={proposal.id}>
-                        <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
-                          {kp.kpPublishedVersionCaption(
-                            proposal.versionNumber,
-                            dateStr,
-                            kp.itemsCount(proposal.lines.length),
-                          )}
-                        </p>
+                        <div className={od.kpVersionCaptionRow}>
+                          <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
+                            {kp.kpPublishedVersionCaption(
+                              proposal.versionNumber,
+                              dateStr,
+                              kp.itemsCount(proposal.lines.length),
+                            )}
+                          </p>
+                          {proposal.lines.length > 0 ? (
+                            <AdminCompactBtn
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                void downloadSourcingCommercialProposalPdf({
+                                  requestId: id,
+                                  proposal,
+                                }).catch((e) => {
+                                  window.alert(
+                                    e instanceof Error ? e.message : 'Не удалось сформировать PDF',
+                                  );
+                                });
+                              }}
+                            >
+                              PDF
+                            </AdminCompactBtn>
+                          ) : null}
+                        </div>
                         {proposal.lines.length === 0 ? (
                           <p className={styles.muted}>{kp.noItems}</p>
                         ) : (

@@ -16,6 +16,8 @@ import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { formatBudgetDigitsGrouped } from '@/lib/formatBudgetRub';
 import { sourcingKpLineTotalRub, sourcingKpOrderTotalRub } from '@/lib/sourcingCommercialProposal/kpLineTotals';
 import type { SourcingCommercialProposalApi, SourcingCommercialProposalLineApi } from '@/lib/sourcingCommercialProposal/types';
+import { downloadSourcingCommercialProposalPdf } from '@/lib/commercialProposal/downloadSourcingCommercialProposalPdf';
+import { cacheSourcingCommercialProposal } from '@/lib/commercialProposal/kpProposalCache';
 import {
   ackUserSourcingCommercialProposalSeen,
   fetchUserSourcingRequest,
@@ -23,7 +25,9 @@ import {
 import { sourcingStatusLabel } from '@/lib/userSourcingRequests/sourcingStatus';
 import type { UserSourcingRequestDetailApi } from '@/lib/userSourcingRequests/types';
 import { AccountGalleryThumb } from '@/components/AccountOrders/AccountGalleryThumb';
+import { OrderKpActionFooter } from '@/components/AccountOrders/OrderKpActionFooter';
 import { privateFileHref, privateFileLinkProps } from '@/lib/privateFiles';
+import orderDetailStyles from './AccountOrderDetailModal.module.css';
 import styles from './AccountSourcingRequestDetailModal.module.css';
 
 function CloseIcon() {
@@ -136,20 +140,31 @@ function AccountSourcingKpLinesTable({ lines }: { lines: SourcingCommercialPropo
 
 type Props = {
   requestId: string | null;
-  /** Открыть чат заявки сразу при открытии модалки (deep-link из документов). */
+  /** Открыть чат заявки сразу при открытии модалки (deep-link / URL sync). */
   initialChatOpen?: boolean;
   onClose: () => void;
+  onChatOpenChange?: (open: boolean) => void;
+  onStatusResolved?: (status: string) => void;
 };
 
-export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen = false, onClose }: Props) {
+export function AccountSourcingRequestDetailModal({
+  requestId,
+  initialChatOpen = false,
+  onClose,
+  onChatOpenChange,
+  onStatusResolved,
+}: Props) {
   const panelRef = useRef<HTMLElement>(null);
-  const latestOfferRef = useRef<HTMLDivElement | null>(null);
   const [detail, setDetail] = useState<UserSourcingRequestDetailApi | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const open = Boolean(requestId);
   const chatAvailable = detail?.status !== 'CANCELLED';
+  const onStatusResolvedRef = useRef(onStatusResolved);
+  onStatusResolvedRef.current = onStatusResolved;
 
   const {
     chatMessages,
@@ -180,11 +195,25 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
     else if (initialChatOpen) setChatOpen(true);
   }, [requestId, initialChatOpen]);
 
+  const openSourcingChat = useCallback(() => {
+    setChatOpen(true);
+    onChatOpenChange?.(true);
+  }, [onChatOpenChange]);
+
+  const closeSourcingChat = useCallback(() => {
+    setChatOpen(false);
+    onChatOpenChange?.(false);
+  }, [onChatOpenChange]);
+
   const load = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
+    setPdfError(null);
     try {
-      setDetail(await fetchUserSourcingRequest(id));
+      const row = await fetchUserSourcingRequest(id);
+      setDetail(row);
+      cacheSourcingCommercialProposal(id, row.latestCommercialProposal);
+      if (row.status) onStatusResolvedRef.current?.(row.status);
     } catch (e) {
       setDetail(null);
       setError(e instanceof Error ? e.message : 'Не удалось загрузить заявку');
@@ -231,11 +260,18 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
   useEffect(() => {
     if (!requestId) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (chatOpen) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        closeSourcingChat();
+        return;
+      }
+      onClose();
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [requestId, onClose]);
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [requestId, onClose, chatOpen, closeSourcingChat]);
 
   useEffect(() => {
     if (!requestId) return;
@@ -253,19 +289,25 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
     return latest && latest.lines.length > 0 ? [latest] : [];
   }, [detail?.publishedCommercialProposals, detail?.latestCommercialProposal]);
   const hasKp = publishedKps.length > 0;
-  const latestKpLines = publishedKps[0]?.lines ?? [];
+  const latestKp = publishedKps[0] ?? null;
   const referenceGalleryUrls = useMemo(
     () => (detail?.items ?? []).flatMap((item) => item.referenceImages.map((img) => img.url)),
     [detail?.items],
   );
 
-  useEffect(() => {
-    if (!detail || !hasKp || latestKpLines.length < 3) return;
-    const id = window.requestAnimationFrame(() => {
-      latestOfferRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [detail?.id, hasKp, latestKpLines.length]);
+  async function handleDownloadKpPdf() {
+    if (!detail?.id || !latestKp?.lines?.length || pdfBusy) return;
+    setPdfBusy(true);
+    setPdfError(null);
+    try {
+      cacheSourcingCommercialProposal(detail.id, latestKp);
+      await downloadSourcingCommercialProposalPdf({ requestId: detail.id, proposal: latestKp });
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : 'Не удалось сформировать PDF');
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   useModalFocusTrap(open, panelRef);
 
@@ -278,7 +320,7 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
       <button type="button" className={panelModal.backdrop} aria-label="Закрыть" onClick={onClose} />
       <section
         ref={panelRef}
-        className={`${panelModal.panel} ${panelModal.panelOrderWide}`}
+        className={`${panelModal.panel} ${panelModal.panelOrderWide} ${orderDetailStyles.orderDetailModalShell}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="sourcing-detail-title"
@@ -289,7 +331,7 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
             variant="embedded"
             embeddedLayout="overlay"
             open={chatOpen}
-            onClose={() => setChatOpen(false)}
+            onClose={closeSourcingChat}
             title={`Чат · ${shortNo}`}
             messages={chatMessages}
             messageEmptyHint={chatLoading ? 'Загрузка…' : 'Пока нет сообщений'}
@@ -314,7 +356,7 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
             <CloseIcon />
           </button>
         </header>
-        <div className={`${panelModal.inner} ${styles.inner}`}>
+        <div className={`${panelModal.inner} ${styles.inner} ${orderDetailStyles.modalBody}`}>
           <h2 id="sourcing-detail-title" className={panelModal.title}>
             Заявка на подбор
           </h2>
@@ -458,7 +500,7 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
               ) : null}
 
               {hasKp ? (
-                <div ref={latestOfferRef} className={styles.section}>
+                <div className={styles.section}>
                   <h3 className={styles.sectionTitle}>
                     {publishedKps.length > 1 ? 'Коммерческие предложения' : 'Коммерческое предложение'}
                   </h3>
@@ -481,6 +523,22 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
             </>
           ) : null}
         </div>
+        {detail && !loading && chatAvailable ? (
+          <>
+            {pdfError ? (
+              <p className={styles.error} role="alert">
+                {pdfError}
+              </p>
+            ) : null}
+            <OrderKpActionFooter
+              staffUnreadCount={detail.unreadStaffChatCount ?? 0}
+              onOpenChat={openSourcingChat}
+              chatAriaLabel="Написать по заявке"
+              onDownloadPdf={hasKp ? () => void handleDownloadKpPdf() : undefined}
+              pdfBusy={pdfBusy}
+            />
+          </>
+        ) : null}
       </section>
     </>
   );

@@ -3,11 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig';
-import { dispatchAccountWorkNotificationsEvent, ACCOUNT_WORK_NOTIFICATIONS_EVENT, type AccountWorkNotificationsDetail } from '@/lib/account/orders';
+import {
+  dispatchAccountWorkNotificationsEvent,
+  ACCOUNT_WORK_NOTIFICATIONS_EVENT,
+  type AccountWorkNotificationsDetail,
+} from '@/lib/account/orders';
+/** Общий табличный chrome ЛК (Команда / Доход / модалка заказа). */
 import report from '@/components/styles/PartnerReportTable.module.css';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
 import { useOrderChat } from '@/hooks/useOrderChat';
+import { useOrderKpResponse } from '@/hooks/useOrderKpResponse';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { orderStatusLabel } from '@/lib/orders/orderStatus';
 import { formatKpGrossTotalsLabel, kpGrossTotals } from '@/lib/commercialProposal/kpGrossDimensions';
@@ -15,10 +21,14 @@ import { KpGrossDisplay } from '@/components/commercialProposal/KpGrossDisplay';
 import { kpLineTotalRub, kpLineUnitAfterDiscount, kpOfferAggregates } from '@/lib/commercialProposal/kpOfferTotals';
 import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
 import { fetchUserOrder, ackUserOrderCommercialProposalSeen } from '@/lib/userOrders/clientApi';
+import { downloadCommercialProposalPdf } from '@/lib/commercialProposal/exportCommercialProposalPdf';
+import { cacheOrderCommercialProposal } from '@/lib/commercialProposal/kpProposalCache';
+import { kpDecisionNotice } from '@/lib/userOrders/orderNextStepHint';
 import type { UserOrderDetailApi } from '@/lib/userOrders/types';
 import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
-import workCardStyles from '@/components/AccountOrders/AccountOrderWorkCard.module.css';
 import { AccountGalleryThumb } from '@/components/AccountOrders/AccountGalleryThumb';
+import { OrderKpAcceptModal } from './OrderKpAcceptModal';
+import { OrderKpActionFooter } from './OrderKpActionFooter';
 import styles from './AccountOrderDetailModal.module.css';
 
 function CloseIcon() {
@@ -34,25 +44,15 @@ function CloseIcon() {
   );
 }
 
-function OrderCtaMessageIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 20 20"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M5.83335 15.3582H9.16669L12.875 17.8249C13.425 18.1916 14.1667 17.7999 14.1667 17.1332V15.3582C16.6667 15.3582 18.3334 13.6916 18.3334 11.1916V6.19157C18.3334 3.69157 16.6667 2.0249 14.1667 2.0249H5.83335C3.33335 2.0249 1.66669 3.69157 1.66669 6.19157V11.1916C1.66669 13.6916 3.33335 15.3582 5.83335 15.3582Z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeMiterlimit={10}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+function kpDeliveryEtaLabel(lines: CommercialProposalLineApi[]): string | null {
+  const etas = Array.from(
+    new Set(
+      lines
+        .map((l) => (typeof l.deliveryEta === 'string' ? l.deliveryEta.trim() : ''))
+        .filter(Boolean),
+    ),
   );
+  return etas.length ? etas.join(' · ') : null;
 }
 
 
@@ -110,22 +110,6 @@ function formatDateTime(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-function TableFlowArrow() {
-  return (
-    <div className={styles.tableFlowArrow} aria-hidden>
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path
-          d="M12 5v14M12 19l-4-4M12 19l4-4"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
 }
 
 function AccountOrderItemsTable({
@@ -368,28 +352,42 @@ function AccountKpLinesTable({ order, lines }: { order: UserOrderDetailApi; line
 
 type Props = {
   orderId: string | null;
-  /** Открыть чат сразу при открытии модалки (deep-link из документов). */
+  /** Открыть чат сразу при открытии модалки (deep-link / URL sync). */
   initialChatOpen?: boolean;
   onClose: () => void;
+  /** Синхронизировать `?chat=` при open/close чата в модалке. */
+  onChatOpenChange?: (open: boolean) => void;
+  /** После загрузки заказа — выровнять вкладку deep-link по реальному status. */
+  onStatusResolved?: (status: string) => void;
 };
 
-/** Сколько строк КП считать «много»: при открытии прокручиваем к актуальному блоку */
-const KP_LINES_SCROLL_THRESHOLD = 5;
-
-export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onClose }: Props) {
+export function AccountOrderDetailModal({
+  orderId,
+  initialChatOpen = false,
+  onClose,
+  onChatOpenChange,
+  onStatusResolved,
+}: Props) {
   const panelRef = useRef<HTMLElement>(null);
+  const sendChatTextRef = useRef<(text: string) => Promise<boolean>>(async () => false);
+  const loadRef = useRef<(id: string) => Promise<void>>(async () => undefined);
   const [order, setOrder] = useState<UserOrderDetailApi | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
-  const latestOfferRef = useRef<HTMLDivElement | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  const onStatusResolvedRef = useRef(onStatusResolved);
+  onStatusResolvedRef.current = onStatusResolved;
 
   const load = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
     try {
-      const o = await fetchUserOrder(id);
-      setOrder(o);
+      const detail = await fetchUserOrder(id);
+      setOrder(detail);
+      cacheOrderCommercialProposal(id, detail.latestCommercialProposal);
+      if (detail.status) onStatusResolvedRef.current?.(detail.status);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить заказ');
       setOrder(null);
@@ -397,21 +395,97 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
       setLoading(false);
     }
   }, []);
+  loadRef.current = load;
+
+  const commercialProposalVersion =
+    order?.commercialProposalVersion ?? order?.latestCommercialProposal?.versionNumber ?? null;
+
+  const {
+    chatOpen,
+    setChatOpen,
+    acceptOpen,
+    setAcceptOpen,
+    openAccept,
+    canRespondKp,
+    chatSeedDraft,
+    composerBanner,
+    chatInputPlaceholder,
+    openChat,
+    openKpChat,
+    closeChat,
+    handleChatSend,
+    markAccepted,
+  } = useOrderKpResponse({
+    orderId: orderId ?? '',
+    commercialProposalVersion,
+    canRespondToCommercialProposal: order?.canRespondToCommercialProposal ?? false,
+    hasUnseenCommercialProposal: false,
+    sendChatText: (text) => sendChatTextRef.current(text),
+    staleVersionMessage: 'КП обновлено — закройте окно и откройте заказ снова.',
+    onResponded: (decision) => {
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              canRespondToCommercialProposal: false,
+              customerKpDecision: decision,
+            }
+          : prev,
+      );
+    },
+    onAccepted: () => {
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              canRespondToCommercialProposal: false,
+              customerKpDecision: 'ACCEPTED',
+              status: prev.status === 'PROPOSAL_FORMED' ? 'APPROVED' : prev.status,
+            }
+          : prev,
+      );
+      if (orderId) void loadRef.current(orderId);
+    },
+  });
 
   useEffect(() => {
     if (!orderId) {
       setOrder(null);
       setError(null);
-      setChatOpen(false);
+      setPdfBusy(false);
+      setPdfError(null);
       return;
     }
+    setPdfError(null);
     void load(orderId);
   }, [orderId, load]);
 
   useEffect(() => {
     if (orderId && initialChatOpen) setChatOpen(true);
-  }, [orderId, initialChatOpen]);
+  }, [orderId, initialChatOpen, setChatOpen]);
 
+  const handleOpenChat = useCallback(() => {
+    openChat();
+    onChatOpenChange?.(true);
+  }, [openChat, onChatOpenChange]);
+
+  const handleCloseChat = useCallback(() => {
+    closeChat();
+    onChatOpenChange?.(false);
+  }, [closeChat, onChatOpenChange]);
+
+  const handleOpenAccept = useCallback(() => {
+    openAccept();
+    onChatOpenChange?.(false);
+  }, [openAccept, onChatOpenChange]);
+
+  const handleOpenKpChat = useCallback(
+    (decision: 'CHANGES_REQUESTED' | 'REJECTED') => {
+      openKpChat(decision);
+      onChatOpenChange?.(true);
+    },
+    [openKpChat, onChatOpenChange],
+  );
   useEffect(() => {
     if (!order?.id || loading) return;
     void (async () => {
@@ -441,11 +515,24 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
   useEffect(() => {
     if (!orderId) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (acceptOpen) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setAcceptOpen(false);
+        return;
+      }
+      if (chatOpen) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        handleCloseChat();
+        return;
+      }
+      onClose();
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [orderId, onClose]);
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [orderId, onClose, chatOpen, acceptOpen, handleCloseChat, setAcceptOpen]);
 
   useEffect(() => {
     if (!orderId) return;
@@ -478,25 +565,37 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
     variant: 'account',
     timeLocale: 'ru-RU',
   });
+  sendChatTextRef.current = sendChatText;
 
   const staffUnread = order?.unreadStaffChatCount ?? 0;
   const cp = order?.latestCommercialProposal;
   const kpLines = cp?.lines ?? [];
   const hasKp = Boolean(cp && kpLines.length > 0);
+  const kpEta = useMemo(() => (hasKp ? kpDeliveryEtaLabel(kpLines) : null), [hasKp, kpLines]);
+  const decision = order?.customerKpDecision ?? null;
+  const decisionNotice = order ? kpDecisionNotice(canRespondKp, decision) : undefined;
+  const statusRejected = !canRespondKp && decision === 'REJECTED';
 
   const chatTitle = useMemo(() => {
     if (!order) return 'Сообщения';
     return `Чат · ${formatOrderDisplayId(order.id)}`;
   }, [order]);
 
-
-  useEffect(() => {
-    if (!order || !hasKp || kpLines.length < KP_LINES_SCROLL_THRESHOLD) return;
-    const id = window.requestAnimationFrame(() => {
-      latestOfferRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [order?.id, hasKp, kpLines.length]);
+  async function handleDownloadKpPdf() {
+    if (!order?.latestCommercialProposal || pdfBusy) return;
+    setPdfBusy(true);
+    setPdfError(null);
+    try {
+      await downloadCommercialProposalPdf({
+        orderId: order.id,
+        proposal: order.latestCommercialProposal,
+      });
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : 'Не удалось сформировать PDF');
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   useModalFocusTrap(Boolean(orderId), panelRef);
 
@@ -517,7 +616,7 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
           variant="embedded"
           embeddedLayout="overlay"
           open={chatOpen}
-          onClose={() => setChatOpen(false)}
+          onClose={handleCloseChat}
           title={chatTitle}
           messages={chatMessages}
           messageEmptyHint={chatLoading ? 'Загрузка…' : 'Пока нет сообщений'}
@@ -528,7 +627,10 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
           pendingAttachmentsHint={pendingAttachmentsHint}
           pendingOutgoing={pendingOutgoingAttachments}
           allowEmptySend={canSendAttachmentMessage}
-          onSend={sendChatText}
+          onSend={handleChatSend}
+          seedDraft={chatSeedDraft}
+          composerBanner={composerBanner}
+          inputPlaceholder={chatInputPlaceholder}
           onAttachFiles={attachChatFiles}
           onRemovePendingAttachment={removePendingChatAttachment}
           onDeleteMessage={deleteChatMessage}
@@ -536,55 +638,72 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
           loadingOlderHistory={chatLoadingOlderHistory}
           onLoadOlderHistory={loadOlderChatMessages}
         />
+        <OrderKpAcceptModal
+          open={acceptOpen}
+          orderId={orderId}
+          expectedVersion={commercialProposalVersion}
+          onClose={() => setAcceptOpen(false)}
+          onAccepted={markAccepted}
+        />
         <header className={panelModal.header}>
           <button type="button" className={panelModal.iconBtn} onClick={onClose} aria-label="Закрыть">
             <CloseIcon />
           </button>
         </header>
-        <div className={`${panelModal.inner} ${styles.innerTightTop}`}>
+        <div className={`${panelModal.inner} ${styles.innerTightTop} ${styles.modalBody}`}>
           {loading ? <p className={styles.muted}>Загрузка…</p> : null}
           {error ? <p className={styles.error}>{error}</p> : null}
           {order && !loading ? (
             <>
-              <div>
+              <div className={styles.titleBlock}>
                 <h2 id="account-order-detail-title" className={panelModal.title}>
                   {formatOrderCreatedTitle(order.createdAt)}
                 </h2>
-                <p className={styles.fullId} title={order.id}>
-                  Номер заказа: {formatOrderDisplayId(order.id)}
+                <p className={styles.orderNumber} title={order.id}>
+                  Номер {formatOrderDisplayId(order.id)}
                 </p>
+                {decisionNotice ? (
+                  <p
+                    className={
+                      statusRejected
+                        ? `${styles.statusNotice} ${styles.statusNoticeRejected}`
+                        : styles.statusNotice
+                    }
+                  >
+                    {decisionNotice}
+                  </p>
+                ) : null}
               </div>
 
-              <div className={`${styles.metaGrid} ${styles.metaGridStacked}`}>
-                <div className={styles.metaGridMain}>
-                  <div className={styles.metaItem}>
-                    <div className={styles.metaItemLabel}>Статус</div>
-                    <div className={styles.metaItemValue}>{orderStatusLabel(order.status, 'ru')}</div>
-                  </div>
-                  <div className={styles.metaItem}>
-                    <div className={styles.metaItemLabel}>Создан</div>
-                    <div className={styles.metaItemValue}>{formatDateTime(order.createdAt)}</div>
-                  </div>
-                  <div className={styles.metaItem}>
-                    <div className={styles.metaItemLabel}>Обновлён</div>
-                    <div className={styles.metaItemValue}>{formatDateTime(order.updatedAt)}</div>
+              <div className={styles.metaGridPlain}>
+                <div className={styles.metaItem}>
+                  <div className={styles.metaItemLabel}>Статус</div>
+                  <div
+                    className={
+                      statusRejected
+                        ? `${styles.metaItemValue} ${styles.metaItemValueRejected}`
+                        : styles.metaItemValue
+                    }
+                  >
+                    {orderStatusLabel(order.status, 'ru')}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className={`${workCardStyles.ctaButton} ${styles.modalCtaMessage} ${styles.modalCtaMessageSolo}${staffUnread > 0 ? ` ${workCardStyles.ctaButtonUnread}` : ''}`}
-                  aria-label={
-                    staffUnread > 0 ? `Написать по заказу, непрочитанных: ${staffUnread}` : 'Написать по заказу'
-                  }
-                  onClick={() => setChatOpen(true)}
-                >
-                  <OrderCtaMessageIcon
-                    className={`${workCardStyles.ctaIcon}${staffUnread > 0 ? ` ${workCardStyles.ctaIconUnread}` : ''}`}
-                  />
-                  {staffUnread > 0 ? (
-                    <span className={workCardStyles.ctaUnreadCount}>({staffUnread})</span>
-                  ) : null}
-                </button>
+                <div className={styles.metaItem}>
+                  <div className={styles.metaItemLabel}>Обновлён</div>
+                  <div className={styles.metaItemValue}>{formatDateTime(order.updatedAt)}</div>
+                </div>
+                {cp?.publishedAt ? (
+                  <div className={styles.metaItem}>
+                    <div className={styles.metaItemLabel}>КП от</div>
+                    <div className={styles.metaItemValue}>{formatDateTime(cp.publishedAt)}</div>
+                  </div>
+                ) : null}
+                {kpEta ? (
+                  <div className={styles.metaItem}>
+                    <div className={styles.metaItemLabel}>Срок доставки</div>
+                    <div className={styles.metaItemValue}>{kpEta}</div>
+                  </div>
+                ) : null}
               </div>
 
               <AccordionBig title="Детали" className={styles.accordionFullWidth} panelClassName={styles.accordionPanelMeta}>
@@ -593,10 +712,20 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
                     <div className={styles.metaItemLabel}>ФИО</div>
                     <div className={styles.metaItemValue}>{order.customerName?.trim() || '—'}</div>
                   </div>
+                  <div className={styles.metaItem}>
+                    <div className={styles.metaItemLabel}>Телефон</div>
+                    <div className={styles.metaItemValue}>{order.customerPhone?.trim() || '—'}</div>
+                  </div>
                   <div className={styles.metaItem} style={{ gridColumn: '1 / -1' }}>
                     <div className={styles.metaItemLabel}>Адрес</div>
                     <div className={`${styles.metaItemValue} ${styles.blockText}`}>
                       {order.deliveryAddress?.trim() || '—'}
+                    </div>
+                  </div>
+                  <div className={styles.metaItem} style={{ gridColumn: '1 / -1' }}>
+                    <div className={styles.metaItemLabel}>Комментарий</div>
+                    <div className={`${styles.metaItemValue} ${styles.blockText}`}>
+                      {order.comment?.trim() || '—'}
                     </div>
                   </div>
                 </div>
@@ -604,24 +733,29 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
 
               {hasKp && cp ? (
                 <div className={styles.orderCompareStack}>
-                  <div className={styles.orderTableFrameWrapPrev}>
-                    <p className={styles.orderSnapshotLabel}>Исходный заказ</p>
-                    <div className={styles.orderTableFrameDimTarget}>
-                      <AccountOrderItemsTable order={order} positionHeader="Товар" footerMuted />
+                  <div className={styles.orderTableFrameWrap}>
+                    <div className={styles.kpSectionHead}>
+                      <div>
+                        <h3 className={styles.sectionTitle}>Коммерческое предложение</h3>
+                        {cp.publishedAt ? (
+                          <p className={styles.muted}>от {formatDateTime(cp.publishedAt)}</p>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                  <TableFlowArrow />
-                  <div ref={latestOfferRef} className={styles.orderTableFrameWrap}>
-                    <h3 className={panelModal.title} style={{ fontSize: '1.05rem', marginBottom: 8 }}>
-                      Коммерческое предложение
-                    </h3>
-                    {cp.publishedAt ? (
-                      <p className={styles.muted} style={{ marginBottom: 12 }}>
-                        от {formatDateTime(cp.publishedAt)}
+                    {pdfError ? (
+                      <p className={styles.error} role="alert">
+                        {pdfError}
                       </p>
                     ) : null}
                     <AccountKpLinesTable order={order} lines={kpLines} />
                   </div>
+                  <AccordionBig
+                    title="Было: исходный заказ"
+                    className={styles.accordionFullWidth}
+                    panelClassName={styles.accordionPanelMeta}
+                  >
+                    <AccountOrderItemsTable order={order} positionHeader="Товар" footerMuted />
+                  </AccordionBig>
                 </div>
               ) : (
                 <div className={styles.orderTableFrameWrap}>
@@ -631,6 +765,18 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
             </>
           ) : null}
         </div>
+        {order && !loading ? (
+          <OrderKpActionFooter
+            staffUnreadCount={staffUnread}
+            canRespondKp={canRespondKp}
+            onOpenChat={handleOpenChat}
+            onConfirm={handleOpenAccept}
+            onRequestChanges={() => handleOpenKpChat('CHANGES_REQUESTED')}
+            onReject={() => handleOpenKpChat('REJECTED')}
+            onDownloadPdf={hasKp ? () => void handleDownloadKpPdf() : undefined}
+            pdfBusy={pdfBusy}
+          />
+        ) : null}
       </section>
     </>
   );

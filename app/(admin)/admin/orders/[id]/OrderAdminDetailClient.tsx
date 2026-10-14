@@ -11,6 +11,7 @@ import {
 } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
 import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
+import { downloadCommercialProposalPdf } from '@/lib/commercialProposal/exportCommercialProposalPdf';
 import { kpLineTotalRub, kpLineUnitAfterDiscount } from '@/lib/commercialProposal/kpOfferTotals';
 import type {
   CommercialProposalApi,
@@ -511,13 +512,33 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                       : '—';
                     return (
                       <div key={proposal.id}>
-                        <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
-                          {d.kpPublishedVersionCaption(
-                            proposal.versionNumber,
-                            dateStr,
-                            listS.itemsCount(proposal.lines.length),
-                          )}
-                        </p>
+                        <div className={od.kpVersionCaptionRow}>
+                          <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
+                            {d.kpPublishedVersionCaption(
+                              proposal.versionNumber,
+                              dateStr,
+                              listS.itemsCount(proposal.lines.length),
+                            )}
+                          </p>
+                          {proposal.lines.length > 0 ? (
+                            <AdminCompactBtn
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                void downloadCommercialProposalPdf({
+                                  orderId: order.id,
+                                  proposal,
+                                }).catch((e) => {
+                                  window.alert(
+                                    e instanceof Error ? e.message : 'Не удалось сформировать PDF',
+                                  );
+                                });
+                              }}
+                            >
+                              PDF
+                            </AdminCompactBtn>
+                          ) : null}
+                        </div>
                         {proposal.lines.length === 0 ? (
                           <p className={styles.muted}>{d.noItems}</p>
                         ) : (

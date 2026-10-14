@@ -66,6 +66,7 @@ export function accountOrdersDetailHref(link: AccountOrdersDetailLink): string {
   const q = new URLSearchParams();
   if (tab !== 'preparation') q.set('tab', tab);
   q.set(link.kind, link.id);
+  if (link.status?.trim()) q.set('status', link.status.trim());
   if (link.chat) q.set('chat', '1');
   return `/account/orders?${q.toString()}`;
 }
@@ -74,12 +75,42 @@ export function accountOrdersDetailFromQuery(params: {
   order?: string | string[];
   sourcing?: string | string[];
   chat?: string | string[];
+  status?: string | string[];
 }): AccountOrdersDetailLink | null {
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim() || '';
   const chat = first(params.chat) === '1';
+  const status = first(params.status) || null;
   const order = first(params.order);
-  if (order) return { kind: 'order', id: order, chat };
+  if (order) return { kind: 'order', id: order, chat, status };
   const sourcing = first(params.sourcing);
-  if (sourcing) return { kind: 'sourcing', id: sourcing, chat };
+  if (sourcing) return { kind: 'sourcing', id: sourcing, chat, status };
   return null;
+}
+
+/** Собрать query ЛК заказов: tab + опционально order|sourcing[+status][+chat]. */
+export function buildAccountOrdersSearchParams(opts: {
+  tabIndex: number;
+  detail?: AccountOrdersDetailLink | null;
+}): URLSearchParams {
+  const q = new URLSearchParams();
+  const tab = orderTabQueryParamForUrl(opts.tabIndex);
+  if (tab) q.set('tab', tab);
+  const detail = opts.detail;
+  if (detail?.id) {
+    q.set(detail.kind, detail.id);
+    if (detail.status?.trim()) q.set('status', detail.status.trim());
+    if (detail.chat) q.set('chat', '1');
+  }
+  return q;
+}
+
+export function buildAccountOrdersHref(opts: {
+  tabIndex: number;
+  detail?: AccountOrdersDetailLink | null;
+  pathname?: string;
+}): string {
+  const path = opts.pathname ?? '/account/orders';
+  const q = buildAccountOrdersSearchParams(opts);
+  const s = q.toString();
+  return s ? `${path}?${s}` : path;
 }

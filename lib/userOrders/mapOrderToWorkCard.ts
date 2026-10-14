@@ -3,11 +3,10 @@ import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
 import { CUSTOMER_IN_WORK_STATUSES, orderStatusLabel } from '@/lib/orders/orderStatus';
 import { formatDesignerOwnExpectedBonusLabel, type OrderProgramPublic } from '@/lib/orderProgram/publicOrderProgram';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
+import { kpDecisionNotice } from './orderNextStepHint';
 import type { UserOrderListItemApi } from './types';
 
 const COMPLETED_ORDER_CHAT_NOTICE = 'Переписка доступна 90 дней после завершения заказа';
-const KP_CHANGES_REQUESTED_NOTICE = 'Запросили изменения — ожидаем новое коммерческое предложение';
-const KP_REJECTED_NOTICE = 'Вы отклонили коммерческое предложение';
 
 function orderItemThumbSrcs(item: UserOrderListItemApi['items'][number]): string[] {
   const s = item.snapshot && typeof item.snapshot === 'object' ? (item.snapshot as Record<string, unknown>) : null;
@@ -106,12 +105,7 @@ export function mapUserOrderToWorkCard(
 
   const canRespond = order.canRespondToCommercialProposal ?? false;
   const decision = order.customerKpDecision ?? null;
-  const decisionNotice =
-    !canRespond && decision === 'CHANGES_REQUESTED'
-      ? KP_CHANGES_REQUESTED_NOTICE
-      : !canRespond && decision === 'REJECTED'
-        ? KP_REJECTED_NOTICE
-        : undefined;
+  const decisionNotice = kpDecisionNotice(canRespond, decision);
 
   return {
     orderId: order.id,
@@ -133,5 +127,8 @@ export function mapUserOrderToWorkCard(
     hasUnseenCommercialProposal: order.hasUnseenCommercialProposal ?? false,
     canRespondToCommercialProposal: canRespond,
     commercialProposalVersion: order.commercialProposalVersion ?? null,
+    canDownloadCommercialProposalPdf:
+      (order.commercialProposalVersion != null && order.commercialProposalVersion >= 1) ||
+      Boolean(order.commercialProposalOffer),
   };
 }

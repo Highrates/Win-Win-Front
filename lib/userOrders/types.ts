@@ -69,10 +69,18 @@ export type UserOrderDetailApi = {
   comment: string | null;
   customerName: string | null;
   deliveryAddress: string | null;
+  /** Телефон из профиля пользователя (если есть). */
+  customerPhone?: string | null;
   createdAt: string;
   updatedAt: string;
   items: UserOrderDetailItemApi[];
   /** Непрочитанные сообщения от менеджера в чате по заказу (если отдаёт API). */
   unreadStaffChatCount?: number;
   latestCommercialProposal?: CommercialProposalApi | null;
+  /** Версия последнего опубликованного КП. */
+  commercialProposalVersion?: number | null;
+  /** Можно ответить на текущую версию КП. */
+  canRespondToCommercialProposal?: boolean;
+  customerKpDecision?: 'ACCEPTED' | 'CHANGES_REQUESTED' | 'REJECTED' | null;
+  customerKpDecisionVersion?: number | null;
 };

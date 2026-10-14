@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { teardownOrderChatWsForLogout } from '@/lib/orderChat/orderChatWsShared';
 import { invalidateUserClientCaches } from '@/lib/userSessionClient';
 import { ACCOUNT_WORK_NOTIFICATIONS_EVENT, dispatchAccountWorkFeedRefreshEvent } from '@/lib/account/orders';
+import {
+  accountWorkHasNotification,
+  parseAccountWorkUnreadSummary,
+} from '@/lib/account/workNotifications';
 import { CustomerAccountSidebar } from './CustomerAccountSidebar';
 
 type ProfileMe = {
@@ -68,18 +72,18 @@ export function CustomerAccountSidebarContainer() {
         ]);
         if (cancelled) return;
         if (allRes.ok) {
-          const j = (await allRes.json()) as { count?: number };
-          if (!cancelled) setOrderChatNotify((j.count ?? 0) > 0);
+          const summary = parseAccountWorkUnreadSummary(await allRes.json());
+          if (!cancelled) setOrderChatNotify(accountWorkHasNotification(summary));
         } else if (!cancelled) setOrderChatNotify(false);
         if (workRes.ok) {
-          const j = (await workRes.json()) as { count?: number };
-          const next = j.count ?? 0;
+          const summary = parseAccountWorkUnreadSummary(await workRes.json());
+          const signal = (summary.count ?? 0) + (summary.unseenKpCount ?? 0);
           if (!cancelled) {
-            if (next > prevWorkUnreadRef.current) {
+            if (signal > prevWorkUnreadRef.current) {
               dispatchAccountWorkFeedRefreshEvent();
             }
-            prevWorkUnreadRef.current = next;
-            setWorkTabNotify(next > 0);
+            prevWorkUnreadRef.current = signal;
+            setWorkTabNotify(accountWorkHasNotification(summary));
           }
         } else if (!cancelled) setWorkTabNotify(false);
       } catch {

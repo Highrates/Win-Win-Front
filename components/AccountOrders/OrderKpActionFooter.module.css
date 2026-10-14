@@ -1,0 +1,224 @@
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: var(--account-hairline-width) solid var(--account-hairline-color);
+  background: var(--color-white);
+  box-sizing: border-box;
+}
+
+/** Вертикальный CTA колонки карточки «В работе». */
+.card {
+  width: 134px;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.cardKp {
+  width: 148px;
+}
+
+.cardKp > .btn:first-child,
+.cardKp > .confirm {
+  flex: 1 1 0;
+  min-height: 48px;
+  height: auto;
+}
+
+.cardKpRow {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
+  flex: 0 0 auto;
+  height: 44px;
+  min-height: 44px;
+}
+
+.cardKpRow .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+}
+
+.cardLabel {
+  display: none;
+  font-family: var(--font-commissioner);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.2;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.cardUnreadCount {
+  color: var(--color-red);
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  font-family: var(--font-commissioner);
+}
+
+.btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  height: auto;
+  padding: 10px 12px;
+}
+
+.confirm {
+  flex: 1.15 1 0;
+}
+
+.label {
+  font-family: var(--font-commissioner);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.2;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.pdfBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: var(--account-hairline-width) solid var(--color-ink-black, #1d1c1b);
+  background: var(--color-white);
+  color: var(--color-ink-black, #1d1c1b);
+  font-family: var(--font-commissioner);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.2;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.pdfBtn:hover:not(:disabled) {
+  background: var(--color-ink-black, #1d1c1b);
+  color: var(--color-white);
+}
+
+.pdfBtn:hover:not(:disabled) img {
+  filter: brightness(0) invert(1);
+}
+
+.pdfBtn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.pdfBtn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767.98px) {
+  .footer {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    gap: 6px;
+  }
+
+  .footerKp {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .footerKp .pdfBtn {
+    grid-column: 1 / -1;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 8px 6px;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .confirm {
+    flex: unset;
+  }
+
+  .label {
+    font-size: 12px;
+  }
+
+  .btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .pdfBtn {
+    min-height: 44px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    min-height: 72px;
+  }
+
+  .cardKp {
+    width: 100%;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .cardKp > .btn:first-child,
+  .cardKp > .confirm {
+    width: 100%;
+    flex: 1 1 0;
+    height: auto;
+    min-height: 56px;
+  }
+
+  .cardKpRow {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 56px;
+  }
+
+  .cardKpRow .btn {
+    height: auto;
+    min-height: 56px;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .cardLabel {
+    display: inline;
+  }
+
+  .card .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 72px;
+  }
+}

@@ -95,6 +95,17 @@
   font-family: var(--font-commissioner);
 }
 
+.loadMoreRow {
+  align-self: stretch;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.loadMoreButton {
+  min-width: 200px;
+}
+
 .ordersMainContent {
   margin-top: 32px;
   align-self: stretch;

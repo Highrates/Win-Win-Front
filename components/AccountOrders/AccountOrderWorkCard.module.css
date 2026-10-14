@@ -201,34 +201,59 @@
 .orderDetailLinkRow {
   align-self: stretch;
   display: inline-flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
   align-items: center;
   gap: 8px;
-  color: var(--color-gray);
+}
+
+.orderDetailLink:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.orderDetailPdfIcon {
+  flex-shrink: 0;
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.orderDetailLink:hover:not(:disabled) .orderDetailPdfIcon {
+  filter: brightness(0) invert(1);
 }
 
 .orderDetailLink {
   font-family: var(--font-commissioner);
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
-  color: var(--color-gray);
+  color: var(--color-ink-black, #051826);
   text-decoration: none;
-  border: none;
-  background: none;
-  padding: 0;
+  border: var(--account-hairline-width) solid var(--color-ink-black, #051826);
+  background: var(--color-white);
+  padding: 5px 10px;
+  border-radius: 999px;
   cursor: pointer;
   text-align: left;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  line-height: 1.2;
+  box-sizing: border-box;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.orderDetailLink:hover {
+  background: var(--color-ink-black, #051826);
+  color: var(--color-white);
+}
+
+.orderDetailLink:hover .orderDetailArrow {
+  filter: brightness(0) invert(1);
 }
 
 .orderDetailLinkText {
   text-decoration: none;
-}
-
-.orderDetailLink:hover .orderDetailLinkText {
-  text-decoration: underline;
 }
 
 .kpUnseenBadge {
@@ -249,14 +274,15 @@
 .orderDetailLink:focus-visible {
   outline: 2px solid var(--color-blue);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 .orderDetailArrow {
   flex-shrink: 0;
   display: block;
-  width: 10px;
-  height: auto;
+  width: 12px;
+  height: 7px;
+  margin-block: auto;
+  align-self: center;
 }
 
 .orderProductImgs {
@@ -324,36 +350,41 @@
   width: 148px;
 }
 
-/* Чат — первый ребёнок: растягивается на оставшуюся высоту карточки */
-.orderCTAKp > .ctaButton:first-child {
-  flex: 1 1 auto;
-  min-height: 48px;
+/* Local aliases so parent>child layout selectors stay in this module. */
+.ctaButton {
+  composes: ctaButton from './AccountOrderCta.module.css';
+}
+
+.ctaButtonUnread {
+  composes: ctaButtonUnread from './AccountOrderCta.module.css';
+}
+
+.ctaIcon {
+  composes: ctaIcon from './AccountOrderCta.module.css';
+}
+
+.ctaIconUnread {
+  composes: ctaIconUnread from './AccountOrderCta.module.css';
+}
+
+.ctaUnreadCount {
+  composes: ctaUnreadCount from './AccountOrderCta.module.css';
+}
+
+.ctaButtonLabel {
+  composes: ctaButtonLabel from './AccountOrderCta.module.css';
 }
 
 .ctaKpConfirm {
-  flex: 0 0 auto;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 12px;
-  background: var(--color-ink-black);
-  color: var(--color-white);
-  border-radius: 8px;
-  border: none;
-  font-family: var(--font-commissioner);
-  font-size: var(--text-caption);
-  font-weight: var(--text-caption-weight);
-  line-height: 1.2;
-  cursor: pointer;
-  box-sizing: border-box;
+  composes: ctaKpConfirm from './AccountOrderCta.module.css';
 }
 
-.ctaKpConfirm:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.ctaKpConfirm:focus-visible {
-  outline: 2px solid var(--color-blue);
-  outline-offset: 2px;
+/* Чат и «Подтвердить» делят оставшуюся высоту поровну; «Изменения/Отклонить» — фиксированы */
+.orderCTAKp > .ctaButton:first-child,
+.orderCTAKp > .ctaKpConfirm {
+  flex: 1 1 0;
+  min-height: 48px;
+  height: auto;
 }
 
 .ctaKpRow {
@@ -374,77 +405,7 @@
   padding: 0 8px;
 }
 
-.ctaButton {
-  align-self: stretch;
-  flex: 1;
-  min-height: 0;
-  padding: 16px 18px;
-  background: var(--color-bright-snow);
-  border-radius: 8px;
-  border: var(--account-hairline-width) solid transparent;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.ctaButton:focus-visible {
-  outline: 2px solid var(--color-blue);
-  outline-offset: 2px;
-}
-
-.ctaIcon {
-  width: 24px;
-  height: 24px;
-  display: block;
-  flex-shrink: 0;
-  color: var(--color-black);
-}
-
-.ctaIcon path {
-  stroke-width: 1.2;
-}
-
-.ctaButton:hover:not(:disabled) .ctaIcon {
-  color: color-mix(in srgb, var(--color-black) 58%, var(--color-bright-snow));
-}
-
-.ctaButtonUnread:hover:not(:disabled) .ctaIconUnread {
-  color: color-mix(in srgb, var(--color-red) 72%, var(--color-white));
-}
-
-.ctaButtonUnread {
-  border-color: var(--color-red);
-}
-
-.ctaIconUnread {
-  color: var(--color-red);
-}
-
-.ctaUnreadCount {
-  color: var(--color-red);
-  font-size: var(--text-body);
-  font-weight: var(--text-body-weight);
-  font-family: var(--font-commissioner);
-}
-
-.ctaButtonLabel {
-  display: none;
-  font-family: var(--font-commissioner);
-  font-size: var(--text-caption);
-  font-weight: var(--text-caption-weight);
-  line-height: 1.2;
-  color: inherit;
-  white-space: nowrap;
-}
-
 @media (max-width: 768px) {
-  .ctaButtonLabel {
-    display: inline;
-  }
-
   .ctaKpRow .ctaButton {
     flex-direction: column;
     gap: 4px;
@@ -480,20 +441,12 @@
     min-height: 0;
   }
 
-  .orderCTAKp > .ctaButton:first-child {
+  .orderCTAKp > .ctaButton:first-child,
+  .orderCTAKp > .ctaKpConfirm {
     width: 100%;
-    flex: 1 1 auto;
-    min-height: 72px;
-  }
-
-  .ctaKpConfirm {
-    height: 48px;
-    min-height: 48px;
-    flex: 0 0 auto;
-  }
-
-  .ctaButtonLabel {
-    display: inline;
+    flex: 1 1 0;
+    height: auto;
+    min-height: 56px;
   }
 
   .ctaKpRow {
@@ -512,21 +465,6 @@
   }
 
   .ctaKpRow .ctaIcon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .ctaButton {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 72px;
-    width: auto;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-  }
-
-  .ctaIcon {
     width: 20px;
     height: 20px;
   }

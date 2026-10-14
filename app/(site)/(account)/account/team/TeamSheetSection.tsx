@@ -11,7 +11,6 @@ import {
   type PartnerReportPeriod,
   type PartnerReportRangePreset,
 } from '@/lib/account/partnerReportPeriod';
-import { downloadPartnerTeamPdf } from '@/lib/account/exportPartnerTeamPdf';
 import {
   filterCompletedPartnerLines,
   filterReferralL1Lines,
@@ -50,8 +49,6 @@ export function TeamSheetSection({
   const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(() => defaultCustomRangeYmd().fromYmd);
   const [draftTo, setDraftTo] = useState(() => defaultCustomRangeYmd().toYmd);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   const [designerFilterId, setDesignerFilterId] = useState<string | null>(null);
   const [levelFilter, setLevelFilter] = useState<L2LevelFilter>('all');
   const [designerMenuOpen, setDesignerMenuOpen] = useState(false);
@@ -96,7 +93,6 @@ export function TeamSheetSection({
     setDraftFrom(toDateInputValue(next.from));
     setDraftTo(toDateInputValue(new Date(next.toExclusive.getTime() - 1)));
     setPeriodMenuOpen(false);
-    setExportError(null);
   };
 
   const applyCustomRange = () => {
@@ -105,7 +101,6 @@ export function TeamSheetSection({
     setPeriod(next);
     setRangeIndex(-1);
     setPeriodMenuOpen(false);
-    setExportError(null);
   };
 
   const l1All = useMemo(
@@ -168,23 +163,6 @@ export function TeamSheetSection({
   const levelFilterLabel =
     levelFilter === 'all' ? 'По уровню' : levelFilter === 1 ? 'Уровень L1' : 'Уровень L2';
 
-  const onExportPdf = async () => {
-    if (exporting) return;
-    setExporting(true);
-    setExportError(null);
-    try {
-      await downloadPartnerTeamPdf({
-        period,
-        l1Lines: l1Rows,
-        l2Lines: teamRows,
-      });
-    } catch {
-      setExportError('Не удалось сформировать PDF. Попробуйте ещё раз.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
   return (
     <div className={report.sheetWrapper}>
       {partnerIncomeError ? (
@@ -216,10 +194,6 @@ export function TeamSheetSection({
             onApplyCustomRange={applyCustomRange}
             rangeIndex={rangeIndex}
             onSelectPreset={selectPreset}
-            onExportPdf={() => void onExportPdf()}
-            exporting={exporting}
-            exportDisabled={partnerIncomeLoading}
-            exportError={exportError}
           />
           <PartnerIncomeTables
             l1Rows={l1Rows}

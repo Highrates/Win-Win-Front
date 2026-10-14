@@ -19,10 +19,6 @@ type Props = {
   onApplyCustomRange: () => void;
   rangeIndex: number;
   onSelectPreset: (index: number) => void;
-  onExportPdf: () => void;
-  exporting: boolean;
-  exportDisabled: boolean;
-  exportError: string | null;
 };
 
 export function TeamPeriodToolbar({
@@ -37,10 +33,6 @@ export function TeamPeriodToolbar({
   onApplyCustomRange,
   rangeIndex,
   onSelectPreset,
-  onExportPdf,
-  exporting,
-  exportDisabled,
-  exportError,
 }: Props) {
   const periodPopoverRef = useRef<HTMLDivElement>(null);
   useModalFocusTrap(periodMenuOpen, periodPopoverRef);
@@ -106,15 +98,7 @@ export function TeamPeriodToolbar({
             mode="toggle"
           />
         </div>
-        <TBtn type="button" onClick={onExportPdf} disabled={exportDisabled || exporting}>
-          {exporting ? 'Формируем PDF…' : 'Экспортировать PDF'}
-        </TBtn>
       </div>
-      {exportError ? (
-        <p className={report.exportError} role="alert">
-          {exportError}
-        </p>
-      ) : null}
     </div>
   );
 }

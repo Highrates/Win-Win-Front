@@ -10,7 +10,10 @@ export function useModalBodyLock(open: boolean, onEscape: () => void) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onEscapeRef.current();
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      onEscapeRef.current();
     };
     document.addEventListener('keydown', onKeyDown);
     const html = document.documentElement;

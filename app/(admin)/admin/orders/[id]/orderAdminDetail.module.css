@@ -43,8 +43,18 @@
   gap: 28px;
 }
 
-.kpVersionCaption {
+.kpVersionCaptionRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0 0 12px;
+}
+
+.kpVersionCaption {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .actionsHint {
