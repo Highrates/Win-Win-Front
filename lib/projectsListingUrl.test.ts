@@ -1,50 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import {
-  chipsFromFeedSource,
-  feedSourceFromChips,
-  nextProjectsSearchWithSource,
-} from './projectsListingUrl';
+import { nextProjectsSearchWithSource } from './projectsListingUrl';
 import {
   parseProjectsFeedPayload,
   resolveProjectsFeedSource,
 } from './publicProjectsListing';
 
 describe('projectsListingUrl', () => {
-  it('maps source param to chips', () => {
-    expect(chipsFromFeedSource('all')).toEqual({ designers: true, brands: true });
-    expect(chipsFromFeedSource('designers')).toEqual({ designers: true, brands: false });
-    expect(chipsFromFeedSource('brands')).toEqual({ designers: false, brands: true });
-  });
-
-  it('writes ?source= when toggling to one chip', () => {
-    expect(nextProjectsSearchWithSource('', { designers: true, brands: false })).toBe(
-      '?source=designers',
+  it('writes ?source= when selecting designers or brands', () => {
+    expect(nextProjectsSearchWithSource('', 'designers')).toBe('?source=designers');
+    expect(nextProjectsSearchWithSource('?brand=acme&product=1', 'brands')).toBe(
+      '?brand=acme&product=1&source=brands',
     );
-    expect(
-      nextProjectsSearchWithSource('?brand=acme&product=1', { designers: false, brands: true }),
-    ).toBe('?brand=acme&product=1&source=brands');
   });
 
-  it('removes source when both chips on (all)', () => {
-    expect(
-      nextProjectsSearchWithSource('?source=designers', { designers: true, brands: true }),
-    ).toBe('');
+  it('removes source when selecting all', () => {
+    expect(nextProjectsSearchWithSource('?source=designers', 'all')).toBe('');
   });
 
-  it('does not rewrite URL when both chips off', () => {
-    expect(nextProjectsSearchWithSource('?source=brands', { designers: false, brands: false })).toBe(
-      null,
-    );
+  it('does not rewrite URL when already all without source param', () => {
+    expect(nextProjectsSearchWithSource('', 'all')).toBe(null);
   });
 
   it('writes source=brands so shareable URL survives refresh', () => {
-    expect(feedSourceFromChips({ designers: false, brands: true })).toBe('brands');
-    expect(nextProjectsSearchWithSource('', { designers: false, brands: true })).toBe(
-      '?source=brands',
-    );
-    expect(nextProjectsSearchWithSource('?source=brands', { designers: true, brands: true })).toBe(
-      '',
-    );
+    expect(nextProjectsSearchWithSource('', 'brands')).toBe('?source=brands');
+    expect(nextProjectsSearchWithSource('?source=brands', 'all')).toBe('');
+    expect(nextProjectsSearchWithSource('?source=brands', 'brands')).toBe(null);
   });
 });
 

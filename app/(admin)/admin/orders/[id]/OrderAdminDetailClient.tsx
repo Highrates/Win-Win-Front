@@ -27,6 +27,22 @@ import { AdminOrdersConfirmModal } from '../AdminOrdersConfirmModal';
 import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
 import { ORDER_STATUS_DRAFT, ORDER_STATUS_FLOW } from '@/lib/orders/orderStatus';
 
+type CustomerKpDecisionCode = 'ACCEPTED' | 'CHANGES_REQUESTED' | 'REJECTED';
+
+type CustomerKpRequisites = {
+  legalType?: string | null;
+  contactName?: string | null;
+  phone?: string | null;
+  companyName?: string | null;
+  inn?: string | null;
+  kpp?: string | null;
+  legalAddress?: string | null;
+  bankName?: string | null;
+  bankAccount?: string | null;
+  bic?: string | null;
+  correspondentAccount?: string | null;
+};
+
 type AdminOrderDetail = {
   id: string;
   status: string;
@@ -37,6 +53,10 @@ type AdminOrderDetail = {
   deliveryAddress: string | null;
   createdAt: string;
   updatedAt: string;
+  customerKpDecision?: CustomerKpDecisionCode | null;
+  customerKpDecisionAt?: string | null;
+  customerKpDecisionVersion?: number | null;
+  customerKpRequisites?: CustomerKpRequisites | null;
   user: {
     id: string;
     email: string | null;
@@ -58,6 +78,11 @@ type AdminOrderDetail = {
     };
   }[];
 };
+
+function parseCustomerKpRequisites(raw: unknown): CustomerKpRequisites | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  return raw as CustomerKpRequisites;
+}
 
 function parseSnapshot(row: { snapshot: unknown }): Record<string, unknown> | null {
   const s = row.snapshot;
@@ -585,6 +610,125 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                     );
                   })}
                 </div>
+              )}
+            </div>
+          ) : null}
+
+          {showPublishedKpBlock || order.customerKpDecision ? (
+            <div className={styles.section}>
+              <h2 className={styles.groupHeading}>{d.kpSectionCustomerResponse}</h2>
+              {!order.customerKpDecision ? (
+                <p className={styles.muted}>{d.kpCustomerNoResponse}</p>
+              ) : (
+                <dl className={clientsStyles.detailList}>
+                  <div>
+                    <dt>{d.labelStatus}</dt>
+                    <dd>
+                      {order.customerKpDecision === 'ACCEPTED'
+                        ? d.kpCustomerDecisionAccepted
+                        : order.customerKpDecision === 'REJECTED'
+                          ? d.kpCustomerDecisionRejected
+                          : d.kpCustomerDecisionChanges}
+                    </dd>
+                  </div>
+                  {order.customerKpDecisionVersion != null ? (
+                    <div>
+                      <dt>{d.kpCustomerDecisionVersion}</dt>
+                      <dd>{order.customerKpDecisionVersion}</dd>
+                    </div>
+                  ) : null}
+                  <div>
+                    <dt>{d.kpCustomerDecisionAt}</dt>
+                    <dd>
+                      {order.customerKpDecisionAt
+                        ? formatAdminOrderDateTime(order.customerKpDecisionAt, locale)
+                        : '—'}
+                    </dd>
+                  </div>
+                  {order.customerKpDecision === 'ACCEPTED'
+                    ? (() => {
+                        const req =
+                          parseCustomerKpRequisites(order.customerKpRequisites) ??
+                          order.customerKpRequisites ??
+                          null;
+                        if (!req) return null;
+                        const legal =
+                          req.legalType === 'IE'
+                            ? d.kpCustomerLegalIe
+                            : req.legalType === 'LLC'
+                              ? d.kpCustomerLegalLlc
+                              : d.kpCustomerLegalIndividual;
+                        return (
+                          <>
+                            <div>
+                              <dt>{d.kpCustomerRequisitesHeading}</dt>
+                              <dd>{legal}</dd>
+                            </div>
+                            {req.contactName?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqContact}</dt>
+                                <dd>{req.contactName.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.phone?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqPhone}</dt>
+                                <dd>{req.phone.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.companyName?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqCompany}</dt>
+                                <dd>{req.companyName.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.inn?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqInn}</dt>
+                                <dd>{req.inn.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.kpp?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqKpp}</dt>
+                                <dd>{req.kpp.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.legalAddress?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqLegalAddress}</dt>
+                                <dd className={od.preWrap}>{req.legalAddress.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.bankName?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqBankName}</dt>
+                                <dd>{req.bankName.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.bankAccount?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqBankAccount}</dt>
+                                <dd>{req.bankAccount.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.bic?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqBic}</dt>
+                                <dd>{req.bic.trim()}</dd>
+                              </div>
+                            ) : null}
+                            {req.correspondentAccount?.trim() ? (
+                              <div>
+                                <dt>{d.kpCustomerReqCorrAccount}</dt>
+                                <dd>{req.correspondentAccount.trim()}</dd>
+                              </div>
+                            ) : null}
+                          </>
+                        );
+                      })()
+                    : null}
+                </dl>
               )}
             </div>
           ) : null}

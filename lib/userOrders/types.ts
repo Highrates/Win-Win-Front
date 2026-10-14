@@ -20,8 +20,14 @@ export type UserOrderListItemApi = {
   commercialProposalDeliveryEta?: string | null;
   /** Дата публикации последнего КП (для сортировки ленты). */
   commercialProposalPublishedAt?: string | null;
+  /** Номер версии последнего опубликованного КП (для optimistic concurrency при ответе). */
+  commercialProposalVersion?: number | null;
   /** Есть непросмотренная версия опубликованного КП. */
   hasUnseenCommercialProposal?: boolean;
+  /** Можно ответить на текущую версию КП (принять / правки / отклонить). */
+  canRespondToCommercialProposal?: boolean;
+  /** Уже зафиксированный ответ на КП (если на текущую или прошлую версию). */
+  customerKpDecision?: 'ACCEPTED' | 'CHANGES_REQUESTED' | 'REJECTED' | null;
   items: {
     quantity: number;
     snapshot?: unknown;

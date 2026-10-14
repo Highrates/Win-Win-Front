@@ -60,8 +60,11 @@ type Props = {
   onClose: () => void;
   title: string;
   messages?: ChatWindowMessage[];
-  /** Вызывается при нажатии «Отправить» (текст из поля) */
-  onSend?: (text: string) => void;
+  /**
+   * Вызывается при нажатии «Отправить» (текст из поля).
+   * Если вернёт `false` / rejected Promise — черновик в поле не очищается.
+   */
+  onSend?: (text: string) => void | boolean | Promise<void | boolean>;
   /** Боковая колонка: без портала и без fixed-позиционирования */
   variant?: 'portal' | 'embedded';
   /**
@@ -73,6 +76,8 @@ type Props = {
   hideCloseButton?: boolean;
   messageEmptyHint?: string;
   inputPlaceholder?: string;
+  /** Предзаполнить композер при открытии (например подсказка после «Отклонить»). */
+  seedDraft?: string | null;
   /** Баннер ошибки над лентой сообщений */
   errorText?: string | null;
   /** Заблокировать ввод и отправку */
@@ -236,6 +241,7 @@ export function ChatWindow({
   hideCloseButton = false,
   messageEmptyHint = 'Пока нет сообщений',
   inputPlaceholder = 'Сообщение',
+  seedDraft = null,
   errorText = null,
   composerDisabled = false,
   attachPickerDisabled,
@@ -262,6 +268,16 @@ export function ChatWindow({
   const [draft, setDraft] = useState('');
   /** Два rAF: даём браузеру собрать слой с backdrop-filter до плавного появления */
   const [blendReady, setBlendReady] = useState(embedded);
+
+  /** Один эффект: при open — seed или пусто; при close — очистка. Не сбрасывать вторым эффектом на open. */
+  useEffect(() => {
+    if (!open) {
+      setDraft('');
+      return;
+    }
+    // Не trim-им значение: шаблоны «Причина: » / «…: » держат хвостовой пробел для набора.
+    setDraft(seedDraft && seedDraft.trim() ? seedDraft : '');
+  }, [open, seedDraft]);
 
   /** Прокручивает область сообщений к низу (новые сообщения внизу). */
   const scrollMessagesToBottom = useCallback(() => {
@@ -407,10 +423,6 @@ export function ChatWindow({
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose, embedded]);
 
-  useEffect(() => {
-    if (open) setDraft('');
-  }, [open]);
-
   const syncComposerHeight = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -427,8 +439,15 @@ export function ChatWindow({
     if (composerDisabled) return;
     const t = draft.trim();
     if (!t && !allowEmptySend) return;
-    onSend?.(t);
-    setDraft('');
+    void (async () => {
+      try {
+        const result = await Promise.resolve(onSend?.(t));
+        if (result === false) return;
+        setDraft('');
+      } catch {
+        /* черновик оставляем — родитель показал ошибку */
+      }
+    })();
   }, [draft, onSend, composerDisabled, allowEmptySend]);
 
   const openChatImage = useCallback((images: ChatImageAttachment[], index: number) => {

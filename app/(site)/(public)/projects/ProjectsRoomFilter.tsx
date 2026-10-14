@@ -2,9 +2,14 @@
 
 import Link from 'next/link';
 import { UnderlineTabs } from '@/components/UnderlineTabs';
+import type { ProjectsFeedSourceParam } from '@/lib/projectsListingUrl';
 import styles from './ProjectsPage.module.css';
 
-export type ProjectsSourceChip = 'designers' | 'brands';
+const SOURCE_OPTIONS: { id: ProjectsFeedSourceParam; label: string }[] = [
+  { id: 'all', label: 'Все' },
+  { id: 'designers', label: 'Дизайнеры' },
+  { id: 'brands', label: 'Бренды' },
+];
 
 type Props = {
   /** «Все» + помещения из выкладки. */
@@ -19,8 +24,10 @@ type Props = {
   productBrandFilter?: { slug: string; label: string } | null;
   withProducts: boolean;
   onWithProductsChange: (value: boolean) => void;
-  sources: Record<ProjectsSourceChip, boolean>;
-  onSourceToggle: (source: ProjectsSourceChip) => void;
+  source: ProjectsFeedSourceParam;
+  onSourceChange: (source: ProjectsFeedSourceParam) => void;
+  /** Скрыть сегмент, если источник задан query (`brand` / `productBrand`). */
+  sourceLocked?: boolean;
 };
 
 function projectsHref(params: {
@@ -47,8 +54,9 @@ export function ProjectsRoomFilter({
   productBrandFilter,
   withProducts,
   onWithProductsChange,
-  sources,
-  onSourceToggle,
+  source,
+  onSourceChange,
+  sourceLocked = false,
 }: Props) {
   const tabs = roomChips.map((label) => ({ id: label, label }));
 
@@ -148,28 +156,27 @@ export function ProjectsRoomFilter({
             <span className={styles.withProductsSwitchLabel}>с товарами</span>
           </label>
 
-          <div className={styles.sourceChips} role="group" aria-label="Источник проектов">
-            <button
-              type="button"
-              className={`${styles.marketProductFilterChip} ${styles.sourceChipBtn} ${
-                sources.designers ? styles.sourceChipActive : styles.sourceChipInactive
-              }`}
-              aria-pressed={sources.designers}
-              onClick={() => onSourceToggle('designers')}
-            >
-              Дизайнеры
-            </button>
-            <button
-              type="button"
-              className={`${styles.marketProductFilterChip} ${styles.sourceChipBtn} ${
-                sources.brands ? styles.sourceChipActive : styles.sourceChipInactive
-              }`}
-              aria-pressed={sources.brands}
-              onClick={() => onSourceToggle('brands')}
-            >
-              Бренды
-            </button>
-          </div>
+          {!sourceLocked ? (
+            <div className={styles.sourceSegment} role="radiogroup" aria-label="Источник проектов">
+              {SOURCE_OPTIONS.map((opt) => {
+                const selected = source === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`${styles.sourceSegmentBtn} ${
+                      selected ? styles.sourceSegmentBtnActive : ''
+                    }`}
+                    onClick={() => onSourceChange(opt.id)}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

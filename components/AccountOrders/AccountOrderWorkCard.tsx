@@ -4,9 +4,18 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
 import { useOrderChat, type OrderChatSubject } from '@/hooks/useOrderChat';
-import { ACCOUNT_WORK_NOTIFICATIONS_EVENT, type AccountWorkNotificationsDetail } from '@/lib/account/orders';
+import {
+  ACCOUNT_WORK_NOTIFICATIONS_EVENT,
+  dispatchAccountWorkFeedRefreshEvent,
+  type AccountWorkNotificationsDetail,
+} from '@/lib/account/orders';
 import { openOrderChatPhotoSwipe } from '@/lib/orderChat/openOrderChatPhotoSwipe';
+import {
+  archiveUserOrder,
+  recordUserOrderCommercialProposalDecision,
+} from '@/lib/userOrders/clientApi';
 import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
+import { OrderKpAcceptModal } from './OrderKpAcceptModal';
 import styles from './AccountOrderWorkCard.module.css';
 
 export type AccountOrderWorkMetaRow = { label: string; value: ReactNode; valueTitle?: string };
@@ -45,6 +54,10 @@ export type AccountOrderWorkCardProps = {
   staffUnreadCount?: number;
   /** Есть непросмотренная версия опубликованного КП. */
   hasUnseenCommercialProposal?: boolean;
+  /** Показать кнопки ответа на КП (подтвердить / правки / отклонить). */
+  canRespondToCommercialProposal?: boolean;
+  /** Версия опубликованного КП для optimistic concurrency при ответе. */
+  commercialProposalVersion?: number | null;
   /** Показывать чат справа (по умолчанию — да). */
   chatEnabled?: boolean;
   /** Тип сущности для API чата (заказ или заявка на подбор). */
@@ -56,6 +69,8 @@ export type AccountOrderWorkCardProps = {
 };
 
 const PLACEHOLDER = '/images/placeholder.svg';
+
+type PendingKpChatDecision = 'CHANGES_REQUESTED' | 'REJECTED';
 
 function isZoomableThumb(src: string): boolean {
   return Boolean(src?.trim()) && src !== PLACEHOLDER && !src.includes('placeholder.svg');
@@ -107,6 +122,43 @@ function OrderCtaMessageIcon({ className }: { className?: string }) {
   );
 }
 
+function OrderCtaEditIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path
+        d="M11.05 3.00002L4.20835 10.2417C3.95002 10.5167 3.70002 11.0584 3.65002 11.4334L3.34169 14.1334C3.23335 15.1084 3.93335 15.775 4.90002 15.6084L7.58335 15.15C7.95835 15.0834 8.48335 14.8084 8.74169 14.525L15.5834 7.28335C16.7667 6.03335 17.3 4.60835 15.4584 2.86669C13.625 1.14169 12.2334 1.75002 11.05 3.00002Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeMiterlimit={10}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.90833 4.20837C10.2667 6.50837 12.1333 8.26671 14.45 8.50004"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeMiterlimit={10}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function OrderCtaRejectIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path
+        d="M15 5L5 15M5 5l10 10"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function renderMeta(metaRows: AccountOrderWorkMetaRow[]) {
   return (
     <div className={productListStyles.productCardDetailedMeta}>
@@ -135,6 +187,8 @@ export function AccountOrderWorkCard({
   statusRejected = false,
   staffUnreadCount = 0,
   hasUnseenCommercialProposal = false,
+  canRespondToCommercialProposal = false,
+  commercialProposalVersion = null,
   chatEnabled = true,
   chatSubject = 'order',
   detailLinkLabel = 'Подробнее о заказе',
@@ -142,8 +196,17 @@ export function AccountOrderWorkCard({
 }: AccountOrderWorkCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [acceptOpen, setAcceptOpen] = useState(false);
   const [displayUnread, setDisplayUnread] = useState(staffUnreadCount);
   const [displayKpUnseen, setDisplayKpUnseen] = useState(hasUnseenCommercialProposal);
+  const [canRespondKp, setCanRespondKp] = useState(canRespondToCommercialProposal);
+  const [pendingKpDecision, setPendingKpDecision] = useState<PendingKpChatDecision | null>(null);
+  /** Decision уже записан, нужно только дослать причину в чат. */
+  const [kpReasonFollowUp, setKpReasonFollowUp] = useState(false);
+  const [chatSeedDraft, setChatSeedDraft] = useState<string | null>(null);
+  const [composerBanner, setComposerBanner] = useState<string | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const menuWrapRef = useRef<HTMLDivElement>(null);
   const {
     chatMessages,
@@ -176,6 +239,10 @@ export function AccountOrderWorkCard({
   useEffect(() => {
     setDisplayKpUnseen(hasUnseenCommercialProposal);
   }, [hasUnseenCommercialProposal, orderId]);
+
+  useEffect(() => {
+    setCanRespondKp(canRespondToCommercialProposal);
+  }, [canRespondToCommercialProposal, orderId]);
 
   useEffect(() => {
     const onWorkNotifications = (ev: Event) => {
@@ -250,33 +317,168 @@ export function AccountOrderWorkCard({
     renderMeta(metaRows)
   );
 
-  const openChat = () => setChatOpen(true);
+  const openChat = () => {
+    setPendingKpDecision(null);
+    if (kpReasonFollowUp) {
+      setComposerBanner(
+        'Решение сохранено, но сообщение не ушло. Отправьте причину ещё раз — без повторной фиксации решения.',
+      );
+    } else {
+      setChatSeedDraft(null);
+      setComposerBanner(null);
+    }
+    setChatOpen(true);
+  };
+
+  function openKpChat(decision: PendingKpChatDecision) {
+    setPendingKpDecision(decision);
+    setKpReasonFollowUp(false);
+    if (decision === 'REJECTED') {
+      setComposerBanner('Опишите причину отклонения и отправьте сообщение — мы зафиксируем отказ.');
+      setChatSeedDraft('Хочу отклонить коммерческое предложение. Причина: ');
+    } else {
+      setComposerBanner('Опишите, что нужно изменить в КП, и отправьте сообщение.');
+      setChatSeedDraft('Прошу изменить коммерческое предложение: ');
+    }
+    setChatOpen(true);
+  }
+
+  function finishKpRespondUi() {
+    setPendingKpDecision(null);
+    setKpReasonFollowUp(false);
+    setComposerBanner(null);
+    setChatSeedDraft(null);
+    setCanRespondKp(false);
+    setDisplayKpUnseen(false);
+    dispatchAccountWorkFeedRefreshEvent();
+  }
+
+  /**
+   * Сначала decision, потом сообщение.
+   * Pending не сбрасываем до успеха send; если decision уже есть, а чат упал — режим «дослать причину».
+   */
+  async function handleChatSend(text: string): Promise<boolean> {
+    if (chatSubject === 'order' && pendingKpDecision) {
+      const decision = pendingKpDecision;
+      const version = commercialProposalVersion;
+      if (version == null || version < 1) {
+        setComposerBanner('КП обновлено — обновите список заказов и попробуйте снова.');
+        return false;
+      }
+      try {
+        await recordUserOrderCommercialProposalDecision(orderId, decision, version);
+      } catch (e) {
+        setComposerBanner(
+          e instanceof Error
+            ? e.message
+            : 'Не удалось зафиксировать решение. Сообщение не отправлено — попробуйте ещё раз.',
+        );
+        return false;
+      }
+
+      const ok = await sendChatText(text);
+      if (!ok) {
+        setPendingKpDecision(null);
+        setKpReasonFollowUp(true);
+        setCanRespondKp(false);
+        setDisplayKpUnseen(false);
+        setComposerBanner(
+          'Решение сохранено, но сообщение не ушло. Отправьте причину ещё раз — без повторной фиксации решения.',
+        );
+        dispatchAccountWorkFeedRefreshEvent();
+        return false;
+      }
+      finishKpRespondUi();
+      return true;
+    }
+
+    if (chatSubject === 'order' && kpReasonFollowUp) {
+      const ok = await sendChatText(text);
+      if (!ok) {
+        setComposerBanner('Не удалось отправить причину. Нажмите «Отправить» ещё раз.');
+        return false;
+      }
+      finishKpRespondUi();
+      return true;
+    }
+
+    return sendChatText(text);
+  }
+
+  async function handleArchive() {
+    if (chatSubject !== 'order' || archiveBusy) return;
+    setArchiveBusy(true);
+    setArchiveError(null);
+    setMenuOpen(false);
+    try {
+      await archiveUserOrder(orderId);
+      dispatchAccountWorkFeedRefreshEvent();
+    } catch (e) {
+      setArchiveError(e instanceof Error ? e.message : 'Не удалось архивировать');
+    } finally {
+      setArchiveBusy(false);
+    }
+  }
+
+  const showKpActions = chatEnabled && chatSubject === 'order' && canRespondKp;
 
   return (
     <div className={chatEnabled ? styles.orderWrapper : `${styles.orderWrapper} ${styles.orderWrapperNoChat}`}>
       {chatEnabled ? (
         <ChatWindow
-        open={chatOpen}
-        onClose={() => setChatOpen(false)}
-        title={chatTitle}
-        messages={chatMessages}
-        messageEmptyHint={chatLoading ? 'Загрузка…' : 'Пока нет сообщений'}
-        errorText={chatError}
-        composerDisabled={chatComposerDisabled}
-        attachPickerDisabled={chatAttachPickerDisabled}
-        attachmentsEnabled
-        pendingAttachmentsHint={pendingAttachmentsHint}
-        pendingOutgoing={pendingOutgoingAttachments}
-        allowEmptySend={canSendAttachmentMessage}
-        onSend={sendChatText}
-        onAttachFiles={attachChatFiles}
-        onRemovePendingAttachment={removePendingChatAttachment}
-        onDeleteMessage={deleteChatMessage}
-        hasOlderHistory={chatHasOlderHistory}
-        loadingOlderHistory={chatLoadingOlderHistory}
-        onLoadOlderHistory={loadOlderChatMessages}
+          open={chatOpen}
+          onClose={() => {
+            setChatOpen(false);
+            setPendingKpDecision(null);
+            setComposerBanner(null);
+            setChatSeedDraft(null);
+            /* kpReasonFollowUp оставляем — можно открыть чат снова и дослать */
+          }}
+          title={chatTitle}
+          messages={chatMessages}
+          messageEmptyHint={chatLoading ? 'Загрузка…' : 'Пока нет сообщений'}
+          errorText={chatError}
+          composerDisabled={chatComposerDisabled}
+          attachPickerDisabled={chatAttachPickerDisabled}
+          attachmentsEnabled
+          pendingAttachmentsHint={pendingAttachmentsHint}
+          pendingOutgoing={pendingOutgoingAttachments}
+          allowEmptySend={canSendAttachmentMessage}
+          onSend={handleChatSend}
+          seedDraft={chatSeedDraft}
+          composerBanner={composerBanner}
+          inputPlaceholder={
+            kpReasonFollowUp
+              ? 'Дослать причину…'
+              : pendingKpDecision === 'REJECTED'
+                ? 'Причина отклонения…'
+                : pendingKpDecision === 'CHANGES_REQUESTED'
+                  ? 'Что изменить в КП…'
+                  : 'Сообщение'
+          }
+          onAttachFiles={attachChatFiles}
+          onRemovePendingAttachment={removePendingChatAttachment}
+          onDeleteMessage={deleteChatMessage}
+          hasOlderHistory={chatHasOlderHistory}
+          loadingOlderHistory={chatLoadingOlderHistory}
+          onLoadOlderHistory={loadOlderChatMessages}
         />
       ) : null}
+
+      {chatSubject === 'order' ? (
+        <OrderKpAcceptModal
+          open={acceptOpen}
+          orderId={orderId}
+          expectedVersion={commercialProposalVersion}
+          onClose={() => setAcceptOpen(false)}
+          onAccepted={() => {
+            setCanRespondKp(false);
+            setDisplayKpUnseen(false);
+            dispatchAccountWorkFeedRefreshEvent();
+          }}
+        />
+      ) : null}
+
       <div className={styles.orderCard}>
         <div className={styles.orderCardTop}>
           <div className={styles.orderCardTopLeft}>
@@ -284,7 +486,22 @@ export function AccountOrderWorkCard({
               {statusLabel}
             </span>
             <span className={styles.orderDate}>{dateLine}</span>
-            {statusNotice ? <p className={styles.orderStatusNotice}>{statusNotice}</p> : null}
+            {statusNotice ? (
+              <p
+                className={
+                  statusRejected
+                    ? `${styles.orderStatusNotice} ${styles.orderStatusNoticeRejected}`
+                    : styles.orderStatusNotice
+                }
+              >
+                {statusNotice}
+              </p>
+            ) : null}
+            {archiveError ? (
+              <p className={`${styles.orderStatusNotice} ${styles.orderStatusNoticeRejected}`} role="alert">
+                {archiveError}
+              </p>
+            ) : null}
           </div>
           {!hideMoreMenu || cornerChipLabel ? (
             <div className={styles.orderCardTopActions}>
@@ -305,8 +522,14 @@ export function AccountOrderWorkCard({
                   </button>
                   {menuOpen ? (
                     <div className={productListStyles.productCardDetailedMoreMenu} role="menu">
-                      <button type="button" className={productListStyles.productCardDetailedMoreItem} role="menuitem">
-                        Архивировать
+                      <button
+                        type="button"
+                        className={productListStyles.productCardDetailedMoreItem}
+                        role="menuitem"
+                        disabled={archiveBusy || chatSubject !== 'order'}
+                        onClick={() => void handleArchive()}
+                      >
+                        {archiveBusy ? 'Архивация…' : 'Архивировать'}
                       </button>
                     </div>
                   ) : null}
@@ -360,13 +583,48 @@ export function AccountOrderWorkCard({
       </div>
 
       {chatEnabled ? (
-        <div className={styles.orderCTA}>
-          <MessageCtaButton
-            staffUnreadCount={displayUnread}
-            onClick={openChat}
-            ariaLabel={chatSubject === 'sourcing' ? 'Написать по заявке' : 'Написать по заказу'}
-          />
-        </div>
+        showKpActions ? (
+          <div className={`${styles.orderCTA} ${styles.orderCTAKp}`}>
+            <MessageCtaButton
+              staffUnreadCount={displayUnread}
+              onClick={openChat}
+              ariaLabel="Написать по заказу"
+            />
+            <button type="button" className={styles.ctaKpConfirm} onClick={() => setAcceptOpen(true)}>
+              Подтвердить
+            </button>
+            <div className={styles.ctaKpRow}>
+              <button
+                type="button"
+                className={styles.ctaButton}
+                aria-label="Запросить изменения"
+                title="Запросить изменения"
+                onClick={() => openKpChat('CHANGES_REQUESTED')}
+              >
+                <OrderCtaEditIcon className={styles.ctaIcon} />
+                <span className={styles.ctaButtonLabel}>Изменения</span>
+              </button>
+              <button
+                type="button"
+                className={styles.ctaButton}
+                aria-label="Отклонить"
+                title="Отклонить"
+                onClick={() => openKpChat('REJECTED')}
+              >
+                <OrderCtaRejectIcon className={styles.ctaIcon} />
+                <span className={styles.ctaButtonLabel}>Отклонить</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.orderCTA}>
+            <MessageCtaButton
+              staffUnreadCount={displayUnread}
+              onClick={openChat}
+              ariaLabel={chatSubject === 'sourcing' ? 'Написать по заявке' : 'Написать по заказу'}
+            />
+          </div>
+        )
       ) : null}
     </div>
   );

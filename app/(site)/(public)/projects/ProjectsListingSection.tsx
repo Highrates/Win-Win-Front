@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { CasesPagination, ProjectData } from '../designers/designerProjectsTypes';
 import { ProjectsGrid } from './ProjectsGrid';
 import { ProjectsRoomFilter } from './ProjectsRoomFilter';
-import { projectsFeedPaginationEnabled } from '@/lib/brandCaseForm';
 import { useProjectsListingFilters } from './useProjectsListingFilters';
 import pageStyles from './ProjectsPage.module.css';
 
@@ -45,11 +44,11 @@ export function ProjectsListingSection({
     setActiveRoom,
     withProducts,
     setWithProducts,
-    sources,
-    onSourceToggle,
+    source,
+    onSourceChange,
+    sourceLocked,
     onFeedRooms,
     roomChips,
-    bothSourcesOff,
     feedSource,
   } = useProjectsListingFilters({
     brandFilter,
@@ -62,8 +61,7 @@ export function ProjectsListingSection({
     setRetrying(false);
   }, [loadError, projects, initialTotal]);
 
-  const feedEnabled =
-    initialTotal != null && projectsFeedPaginationEnabled(bothSourcesOff);
+  const feedEnabled = initialTotal != null;
 
   const casesPagination = useMemo((): CasesPagination | undefined => {
     if (!feedEnabled || initialTotal == null) return undefined;
@@ -101,8 +99,9 @@ export function ProjectsListingSection({
       productBrandFilter={productBrandFilter ?? null}
       withProducts={withProducts}
       onWithProductsChange={setWithProducts}
-      sources={sources}
-      onSourceToggle={onSourceToggle}
+      source={source}
+      onSourceChange={onSourceChange}
+      sourceLocked={sourceLocked}
     />
   );
 
@@ -123,13 +122,6 @@ export function ProjectsListingSection({
         {retrying ? 'Загрузка…' : 'Повторить'}
       </button>
     </div>
-  ) : bothSourcesOff ? (
-    <>
-      <div className={pageStyles.listingFiltersAboveHint}>{filterBar}</div>
-      <p className={pageStyles.listingStatus}>
-        Включите хотя бы один источник: «Дизайнеры» или «Бренды».
-      </p>
-    </>
   ) : (
     <ProjectsGrid
       projects={projects}

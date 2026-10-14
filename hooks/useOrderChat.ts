@@ -580,19 +580,19 @@ export function useOrderChat(opts: {
   }, [enabled, orderId, variant, timeLocale, chatSubject, clearPendingAttachments]);
 
   const sendText = useCallback(
-    async (text: string) => {
-      if (!orderId) return;
+    async (text: string): Promise<boolean> => {
+      if (!orderId) return false;
       const body = text.trim();
       const ready = getReadyAttachments();
-      if (!body && ready.length === 0) return;
+      if (!body && ready.length === 0) return false;
 
       if (body.length > ORDER_CHAT_POST_BODY_MAX_CHARS) {
         setError(`Сообщение длиннее ${ORDER_CHAT_POST_BODY_MAX_CHARS.toLocaleString()} символов`);
-        return;
+        return false;
       }
       if (ready.length > ORDER_CHAT_ATTACHMENTS_MAX) {
         setError(`Не более ${ORDER_CHAT_ATTACHMENTS_MAX} вложений в сообщении`);
-        return;
+        return false;
       }
       let refsPayloadChars = 0;
       for (const r of ready) {
@@ -601,7 +601,7 @@ export function useOrderChat(opts: {
       }
       if (refsPayloadChars > ORDER_CHAT_ATTACHMENT_REFS_PAYLOAD_MAX_CHARS) {
         setError('Суммарный размер полей вложений слишком большой — удалите часть файлов или напишите в поддержку');
-        return;
+        return false;
       }
 
       setSending(true);
@@ -648,8 +648,10 @@ export function useOrderChat(opts: {
             })
             .catch(() => undefined);
         }
+        return true;
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Не удалось отправить');
+        return false;
       } finally {
         setSending(false);
       }

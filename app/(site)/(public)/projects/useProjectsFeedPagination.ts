@@ -32,25 +32,27 @@ export function useProjectsFeedPagination({
   const [filterLoading, setFilterLoading] = useState(false);
   const loadingMoreRef = useRef(false);
   const filterRequestId = useRef(0);
-  const feedKeyRef = useRef<string>('');
+  /** Ключ, для которого уже применены items (SSR hydrate или успешный refetch). */
+  const appliedFeedKeyRef = useRef<string>('');
   const feedWasClearedRef = useRef(false);
   const onFeedRoomsRef = useRef(onFeedRooms);
   onFeedRoomsRef.current = onFeedRooms;
 
   useEffect(() => {
     if (!enabled || !pagination) {
-      if (feedKeyRef.current) feedWasClearedRef.current = true;
-      feedKeyRef.current = '';
+      if (appliedFeedKeyRef.current) feedWasClearedRef.current = true;
+      appliedFeedKeyRef.current = '';
+      setFilterLoading(false);
       return;
     }
     const key = projectsFeedFilterKey(pagination);
-    if (key === feedKeyRef.current) return;
+    if (key === appliedFeedKeyRef.current) return;
 
-    const hydrateFromSsr = feedKeyRef.current === '' && !feedWasClearedRef.current;
-    feedKeyRef.current = key;
+    const hydrateFromSsr = appliedFeedKeyRef.current === '' && !feedWasClearedRef.current;
     feedWasClearedRef.current = false;
 
     if (hydrateFromSsr) {
+      appliedFeedKeyRef.current = key;
       setItems(initialProjects);
       setLoadedPage(1);
       setCasesTotal(pagination.total);
@@ -72,6 +74,7 @@ export function useProjectsFeedPagination({
         hasProducts: pagination.hasProducts,
       });
       if (cancelled || reqId !== filterRequestId.current) return;
+      appliedFeedKeyRef.current = key;
       setItems(data.projects);
       setCasesTotal(data.total);
       setLoadedPage(1);

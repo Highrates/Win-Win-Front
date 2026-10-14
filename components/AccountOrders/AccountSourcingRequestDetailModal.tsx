@@ -208,8 +208,10 @@ export function AccountSourcingRequestDetailModal({ requestId, initialChatOpen =
       try {
         await ackUserSourcingCommercialProposalSeen(detail.id);
         dispatchAccountWorkNotificationsEvent({ entityId: detail.id, chatSubject: 'sourcing' });
-      } catch {
-        /* просмотр заявки не зависит от ack */
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : 'Не удалось отметить КП просмотренным';
+        setError((prev) => prev ?? msg);
       }
     })();
   }, [detail?.id, detail?.latestCommercialProposal?.versionNumber, loading]);

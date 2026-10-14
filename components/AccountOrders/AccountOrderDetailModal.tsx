@@ -418,8 +418,10 @@ export function AccountOrderDetailModal({ orderId, initialChatOpen = false, onCl
       try {
         await ackUserOrderCommercialProposalSeen(order.id);
         dispatchAccountWorkNotificationsEvent({ entityId: order.id, chatSubject: 'order' });
-      } catch {
-        /* просмотр заказа не зависит от ack */
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : 'Не удалось отметить КП просмотренным';
+        setError((prev) => prev ?? msg);
       }
     })();
   }, [order?.id, order?.latestCommercialProposal?.versionNumber, loading]);

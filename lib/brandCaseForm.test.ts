@@ -61,14 +61,6 @@ describe('projectsFeedFilterKey', () => {
   });
 });
 
-describe('projectsFeedPaginationEnabled', () => {
-  it('disables when both sources are off', async () => {
-    const { projectsFeedPaginationEnabled } = await import('./brandCaseForm');
-    expect(projectsFeedPaginationEnabled(true)).toBe(false);
-    expect(projectsFeedPaginationEnabled(false)).toBe(true);
-  });
-});
-
 describe('resolveProjectsFeedSource', () => {
   it('prefers brand slug over source param', () => {
     expect(resolveProjectsFeedSource({ brandSlug: 'x', source: 'designers' })).toBe('brands');

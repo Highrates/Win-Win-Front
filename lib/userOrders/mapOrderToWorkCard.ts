@@ -6,6 +6,8 @@ import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import type { UserOrderListItemApi } from './types';
 
 const COMPLETED_ORDER_CHAT_NOTICE = 'Переписка доступна 90 дней после завершения заказа';
+const KP_CHANGES_REQUESTED_NOTICE = 'Запросили изменения — ожидаем новое коммерческое предложение';
+const KP_REJECTED_NOTICE = 'Вы отклонили коммерческое предложение';
 
 function orderItemThumbSrcs(item: UserOrderListItemApi['items'][number]): string[] {
   const s = item.snapshot && typeof item.snapshot === 'object' ? (item.snapshot as Record<string, unknown>) : null;
@@ -102,6 +104,15 @@ export function mapUserOrderToWorkCard(
         { label: sumLabel, value: formatTotalRub(order.totalAmount, order.currency) },
       ];
 
+  const canRespond = order.canRespondToCommercialProposal ?? false;
+  const decision = order.customerKpDecision ?? null;
+  const decisionNotice =
+    !canRespond && decision === 'CHANGES_REQUESTED'
+      ? KP_CHANGES_REQUESTED_NOTICE
+      : !canRespond && decision === 'REJECTED'
+        ? KP_REJECTED_NOTICE
+        : undefined;
+
   return {
     orderId: order.id,
     statusLabel: orderStatusLabel(order.status, 'ru'),
@@ -110,12 +121,17 @@ export function mapUserOrderToWorkCard(
     metaRows,
     productThumbSrcs: thumbs,
     hideMoreMenu: order.status === 'PENDING_APPROVAL',
-    statusRejected: false,
-    statusNotice: order.status === 'COMPLETED' ? COMPLETED_ORDER_CHAT_NOTICE : undefined,
+    statusRejected: !canRespond && decision === 'REJECTED',
+    statusNotice:
+      order.status === 'COMPLETED'
+        ? COMPLETED_ORDER_CHAT_NOTICE
+        : decisionNotice,
     onOpenDetails: opts?.onOpenDetails,
     detailHref: opts?.onOpenDetails ? undefined : `/account/orders/${order.id}`,
     offer,
     staffUnreadCount: order.unreadStaffChatCount ?? 0,
     hasUnseenCommercialProposal: order.hasUnseenCommercialProposal ?? false,
+    canRespondToCommercialProposal: canRespond,
+    commercialProposalVersion: order.commercialProposalVersion ?? null,
   };
 }

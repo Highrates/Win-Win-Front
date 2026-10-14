@@ -59,8 +59,3 @@ export function projectsFeedFilterKey(p: {
     p.pageSize,
   ].join('\0');
 }
-
-/** Пагинация ленты выключена, если оба источника сняты (пустая сетка без fetch). */
-export function projectsFeedPaginationEnabled(bothSourcesOff: boolean): boolean {
-  return !bothSourcesOff;
-}

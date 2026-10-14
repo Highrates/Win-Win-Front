@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import type { ProjectsSourceChip } from './ProjectsRoomFilter';
 import {
-  chipsFromFeedSource,
   nextProjectsSearchWithSource,
   type ProjectsFeedSourceParam,
 } from '@/lib/projectsListingUrl';
@@ -18,30 +16,20 @@ export type ProjectsListingFilterArgs = {
   initialRooms?: string[];
 };
 
-function sourceFromChips(
-  sources: Record<ProjectsSourceChip, boolean>,
-  brandOnly: boolean,
-  forcedSource?: 'all' | 'designers' | 'brands',
-): 'all' | 'designers' | 'brands' {
-  if (forcedSource === 'designers' || forcedSource === 'brands') return forcedSource;
-  if (brandOnly) return 'brands';
-  if (sources.designers && sources.brands) return 'all';
-  if (sources.brands) return 'brands';
-  return 'designers';
-}
-
-function initialChips(args: {
+function resolveInitialSource(args: {
   brandOnly: boolean;
   productBrandOnly: boolean;
   initialSource?: ProjectsFeedSourceParam;
-}): Record<ProjectsSourceChip, boolean> {
-  if (args.brandOnly) return { designers: false, brands: true };
-  if (args.productBrandOnly) return { designers: true, brands: false };
-  if (args.initialSource) return chipsFromFeedSource(args.initialSource);
-  return { designers: true, brands: true };
+}): ProjectsFeedSourceParam {
+  if (args.brandOnly) return 'brands';
+  if (args.productBrandOnly) return 'designers';
+  if (args.initialSource === 'designers' || args.initialSource === 'brands') {
+    return args.initialSource;
+  }
+  return 'all';
 }
 
-/** Единый стейт фильтров витрины `/projects` (комнаты, источники, «с товарами»). */
+/** Единый стейт фильтров витрины `/projects` (комнаты, источник, «с товарами»). */
 export function useProjectsListingFilters({
   brandFilter,
   productBrandFilter,
@@ -55,19 +43,20 @@ export function useProjectsListingFilters({
   /** Forced только query-фильтрами, не `?source=` (иначе toggle не пишет URL). */
   const brandOnly = Boolean(brandFilter);
   const productBrandOnly = Boolean(productBrandFilter);
+  const sourceLocked = brandOnly || productBrandOnly;
+
   const [activeRoom, setActiveRoom] = useState(ALL_SPACES_LABEL);
   const [withProducts, setWithProducts] = useState(false);
-  const [sources, setSources] = useState<Record<ProjectsSourceChip, boolean>>(() =>
-    initialChips({ brandOnly, productBrandOnly, initialSource }),
+  const [source, setSource] = useState<ProjectsFeedSourceParam>(() =>
+    resolveInitialSource({ brandOnly, productBrandOnly, initialSource }),
   );
   const [rooms, setRooms] = useState<string[]>(initialRooms);
 
-  const bothSourcesOff = !brandOnly && !productBrandOnly && !sources.designers && !sources.brands;
-  const feedSource = sourceFromChips(
-    sources,
-    brandOnly,
-    productBrandOnly ? 'designers' : brandOnly ? 'brands' : undefined,
-  );
+  const feedSource: ProjectsFeedSourceParam = productBrandOnly
+    ? 'designers'
+    : brandOnly
+      ? 'brands'
+      : source;
 
   const roomChips = useMemo(
     () => [ALL_SPACES_LABEL, ...rooms.filter((r) => r.trim() && r !== ALL_SPACES_LABEL)],
@@ -80,26 +69,16 @@ export function useProjectsListingFilters({
     }
   }, [rooms, activeRoom]);
 
-  const writeSourceToUrl = useCallback(
-    (nextSources: Record<ProjectsSourceChip, boolean>) => {
+  const onSourceChange = useCallback(
+    (next: ProjectsFeedSourceParam) => {
+      if (sourceLocked) return;
+      setSource(next);
       if (pathname !== '/projects') return;
-      if (brandOnly || productBrandOnly) return;
-      const nextSearch = nextProjectsSearchWithSource(searchParams.toString(), nextSources);
+      const nextSearch = nextProjectsSearchWithSource(searchParams.toString(), next);
       if (nextSearch == null) return;
       router.replace(nextSearch ? `${pathname}${nextSearch}` : pathname, { scroll: false });
     },
-    [brandOnly, pathname, productBrandOnly, router, searchParams],
-  );
-
-  const onSourceToggle = useCallback(
-    (source: ProjectsSourceChip) => {
-      setSources((prev) => {
-        const next = { ...prev, [source]: !prev[source] };
-        writeSourceToUrl(next);
-        return next;
-      });
-    },
-    [writeSourceToUrl],
+    [pathname, router, searchParams, sourceLocked],
   );
 
   const onFeedRooms = useCallback((next: string[]) => {
@@ -112,12 +91,12 @@ export function useProjectsListingFilters({
     setActiveRoom,
     withProducts,
     setWithProducts,
-    sources,
-    onSourceToggle,
+    source: feedSource,
+    onSourceChange,
+    sourceLocked,
     rooms,
     onFeedRooms,
     roomChips,
-    bothSourcesOff,
     feedSource,
     brandOnly,
     designersOnly: productBrandOnly,

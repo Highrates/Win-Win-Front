@@ -180,41 +180,51 @@ section.projectsPageMarketSection {
   white-space: nowrap;
 }
 
-.sourceChips {
+.sourceSegment {
   display: inline-flex;
   flex: 0 0 auto;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  max-width: none;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 100px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color, #e2e6e8);
+  background: var(--color-bright-snow);
+  box-sizing: border-box;
 }
 
-.sourceChipBtn {
+.sourceSegmentBtn {
   appearance: none;
+  margin: 0;
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-gray);
   cursor: pointer;
   white-space: nowrap;
+  line-height: 1.2;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
-.sourceChipBtn:focus-visible {
+.sourceSegmentBtn:hover {
+  color: var(--color-ink-black);
+}
+
+.sourceSegmentBtnActive {
+  background: var(--color-ink-black);
+  color: var(--color-white);
+}
+
+.sourceSegmentBtnActive:hover {
+  color: var(--color-white);
+}
+
+.sourceSegmentBtn:focus-visible {
   outline: 2px solid var(--color-ink-black);
   outline-offset: 2px;
-}
-
-.sourceChipActive {
-  border-color: var(--color-ink-black);
-  background: var(--color-bright-snow);
-  color: var(--color-ink-black);
-}
-
-.sourceChipInactive {
-  border-color: transparent;
-  background: transparent;
-  color: var(--color-gray);
-}
-
-.sourceChipInactive:hover {
-  color: var(--color-ink-black);
-  background: var(--color-bright-snow);
 }
 
 @media (max-width: 900px) {
