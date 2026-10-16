@@ -86,6 +86,15 @@ export function OrderKpActionFooter({
 
   return (
     <footer className={`${styles.footer}${canRespondKp ? ` ${styles.footerKp}` : ''}`}>
+      {canRespondKp ? (
+        <button
+          type="button"
+          className={`${cta.ctaKpConfirm} ${styles.btn} ${styles.confirm}`}
+          onClick={onConfirm}
+        >
+          Подтвердить
+        </button>
+      ) : null}
       <button
         type="button"
         className={`${cta.ctaButton} ${styles.btn}${unread ? ` ${cta.ctaButtonUnread}` : ''}`}
@@ -97,13 +106,6 @@ export function OrderKpActionFooter({
       </button>
       {canRespondKp ? (
         <>
-          <button
-            type="button"
-            className={`${cta.ctaKpConfirm} ${styles.btn} ${styles.confirm}`}
-            onClick={onConfirm}
-          >
-            Подтвердить
-          </button>
           <button
             type="button"
             className={`${cta.ctaButton} ${styles.btn}`}

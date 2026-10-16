@@ -31,6 +31,12 @@ vi.mock('jspdf', () => ({
     getNumberOfPages,
     getTextWidth,
     splitTextToSize,
+    getImageProperties: vi.fn((src: string) => {
+      if (typeof src === 'string' && src.startsWith('data:')) {
+        return { width: 800, height: 600 };
+      }
+      return { width: 100, height: 100 };
+    }),
     save,
   })),
 }));
@@ -176,5 +182,20 @@ describe('media proxy for PDF images', () => {
       '/api/media-proxy?url=' + encodeURIComponent('https://cdn.example.com/a.jpg'),
     );
     expect(mediaUrlForPdf('/uploads/x.jpg')).toBe('/uploads/x.jpg');
+    expect(mediaUrlForPdf('data:image/png;base64,abc')).toBe('data:image/png;base64,abc');
+  });
+
+  it('отбрасывает placeholder URL', async () => {
+    const { isPlaceholderMediaUrl } = await import('./exportCommercialProposalPdf');
+    expect(isPlaceholderMediaUrl('/images/placeholder.svg')).toBe(true);
+    expect(isPlaceholderMediaUrl('/uploads/chair.jpg')).toBe(false);
+  });
+
+  it('fitContain сохраняет отношение сторон', async () => {
+    const { fitContain } = await import('./exportCommercialProposalPdf');
+    const fitted = fitContain(180, 110, 800, 600);
+    expect(fitted.w / fitted.h).toBeCloseTo(800 / 600, 5);
+    expect(fitted.w).toBeLessThanOrEqual(180);
+    expect(fitted.h).toBeLessThanOrEqual(110);
   });
 });

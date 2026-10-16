@@ -575,6 +575,15 @@ export function AccountOrderDetailModal({
   const decision = order?.customerKpDecision ?? null;
   const decisionNotice = order ? kpDecisionNotice(canRespondKp, decision) : undefined;
   const statusRejected = !canRespondKp && decision === 'REJECTED';
+  const detailRows = useMemo(() => {
+    if (!order) return [];
+    return [
+      { label: 'ФИО', value: order.customerName?.trim() || '' },
+      { label: 'Телефон', value: order.customerPhone?.trim() || '' },
+      { label: 'Адрес', value: order.deliveryAddress?.trim() || '' },
+      { label: 'Комментарий', value: order.comment?.trim() || '' },
+    ].filter((row) => Boolean(row.value));
+  }, [order]);
 
   const chatTitle = useMemo(() => {
     if (!order) return 'Сообщения';
@@ -706,30 +715,22 @@ export function AccountOrderDetailModal({
                 ) : null}
               </div>
 
-              <AccordionBig title="Детали" className={styles.accordionFullWidth} panelClassName={styles.accordionPanelMeta}>
-                <div className={styles.metaGridPlain}>
-                  <div className={styles.metaItem}>
-                    <div className={styles.metaItemLabel}>ФИО</div>
-                    <div className={styles.metaItemValue}>{order.customerName?.trim() || '—'}</div>
-                  </div>
-                  <div className={styles.metaItem}>
-                    <div className={styles.metaItemLabel}>Телефон</div>
-                    <div className={styles.metaItemValue}>{order.customerPhone?.trim() || '—'}</div>
-                  </div>
-                  <div className={styles.metaItem} style={{ gridColumn: '1 / -1' }}>
-                    <div className={styles.metaItemLabel}>Адрес</div>
-                    <div className={`${styles.metaItemValue} ${styles.blockText}`}>
-                      {order.deliveryAddress?.trim() || '—'}
-                    </div>
-                  </div>
-                  <div className={styles.metaItem} style={{ gridColumn: '1 / -1' }}>
-                    <div className={styles.metaItemLabel}>Комментарий</div>
-                    <div className={`${styles.metaItemValue} ${styles.blockText}`}>
-                      {order.comment?.trim() || '—'}
-                    </div>
-                  </div>
-                </div>
-              </AccordionBig>
+              {detailRows.length > 0 ? (
+                <AccordionBig
+                  title="Детали"
+                  className={styles.accordionFullWidth}
+                  panelClassName={styles.accordionPanelMeta}
+                >
+                  <dl className={styles.detailsList}>
+                    {detailRows.map((row) => (
+                      <div key={row.label} className={styles.detailsRow}>
+                        <dt>{row.label}</dt>
+                        <dd>{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </AccordionBig>
+              ) : null}
 
               {hasKp && cp ? (
                 <div className={styles.orderCompareStack}>

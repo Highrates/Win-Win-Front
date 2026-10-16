@@ -6,6 +6,18 @@ import { recordUserOrderCommercialProposalDecision } from '@/lib/userOrders/clie
 
 export type PendingKpChatDecision = 'CHANGES_REQUESTED' | 'REJECTED';
 
+/** Nest class-validator текст не показываем клиенту как есть. */
+export function humanizeKpDecisionError(raw: string): string {
+  const u = raw.toUpperCase();
+  if (u.includes('EXPECTEDVERSION') || u.includes('EXPECTED VERSION')) {
+    return 'КП обновлено или версия не подтянулась — закройте окно, откройте заказ снова и повторите.';
+  }
+  if (u.includes('DECISION') && u.includes('MUST BE')) {
+    return 'Не удалось зафиксировать решение. Попробуйте ещё раз.';
+  }
+  return raw.trim() || 'Не удалось зафиксировать решение. Сообщение не отправлено — попробуйте ещё раз.';
+}
+
 type Options = {
   orderId: string;
   /** Версия КП для optimistic concurrency. */
@@ -129,9 +141,11 @@ export function useOrderKpResponse({
           await recordUserOrderCommercialProposalDecision(orderId, decision, version);
         } catch (e) {
           setComposerBanner(
-            e instanceof Error
-              ? e.message
-              : 'Не удалось зафиксировать решение. Сообщение не отправлено — попробуйте ещё раз.',
+            humanizeKpDecisionError(
+              e instanceof Error
+                ? e.message
+                : 'Не удалось зафиксировать решение. Сообщение не отправлено — попробуйте ещё раз.',
+            ),
           );
           return false;
         }

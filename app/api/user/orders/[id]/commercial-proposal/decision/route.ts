@@ -1,9 +1,9 @@
-import { proxyUserBearer } from '@/lib/userBackendJsonProxy';
+import { proxyUserBearerFromRequest } from '@/lib/userBackendJsonProxy';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  return proxyUserBearer({
+  return proxyUserBearerFromRequest(
     request,
-    backendPath: `orders/${params.id}/commercial-proposal/decision`,
-    method: 'POST',
-  });
+    `orders/${params.id}/commercial-proposal/decision`,
+    'POST',
+  );
 }
