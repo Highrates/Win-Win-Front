@@ -21,7 +21,7 @@ import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { createClientRandomId } from '@/lib/clientRandomId';
 import type { adminProductGalleryEditorStrings } from '@/lib/admin-i18n/adminProductGalleryEditorI18n';
-import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import styles from './ProductGalleryEditor.module.css';
 
 export type ProductGalleryFrame = {

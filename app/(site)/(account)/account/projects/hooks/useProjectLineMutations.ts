@@ -105,10 +105,60 @@ export function useProjectLineMutations({
     [detail, activeSummary, setDetail, refreshList, confirmRemoveLines, onMutationError],
   );
 
+  /** Абсолютное количество (ввод с клавиатуры). 0 / пустое для шт → подтверждение удаления. */
+  const setQuantity = useCallback(
+    async (lineId: string, nextRaw: number) => {
+      if (!detail || !activeSummary) return;
+      const line = detail.lines.find((l) => l.id === lineId);
+      if (!line) return;
+      const unitLower = (line.unit || 'шт').toLowerCase();
+      const isPiece = unitLower === 'шт' || unitLower === 'шт.';
+      if (!Number.isFinite(nextRaw)) return;
+
+      if (isPiece) {
+        const nextQty = Math.floor(nextRaw);
+        if (nextQty < 1) {
+          confirmRemoveLines([lineId]);
+          return;
+        }
+        const current = displayLineQuantity(line.quantity, line.unit);
+        if (nextQty === current) return;
+        const nextLines = detail.lines.map((l) => (l.id === lineId ? { ...l, quantity: nextQty } : l));
+        const patched: DesignerProjectDetailApi = { ...detail, lines: nextLines };
+        try {
+          const d = await updateDesignerProject(activeSummary.id, detailToSavePayload(patched));
+          setDetail(d);
+          void refreshList();
+        } catch (e) {
+          onMutationError?.(
+            e instanceof Error ? e.message : 'Не удалось сохранить количество. Попробуйте снова.',
+          );
+        }
+        return;
+      }
+
+      const nextQty = Math.max(0.001, nextRaw);
+      if (nextQty === Number(line.quantity)) return;
+      const nextLines = detail.lines.map((l) => (l.id === lineId ? { ...l, quantity: nextQty } : l));
+      const patched: DesignerProjectDetailApi = { ...detail, lines: nextLines };
+      try {
+        const d = await updateDesignerProject(activeSummary.id, detailToSavePayload(patched));
+        setDetail(d);
+        void refreshList();
+      } catch (e) {
+        onMutationError?.(
+          e instanceof Error ? e.message : 'Не удалось сохранить количество. Попробуйте снова.',
+        );
+      }
+    },
+    [detail, activeSummary, setDetail, refreshList, confirmRemoveLines, onMutationError],
+  );
+
   return {
     removeLinesByIds,
     confirmRemoveLines,
     confirmRemoveSingleLine,
     updateQuantity,
+    setQuantity,
   };
 }

@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { TurnstileWidget } from '@/components/TurnstileWidget/TurnstileWidget';
 import { navigateAfterUserAuth } from '@/lib/userAuthNavigation';
 import {
+  DESIGNER_INVITE_EXISTING_ACCOUNT_HINT,
   formatDesignerInviteClaimError,
 } from '@/lib/designerInvites/loginHints';
 import { isTurnstileRequired } from '@/lib/turnstile';
@@ -22,7 +23,6 @@ export type LoginEmailFormProps = {
 };
 
 function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: LoginEmailFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const designerInviteToken = (searchParams.get('designerInvite') ?? '').trim() || undefined;
   const prefillEmailFromUrl = useMemo(
@@ -33,6 +33,7 @@ function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: 
     () => (searchParams.get('designerInviteError') ?? '').trim() || '',
     [searchParams],
   );
+  const inviteExisting = searchParams.get('inviteExisting') === '1';
   const callbackUrl = callbackUrlProp ?? searchParams.get('callbackUrl');
   const resetOk = searchParams.get('reset') === 'ok';
   const [inviteEmail, setInviteEmail] = useState(prefillEmailFromUrl);
@@ -140,7 +141,7 @@ function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: 
             return;
           }
 
-          const nav = await navigateAfterUserAuth(router, {
+          const nav = await navigateAfterUserAuth({
             callbackUrl,
             user: data.user,
             designerInviteToken,
@@ -160,7 +161,17 @@ function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: 
       }}
     >
       <div className={styles.authFields}>
-        {inviteEmailHint ? (
+        {inviteExisting && !designerInviteError ? (
+          <p className={styles.authOtpHint} role="status">
+            {DESIGNER_INVITE_EXISTING_ACCOUNT_HINT}
+            {inviteEmailHint ? (
+              <>
+                {' '}
+                Email: <strong>{inviteEmailHint}</strong>
+              </>
+            ) : null}
+          </p>
+        ) : inviteEmailHint ? (
           <p className={styles.authOtpHint}>
             Войдите с email из приглашения: <strong>{inviteEmailHint}</strong>
           </p>

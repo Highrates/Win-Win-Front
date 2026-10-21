@@ -32,9 +32,10 @@ function dispatchUnreadRefreshDebounced(ref: {
  * поддерживается общий admin Socket.IO-слой через refcount с `useOrderChat`, при событии — debounce → DOM **admin-orders-chat-unread-refresh**.
  * При большой нагрузке см. `docs/order-chat-structure.md` (узкие комнаты / офисный контекст).
  */
-export function useAdminOrderChatStaffUnreadEvents(isLoginRoute: boolean) {
+/** Подписка только внутри AdminChrome (login вне shell — флаг isLoginRoute не нужен). */
+export function useAdminOrderChatStaffUnreadEvents() {
   useEffect(() => {
-    if (isLoginRoute || typeof window === 'undefined') return undefined;
+    if (typeof window === 'undefined') return undefined;
 
     let cancelled = false;
     const debounceRef: { bounce: ReturnType<typeof setTimeout> | undefined } = { bounce: undefined };
@@ -85,5 +86,5 @@ export function useAdminOrderChatStaffUnreadEvents(isLoginRoute: boolean) {
       removeLayerListener?.();
       unregisterSession?.();
     };
-  }, [isLoginRoute]);
+  }, []);
 }

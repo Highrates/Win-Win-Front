@@ -3,7 +3,7 @@
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
-import styles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
+import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
 
 export function AdminListPagination({
   page,

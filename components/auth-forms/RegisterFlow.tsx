@@ -20,6 +20,11 @@ import {
   buildDesignerInviteProfilePath,
   sanitizeCallbackUrl,
 } from '@/lib/authRedirect';
+import {
+  buildLoginWithInviteHref,
+  DESIGNER_INVITE_STAFF_EMAIL_ERROR,
+  REGISTER_EMAIL_OTP_FALLBACK_HINT,
+} from '@/lib/designerInvites/loginHints';
 import { invalidateUserClientCaches } from '@/lib/userSessionClient';
 import { isTurnstileRequired } from '@/lib/turnstile';
 import { validateEmailRequired, validateE164Phone, validatePassword } from '@/lib/validation';
@@ -100,6 +105,50 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     if (prefillEmail) q.set('prefillEmail', prefillEmail);
     router.replace(`/register/email?${q.toString()}`);
   }, [designerInviteToken, channel, refFromUrl, prefillEmail, router]);
+
+  /** Приглашение на уже существующий / staff email → сразу на логин с понятным текстом. */
+  useEffect(() => {
+    if (!designerInviteToken || channel !== 'email') return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/auth/designer-invite/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ token: designerInviteToken }),
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          email?: string;
+          accountExists?: boolean;
+          accountKind?: 'none' | 'customer' | 'staff';
+        };
+        if (cancelled || !res.ok) return;
+        const kind = body.accountKind ?? (body.accountExists ? 'customer' : 'none');
+        const inviteEmail = (body.email ?? prefillEmail ?? '').trim();
+        if (kind === 'staff') {
+          const q = new URLSearchParams();
+          q.set('designerInviteError', DESIGNER_INVITE_STAFF_EMAIL_ERROR);
+          if (inviteEmail) q.set('prefillEmail', inviteEmail);
+          router.replace(`/login/email?${q.toString()}`);
+          return;
+        }
+        if (kind === 'customer') {
+          router.replace(
+            buildLoginWithInviteHref({
+              token: designerInviteToken,
+              email: inviteEmail,
+              existing: true,
+            }),
+          );
+        }
+      } catch {
+        /* оставляем форму регистрации */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [designerInviteToken, channel, prefillEmail, router]);
 
   const inviteEmailLocked = Boolean(designerInviteToken);
   const altRegisterHref = buildRegisterAltHref(channel === 'phone' ? 'email' : 'phone', {
@@ -261,19 +310,23 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
         ...(designerInviteToken ? { designerInviteToken } : {}),
       });
       invalidateUserClientCaches({ authenticated: true });
+      let target: string;
       if (designerInviteToken) {
-        router.replace(
-          appendReferralWarningParam(buildDesignerInviteProfilePath(refFromUrl), data.referralWarning),
+        target = appendReferralWarningParam(
+          buildDesignerInviteProfilePath(refFromUrl),
+          data.referralWarning,
         );
       } else {
         const pending = data.user?.profile?.profileOnboardingPending;
-        const target =
+        target = appendReferralWarningParam(
           pending === true || pending === undefined
             ? '/account/profile?tab=info&welcome=1'
-            : sanitizeCallbackUrl(callbackUrl, '/account/orders');
-        router.replace(appendReferralWarningParam(target, data.referralWarning));
+            : sanitizeCallbackUrl(callbackUrl, '/account/orders'),
+          data.referralWarning,
+        );
       }
-      router.refresh();
+      // Hard nav — не зависеть от soft RSC / чужого `_rsc`-шторма.
+      window.location.replace(target);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Не удалось завершить регистрацию');
     } finally {
@@ -281,10 +334,21 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     }
   }
 
+  const loginHref = useMemo(() => {
+    if (designerInviteToken) {
+      return buildLoginWithInviteHref({
+        token: designerInviteToken,
+        email: email || prefillEmail,
+        existing: true,
+      });
+    }
+    return '/login/email';
+  }, [designerInviteToken, email, prefillEmail]);
+
   const subtitle = (
     <>
       Уже есть аккаунт?{' '}
-      <Link href="/login" className={styles.authLinkAccent}>
+      <Link href={loginHref} className={styles.authLinkAccent}>
         Войти
       </Link>
     </>
@@ -435,9 +499,17 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
           Мы отправили код в SMS на номер {phone}. Введите код из сообщения.
         </p>
       ) : (
-        <p className={styles.authOtpHint}>
-          Мы отправили код на {email}. Введите код из письма.
-        </p>
+        <>
+          <p className={styles.authOtpHint}>
+            Мы отправили код на {email}. Введите код из письма.
+          </p>
+          <p className={styles.authOtpHint}>
+            {REGISTER_EMAIL_OTP_FALLBACK_HINT}{' '}
+            <Link href={loginHref} className={styles.authLinkAccent}>
+              Войти
+            </Link>
+          </p>
+        </>
       );
 
     return (

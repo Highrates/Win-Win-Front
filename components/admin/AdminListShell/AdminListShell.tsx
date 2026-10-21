@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
-import defaultStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
+import defaultStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
 
 export function AdminListShell({
   loading,

@@ -1,5 +1,6 @@
 'use client';
 
+import productSelectChrome from './ProductSelectChrome.module.css';
 import styles from './ProductModifications.module.css';
 
 export type ProductModificationItem = {
@@ -37,10 +38,10 @@ export default function ProductModifications({
               type="button"
               role="option"
               aria-selected={selected}
-              className={`${styles.option} ${selected ? styles.optionSelected : ''}`}
+              className={`${styles.option}${selected ? ` ${styles.optionSelected} ${productSelectChrome.selectedBorder}` : ''}`}
               onClick={() => onSelect(m.id)}
             >
-              {m.name}
+              <span className={styles.optionLabel}>{m.name}</span>
             </button>
           );
         })}

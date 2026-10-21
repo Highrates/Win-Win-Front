@@ -179,10 +179,47 @@
 .panelFooter {
   flex-shrink: 0;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   padding: 16px 20px;
   border-top: var(--account-hairline-width) solid var(--account-hairline-color);
+}
+
+.footerSpacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.deleteBtn {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 8px 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-red, #c62828);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.deleteBtn:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 .srOnly {

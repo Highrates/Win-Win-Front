@@ -195,32 +195,28 @@ export function useProductPdpActions({
     }
   }
 
-  async function handleOrderQuantityDelta(delta: number) {
-    if (!orderDraftLineId || orderLineSaving || !Number.isFinite(delta) || delta === 0) return;
-    if (!(await requireAuth(() => void handleOrderQuantityDelta(delta)))) return;
+  async function applyOrderQuantity(nextQty: number) {
+    if (!orderDraftLineId || orderLineSaving || !Number.isFinite(nextQty)) return;
     const currentQty = orderQuantity ?? 1;
-    if (delta < 0 && currentQty <= 1) {
+    if (nextQty < 1) {
       setOrderLineSaving(true);
       try {
         await deleteOrderPreparationLine(orderDraftLineId);
         setOrderDraftLineId(null);
         setOrderQuantity(null);
       } catch (e) {
-        if (e instanceof UserAuthRequiredError) {
-          handleAuthFailure(() => void handleOrderQuantityDelta(delta));
-          return;
-        }
+        if (e instanceof UserAuthRequiredError) throw e;
         pushError(e instanceof Error ? e.message : 'Не удалось обновить количество');
       } finally {
         setOrderLineSaving(false);
       }
       return;
     }
-    const nextQty = Math.max(1, currentQty + delta);
-    if (nextQty === currentQty) return;
+    const qty = Math.max(1, Math.floor(nextQty));
+    if (qty === currentQty) return;
     setOrderLineSaving(true);
     try {
-      const nextDraft = await patchOrderPreparationLineQuantity(orderDraftLineId, nextQty);
+      const nextDraft = await patchOrderPreparationLineQuantity(orderDraftLineId, qty);
       const line = nextDraft.lines.find((l) => l.id === orderDraftLineId);
       if (line) {
         setOrderQuantity(line.quantity);
@@ -229,13 +225,35 @@ export function useProductPdpActions({
         setOrderQuantity(null);
       }
     } catch (e) {
-      if (e instanceof UserAuthRequiredError) {
-        handleAuthFailure(() => void handleOrderQuantityDelta(delta));
-        return;
-      }
+      if (e instanceof UserAuthRequiredError) throw e;
       pushError(e instanceof Error ? e.message : 'Не удалось обновить количество');
     } finally {
       setOrderLineSaving(false);
+    }
+  }
+
+  async function handleOrderQuantityDelta(delta: number) {
+    if (!orderDraftLineId || orderLineSaving || !Number.isFinite(delta) || delta === 0) return;
+    if (!(await requireAuth(() => void handleOrderQuantityDelta(delta)))) return;
+    const currentQty = orderQuantity ?? 1;
+    try {
+      await applyOrderQuantity(currentQty + delta);
+    } catch (e) {
+      if (e instanceof UserAuthRequiredError) {
+        handleAuthFailure(() => void handleOrderQuantityDelta(delta));
+      }
+    }
+  }
+
+  async function handleOrderQuantityChange(nextQty: number) {
+    if (!orderDraftLineId || orderLineSaving || !Number.isFinite(nextQty)) return;
+    if (!(await requireAuth(() => void handleOrderQuantityChange(nextQty)))) return;
+    try {
+      await applyOrderQuantity(nextQty);
+    } catch (e) {
+      if (e instanceof UserAuthRequiredError) {
+        handleAuthFailure(() => void handleOrderQuantityChange(nextQty));
+      }
     }
   }
 
@@ -304,6 +322,7 @@ export function useProductPdpActions({
     ensureProjectsLoaded,
     handleAddToOrder,
     handleOrderQuantityDelta,
+    handleOrderQuantityChange,
     orderQuantity,
     handleAddToExistingProject,
     handleCreateNewProject,

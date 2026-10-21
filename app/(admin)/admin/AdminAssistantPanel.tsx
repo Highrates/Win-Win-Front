@@ -13,7 +13,7 @@ import {
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminModal } from '@/components/admin/AdminModal/AdminModal';
 import { adminBackendFetch, adminBackendJson } from '@/lib/adminBackendFetch';
-import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import styles from './AdminAssistantPanel.module.css';
 
 type ChatRole = 'user' | 'assistant';

@@ -19,7 +19,7 @@ import {
   type DashboardPeriodPreset,
 } from '@/lib/adminDashboard/dashboardPeriod';
 import { useAdminDashboardMetrics } from '@/lib/adminDashboard/useAdminDashboardMetrics';
-import catalogStyles from './catalog/catalogAdmin.module.css';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import { AdminDashboardCatalogSection } from './AdminDashboardCatalogSection';
 import { AdminDashboardInsightsPanel } from './AdminDashboardInsightsPanel';
 import { AdminDashboardKpiColumn } from './AdminDashboardKpiColumn';

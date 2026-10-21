@@ -1,6 +1,6 @@
 'use client';
 
-import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
 
 type Props = {
   onClick: () => void;

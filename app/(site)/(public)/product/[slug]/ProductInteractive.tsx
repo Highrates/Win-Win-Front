@@ -201,6 +201,7 @@ export default function ProductInteractive(props: Props) {
     onAddToOrder: pdpActions.handleAddToOrder,
     orderQuantity: pdpActions.orderQuantity,
     onOrderQuantityDelta: pdpActions.handleOrderQuantityDelta,
+    onOrderQuantityChange: pdpActions.handleOrderQuantityChange,
     onMenuOpenChange: (open: boolean) => {
       if (open) pdpActions.ensureProjectsLoaded();
     },

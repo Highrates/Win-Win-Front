@@ -21,7 +21,10 @@ import { KpGrossDisplay } from '@/components/commercialProposal/KpGrossDisplay';
 import { kpLineTotalRub, kpLineUnitAfterDiscount, kpOfferAggregates } from '@/lib/commercialProposal/kpOfferTotals';
 import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
 import { fetchUserOrder, ackUserOrderCommercialProposalSeen } from '@/lib/userOrders/clientApi';
-import { downloadCommercialProposalPdf } from '@/lib/commercialProposal/exportCommercialProposalPdf';
+import {
+  downloadCommercialProposalPdf,
+  kpPdfFailedImagesMessage,
+} from '@/lib/commercialProposal/exportCommercialProposalPdf';
 import { cacheOrderCommercialProposal } from '@/lib/commercialProposal/kpProposalCache';
 import { kpDecisionNotice } from '@/lib/userOrders/orderNextStepHint';
 import type { UserOrderDetailApi } from '@/lib/userOrders/types';
@@ -375,7 +378,9 @@ export function AccountOrderDetailModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfBusyLabel, setPdfBusyLabel] = useState('PDF…');
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const pdfAbortRef = useRef<AbortController | null>(null);
 
   const onStatusResolvedRef = useRef(onStatusResolved);
   onStatusResolvedRef.current = onStatusResolved;
@@ -591,18 +596,39 @@ export function AccountOrderDetailModal({
   }, [order]);
 
   async function handleDownloadKpPdf() {
-    if (!order?.latestCommercialProposal || pdfBusy) return;
+    if (!order?.id || pdfBusy) return;
+    pdfAbortRef.current?.abort();
+    const ac = new AbortController();
+    pdfAbortRef.current = ac;
     setPdfBusy(true);
+    setPdfBusyLabel('Готовим PDF…');
     setPdfError(null);
     try {
-      await downloadCommercialProposalPdf({
+      // Refetch: modal state может отставать от publish.
+      const detail = await fetchUserOrder(order.id);
+      const proposal = detail.latestCommercialProposal;
+      if (!proposal?.lines?.length) {
+        throw new Error('Коммерческое предложение ещё не опубликовано');
+      }
+      cacheOrderCommercialProposal(order.id, proposal);
+      const result = await downloadCommercialProposalPdf({
         orderId: order.id,
-        proposal: order.latestCommercialProposal,
+        proposal,
+        signal: ac.signal,
+        onProgress: (p) => setPdfBusyLabel(p.label),
       });
+      if (result.failedImageCount > 0) {
+        setPdfError(
+          `PDF сохранён, но ${kpPdfFailedImagesMessage(result.failedImageCount).toLowerCase()}`,
+        );
+      }
     } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return;
       setPdfError(e instanceof Error ? e.message : 'Не удалось сформировать PDF');
     } finally {
+      if (pdfAbortRef.current === ac) pdfAbortRef.current = null;
       setPdfBusy(false);
+      setPdfBusyLabel('PDF…');
     }
   }
 
@@ -776,6 +802,7 @@ export function AccountOrderDetailModal({
             onReject={() => handleOpenKpChat('REJECTED')}
             onDownloadPdf={hasKp ? () => void handleDownloadKpPdf() : undefined}
             pdfBusy={pdfBusy}
+            pdfBusyLabel={pdfBusyLabel}
           />
         ) : null}
       </section>

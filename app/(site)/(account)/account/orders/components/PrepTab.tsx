@@ -232,6 +232,24 @@ export function PrepTab({ orderProgram, onRequestSourcing, onSubmitted }: PrepTa
     }
   };
 
+  const onQuantityChange = async (lineId: string, nextRaw: number) => {
+    const line = draft?.lines.find((l) => l.id === lineId);
+    if (!line || !Number.isFinite(nextRaw)) return;
+    const nextQty = Math.floor(nextRaw);
+    if (nextQty < 1) {
+      if (!window.confirm('Удалить эту позицию из заказа?')) return;
+      void removeLinesByIds([lineId]);
+      return;
+    }
+    if (nextQty === line.quantity) return;
+    try {
+      const d = await patchOrderPreparationLineQuantity(lineId, nextQty);
+      setDraft(d);
+    } catch (e) {
+      setDraftError(e instanceof Error ? e.message : 'Не удалось обновить количество');
+    }
+  };
+
   const confirmRemoveSelectedLines = () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -405,6 +423,7 @@ export function PrepTab({ orderProgram, onRequestSourcing, onSubmitted }: PrepTa
                     quantity={line?.quantity ?? 1}
                     unit={line?.unit ?? 'шт'}
                     onQuantityDelta={line ? (delta) => void onQuantityDelta(line.id, delta) : undefined}
+                    onQuantityChange={line ? (q) => void onQuantityChange(line.id, q) : undefined}
                     onRemoveFromProject={line ? () => confirmRemoveSingleLine(line.id) : undefined}
                     removeMenuItemText="Удалить из заказа"
                   />

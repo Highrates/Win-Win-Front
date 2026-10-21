@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
-import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import type {
   AdminBrandMaterial,
   AdminBrandMaterialColor,
-} from '@/app/(admin)/admin/brands/adminBrandTypes';
+} from '@/app/(admin)/admin/(shell)/brands/adminBrandTypes';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
 import styles from './BrandMaterialColorPickerModal.module.css';
 

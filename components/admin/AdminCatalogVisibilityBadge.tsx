@@ -1,4 +1,4 @@
-import styles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
+import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
 
 type Props = {
   isActive: boolean;

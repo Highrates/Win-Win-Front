@@ -124,6 +124,7 @@ export function mapSourcingRequestToWorkCard(
     statusNotice: isCompleted ? COMPLETED_CHAT_NOTICE : isCancelled ? CANCELLED_CHAT_NOTICE : undefined,
     statusRejected: isCancelled,
     chatEnabled: !isCancelled,
+    commercialProposalVersion: request.publishedCommercialProposalVersion ?? null,
     canDownloadCommercialProposalPdf:
       Boolean(request.hasPublishedCommercialProposal) ||
       (request.publishedCommercialProposalVersion != null &&

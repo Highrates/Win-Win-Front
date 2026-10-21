@@ -1,0 +1,761 @@
+'use client';
+
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
+import { AdminTableRemoveButton } from '@/components/admin/AdminTableRemoveButton/AdminTableRemoveButton';
+import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
+import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
+import { AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
+import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
+import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
+import { adminCollectionEditorStrings } from '@/lib/admin-i18n/adminCollectionsI18n';
+import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
+import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import type { AdminProductRow } from '../catalog/products/adminProductTypes';
+import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
+import objStyles from '../objects/objectsLibrary.module.css';
+import type { CuratedCollectionDetail } from './collectionsAdminTypes';
+
+const COLLECTION_FORM_ID = 'curated-collection-editor-form';
+
+function rowKey(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+type ProductRow = { key: string; productId: string; name: string; slug: string };
+type BrandRow = { key: string; brandId: string; name: string; slug: string };
+
+type BrandListRow = { id: string; name: string; slug: string };
+
+function SortableItemRow({
+  label,
+  onRemove,
+  rowId,
+  dragTitle,
+  removeLabel,
+}: {
+  rowId: string;
+  label: string;
+  onRemove: () => void;
+  dragTitle: string;
+  removeLabel: string;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: rowId,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.65 : 1,
+  };
+  return (
+    <tr ref={setNodeRef} style={style}>
+      <td className={styles.dragHandle} {...attributes} {...listeners} title={dragTitle}>
+        ⋮⋮
+      </td>
+      <td>
+        <strong>{label}</strong>
+      </td>
+      <td className={styles.tableCellActions}>
+        <AdminTableRemoveButton label={removeLabel} onClick={onRemove} />
+      </td>
+    </tr>
+  );
+}
+
+export function CuratedCollectionEditorClient({ collectionId }: { collectionId?: string }) {
+  const router = useRouter();
+  const { locale } = useAdminLocale();
+  const str = useMemo(() => adminCollectionEditorStrings(locale), [locale]);
+  const c = useMemo(() => adminCommonI18n(locale), [locale]);
+  const { confirm } = useAdminConfirm();
+  const isEdit = !!collectionId;
+
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(!isEdit);
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
+  const [kind, setKind] = useState<'PRODUCT' | 'BRAND'>('PRODUCT');
+  const [isActive, setIsActive] = useState(true);
+  const [coverUrl, setCoverUrl] = useState('');
+  const [coverMediaObjectId, setCoverMediaObjectId] = useState<string | null>(null);
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [productRows, setProductRows] = useState<ProductRow[]>([]);
+  const [brandRows, setBrandRows] = useState<BrandRow[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [addPickerOpen, setAddPickerOpen] = useState(false);
+  const [addQ, setAddQ] = useState('');
+  const [addDebouncedQ, setAddDebouncedQ] = useState('');
+  const [addLoading, setAddLoading] = useState(false);
+  const [addProductHits, setAddProductHits] = useState<AdminProductRow[]>([]);
+  const [addBrandHits, setAddBrandHits] = useState<BrandListRow[]>([]);
+  const [addModalSelected, setAddModalSelected] = useState<Set<string>>(() => new Set());
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const selectableProductIds = useMemo(
+    () =>
+      addProductHits.filter((p) => !productRows.some((r) => r.productId === p.id)).map((p) => p.id),
+    [addProductHits, productRows],
+  );
+  const selectableBrandIds = useMemo(
+    () => addBrandHits.filter((b) => !brandRows.some((r) => r.brandId === b.id)).map((b) => b.id),
+    [addBrandHits, brandRows],
+  );
+  const modalAllSelectableSelected =
+    kind === 'PRODUCT'
+      ? selectableProductIds.length > 0 && selectableProductIds.every((id) => addModalSelected.has(id))
+      : selectableBrandIds.length > 0 && selectableBrandIds.every((id) => addModalSelected.has(id));
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isEdit) {
+      setLoaded(true);
+      return;
+    }
+    void (async () => {
+      setLoadError(null);
+      setLoaded(false);
+      try {
+        const d = await adminBackendJson<CuratedCollectionDetail>(
+          `catalog/admin/curated-collections/${collectionId}`,
+        );
+        if (cancelled) return;
+        setName(d.name);
+        setSlug(d.slug);
+        setDescription(d.description ?? '');
+        setKind(d.kind);
+        setIsActive(d.isActive);
+        setCoverUrl(d.coverImageUrl ?? '');
+        setCoverMediaObjectId(d.coverMediaObjectId ?? null);
+        setSeoTitle(d.seoTitle ?? '');
+        setSeoDescription(d.seoDescription ?? '');
+        setProductRows(
+          d.productItems.map((it) => ({
+            key: it.id,
+            productId: it.productId,
+            name: it.name,
+            slug: it.slug,
+          })),
+        );
+        setBrandRows(
+          d.brandItems.map((it) => ({
+            key: it.id,
+            brandId: it.brandId,
+            name: it.name,
+            slug: it.slug,
+          })),
+        );
+        setLoaded(true);
+      } catch (e) {
+        if (!cancelled) {
+          setLoadError(e instanceof Error ? e.message : str.errLoad);
+          setLoaded(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [collectionId, isEdit, str.errLoad]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setAddDebouncedQ(addQ.trim()), 300);
+    return () => clearTimeout(t);
+  }, [addQ]);
+
+  const loadAddHits = useCallback(async () => {
+    if (!addPickerOpen) return;
+    setAddLoading(true);
+    try {
+      if (kind === 'PRODUCT') {
+        const res = await adminBackendList<AdminProductRow>(
+          'catalog/admin/products',
+          adminListParams({ page: 1, limit: 100, q: addDebouncedQ }),
+        );
+        setAddProductHits(res.items);
+        setAddBrandHits([]);
+      } else {
+        const res = await adminBackendList<{ id: string; name: string; slug: string }>(
+          'catalog/admin/brands',
+          adminListParams({ page: 1, limit: 100, q: addDebouncedQ }),
+        );
+        setAddBrandHits(res.items.map((b) => ({ id: b.id, name: b.name, slug: b.slug })));
+        setAddProductHits([]);
+      }
+    } catch {
+      setAddProductHits([]);
+      setAddBrandHits([]);
+    } finally {
+      setAddLoading(false);
+    }
+  }, [addPickerOpen, addDebouncedQ, kind]);
+
+  useEffect(() => {
+    loadAddHits();
+  }, [loadAddHits]);
+
+  useEffect(() => {
+    if (addPickerOpen) setAddModalSelected(new Set());
+  }, [addDebouncedQ, addPickerOpen]);
+
+  function toggleModalSelectAll() {
+    const ids = kind === 'PRODUCT' ? selectableProductIds : selectableBrandIds;
+    if (modalAllSelectableSelected) {
+      setAddModalSelected((prev) => {
+        const n = new Set(prev);
+        for (const id of ids) n.delete(id);
+        return n;
+      });
+    } else {
+      setAddModalSelected((prev) => {
+        const n = new Set(prev);
+        for (const id of ids) n.add(id);
+        return n;
+      });
+    }
+  }
+
+  function toggleAddModalRow(id: string) {
+    setAddModalSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+
+  function commitAddModalSelection() {
+    if (kind === 'PRODUCT') {
+      const picks = Array.from(addModalSelected)
+        .map((id) => addProductHits.find((x) => x.id === id))
+        .filter((p): p is AdminProductRow => !!p && !productRows.some((r) => r.productId === p.id));
+      setProductRows((prev) => [
+        ...prev,
+        ...picks.map((p) => ({ key: rowKey(), productId: p.id, name: p.name, slug: p.slug })),
+      ]);
+    } else {
+      const picks = Array.from(addModalSelected)
+        .map((id) => addBrandHits.find((x) => x.id === id))
+        .filter((b): b is BrandListRow => !!b && !brandRows.some((r) => r.brandId === b.id));
+      setBrandRows((prev) => [
+        ...prev,
+        ...picks.map((b) => ({ key: rowKey(), brandId: b.id, name: b.name, slug: b.slug })),
+      ]);
+    }
+    setAddModalSelected(new Set());
+    setAddPickerOpen(false);
+    setAddQ('');
+  }
+
+  async function changeKind(next: 'PRODUCT' | 'BRAND') {
+    if (next === kind) return;
+    const has = productRows.length > 0 || brandRows.length > 0;
+    if (has && !(await confirm({ title: str.changeKindConfirm }))) {
+      return;
+    }
+    setKind(next);
+    setProductRows([]);
+    setBrandRows([]);
+  }
+
+  function onProductDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = productRows.findIndex((r) => r.key === active.id);
+    const newIndex = productRows.findIndex((r) => r.key === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    setProductRows((prev) => arrayMove(prev, oldIndex, newIndex));
+  }
+
+  function onBrandDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = brandRows.findIndex((r) => r.key === active.id);
+    const newIndex = brandRows.findIndex((r) => r.key === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    setBrandRows((prev) => arrayMove(prev, oldIndex, newIndex));
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaveError(null);
+    const nameTrim = name.trim();
+    if (!nameTrim) {
+      setSaveError(str.nameRequired);
+      return;
+    }
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        name: nameTrim,
+        description: description.trim() || null,
+        seoTitle: seoTitle.trim() || null,
+        seoDescription: seoDescription.trim() || null,
+        kind,
+        isActive,
+      };
+      if (slug.trim()) body.slug = slug.trim();
+      if (coverUrl.trim()) {
+        body.coverImageUrl = coverUrl.trim();
+        if (coverMediaObjectId) body.coverMediaObjectId = coverMediaObjectId;
+      } else {
+        body.coverImageUrl = null;
+      }
+      if (kind === 'PRODUCT') body.productIds = productRows.map((r) => r.productId);
+      if (kind === 'BRAND') body.brandIds = brandRows.map((r) => r.brandId);
+
+      if (isEdit) {
+        await adminBackendJson(`catalog/admin/curated-collections/${collectionId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        });
+      } else {
+        const created = await adminBackendJson<CuratedCollectionDetail>(
+          'catalog/admin/curated-collections',
+          {
+            method: 'POST',
+            body: JSON.stringify(body),
+          },
+        );
+        await revalidatePublicCatalogCache();
+        router.push(`/admin/collections/${created.id}`);
+        router.refresh();
+        return;
+      }
+      await revalidatePublicCatalogCache();
+      router.refresh();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : str.saveErr);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (isEdit && !loaded && !loadError) {
+    return <p className={styles.muted}>{c.loading}</p>;
+  }
+
+  return (
+    <>
+      <p className={styles.backRow}>
+        <Link className={styles.backLink} href="/admin/collections">
+          {str.backList}
+        </Link>
+      </p>
+
+      {loadError ? <p className={styles.error}>{loadError}</p> : null}
+
+      <MediaLibraryPickerModal
+        open={coverPickerOpen}
+        title={str.coverTitle}
+        mediaFilter="image"
+        onClose={() => setCoverPickerOpen(false)}
+        onPick={(sel) => {
+          setCoverUrl(sel.url);
+          setCoverMediaObjectId(sel.id);
+          setCoverPickerOpen(false);
+          setSaveError(null);
+        }}
+      />
+
+      {addPickerOpen ? (
+        <div
+          className={objStyles.modalBackdrop}
+          role="dialog"
+          aria-modal
+          aria-label={kind === 'PRODUCT' ? str.addProductAria : str.addBrandAria}
+          onClick={() => setAddPickerOpen(false)}
+        >
+          <div
+            className={objStyles.modal}
+            onClick={(ev) => ev.stopPropagation()}
+            style={{ maxWidth: 640, width: '100%' }}
+          >
+            <div className={styles.modalHeaderRow}>
+              <h2 className={objStyles.dialogTitle} style={{ margin: 0, paddingRight: 8 }}>
+                {kind === 'PRODUCT' ? str.addProduct : str.addBrand}
+              </h2>
+              <AdminModalCloseButton onClick={() => setAddPickerOpen(false)} label={str.close} />
+            </div>
+            <AdminSearchBox
+              className={styles.searchBoxFull}
+              placeholder={str.searchPh}
+              ariaLabel={str.searchAria}
+              value={addQ}
+              onChange={(e) => setAddQ(e.target.value)}
+            />
+            <div className={`${styles.tableWrap} ${styles.tableScroll}`}>
+              {addLoading ? (
+                <p className={styles.muted}>{c.loading}</p>
+              ) : kind === 'PRODUCT' ? (
+                addProductHits.length === 0 ? (
+                  <p className={styles.muted}>{str.nothing}</p>
+                ) : (
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: 44 }}>
+                          <AccountCheckbox
+                            id="curated-add-select-all"
+                            className={styles.adminCheckboxInTable}
+                            checked={modalAllSelectableSelected}
+                            onChange={toggleModalSelectAll}
+                            disabled={!selectableProductIds.length}
+                            aria-label={str.selectAllList}
+                          />
+                        </th>
+                        <th>{str.thName}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {addProductHits.map((p) => {
+                        const inCol = productRows.some((r) => r.productId === p.id);
+                        return (
+                          <tr key={p.id} className={inCol ? styles.rowInactive : undefined}>
+                            <td>
+                              <AccountCheckbox
+                                id={`curated-add-p-${p.id}`}
+                                className={styles.adminCheckboxInTable}
+                                disabled={inCol}
+                                checked={!inCol && addModalSelected.has(p.id)}
+                                onChange={() => toggleAddModalRow(p.id)}
+                                aria-label={str.selectRow(p.name)}
+                              />
+                            </td>
+                            <td>
+                              {p.name}
+                              {inCol ? (
+                                <span className={styles.muted} style={{ marginLeft: 6 }}>
+                                  {str.inCollection}
+                                </span>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )
+              ) : addBrandHits.length === 0 ? (
+                <p className={styles.muted}>{str.nothing}</p>
+              ) : (
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 44 }}>
+                        <AccountCheckbox
+                          id="curated-add-select-all-brands"
+                          className={styles.adminCheckboxInTable}
+                          checked={modalAllSelectableSelected}
+                          onChange={toggleModalSelectAll}
+                          disabled={!selectableBrandIds.length}
+                          aria-label={str.selectAllList}
+                        />
+                      </th>
+                      <th>{str.thName}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {addBrandHits.map((b) => {
+                      const inCol = brandRows.some((r) => r.brandId === b.id);
+                      return (
+                        <tr key={b.id} className={inCol ? styles.rowInactive : undefined}>
+                          <td>
+                            <AccountCheckbox
+                              id={`curated-add-b-${b.id}`}
+                              className={styles.adminCheckboxInTable}
+                              disabled={inCol}
+                              checked={!inCol && addModalSelected.has(b.id)}
+                              onChange={() => toggleAddModalRow(b.id)}
+                              aria-label={str.selectRow(b.name)}
+                            />
+                          </td>
+                          <td>
+                            {b.name}
+                            {inCol ? (
+                              <span className={styles.muted} style={{ marginLeft: 6 }}>
+                                {str.inCollection}
+                              </span>
+                            ) : null}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className={styles.formActions} style={{ marginTop: 14 }}>
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                onClick={() => setAddModalSelected(new Set())}
+                disabled={!addModalSelected.size}
+              >
+                {str.clearSel}
+              </AdminCompactBtn>
+              <AdminCompactBtn
+                type="button"
+                disabled={!addModalSelected.size}
+                onClick={commitAddModalSelection}
+              >
+                {addModalSelected.size ? `${str.addSelected} (${addModalSelected.size})` : str.addSelected}
+              </AdminCompactBtn>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className={styles.detailTitleRow}>
+        <div className={styles.detailTitleWithBadge}>
+          <h1 className={styles.title}>{isEdit ? str.titleEdit : str.titleNew}</h1>
+          <AdminCatalogVisibilityBadge
+            isActive={isActive}
+            publishedLabel={str.published}
+            hiddenLabel={str.hidden}
+          />
+        </div>
+        <AdminCompactBtn
+          type="submit"
+          form={COLLECTION_FORM_ID}
+          variant="accent"
+          disabled={saving || !!loadError || (isEdit && !loaded)}
+        >
+          {saving ? str.saveBusy : isEdit ? str.saveEdit : str.create}
+        </AdminCompactBtn>
+      </div>
+
+      <form
+        id={COLLECTION_FORM_ID}
+        className={`${styles.form} ${styles.formWide}`}
+        onSubmit={submit}
+      >
+        <AdminTextField
+          label={str.nameLabel}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+
+        <AdminTextField
+          label={str.slugLabel}
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          placeholder={str.slugPh}
+        />
+
+        <AdminTextArea
+          label={str.desc}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={5}
+        />
+
+        <div className={styles.fieldBlock}>
+          <span className={styles.adminFieldLabel}>{str.contentTitle}</span>
+          <AdminTabs
+            variant="pill"
+            ariaLabel={str.contentTitle}
+            items={[
+              { id: 'PRODUCT' as const, label: str.tabProducts },
+              { id: 'BRAND' as const, label: str.tabBrands },
+            ]}
+            activeId={kind}
+            onChange={changeKind}
+          />
+        </div>
+
+        <div className={styles.fieldBlock}>
+          <span className={styles.adminFieldLabel}>{str.coverBlock}</span>
+          {coverUrl.trim() ? (
+            <div className={styles.bgPreview} style={{ maxWidth: 360 }}>
+              <img src={coverUrl.trim()} alt="" />
+            </div>
+          ) : null}
+          <div className={styles.coverActions}>
+            <AdminCompactBtn
+              type="button"
+              onClick={() => {
+                setSaveError(null);
+                setCoverPickerOpen(true);
+              }}
+            >
+              {str.pickLibrary}
+            </AdminCompactBtn>
+            {coverUrl.trim() ? (
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCoverUrl('');
+                  setCoverMediaObjectId(null);
+                }}
+              >
+                {str.removeCover}
+              </AdminCompactBtn>
+            ) : null}
+          </div>
+        </div>
+
+        <h2 className={styles.groupHeading}>{str.seoHeading}</h2>
+        <AdminTextField
+          label={str.seoTitle}
+          value={seoTitle}
+          onChange={(e) => setSeoTitle(e.target.value)}
+        />
+        <AdminTextArea
+          label={str.seoDesc}
+          value={seoDescription}
+          onChange={(e) => setSeoDescription(e.target.value)}
+          rows={3}
+        />
+
+        <div className={styles.labelCheckboxRow}>
+          <AccountCheckbox
+            id="curated-collection-active"
+            className={styles.adminCheckboxForm}
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            aria-label={str.activeAria}
+          />
+          <label htmlFor="curated-collection-active">{str.activeLabel}</label>
+        </div>
+
+        <div className={styles.sectionHead} style={{ marginTop: 8 }}>
+          <h2 className={styles.groupHeading}>
+            {kind === 'PRODUCT' ? str.listProducts : str.listBrands}
+          </h2>
+          <AdminCompactBtn
+            type="button"
+            onClick={() => {
+              setAddQ('');
+              setAddModalSelected(new Set());
+              setAddPickerOpen(true);
+            }}
+          >
+            {kind === 'PRODUCT' ? str.addProductBtn : str.addBrandBtn}
+          </AdminCompactBtn>
+        </div>
+
+        {kind === 'PRODUCT' ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onProductDragEnd}>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }} aria-label={str.thOrder} />
+                    <th>{str.thName}</th>
+                    <th className={styles.tableCellActions} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {productRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className={styles.muted}>
+                        {str.emptyPositions}
+                      </td>
+                    </tr>
+                  ) : (
+                    <SortableContext
+                      items={productRows.map((r) => r.key)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {productRows.map((row) => (
+                        <SortableItemRow
+                          key={row.key}
+                          rowId={row.key}
+                          label={row.name}
+                          dragTitle={str.drag}
+                          removeLabel={str.remove}
+                          onRemove={() =>
+                            setProductRows((prev) => prev.filter((r) => r.key !== row.key))
+                          }
+                        />
+                      ))}
+                    </SortableContext>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </DndContext>
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onBrandDragEnd}>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }} aria-label={str.thOrder} />
+                    <th>{str.thName}</th>
+                    <th className={styles.tableCellActions} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {brandRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className={styles.muted}>
+                        {str.emptyPositions}
+                      </td>
+                    </tr>
+                  ) : (
+                    <SortableContext
+                      items={brandRows.map((r) => r.key)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {brandRows.map((row) => (
+                        <SortableItemRow
+                          key={row.key}
+                          rowId={row.key}
+                          label={row.name}
+                          dragTitle={str.drag}
+                          removeLabel={str.remove}
+                          onRemove={() =>
+                            setBrandRows((prev) => prev.filter((r) => r.key !== row.key))
+                          }
+                        />
+                      ))}
+                    </SortableContext>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </DndContext>
+        )}
+
+        {saveError ? <p className={styles.error}>{saveError}</p> : null}
+
+        <div className={styles.formActions}>
+          <AdminCompactBtnLink href="/admin/collections" variant="outline">
+            {str.cancel}
+          </AdminCompactBtnLink>
+        </div>
+      </form>
+    </>
+  );
+}

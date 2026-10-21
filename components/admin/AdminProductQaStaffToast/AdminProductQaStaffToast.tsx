@@ -45,14 +45,15 @@ function AdminProductQaStaffToastView({
   );
 }
 
-export function AdminProductQaStaffAlerts({ isLoginRoute }: { isLoginRoute: boolean }) {
+/** Toast staff Q&A — только в AdminChrome (login вне shell). */
+export function AdminProductQaStaffAlerts() {
   const [toast, setToast] = useState<ProductQaStaffNewQuestionPayload | null>(null);
   const dismiss = useCallback(() => setToast(null), []);
   const onVisibleStaffNewQuestion = useCallback((payload: ProductQaStaffNewQuestionPayload) => {
     setToast(payload);
   }, []);
 
-  useAdminProductQaStaffEvents(!isLoginRoute, { onVisibleStaffNewQuestion });
+  useAdminProductQaStaffEvents(true, { onVisibleStaffNewQuestion });
 
   useEffect(() => {
     if (!toast) return undefined;

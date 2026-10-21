@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { teardownOrderChatWsForLogout } from '@/lib/orderChat/orderChatWsShared';
 import { invalidateUserClientCaches } from '@/lib/userSessionClient';
 import { ACCOUNT_WORK_NOTIFICATIONS_EVENT, dispatchAccountWorkFeedRefreshEvent } from '@/lib/account/orders';
@@ -24,7 +23,6 @@ function displayName(firstName: string | null | undefined, lastName: string | nu
 }
 
 export function CustomerAccountSidebarContainer() {
-  const router = useRouter();
   const [userName, setUserName] = useState('Имя пользователя');
   const [isWinWinPartner, setIsWinWinPartner] = useState(false);
   const [userGroupLabel, setUserGroupLabel] = useState<string | null>(null);
@@ -110,17 +108,14 @@ export function CustomerAccountSidebarContainer() {
       await fetch('/api/user/logout', { method: 'POST', credentials: 'same-origin' });
       teardownOrderChatWsForLogout('account');
       invalidateUserClientCaches({ authenticated: false });
-      router.push('/');
-      router.refresh();
     } catch {
       teardownOrderChatWsForLogout('account');
       invalidateUserClientCaches({ authenticated: false });
-      router.push('/');
-      router.refresh();
     } finally {
-      setLoggingOut(false);
+      // Hard nav — не зависеть от soft RSC / чужого `_rsc`-шторма.
+      window.location.assign('/');
     }
-  }, [router]);
+  }, []);
 
   const menuHrefOverrides = workTabNotify ? { '/account/orders': '/account/orders?tab=work' } : {};
 

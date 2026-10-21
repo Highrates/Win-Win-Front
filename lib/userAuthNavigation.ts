@@ -1,4 +1,3 @@
-import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import {
   buildDesignerInviteProfilePath,
   defaultPostAuthPath,
@@ -29,26 +28,28 @@ async function claimDesignerInvite(token: string): Promise<
   return { ok: true, prefillRef: body.prefillRef };
 }
 
+/** Hard navigation — не зависит от soft RSC / чужого `_rsc`-шторма в `next dev`. */
+function hardNavigate(path: string): void {
+  if (typeof window === 'undefined') return;
+  window.location.replace(path);
+}
+
 /**
- * После успешного login/register: кэши, claim invite (если есть), redirect + refresh.
+ * После успешного login/register: кэши, claim invite (если есть), hard redirect.
  */
-export async function navigateAfterUserAuth(
-  router: AppRouterInstance,
-  opts: {
-    callbackUrl?: string | null;
-    user?: PostAuthUser | null;
-    designerInviteToken?: string | null;
-    fallbackPath?: string;
-  },
-): Promise<NavigateAfterUserAuthResult> {
+export async function navigateAfterUserAuth(opts: {
+  callbackUrl?: string | null;
+  user?: PostAuthUser | null;
+  designerInviteToken?: string | null;
+  fallbackPath?: string;
+}): Promise<NavigateAfterUserAuthResult> {
   invalidateUserClientCaches({ authenticated: true });
 
   const invite = opts.designerInviteToken?.trim();
   if (invite) {
     const claimed = await claimDesignerInvite(invite);
     if (!claimed.ok) return claimed;
-    router.replace(buildDesignerInviteProfilePath(claimed.prefillRef));
-    router.refresh();
+    hardNavigate(buildDesignerInviteProfilePath(claimed.prefillRef));
     return { ok: true };
   }
 
@@ -56,12 +57,6 @@ export async function navigateAfterUserAuth(
     opts.callbackUrl,
     opts.fallbackPath ?? defaultPostAuthPath(opts.user),
   );
-  // Возврат к файлу (/api/user/files/…) — не страница приложения, клиентский роутер его не отрисует.
-  if (target.startsWith('/api/') && typeof window !== 'undefined') {
-    window.location.replace(target);
-    return { ok: true };
-  }
-  router.replace(target);
-  router.refresh();
+  hardNavigate(target);
   return { ok: true };
 }

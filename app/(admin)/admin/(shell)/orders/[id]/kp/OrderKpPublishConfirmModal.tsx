@@ -1,0 +1,217 @@
+'use client';
+
+import { useEffect, useMemo, useRef } from 'react';
+import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
+import { AdminOrderSideChat } from '../AdminOrderSideChat';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
+import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
+import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
+import { KP_PUBLISH_NEXT_STATUSES } from '@/lib/orders/orderStatus';
+import type { CommercialProposalLineApi } from '@/lib/commercialProposal/types';
+import type { KpOfferTotals } from '@/lib/commercialProposal/kpOfferTotals';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
+import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
+import own from './OrderKpPublishConfirmModal.module.css';
+
+export type NextOrderStatusChoice = (typeof KP_PUBLISH_NEXT_STATUSES)[number];
+
+type Labels = {
+  title: string;
+  cancel: string;
+  submit: string;
+  submitting: string;
+};
+
+type Props = {
+  open: boolean;
+  orderId: string;
+  lines: CommercialProposalLineApi[];
+  lineCount: number;
+  totals: KpOfferTotals;
+  numberLocale: string;
+  labels: Labels;
+  publishing: boolean;
+  /** Ошибка сохранения черновика / публикации — дубль подсказки из редактора */
+  draftOrPublishError?: string | null;
+  /** Заказ «На согласовании» — выбор следующего статуса заказа */
+  showNextStatus: boolean;
+  nextOrderStatus: NextOrderStatusChoice;
+  onNextOrderStatus: (s: NextOrderStatusChoice) => void;
+  onClose: () => void;
+  onConfirm: () => void | Promise<void>;
+};
+
+function formatRubInt(n: number, numberLocale: string): string {
+  return new Intl.NumberFormat(numberLocale, {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function lineTitle(snap: Record<string, unknown> | null): string {
+  if (snap && typeof snap.productName === 'string' && snap.productName.trim()) return snap.productName.trim();
+  return '—';
+}
+
+const NEXT_STATUS_OPTIONS: NextOrderStatusChoice[] = [...KP_PUBLISH_NEXT_STATUSES];
+
+export function OrderKpPublishConfirmModal({
+  open,
+  orderId,
+  lines,
+  lineCount,
+  totals,
+  numberLocale,
+  labels,
+  publishing,
+  draftOrPublishError,
+  showNextStatus,
+  nextOrderStatus,
+  onNextOrderStatus,
+  onClose,
+  onConfirm,
+}: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { locale } = useAdminLocale();
+  const d = useMemo(() => adminOrderDetailStrings(locale), [locale]);
+  const statusLabels = useMergedAdminOrderStatusLabels();
+
+  useModalFocusTrap(open, panelRef);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !publishing) onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    const html = document.documentElement;
+    const body = document.body;
+    const ph = html.style.overflow;
+    const pb = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      html.style.overflow = ph;
+      body.style.overflow = pb;
+    };
+  }, [open, onClose, publishing]);
+
+  if (!open) return null;
+
+  const pct = Math.round(totals.avgDiscountPercent * 10) / 10;
+  const pctLabel = `${pct}%`;
+  const showDiscountRed = pct > 0;
+  const oldF = formatRubInt(totals.oldTotalRub, numberLocale);
+  const newF = formatRubInt(totals.newTotalRub, numberLocale);
+
+  return (
+    <div
+      className={modalStyles.overlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kp-publish-confirm-title"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !publishing) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        className={`${modalStyles.panel} ${own.publishPanel}`}
+        tabIndex={-1}
+      >
+        <div className={modalStyles.panelHead}>
+          <h2 id="kp-publish-confirm-title" className={modalStyles.panelTitle}>
+            {labels.title}
+          </h2>
+          <AdminModalCloseButton
+            label="Закрыть"
+            disabled={publishing}
+            onClick={onClose}
+          />
+        </div>
+        <div className={own.bodySplit}>
+          <div className={own.summaryCol}>
+            <p className={own.summaryTitle}>{d.kpPublishSummaryHeading}</p>
+            <p className={own.summaryMeta}>{d.kpPublishPositions(lineCount)}</p>
+            <p className={own.digitsRow}>
+              <span className={showDiscountRed ? own.digitsDiscount : undefined}>{pctLabel}</span>
+              <span className={own.sep} aria-hidden>
+                ·
+              </span>
+              <span>{oldF}</span>
+              <span className={own.sep} aria-hidden>
+                ·
+              </span>
+              <span className={own.grandNew}>{newF}</span>
+            </p>
+
+            {draftOrPublishError?.trim() ? (
+              <p className={own.flowError} role="alert" aria-live="polite">
+                {draftOrPublishError.trim()}
+              </p>
+            ) : null}
+
+            {showNextStatus ? (
+              <div className={own.statusBlock}>
+                <AdminSelect
+                  label={d.kpPublishNextStatus}
+                  id="kp-publish-next-status"
+                  className={own.statusSelect}
+                  value={nextOrderStatus}
+                  disabled={publishing}
+                  onChange={(e) => onNextOrderStatus(e.target.value as NextOrderStatusChoice)}
+                >
+                  {NEXT_STATUS_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {statusLabels[v] ?? v}
+                    </option>
+                  ))}
+                </AdminSelect>
+              </div>
+            ) : null}
+
+            {lines.length > 0 ? (
+              <ul className={own.linesList} aria-label="Позиции в предложении">
+                {lines.map((line) => {
+                  const snap =
+                    line.snapshot && typeof line.snapshot === 'object'
+                      ? (line.snapshot as Record<string, unknown>)
+                      : null;
+                  return (
+                    <li key={line.id} className={own.lineRow}>
+                      <p className={own.lineName}>{lineTitle(snap)}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+
+            <div className={own.footerRow}>
+              <AdminCompactBtn type="button" variant="outline" disabled={publishing} onClick={onClose}>
+                {labels.cancel}
+              </AdminCompactBtn>
+              <AdminCompactBtn
+                type="button"
+                variant="accent"
+                disabled={publishing}
+                onClick={() => void onConfirm()}
+              >
+                {publishing ? labels.submitting : labels.submit}
+              </AdminCompactBtn>
+            </div>
+          </div>
+          <div className={own.chatCol}>
+            <div className={own.chatHost}>
+              <AdminOrderSideChat orderId={orderId} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,262 @@
+'use client';
+
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
+import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminProductModsStrings } from '@/lib/admin-i18n/adminProductModsI18n';
+import { createClientRandomId } from '@/lib/clientRandomId';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
+import pn from './productNew.module.css';
+import type {
+  AdminProductModification,
+  ProductAdminDetail,
+} from '../adminProductTypes';
+
+type ModificationRow = {
+  id: string;
+  serverId?: string;
+  name: string;
+  modificationSlug: string | null;
+};
+
+function rowId() {
+  return createClientRandomId();
+}
+
+function modificationFromAdmin(m: AdminProductModification): ModificationRow {
+  return {
+    id: rowId(),
+    serverId: m.id,
+    name: m.name,
+    modificationSlug: m.modificationSlug,
+  };
+}
+
+function SortableModificationRow({
+  mod,
+  strings: ms,
+  onChange,
+  onRemove,
+}: {
+  mod: ModificationRow;
+  strings: ReturnType<typeof adminProductModsStrings>;
+  onChange: (next: ModificationRow) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: mod.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.8 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className={pn.repeatRow}>
+      <button
+        type="button"
+        className={pn.dragHandle}
+        {...attributes}
+        {...listeners}
+        title={ms.dragMod}
+        aria-label={ms.dragModAria}
+      >
+        ⋮⋮
+      </button>
+      <AdminTextField
+        className={pn.modFieldGrow}
+        placeholder={ms.namePh}
+        value={mod.name}
+        onChange={(e) => onChange({ ...mod, name: e.target.value })}
+        aria-label={ms.namePh}
+      />
+      <AdminTextField
+        className={pn.modFieldSlug}
+        placeholder={ms.slugPh}
+        value={mod.modificationSlug ?? ''}
+        onChange={(e) => onChange({ ...mod, modificationSlug: e.target.value || null })}
+        aria-label={ms.slugPh}
+      />
+      <AdminCompactBtn type="button" variant="danger" onClick={onRemove}>
+        {ms.delete}
+      </AdminCompactBtn>
+    </div>
+  );
+}
+
+type Props = {
+  productId: string;
+  initialModifications: AdminProductModification[];
+  onProductMutated: (next: ProductAdminDetail) => void;
+};
+
+export function ProductModificationsSection({
+  productId,
+  initialModifications,
+  onProductMutated,
+}: Props) {
+  const { locale } = useAdminLocale();
+  const ms = useMemo(() => adminProductModsStrings(locale), [locale]);
+  const [modifications, setModifications] = useState<ModificationRow[]>(() =>
+    initialModifications.map(modificationFromAdmin),
+  );
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok');
+
+  useEffect(() => {
+    setModifications(initialModifications.map(modificationFromAdmin));
+  }, [initialModifications]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const hasAnyUnnamed = useMemo(
+    () => modifications.some((m) => !m.name.trim()),
+    [modifications],
+  );
+
+  function onModDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = modifications.findIndex((m) => m.id === active.id);
+    const newIndex = modifications.findIndex((m) => m.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    setModifications((m) => arrayMove(m, oldIndex, newIndex));
+  }
+
+  function addModification() {
+    setModifications((prev) => [
+      ...prev,
+      { id: rowId(), name: '', modificationSlug: null },
+    ]);
+  }
+
+  function removeModification(mid: string) {
+    setModifications((prev) => prev.filter((m) => m.id !== mid));
+  }
+
+  function updateModification(mid: string, next: ModificationRow) {
+    setModifications((prev) => prev.map((m) => (m.id === mid ? next : m)));
+  }
+
+  const saveModifications = useCallback(async () => {
+    setMsg(null);
+    if (hasAnyUnnamed) {
+      setMsgKind('err');
+      setMsg(ms.errNames);
+      return;
+    }
+    const payload = {
+      modifications: modifications.map((m, idx) => ({
+        ...(m.serverId ? { id: m.serverId } : {}),
+        name: m.name.trim(),
+        modificationSlug: m.modificationSlug?.trim() || null,
+        sortOrder: idx,
+      })),
+    };
+    setSaving(true);
+    try {
+      await adminBackendJson<unknown>(
+        `catalog/admin/products/${productId}/modifications`,
+        { method: 'PATCH', body: JSON.stringify(payload) },
+      );
+      const fresh = await adminBackendJson<ProductAdminDetail>(
+        `catalog/admin/products/${productId}`,
+      );
+      const matched = modifications.map((local, idx) => {
+        const server = fresh.modifications[idx];
+        if (!server) return local;
+        return {
+          ...local,
+          serverId: server.id,
+          modificationSlug: server.modificationSlug,
+        };
+      });
+      setModifications(matched);
+      onProductMutated(fresh);
+      await revalidatePublicCatalogCache();
+      setMsgKind('ok');
+      setMsg(ms.saved);
+    } catch (err) {
+      setMsgKind('err');
+      setMsg(err instanceof Error ? err.message : ms.saveErr);
+    } finally {
+      setSaving(false);
+    }
+  }, [hasAnyUnnamed, modifications, productId, onProductMutated, ms]);
+
+  return (
+    <div className={pn.section}>
+      <div className={catalogStyles.sectionHead}>
+        <h2 className={catalogStyles.groupHeading}>{ms.sectionTitle}</h2>
+        <AdminCompactBtn
+          type="button"
+          variant="accent"
+          onClick={() => {
+            void saveModifications();
+          }}
+          disabled={saving}
+        >
+          {saving ? ms.saveBusy : ms.save}
+        </AdminCompactBtn>
+      </div>
+
+      {modifications.length === 0 ? (
+        <p className={catalogStyles.muted}>
+          {ms.empty}
+        </p>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onModDragEnd}>
+          <SortableContext
+            items={modifications.map((m) => m.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className={pn.repeatList}>
+              {modifications.map((m) => (
+                <SortableModificationRow
+                  key={m.id}
+                  mod={m}
+                  strings={ms}
+                  onChange={(next) => updateModification(m.id, next)}
+                  onRemove={() => removeModification(m.id)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      <div className={catalogStyles.formActions}>
+        <AdminCompactBtn type="button" onClick={addModification}>
+          {ms.addMod}
+        </AdminCompactBtn>
+      </div>
+
+      {msg ? (
+        <p
+          className={msgKind === 'ok' ? catalogStyles.muted : catalogStyles.error}
+          style={{ marginTop: 8 }}
+        >
+          {msg}
+        </p>
+      ) : null}
+    </div>
+  );
+}

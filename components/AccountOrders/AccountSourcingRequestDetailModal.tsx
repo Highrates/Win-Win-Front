@@ -17,6 +17,7 @@ import { formatBudgetDigitsGrouped } from '@/lib/formatBudgetRub';
 import { sourcingKpLineTotalRub, sourcingKpOrderTotalRub } from '@/lib/sourcingCommercialProposal/kpLineTotals';
 import type { SourcingCommercialProposalApi, SourcingCommercialProposalLineApi } from '@/lib/sourcingCommercialProposal/types';
 import { downloadSourcingCommercialProposalPdf } from '@/lib/commercialProposal/downloadSourcingCommercialProposalPdf';
+import { kpPdfFailedImagesMessage } from '@/lib/commercialProposal/exportCommercialProposalPdf';
 import { cacheSourcingCommercialProposal } from '@/lib/commercialProposal/kpProposalCache';
 import {
   ackUserSourcingCommercialProposalSeen,
@@ -160,7 +161,9 @@ export function AccountSourcingRequestDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfBusyLabel, setPdfBusyLabel] = useState('PDF…');
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const pdfAbortRef = useRef<AbortController | null>(null);
   const open = Boolean(requestId);
   const chatAvailable = detail?.status !== 'CANCELLED';
   const onStatusResolvedRef = useRef(onStatusResolved);
@@ -296,16 +299,38 @@ export function AccountSourcingRequestDetailModal({
   );
 
   async function handleDownloadKpPdf() {
-    if (!detail?.id || !latestKp?.lines?.length || pdfBusy) return;
+    if (!detail?.id || pdfBusy) return;
+    pdfAbortRef.current?.abort();
+    const ac = new AbortController();
+    pdfAbortRef.current = ac;
     setPdfBusy(true);
+    setPdfBusyLabel('Готовим PDF…');
     setPdfError(null);
     try {
-      cacheSourcingCommercialProposal(detail.id, latestKp);
-      await downloadSourcingCommercialProposalPdf({ requestId: detail.id, proposal: latestKp });
+      const fresh = await fetchUserSourcingRequest(detail.id);
+      const proposal = fresh.latestCommercialProposal;
+      if (!proposal?.lines?.length) {
+        throw new Error('Коммерческое предложение ещё не опубликовано');
+      }
+      cacheSourcingCommercialProposal(detail.id, proposal);
+      const result = await downloadSourcingCommercialProposalPdf({
+        requestId: detail.id,
+        proposal,
+        signal: ac.signal,
+        onProgress: (p) => setPdfBusyLabel(p.label),
+      });
+      if (result.failedImageCount > 0) {
+        setPdfError(
+          `PDF сохранён, но ${kpPdfFailedImagesMessage(result.failedImageCount).toLowerCase()}`,
+        );
+      }
     } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return;
       setPdfError(e instanceof Error ? e.message : 'Не удалось сформировать PDF');
     } finally {
+      if (pdfAbortRef.current === ac) pdfAbortRef.current = null;
       setPdfBusy(false);
+      setPdfBusyLabel('PDF…');
     }
   }
 
@@ -536,6 +561,7 @@ export function AccountSourcingRequestDetailModal({
               chatAriaLabel="Написать по заявке"
               onDownloadPdf={hasKp ? () => void handleDownloadKpPdf() : undefined}
               pdfBusy={pdfBusy}
+              pdfBusyLabel={pdfBusyLabel}
             />
           </>
         ) : null}

@@ -1,37 +1,38 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField/TextField';
+import { sanitizeAdminCallbackUrl } from '@/lib/adminAuth';
 import { adminLoginStrings } from '@/lib/admin-i18n/adminLoginI18n';
 import type { AdminLocale } from '@/lib/admin-i18n/adminChromeI18n';
 import styles from './login.module.css';
 
-export function AdminLoginForm({ initialLocale }: { initialLocale: AdminLocale }) {
+export function AdminLoginForm({
+  initialLocale,
+  from,
+}: {
+  initialLocale: AdminLocale;
+  from?: string | null;
+}) {
   const str = adminLoginStrings(initialLocale);
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const redirectTarget = useCallback(() => {
-    const from = searchParams.get('from');
-    if (from && from.startsWith('/admin') && from !== '/admin/login') return from;
-    return '/admin';
-  }, [searchParams]);
+  const sessionCheckDone = useRef(false);
 
   useEffect(() => {
+    if (sessionCheckDone.current) return;
+    sessionCheckDone.current = true;
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch('/api/admin/session', { credentials: 'same-origin' });
         const data = await res.json();
         if (!cancelled && data.authenticated) {
-          router.replace(redirectTarget());
+          window.location.replace(sanitizeAdminCallbackUrl(from));
         }
       } catch {
         /* остаёмся на логине */
@@ -40,7 +41,7 @@ export function AdminLoginForm({ initialLocale }: { initialLocale: AdminLocale }
     return () => {
       cancelled = true;
     };
-  }, [router, redirectTarget]);
+  }, [from]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,8 +62,7 @@ export function AdminLoginForm({ initialLocale }: { initialLocale: AdminLocale }
         setError(typeof body.error === 'string' ? body.error : str.errLogin);
         return;
       }
-      router.replace(redirectTarget());
-      router.refresh();
+      window.location.assign(sanitizeAdminCallbackUrl(from));
     } catch {
       setError(str.errNetwork);
     } finally {

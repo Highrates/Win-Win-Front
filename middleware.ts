@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/adminAuth';
+import { ADMIN_ACCESS_TOKEN_COOKIE, buildAdminLoginHref } from '@/lib/adminAuth';
 import { USER_ACCESS_TOKEN_COOKIE } from '@/lib/userAuth';
 
 const HERO_ROTATION_COOKIE = 'winwin-hero-idx';
@@ -103,10 +103,7 @@ export function middleware(request: NextRequest) {
       return forward();
     }
     if (!hasAuthCookie(request, ADMIN_ACCESS_TOKEN_COOKIE)) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/admin/login';
-      url.searchParams.set('from', pathname);
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(new URL(buildAdminLoginHref(pathname), request.url));
     }
     return forward();
   }

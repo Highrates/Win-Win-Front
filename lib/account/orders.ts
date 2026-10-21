@@ -12,13 +12,33 @@ export type AccountWorkNotificationsDetail = {
   chatSubject?: 'order' | 'sourcing';
 };
 
+function logWorkEventDispatch(name: string): void {
+  if (typeof window === 'undefined') return;
+  if (process.env.NODE_ENV !== 'development') return;
+  try {
+    if (localStorage.getItem('wwInspectNet') !== '1') return;
+  } catch {
+    return;
+  }
+  const stack = new Error().stack
+    ?.split('\n')
+    .slice(2, 8)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .join(' ← ');
+  // eslint-disable-next-line no-console
+  console.log(`%c[wwInspectNet] dispatch`, 'color:#c45c26', name, stack ? `\n  ${stack}` : '');
+}
+
 export function dispatchAccountWorkNotificationsEvent(detail?: AccountWorkNotificationsDetail): void {
   if (typeof window === 'undefined') return;
+  logWorkEventDispatch(ACCOUNT_WORK_NOTIFICATIONS_EVENT);
   window.dispatchEvent(new CustomEvent(ACCOUNT_WORK_NOTIFICATIONS_EVENT, { detail }));
 }
 
 export function dispatchAccountWorkFeedRefreshEvent(): void {
   if (typeof window === 'undefined') return;
+  logWorkEventDispatch(ACCOUNT_WORK_FEED_REFRESH_EVENT);
   window.dispatchEvent(new CustomEvent(ACCOUNT_WORK_FEED_REFRESH_EVENT));
 }
 

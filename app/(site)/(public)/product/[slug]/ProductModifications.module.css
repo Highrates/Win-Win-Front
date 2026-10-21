@@ -21,6 +21,7 @@
 }
 
 .option {
+  position: relative;
   padding: 8px 16px;
   border-radius: var(--radius-4);
   border: var(--account-hairline-width) solid var(--account-hairline-color);
@@ -28,7 +29,7 @@
   display: inline-flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 24px;
+  gap: 8px;
   background: none;
   cursor: pointer;
   font-family: inherit;
@@ -38,27 +39,25 @@
   text-decoration: none;
 }
 
+.optionLabel {
+  min-width: 0;
+}
+
 .option:hover {
-  border-color: rgba(0, 0, 0, 0.4);
+  border-color: color-mix(in srgb, var(--color-blue) 55%, var(--account-hairline-color));
   background: var(--color-bright-snow);
 }
 
-.option[aria-pressed='true'],
 .optionSelected {
-  border: 1px solid var(--color-black);
-  background: var(--color-bright-snow);
   color: var(--color-ink-black);
 }
 
-.option[aria-pressed='true']:hover,
 .optionSelected:hover {
-  border: 1px solid var(--color-black);
-  background: var(--color-bright-snow);
   color: var(--color-ink-black);
 }
 
 .option:focus-visible {
-  outline: 2px solid var(--color-ink-black);
+  outline: 2px solid var(--color-blue);
   outline-offset: 2px;
 }
 

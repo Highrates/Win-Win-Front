@@ -38,7 +38,7 @@ import {
   type AdminLocale,
 } from '@/lib/admin-i18n/adminChromeI18n';
 import styles from './layout.module.css';
-import { DEFAULT_STAFF_AVATAR } from './settings/staff/StaffAvatarField';
+import { DEFAULT_STAFF_AVATAR } from './(shell)/settings/staff/StaffAvatarField';
 
 function NavLinkLeading({ expandable, open }: { expandable?: boolean; open?: boolean }) {
   return (
@@ -335,8 +335,7 @@ export function AdminChrome({
   buildId: string;
 }) {
   const pathname = usePathname() ?? '';
-  const isLoginPage = pathname === '/admin/login';
-  useAdminOrderChatStaffUnreadEvents(isLoginPage);
+  useAdminOrderChatStaffUnreadEvents();
   const router = useRouter();
   const [locale, setLocale] = useState<AdminLocale>(initialLocale);
   const [localeReady, setLocaleReady] = useState(false);
@@ -346,17 +345,18 @@ export function AdminChrome({
   }, [initialLocale]);
 
   useEffect(() => {
+    // Только cookie + state — без router.refresh(): refresh на mismatch легко зацикливается в dev.
     try {
       const saved = localStorage.getItem(ADMIN_LOCALE_STORAGE_KEY);
       if ((saved === 'zh' || saved === 'ru') && saved !== initialLocale) {
         document.cookie = adminLocaleCookieString(saved);
-        router.refresh();
+        setLocale(saved);
       }
     } catch {
       /* ignore */
     }
     setLocaleReady(true);
-  }, [initialLocale, router]);
+  }, [initialLocale]);
 
   function setAdminLocale(next: AdminLocale) {
     setLocale(next);
@@ -367,10 +367,6 @@ export function AdminChrome({
       /* ignore */
     }
     router.refresh();
-  }
-
-  if (isLoginPage) {
-    return <>{children}</>;
   }
 
   const sidebarProps = {
@@ -389,7 +385,7 @@ export function AdminChrome({
             <AdminRouteGuard>
               <AdminSidebarBadgesProvider enabled>
                 <AdminShellBody sidebar={<AdminSidebar {...sidebarProps} />}>{children}</AdminShellBody>
-                <AdminProductQaStaffAlerts isLoginRoute={isLoginPage} />
+                <AdminProductQaStaffAlerts />
                 <AdminAssistantMount />
               </AdminSidebarBadgesProvider>
             </AdminRouteGuard>

@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { AdminConfirmDialog } from '@/components/admin/AdminConfirmDialog/AdminConfirmDialog';
-import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 

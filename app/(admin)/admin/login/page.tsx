@@ -1,23 +1,16 @@
-import { Suspense } from 'react';
+import { sanitizeAdminCallbackUrl } from '@/lib/adminAuth';
 import { getAdminLocale } from '@/lib/admin-i18n/getAdminLocale';
-import { adminLoginStrings } from '@/lib/admin-i18n/adminLoginI18n';
 import { AdminLoginForm } from './AdminLoginForm';
-import styles from './login.module.css';
 
-export default function AdminLoginPage() {
+export default function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams?: { from?: string | string[] };
+}) {
   const locale = getAdminLocale();
-  const str = adminLoginStrings(locale);
-  return (
-    <Suspense
-      fallback={
-        <div className={styles.wrap}>
-          <main className={styles.card}>
-            <p className={styles.hint}>{str.loading}</p>
-          </main>
-        </div>
-      }
-    >
-      <AdminLoginForm initialLocale={locale} />
-    </Suspense>
-  );
+  const rawFrom = searchParams?.from;
+  const raw = typeof rawFrom === 'string' ? rawFrom : Array.isArray(rawFrom) ? rawFrom[0] : null;
+  const from = sanitizeAdminCallbackUrl(raw);
+
+  return <AdminLoginForm initialLocale={locale} from={from} />;
 }

@@ -74,6 +74,55 @@
   border-radius: 2px;
 }
 
+.qtyInputWrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.qtyInput {
+  width: 3.2ch;
+  min-width: 2.5ch;
+  max-width: 5.5ch;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  text-align: center;
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: inherit;
+  box-sizing: content-box;
+}
+
+.qtyInput:focus {
+  outline: none;
+  border-bottom-color: currentColor;
+}
+
+.qtyInput:disabled {
+  opacity: 0.55;
+}
+
+.qtyUnit {
+  white-space: nowrap;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .qtyValue {
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);

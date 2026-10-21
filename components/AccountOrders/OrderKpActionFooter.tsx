@@ -16,6 +16,8 @@ type Props = {
   /** Скачать КП PDF (если задан — кнопка в футере; на card обычно не используется). */
   onDownloadPdf?: () => void;
   pdfBusy?: boolean;
+  /** Подпись на кнопке PDF, пока идёт сборка (например «Готовим PDF… 40%»). */
+  pdfBusyLabel?: string;
   chatAriaLabel?: string;
 };
 
@@ -29,6 +31,7 @@ export function OrderKpActionFooter({
   onReject,
   onDownloadPdf,
   pdfBusy = false,
+  pdfBusyLabel,
   chatAriaLabel = 'Написать по заказу',
 }: Props) {
   const unread = staffUnreadCount > 0;
@@ -135,7 +138,7 @@ export function OrderKpActionFooter({
           aria-label="Скачать коммерческое предложение в PDF"
         >
           <img src="/icons/document-download.svg" alt="" width={16} height={16} aria-hidden />
-          <span>{pdfBusy ? 'PDF…' : 'PDF'}</span>
+          <span>{pdfBusy ? pdfBusyLabel || 'PDF…' : 'PDF'}</span>
         </button>
       ) : null}
     </footer>

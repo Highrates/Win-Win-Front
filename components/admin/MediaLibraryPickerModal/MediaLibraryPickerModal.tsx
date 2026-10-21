@@ -24,8 +24,8 @@ import type {
   MediaLibraryTab,
   MediaObjectRow,
 } from '@/lib/adminMediaLibraryTypes';
-import catalogStyles from '@/app/(admin)/admin/catalog/catalogAdmin.module.css';
-import libStyles from '@/app/(admin)/admin/objects/objectsLibrary.module.css';
+import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
+import libStyles from '@/app/(admin)/admin/(shell)/objects/objectsLibrary.module.css';
 import pickStyles from './MediaLibraryPickerModal.module.css';
 
 export type MediaLibraryPickResult = {

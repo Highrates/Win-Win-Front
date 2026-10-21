@@ -10,12 +10,13 @@ import {
   type AccountWorkNotificationsDetail,
 } from '@/lib/account/orders';
 import { openOrderChatPhotoSwipe } from '@/lib/orderChat/openOrderChatPhotoSwipe';
-import { downloadCommercialProposalPdf } from '@/lib/commercialProposal/exportCommercialProposalPdf';
+import {
+  downloadCommercialProposalPdf,
+  kpPdfFailedImagesMessage,
+} from '@/lib/commercialProposal/exportCommercialProposalPdf';
 import {
   cacheOrderCommercialProposal,
   cacheSourcingCommercialProposal,
-  getCachedOrderCommercialProposal,
-  getCachedSourcingCommercialProposal,
 } from '@/lib/commercialProposal/kpProposalCache';
 import { downloadSourcingCommercialProposalPdf } from '@/lib/commercialProposal/downloadSourcingCommercialProposalPdf';
 import {
@@ -129,7 +130,9 @@ export function AccountOrderWorkCard({
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfBusyLabel, setPdfBusyLabel] = useState('PDF…');
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const pdfAbortRef = useRef<AbortController | null>(null);
   const menuWrapRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -301,27 +304,34 @@ export function AccountOrderWorkCard({
 
   async function handleDownloadKpPdf() {
     if (!canDownloadCommercialProposalPdf || pdfBusy) return;
+    pdfAbortRef.current?.abort();
+    const ac = new AbortController();
+    pdfAbortRef.current = ac;
     setPdfBusy(true);
+    setPdfBusyLabel('Готовим PDF…');
     setPdfError(null);
+    const onProgress = (p: { label: string }) => setPdfBusyLabel(p.label);
     try {
+      // Всегда refetch detail: version на карточке может отставать от publish;
+      // cache только ускоряет повтор при той же version (не skip сети).
       if (chatSubject === 'sourcing') {
-        const cachedSrc = getCachedSourcingCommercialProposal(orderId);
-        if (cachedSrc?.lines?.length) {
-          await downloadSourcingCommercialProposalPdf({ requestId: orderId, proposal: cachedSrc });
-          return;
-        }
         const detail = await fetchUserSourcingRequest(orderId);
         const proposal = detail.latestCommercialProposal;
         if (!proposal?.lines?.length) {
           throw new Error('Коммерческое предложение ещё не опубликовано');
         }
         cacheSourcingCommercialProposal(orderId, proposal);
-        await downloadSourcingCommercialProposalPdf({ requestId: orderId, proposal });
-        return;
-      }
-      const cached = getCachedOrderCommercialProposal(orderId);
-      if (cached?.lines?.length) {
-        await downloadCommercialProposalPdf({ orderId, proposal: cached });
+        const result = await downloadSourcingCommercialProposalPdf({
+          requestId: orderId,
+          proposal,
+          onProgress,
+          signal: ac.signal,
+        });
+        if (result.failedImageCount > 0) {
+          setPdfError(
+            `PDF сохранён, но ${kpPdfFailedImagesMessage(result.failedImageCount).toLowerCase()}`,
+          );
+        }
         return;
       }
       const detail = await fetchUserOrder(orderId);
@@ -330,11 +340,24 @@ export function AccountOrderWorkCard({
         throw new Error('Коммерческое предложение ещё не опубликовано');
       }
       cacheOrderCommercialProposal(orderId, proposal);
-      await downloadCommercialProposalPdf({ orderId, proposal });
+      const result = await downloadCommercialProposalPdf({
+        orderId,
+        proposal,
+        onProgress,
+        signal: ac.signal,
+      });
+      if (result.failedImageCount > 0) {
+        setPdfError(
+          `PDF сохранён, но ${kpPdfFailedImagesMessage(result.failedImageCount).toLowerCase()}`,
+        );
+      }
     } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return;
       setPdfError(e instanceof Error ? e.message : 'Не удалось сформировать PDF');
     } finally {
+      if (pdfAbortRef.current === ac) pdfAbortRef.current = null;
       setPdfBusy(false);
+      setPdfBusyLabel('PDF…');
     }
   }
 
@@ -511,7 +534,9 @@ export function AccountOrderWorkCard({
                 className={styles.orderDetailPdfIcon}
                 aria-hidden
               />
-              <span className={styles.orderDetailLinkText}>{pdfBusy ? 'PDF…' : 'Скачать PDF'}</span>
+              <span className={styles.orderDetailLinkText}>
+                {pdfBusy ? pdfBusyLabel : 'Скачать PDF'}
+              </span>
             </button>
           ) : null}
         </div>

@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState, type FocusEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type {
   PublicElementAvailabilityApi,
   PublicProductElementApi,
 } from '@/lib/publicProductFromApi';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
+import productSelectChrome from './ProductSelectChrome.module.css';
 import styles from './ProductElementTabs.module.css';
 
 type Props = {
@@ -16,17 +17,24 @@ type Props = {
   onSelect: (elementId: string, brandMaterialColorId: string) => void;
 };
 
-type HoverPreview = {
-  url: string;
-  top: number;
-  left: number;
-};
-
 type GroupedAvailabilities = {
   materialId: string;
   materialName: string;
   items: PublicElementAvailabilityApi[];
 };
+
+function CloseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path
+        d="M5 5L15 15M15 5L5 15"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 function groupByMaterial(items: PublicElementAvailabilityApi[]): GroupedAvailabilities[] {
   const map = new Map<string, GroupedAvailabilities>();
@@ -55,20 +63,23 @@ export default function ProductElementTabs({ elements, selections, onSelect }: P
     [elements],
   );
   const [activeId, setActiveId] = useState<string>(() => visibleElements[0]?.id ?? '');
-  const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
-  if (visibleElements.length === 0) return null;
+  const [lightbox, setLightbox] = useState<{ url: string; label: string } | null>(null);
 
-  const showHoverPreview = (buttonEl: HTMLButtonElement, url: string) => {
-    if (typeof window === 'undefined') return;
-    if (!window.matchMedia('(hover: hover) and (min-width: 769px)').matches) return;
-    const thumbEl = buttonEl.querySelector(`.${styles.tileThumbWrap}`) as HTMLElement | null;
-    const rect = (thumbEl ?? buttonEl).getBoundingClientRect();
-    setHoverPreview({
-      url,
-      top: rect.top + rect.height / 2,
-      left: rect.left + rect.width / 2,
-    });
-  };
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightbox(null);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [lightbox]);
+
+  if (visibleElements.length === 0) return null;
 
   const active = visibleElements.find((el) => el.id === activeId) ?? visibleElements[0]!;
   const groups = groupByMaterial(active.availabilities);
@@ -102,30 +113,39 @@ export default function ProductElementTabs({ elements, selections, onSelect }: P
               {g.items.map((a) => {
                 const imageUrl = resolveMediaUrlForClient(a.imageUrl);
                 const isSelected = activeSelectedBmcId === a.brandMaterialColorId;
+                const label = `${g.materialName}: ${a.colorName}`;
                 return (
                   <li key={a.brandMaterialColorId} className={styles.tileItem}>
-                    <button
-                      type="button"
-                      className={`${styles.tile} ${isSelected ? styles.tileSelected : ''}`}
-                      aria-pressed={isSelected}
-                      aria-label={`${g.materialName}: ${a.colorName}`}
-                      onClick={() => onSelect(active.id, a.brandMaterialColorId)}
-                      onMouseEnter={imageUrl ? (e) => showHoverPreview(e.currentTarget, imageUrl) : undefined}
-                      onMouseLeave={() => setHoverPreview(null)}
-                      onFocus={imageUrl ? (e: FocusEvent<HTMLButtonElement>) => showHoverPreview(e.currentTarget, imageUrl) : undefined}
-                      onBlur={() => setHoverPreview(null)}
-                    >
-                      <span className={styles.tileThumbWrap}>
-                        <span
-                          className={styles.tileThumb}
-                          style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
-                          aria-hidden
-                        />
-                      </span>
-                      <span className={styles.tileMeta}>
-                        <span className={styles.tileName}>{a.colorName}</span>
-                      </span>
-                    </button>
+                    <div className={styles.tileShell}>
+                      <button
+                        type="button"
+                        className={`${styles.tile}${isSelected ? ` ${styles.tileSelected} ${productSelectChrome.selectedBorder}` : ''}`}
+                        aria-pressed={isSelected}
+                        aria-label={label}
+                        onClick={() => onSelect(active.id, a.brandMaterialColorId)}
+                      >
+                        <span className={styles.tileThumbWrap}>
+                          <span
+                            className={styles.tileThumb}
+                            style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
+                            aria-hidden
+                          />
+                        </span>
+                        <span className={styles.tileMeta}>
+                          <span className={styles.tileName}>{a.colorName}</span>
+                        </span>
+                      </button>
+                      {imageUrl ? (
+                        <button
+                          type="button"
+                          className={styles.zoomBtn}
+                          aria-label={`Увеличить: ${label}`}
+                          onClick={() => setLightbox({ url: imageUrl, label })}
+                        >
+                          <img src="/icons/zoom-in.svg" alt="" width={16} height={16} aria-hidden />
+                        </button>
+                      ) : null}
+                    </div>
                   </li>
                 );
               })}
@@ -134,17 +154,27 @@ export default function ProductElementTabs({ elements, selections, onSelect }: P
         ))}
       </div>
 
-      {hoverPreview && typeof document !== 'undefined'
+      {lightbox && typeof document !== 'undefined'
         ? createPortal(
             <div
-              className={styles.hoverPreviewPortal}
-              style={{
-                top: hoverPreview.top,
-                left: hoverPreview.left,
-                backgroundImage: `url("${hoverPreview.url}")`,
+              className={styles.lightbox}
+              role="dialog"
+              aria-modal="true"
+              aria-label={lightbox.label}
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) setLightbox(null);
               }}
-              aria-hidden
-            />,
+            >
+              <button
+                type="button"
+                className={styles.lightboxClose}
+                aria-label="Закрыть"
+                onClick={() => setLightbox(null)}
+              >
+                <CloseIcon />
+              </button>
+              <img className={styles.lightboxImg} src={lightbox.url} alt={lightbox.label} />
+            </div>,
             document.body,
           )
         : null}

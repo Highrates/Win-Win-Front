@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import type { DesignerProjectDetailApi } from '@/lib/designerProjects/apiTypes';
-import { createDesignerProject, updateDesignerProject } from '@/lib/designerProjects/clientApi';
+import {
+  createDesignerProject,
+  deleteDesignerProjectApi,
+  updateDesignerProject,
+} from '@/lib/designerProjects/clientApi';
 import { DEFAULT_DESIGNER_ROOM_KEY } from '@/lib/designerProjects/defaultRoom';
 import { clearPdpProjectDraft, type PdpProjectDraftPayload } from '@/lib/designerProjects/pdpDraft';
 import { DEFAULT_DESIGNER_ROOM_ROW, detailToSavePayload, pdpDraftToLineSnapshot } from '@/lib/designerProjects/payload';
@@ -30,6 +34,8 @@ type Props = {
   /** После создания проекта передаётся имя для тоста на PDP и т.п. */
   onSaved?: (ctx?: { createdProjectName?: string }) => void;
   onSaveError?: (message: string) => void;
+  /** После успешного удаления проекта (только mode=edit). */
+  onDeleted?: (projectId: string) => void;
 };
 
 export function CreateEditProjectModal({
@@ -41,10 +47,12 @@ export function CreateEditProjectModal({
   pendingLineDraft,
   onSaved,
   onSaveError,
+  onDeleted,
 }: Props) {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -160,7 +168,25 @@ export function CreateEditProjectModal({
     }
   };
 
+  const removeProject = async () => {
+    if (mode !== 'edit' || !projectId || deleting || saving) return;
+    const label = name.trim() || initialDetail?.name?.trim() || 'этот проект';
+    if (!window.confirm(`Удалить проект «${label}»? Это действие нельзя отменить.`)) return;
+    setDeleting(true);
+    try {
+      await deleteDesignerProjectApi(projectId);
+      onDeleted?.(projectId);
+      onClose();
+    } catch (e) {
+      onSaveError?.(e instanceof Error ? e.message : 'Не удалось удалить проект');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!open) return null;
+
+  const busy = saving || deleting;
 
   return (
     <div className={modalStyles.overlay} role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -169,7 +195,7 @@ export function CreateEditProjectModal({
           <h2 id="dpm-title" className={modalStyles.panelTitle}>
             {mode === 'edit' ? 'Редактировать проект' : 'Новый проект'}
           </h2>
-          <button type="button" className={modalStyles.closeBtn} onClick={onClose} aria-label="Закрыть">
+          <button type="button" className={modalStyles.closeBtn} onClick={onClose} aria-label="Закрыть" disabled={busy}>
             <CloseIcon />
           </button>
         </div>
@@ -180,12 +206,26 @@ export function CreateEditProjectModal({
           </div>
         </div>
         <div className={modalStyles.panelFooter}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Отмена
-          </Button>
-          <Button type="button" variant="primary" disabled={!name.trim() || saving} onClick={() => void save()}>
-            {saving ? 'Сохранение…' : 'Сохранить'}
-          </Button>
+          {mode === 'edit' && projectId ? (
+            <button
+              type="button"
+              className={modalStyles.deleteBtn}
+              disabled={busy}
+              onClick={() => void removeProject()}
+            >
+              {deleting ? 'Удаление…' : 'Удалить проект'}
+            </button>
+          ) : (
+            <span className={modalStyles.footerSpacer} aria-hidden />
+          )}
+          <div className={modalStyles.footerActions}>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={busy}>
+              Отмена
+            </Button>
+            <Button type="button" variant="primary" disabled={!name.trim() || busy} onClick={() => void save()}>
+              {saving ? 'Сохранение…' : 'Сохранить'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

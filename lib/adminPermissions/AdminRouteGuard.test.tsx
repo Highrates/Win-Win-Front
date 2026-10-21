@@ -55,7 +55,7 @@ describe('AdminRouteGuard', () => {
     );
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/admin/login');
+      expect(replace).toHaveBeenCalledWith('/admin/login?from=%2Fadmin');
     });
   });
 

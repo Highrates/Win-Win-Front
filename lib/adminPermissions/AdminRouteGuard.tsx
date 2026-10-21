@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
+import { buildAdminLoginHref } from '@/lib/adminAuth';
 import { AdminPermissionsLoadingShell } from './AdminPermissionsLoadingShell';
 import { useAdminPermissions } from './AdminPermissionsProvider';
 
@@ -13,7 +14,7 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading || pathname === '/admin/login') return;
     if (!staff) {
-      router.replace('/admin/login');
+      router.replace(buildAdminLoginHref(pathname));
       return;
     }
     if (!canAccessPathname(pathname)) {

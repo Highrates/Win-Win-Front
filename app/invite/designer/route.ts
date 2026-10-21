@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import { getServerRequestOrigin } from '@/lib/serverRequestOrigin';
+import {
+  buildLoginWithInviteHref,
+  DESIGNER_INVITE_STAFF_EMAIL_ERROR,
+} from '@/lib/designerInvites/loginHints';
 
 /** Серверный редирект по ссылке из письма — без промежуточного лендинга. */
 export async function GET(request: Request) {
@@ -27,6 +31,7 @@ export async function GET(request: Request) {
     message?: string;
     prefillRef?: string;
     accountExists?: boolean;
+    accountKind?: 'none' | 'customer' | 'staff';
     email?: string;
   };
 
@@ -41,19 +46,26 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/login/email?${q.toString()}`, siteOrigin));
   }
 
-  if (body.accountExists) {
+  const email = (body.email ?? '').trim();
+  const kind = body.accountKind ?? (body.accountExists ? 'customer' : 'none');
+
+  if (kind === 'staff') {
     const q = new URLSearchParams();
-    q.set('designerInvite', t);
-    const email = (body.email ?? '').trim();
+    q.set('designerInviteError', DESIGNER_INVITE_STAFF_EMAIL_ERROR);
     if (email) q.set('prefillEmail', email);
     return NextResponse.redirect(new URL(`/login/email?${q.toString()}`, siteOrigin));
+  }
+
+  if (kind === 'customer' || body.accountExists) {
+    return NextResponse.redirect(
+      new URL(buildLoginWithInviteHref({ token: t, email, existing: true }), siteOrigin),
+    );
   }
 
   const q = new URLSearchParams();
   const prefillRef = (body.prefillRef ?? '').trim();
   if (prefillRef) q.set('ref', prefillRef);
   q.set('designerInvite', t);
-  const email = (body.email ?? '').trim();
   if (email) q.set('prefillEmail', email);
   return NextResponse.redirect(new URL(`/register/email?${q.toString()}`, siteOrigin));
 }

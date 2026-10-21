@@ -21,6 +21,8 @@ type ProductOrderSplitProps = {
   /** После добавления в заказ — количество и ± (null = кнопка «Добавить к заказу»). */
   orderQuantity?: number | null;
   onOrderQuantityDelta?: (delta: number) => void | Promise<void>;
+  /** Абсолютное количество (ввод с клавиатуры). */
+  onOrderQuantityChange?: (quantity: number) => void | Promise<void>;
   /** Lazy-load списка проектов при первом открытии меню. */
   onMenuOpenChange?: (open: boolean) => void;
   /** Компактный вид в mobile sticky bar. */
@@ -42,12 +44,20 @@ export function ProductOrderSplit({
   onAddToOrder,
   orderQuantity = null,
   onOrderQuantityDelta,
+  onOrderQuantityChange,
   onMenuOpenChange,
   inStickyBar = false,
   menuOpensAbove = false,
 }: ProductOrderSplitProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const qty = orderQuantity != null && orderQuantity > 0 ? orderQuantity : 1;
+  const [qtyDraft, setQtyDraft] = useState(String(qty));
+  const qtyFocusedRef = useRef(false);
+
+  useEffect(() => {
+    if (!qtyFocusedRef.current) setQtyDraft(String(qty));
+  }, [qty]);
 
   useEffect(() => {
     onMenuOpenChange?.(menuOpen);
@@ -106,11 +116,47 @@ export function ProductOrderSplit({
           >
             −
           </button>
-          <span className={styles.qtyValue}>
-            {orderQuantity}
-            {'\u00A0'}
-            шт
-          </span>
+          {onOrderQuantityChange ? (
+            <label className={styles.qtyInputWrap}>
+              <span className={styles.srOnly}>Количество</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                className={styles.qtyInput}
+                value={qtyDraft}
+                aria-label="Количество"
+                disabled={orderActionBusy}
+                onFocus={() => {
+                  qtyFocusedRef.current = true;
+                }}
+                onChange={(e) => setQtyDraft(e.target.value.replace(/[^\d]/g, ''))}
+                onBlur={() => {
+                  qtyFocusedRef.current = false;
+                  const parsed = Number.parseInt(qtyDraft.replace(/[^\d]/g, ''), 10);
+                  if (!Number.isFinite(parsed)) {
+                    setQtyDraft(String(qty));
+                    return;
+                  }
+                  void onOrderQuantityChange(parsed);
+                  setQtyDraft(String(Math.max(0, parsed)));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+              />
+              <span className={styles.qtyUnit}>шт</span>
+            </label>
+          ) : (
+            <span className={styles.qtyValue}>
+              {orderQuantity}
+              {'\u00A0'}
+              шт
+            </span>
+          )}
           <button
             type="button"
             className={styles.qtyBtn}

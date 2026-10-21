@@ -14,6 +14,7 @@ export type AccountProjectsLinesListProps = {
   onLineSelectedChange: (lineId: string, checked: boolean) => void;
   onRemoveLine: (lineId: string) => void;
   onQuantityDelta: (lineId: string, delta: number) => void;
+  onQuantityChange: (lineId: string, quantity: number) => void;
 };
 
 export function AccountProjectsLinesList({
@@ -23,6 +24,7 @@ export function AccountProjectsLinesList({
   onLineSelectedChange,
   onRemoveLine,
   onQuantityDelta,
+  onQuantityChange,
 }: AccountProjectsLinesListProps) {
   return (
     <div className={productListStyles.productCardDetailedWrapper}>
@@ -40,6 +42,7 @@ export function AccountProjectsLinesList({
           quantity={displayLineQuantity(line.quantity, line.unit)}
           unit={line.unit}
           onQuantityDelta={(d) => onQuantityDelta(line.id, d)}
+          onQuantityChange={(q) => onQuantityChange(line.id, q)}
         />
       ))}
     </div>

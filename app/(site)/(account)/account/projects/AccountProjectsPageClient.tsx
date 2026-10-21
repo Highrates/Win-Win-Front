@@ -87,7 +87,7 @@ export function AccountProjectsPageClient() {
     setCtaAccordionOpen(false);
   }, []);
 
-  const { confirmRemoveLines, confirmRemoveSingleLine, updateQuantity } = useProjectLineMutations({
+  const { confirmRemoveLines, confirmRemoveSingleLine, updateQuantity, setQuantity } = useProjectLineMutations({
     detail,
     setDetail,
     activeSummary,
@@ -199,6 +199,20 @@ export function AccountProjectsPageClient() {
       void fetchDesignerProjectDetail(activeSummary.id).then(setDetail);
     }
   };
+
+  const onModalDeleted = useCallback(
+    (deletedId: string) => {
+      setDetail(null);
+      setEditingId(null);
+      setModalOpen(false);
+      const next = new URLSearchParams(searchParams.toString());
+      if (next.get(PROJECT_Q) === deletedId) next.delete(PROJECT_Q);
+      const q = next.toString();
+      router.replace(q ? `/account/projects?${q}` : '/account/projects', { scroll: false });
+      void refreshList();
+    },
+    [refreshList, router, searchParams, setDetail],
+  );
 
   const onSelectAllEnter = () => {
     setSelectionMode(true);
@@ -334,6 +348,7 @@ export function AccountProjectsPageClient() {
             onLineSelectedChange={onLineSelectedChange}
             onRemoveLine={confirmRemoveSingleLine}
             onQuantityDelta={(lineId, d) => void updateQuantity(lineId, d)}
+            onQuantityChange={(lineId, q) => void setQuantity(lineId, q)}
           />
         </div>
       )}
@@ -346,6 +361,7 @@ export function AccountProjectsPageClient() {
         initialDetail={modalMode === 'edit' && detail && editingId === detail.id ? detail : null}
         pendingLineDraft={pendingLineDraft}
         onSaved={onModalSaved}
+        onDeleted={onModalDeleted}
         onSaveError={pushError}
       />
     </>

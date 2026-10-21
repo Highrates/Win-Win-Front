@@ -1,0 +1,6 @@
+/** Общий вид выбранной опции: синяя рамка. */
+
+.selectedBorder {
+  border: 1.5px solid var(--color-blue) !important;
+  background: color-mix(in srgb, var(--color-blue) 6%, #fff) !important;
+}

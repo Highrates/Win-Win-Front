@@ -31,6 +31,8 @@ type AccountDetailedProductRowProps = {
   quantity?: number;
   unit?: string;
   onQuantityDelta?: (delta: number) => void;
+  /** Абсолютное количество (ввод с клавиатуры). */
+  onQuantityChange?: (quantity: number) => void;
   /** Дополнительный блок под метой (напр. выбор помещения в модалке проекта). */
   footerExtra?: ReactNode;
 };
@@ -50,11 +52,29 @@ export function AccountDetailedProductRow({
   quantity = 1,
   unit = 'шт',
   onQuantityDelta,
+  onQuantityChange,
   footerExtra,
 }: AccountDetailedProductRowProps) {
   const qty = Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuWrapRef = useRef<HTMLDivElement>(null);
+  const [qtyDraft, setQtyDraft] = useState(String(qty));
+  const qtyFocusedRef = useRef(false);
+
+  useEffect(() => {
+    if (!qtyFocusedRef.current) setQtyDraft(String(qty));
+  }, [qty]);
+
+  const commitQtyDraft = () => {
+    if (!onQuantityChange) return;
+    const parsed = Number.parseInt(qtyDraft.replace(/[^\d]/g, ''), 10);
+    if (!Number.isFinite(parsed)) {
+      setQtyDraft(String(qty));
+      return;
+    }
+    onQuantityChange(parsed);
+    setQtyDraft(String(Math.max(0, parsed)));
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -188,11 +208,40 @@ export function AccountDetailedProductRow({
               >
                 -
               </button>
-              <span className={productListStyles.qtyValue}>
-                {qty}
-                {'\u00A0'}
-                {unit || 'шт'}
-              </span>
+              {onQuantityChange ? (
+                <label className={productListStyles.qtyInputWrap}>
+                  <span className={productListStyles.srOnly}>Количество</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className={productListStyles.qtyInput}
+                    value={qtyDraft}
+                    aria-label="Количество"
+                    onFocus={() => {
+                      qtyFocusedRef.current = true;
+                    }}
+                    onChange={(e) => setQtyDraft(e.target.value.replace(/[^\d]/g, ''))}
+                    onBlur={() => {
+                      qtyFocusedRef.current = false;
+                      commitQtyDraft();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                  />
+                  <span className={productListStyles.qtyUnit}>{unit || 'шт'}</span>
+                </label>
+              ) : (
+                <span className={productListStyles.qtyValue}>
+                  {qty}
+                  {'\u00A0'}
+                  {unit || 'шт'}
+                </span>
+              )}
               <button
                 type="button"
                 className={productListStyles.qtyButton}
