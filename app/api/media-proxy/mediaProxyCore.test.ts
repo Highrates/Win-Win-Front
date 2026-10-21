@@ -12,7 +12,7 @@ describe('media-proxy allowlist', () => {
   });
 
   it('allows API origin, AWS and expanded CDN suffixes', async () => {
-    const { isAllowedMediaProxyTarget } = await import('./route');
+    const { isAllowedMediaProxyTarget } = await import('./mediaProxyCore');
     expect(isAllowedMediaProxyTarget(new URL('http://127.0.0.1:3001/uploads/a.jpg'))).toBe(true);
     expect(isAllowedMediaProxyTarget(new URL('https://bucket.s3.eu-central-1.amazonaws.com/x.jpg'))).toBe(
       true,
@@ -25,12 +25,12 @@ describe('media-proxy allowlist', () => {
   });
 
   it('denies unknown hosts unless env allowlist expands them', async () => {
-    const { isAllowedMediaProxyTarget } = await import('./route');
+    const { isAllowedMediaProxyTarget } = await import('./mediaProxyCore');
     expect(isAllowedMediaProxyTarget(new URL('https://evil.example/a.jpg'))).toBe(false);
 
     process.env.MEDIA_PROXY_ALLOWED_HOST_SUFFIXES = 'evil.example, .cdn.partner.test';
     vi.resetModules();
-    const { isAllowedMediaProxyTarget: again } = await import('./route');
+    const { isAllowedMediaProxyTarget: again } = await import('./mediaProxyCore');
     expect(again(new URL('https://evil.example/a.jpg'))).toBe(true);
     expect(again(new URL('https://img.cdn.partner.test/a.jpg'))).toBe(true);
   });
@@ -39,7 +39,7 @@ describe('media-proxy allowlist', () => {
     const {
       fetchMediaWithAllowedRedirects,
       MediaProxyRedirectDeniedError,
-    } = await import('./route');
+    } = await import('./mediaProxyCore');
     const fetchImpl = vi.fn(async () =>
       new Response(null, {
         status: 302,
@@ -57,7 +57,7 @@ describe('media-proxy allowlist', () => {
   });
 
   it('fetchMediaWithAllowedRedirects: 302 на allowed host → follow', async () => {
-    const { fetchMediaWithAllowedRedirects } = await import('./route');
+    const { fetchMediaWithAllowedRedirects } = await import('./mediaProxyCore');
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(
