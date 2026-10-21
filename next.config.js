@@ -1,3 +1,5 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 /**
  * Dev: `npm run dev` / `dev:turbo`. Секцию `webpack` не добавляем — при Turbopack Next ругается.
@@ -5,6 +7,9 @@
  *
  * Safari + webpack HMR: сообщение «access control checks» на `*.hot-update.json` часто ложное для dev;
  * попробуйте `npm run dev:turbo` или Chrome. Явный `allowedDevOrigins` в Next включает строгий block-режим — не добавляем без необходимости.
+ *
+ * Collecting build traces: NFT не должен уходить выше корня приложения (иначе на VPS
+ * «зависает» на минуты/часы, особенно при symlink в чужой node_modules).
  */
 function backendOriginForUploads() {
   const raw = (
@@ -67,6 +72,24 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '15mb',
+    },
+    /** Корень трассировки = этот пакет (на сервере /var/www/win-win-front). */
+    outputFileTracingRoot: path.join(__dirname),
+    /** Dev/test-only и тяжёлые пакеты не нужны в server trace → меньше риск hang NFT. */
+    outputFileTracingExcludes: {
+      '*': [
+        'node_modules/@types/**/*',
+        'node_modules/typescript/**/*',
+        'node_modules/eslint*/**/*',
+        'node_modules/@typescript-eslint/**/*',
+        'node_modules/vitest/**/*',
+        'node_modules/@vitest/**/*',
+        'node_modules/playwright/**/*',
+        'node_modules/@playwright/**/*',
+        'node_modules/sass/**/*',
+        '**/*.md',
+        '**/*.map',
+      ],
     },
   },
   env: {
