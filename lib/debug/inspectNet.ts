@@ -116,7 +116,7 @@ export function installInspectNet(): void {
       for (const h of hits) {
         byLabel.set(h.label, (byLabel.get(h.label) ?? 0) + 1);
       }
-      const summary = [...byLabel.entries()].sort((a, b) => b[1] - a[1]);
+      const summary = Array.from(byLabel.entries()).sort((a, b) => b[1] - a[1]);
       // eslint-disable-next-line no-console
       console.table(summary.map(([label, count]) => ({ label, count })));
       // eslint-disable-next-line no-console
