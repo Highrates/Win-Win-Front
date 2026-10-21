@@ -87,7 +87,7 @@ export function clearOrderCommercialProposalCache(orderId?: string): void {
     return;
   }
   const prefix = `${orderId}:`;
-  for (const key of [...orderCache.keys()]) {
+  for (const key of Array.from(orderCache.keys())) {
     if (key === orderId || key.startsWith(prefix)) orderCache.delete(key);
   }
 }
@@ -98,7 +98,7 @@ export function clearSourcingCommercialProposalCache(requestId?: string): void {
     return;
   }
   const prefix = `${requestId}:`;
-  for (const key of [...sourcingCache.keys()]) {
+  for (const key of Array.from(sourcingCache.keys())) {
     if (key === requestId || key.startsWith(prefix)) sourcingCache.delete(key);
   }
 }
