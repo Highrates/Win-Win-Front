@@ -8,6 +8,8 @@ import {
   buildSnapshotFromAdminVariant,
   type AdminVariantForKpSnapshot,
 } from '@/lib/commercialProposal/buildSnapshotFromAdminVariant';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminOrderKpStrings } from '@/lib/admin-i18n/adminOrderKpI18n';
 import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
@@ -34,6 +36,8 @@ type Props = {
 };
 
 export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
+  const { locale } = useAdminLocale();
+  const t = useMemo(() => adminOrderKpStrings(locale), [locale]);
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [searching, setSearching] = useState(false);
@@ -82,11 +86,11 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
       if (first) setVariantId(first);
     } catch (e) {
       setDetail(null);
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить товар');
+      setError(e instanceof Error ? e.message : t.replaceErrLoadProduct);
     } finally {
       setLoadingDetail(false);
     }
-  }, []);
+  }, [t.replaceErrLoadProduct]);
 
   useEffect(() => {
     if (!open || productId) return;
@@ -103,7 +107,7 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
       } catch (e) {
         if (!cancelled) {
           setResults([]);
-          setError(e instanceof Error ? e.message : 'Ошибка поиска');
+          setError(e instanceof Error ? e.message : t.replaceErrSearch);
         }
       } finally {
         if (!cancelled) setSearching(false);
@@ -112,13 +116,13 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, debouncedQ, productId]);
+  }, [open, debouncedQ, productId, t.replaceErrSearch]);
 
   const variantOptions = useMemo(() => detail?.variants ?? [], [detail]);
 
   async function confirm() {
     if (!detail || !variantId) {
-      setError('Выберите вариант SKU');
+      setError(t.replaceErrSelectVariant);
       return;
     }
     setApplying(true);
@@ -131,7 +135,7 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
       onApply({ productId: detail.id, productVariantId: variantId, snapshot });
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить вариант');
+      setError(e instanceof Error ? e.message : t.replaceErrLoadVariant);
     } finally {
       setApplying(false);
     }
@@ -178,24 +182,24 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
       <div className={modalStyles.panel}>
         <div className={modalStyles.panelHead}>
           <h2 id="kp-replace-title" className={modalStyles.panelTitle}>
-            Заменить товар
+            {t.replaceTitle}
           </h2>
-          <AdminModalCloseButton label="Закрыть" onClick={onClose} />
+          <AdminModalCloseButton label={t.modalClose} onClick={onClose} />
         </div>
         <div className={`${modalStyles.body} ${own.body}`}>
           {!productId ? (
             <div className={own.searchBlock}>
               <AdminSearchBox
                 className={styles.searchBoxFull}
-                placeholder="Например, диван"
-                ariaLabel="Поиск по названию или slug"
+                placeholder={t.replaceSearchPlaceholder}
+                ariaLabel={t.replaceSearchAria}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
-              {searching ? <p className={styles.muted}>Поиск…</p> : null}
+              {searching ? <p className={styles.muted}>{t.replaceSearching}</p> : null}
               {!searching && results.length === 0 ? (
                 <p className={styles.muted}>
-                  {debouncedQ ? 'Ничего не найдено' : 'Введите запрос или выберите из списка'}
+                  {debouncedQ ? t.replaceEmptyResults : t.replaceEmptyQuery}
                 </p>
               ) : null}
               <ul className={own.resultsList}>
@@ -215,12 +219,12 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
             </div>
           ) : (
             <div className={own.productBlock}>
-              {loadingDetail ? <p className={styles.muted}>Загрузка карточки…</p> : null}
+              {loadingDetail ? <p className={styles.muted}>{t.replaceLoadingProduct}</p> : null}
               {detail && !loadingDetail ? (
                 <>
                   <p className={own.productName}>{detail.name}</p>
                   <AdminSelect
-                    label="Вариант (SKU)"
+                    label={t.replaceVariantLabel}
                     id="kp-variant-select"
                     value={variantId}
                     onChange={(e) => setVariantId(e.target.value)}
@@ -244,11 +248,11 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
         <div className={modalStyles.panelFooter}>
           {productId ? (
             <AdminCompactBtn type="button" variant="outline" onClick={backToSearch}>
-              Назад к поиску
+              {t.replaceBackToSearch}
             </AdminCompactBtn>
           ) : null}
           <AdminCompactBtn type="button" variant="outline" onClick={onClose}>
-            Отмена
+            {t.cancel}
           </AdminCompactBtn>
           <AdminCompactBtn
             type="button"
@@ -256,7 +260,7 @@ export function OrderKpReplaceModal({ open, onClose, onApply }: Props) {
             disabled={!detail || !variantId || applying}
             onClick={() => void confirm()}
           >
-            {applying ? 'Применение…' : 'Применить'}
+            {applying ? t.applying : t.apply}
           </AdminCompactBtn>
         </div>
       </div>

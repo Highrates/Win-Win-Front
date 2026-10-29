@@ -80,7 +80,59 @@
 }
 
 .editorActions {
-  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 0;
+  background: var(--color-white, #fff);
+  border-bottom-width: var(--account-hairline-width, 0.7px);
+  border-bottom-style: solid;
+  border-bottom-color: var(--account-hairline-color, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 6px 12px rgba(5, 24, 38, 0.04);
+}
+
+.savedFlash {
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 0.8125rem;
+  color: var(--color-ink-black, #051826);
+  opacity: 0.72;
+}
+
+.dirtyBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: var(--color-white, #fff);
+  border-top-width: var(--account-hairline-width, 0.7px);
+  border-top-style: solid;
+  border-top-color: var(--account-hairline-color, rgba(0, 0, 0, 0.2));
+  box-shadow: 0 -6px 16px rgba(5, 24, 38, 0.06);
+}
+
+.dirtyBarHint {
+  margin: 0;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 13px;
+  color: var(--color-ink-black, #051826);
+}
+
+.dirtyBarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .initCopyList {
@@ -90,6 +142,41 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.publishedVersionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.totalsCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: var(--color-bright-snow, #f5f7f8);
+  border-width: var(--account-hairline-width, 0.7px);
+  border-style: solid;
+  border-color: var(--account-hairline-color, rgba(0, 0, 0, 0.12));
+}
+
+.totalsCardTitle {
+  margin: 0 0 4px;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  opacity: 0.72;
+}
+
+.totalsCardMeta {
+  margin: 0;
+  font-size: 0.8125rem;
+  opacity: 0.72;
 }
 
 .totalsRow {
@@ -147,4 +234,126 @@
 
 .resultPickBtn:hover {
   text-decoration: underline;
+}
+
+.tableScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* sticky left works against this scrollport */
+  position: relative;
+}
+
+.kpTable {
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.productCell {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.productSticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--color-white, #fff);
+  box-shadow: 4px 0 8px rgba(5, 24, 38, 0.06);
+}
+
+.kpTable thead .productSticky {
+  z-index: 3;
+  background: var(--color-white, #fff);
+}
+
+.kpTable tbody tr:hover .productSticky {
+  background: #e6e6e6;
+}
+
+.productTitle {
+  font-size: 0.9375rem;
+  line-height: 1.3;
+}
+
+.lineCards {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lineCard {
+  padding: 12px;
+  border-width: var(--account-hairline-width, 0.7px);
+  border-style: solid;
+  border-color: var(--account-hairline-color, rgba(0, 0, 0, 0.12));
+  background: var(--color-white, #fff);
+}
+
+.lineCardHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.lineCardHeadText {
+  flex: 1;
+  min-width: 0;
+}
+
+.lineCardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.lineCardField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lineCardFieldFull {
+  grid-column: 1 / -1;
+}
+
+.lineCardLabel {
+  font-size: 0.75rem;
+  opacity: 0.65;
+}
+
+.lineCardTotal {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .tableScroll {
+    display: none;
+  }
+
+  .lineCards {
+    display: flex;
+  }
+
+  .fieldPrice,
+  .fieldDelivery,
+  .fieldQty,
+  .fieldUnit,
+  .fieldDiscount {
+    width: 100%;
+    max-width: none;
+  }
+
+  .lineCardGrid {
+    grid-template-columns: 1fr;
+  }
 }

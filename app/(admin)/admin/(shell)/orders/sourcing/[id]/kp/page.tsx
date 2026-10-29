@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { adminSourcingKpStrings } from '@/lib/admin-i18n/adminSourcingKpI18n';
 import { getAdminLocale } from '@/lib/admin-i18n/getAdminLocale';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
@@ -9,16 +8,27 @@ import { SourcingKpEditorClient } from './SourcingKpEditorClient';
 export default function AdminSourcingKpPage({ params }: { params: { id: string } }) {
   const locale = getAdminLocale();
   const t = adminSourcingKpStrings(locale);
-  const d = adminOrderDetailStrings(locale);
+  const detailHref = `/admin/orders/sourcing/${encodeURIComponent(params.id)}`;
+  const displayId = formatOrderDisplayId(params.id);
   return (
     <main>
-      <p className={styles.backRow}>
-        <Link href={`/admin/orders/sourcing/${encodeURIComponent(params.id)}`} className={styles.backLink}>
-          {t.backToRequest}
+      <nav className={styles.breadcrumb} aria-label={t.crumbNavAria}>
+        <Link href="/admin/orders/sourcing" className={styles.breadcrumbLink}>
+          {t.crumbSourcing}
         </Link>
-      </p>
+        <span className={styles.breadcrumbSep} aria-hidden>
+          /
+        </span>
+        <Link href={detailHref} className={styles.breadcrumbLink}>
+          {displayId}
+        </Link>
+        <span className={styles.breadcrumbSep} aria-hidden>
+          /
+        </span>
+        <span className={styles.breadcrumbCurrent}>{t.pageTitle}</span>
+      </nav>
       <h1 className={styles.title}>
-        {d.actionPrepareCp} · {formatOrderDisplayId(params.id)}
+        {t.pageTitle} · {displayId}
       </h1>
       <SourcingKpEditorClient sourcingRequestId={params.id} />
     </main>

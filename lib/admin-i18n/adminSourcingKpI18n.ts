@@ -5,6 +5,15 @@ const pick = <T,>(locale: AdminLocale, ru: T, zh: T): T => (locale === 'zh' ? zh
 export function adminSourcingKpStrings(locale: AdminLocale) {
   return {
     backToRequest: pick(locale, '← К заявке', '← 返回申请'),
+    crumbSourcing: pick(locale, 'Заявки на подбор', '选品申请'),
+    crumbNavAria: pick(locale, 'Навигация по заявке', '申请导航'),
+    pageTitle: pick(locale, 'КП / Excel', '报价 / Excel'),
+    excelExportVersion: (version: number) => pick(locale, `Excel v${version}`, `Excel v${version}`),
+    publishedExcelHint: pick(
+      locale,
+      'Скачать Excel по уже отправленной версии (для поставщика):',
+      '下载已发送版本的 Excel（供供应商）：',
+    ),
     errLoad: pick(locale, 'Ошибка загрузки', '加载失败'),
     errInitDraft: pick(locale, 'Не удалось создать черновик', '无法创建草稿'),
     errSaveDraft: pick(locale, 'Не удалось сохранить', '保存失败'),
@@ -28,6 +37,7 @@ export function adminSourcingKpStrings(locale: AdminLocale) {
       pick(locale, `Копия КП v${version} (${lineCount} поз.)`, `复制报价 v${version}（${lineCount} 项）`),
     saveDraft: pick(locale, 'Сохранить черновик', '保存草稿'),
     savingDraft: pick(locale, 'Сохранение…', '保存中…'),
+    savedDraft: pick(locale, 'Сохранено', '已保存'),
     addLine: pick(locale, 'Добавить товар', '添加商品'),
     thProductName: pick(locale, 'Название товара', '商品名称'),
     imagesLabel: pick(locale, 'Фото', '图片'),

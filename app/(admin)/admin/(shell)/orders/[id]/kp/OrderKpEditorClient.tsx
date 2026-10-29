@@ -1,12 +1,20 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import { PiExcelImportDiffModal } from '@/components/admin/PiExcelImportDiffModal/PiExcelImportDiffModal';
 import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
 import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { useUnsavedChangesGuard } from '@/lib/adminConfirm/useUnsavedChangesGuard';
+import {
+  downloadPiExcel,
+  importPiExcel,
+  type PiExcelImportResult,
+} from '@/lib/commercialProposal/piExcelAdmin';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
+import { adminOrderKpStrings } from '@/lib/admin-i18n/adminOrderKpI18n';
 import type { CommercialProposalApi, CommercialProposalLineApi, CommercialProposalSummaryApi } from '@/lib/commercialProposal/types';
 import { orderItemSnapshotMetaRows } from '@win-win/order-item-snapshot';
 import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
@@ -18,9 +26,22 @@ import { OrderKpGrossEditModal } from './OrderKpGrossEditModal';
 import { OrderKpPublishConfirmModal, type NextOrderStatusChoice } from './OrderKpPublishConfirmModal';
 import { OrderKpReplaceModal } from './OrderKpReplaceModal';
 
-function lineTitle(snap: Record<string, unknown> | null): string {
+function lineTitle(snap: Record<string, unknown> | null, dash: string): string {
   if (snap && typeof snap.productName === 'string' && snap.productName.trim()) return snap.productName.trim();
-  return '—';
+  return dash;
+}
+
+function lineThumbUrl(snap: Record<string, unknown> | null): string | null {
+  const u = snap?.imageUrl;
+  return typeof u === 'string' && u.trim() ? u.trim() : null;
+}
+
+function formatRub(n: number, numberLocale: string): string {
+  return new Intl.NumberFormat(numberLocale, {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
 function parseOfferPriceInput(raw: string): number {
@@ -48,10 +69,12 @@ function formatOfferPriceInput(n: number, numberLocale: string): string {
 function OfferUnitPriceField({
   value,
   numberLocale,
+  ariaLabel,
   onChange,
 }: {
   value: number;
   numberLocale: string;
+  ariaLabel: string;
   onChange: (n: number) => void;
 }) {
   const formatted = useMemo(() => formatOfferPriceInput(value, numberLocale), [value, numberLocale]);
@@ -65,7 +88,7 @@ function OfferUnitPriceField({
       autoComplete="off"
       value={formatted}
       onChange={(e) => onChange(parseOfferPriceInput(e.target.value))}
-      aria-label={numberLocale === 'zh-CN' ? '单价' : 'Цена за единицу'}
+      aria-label={ariaLabel}
     />
   );
 }
@@ -73,6 +96,7 @@ function OfferUnitPriceField({
 export function OrderKpEditorClient({ orderId }: { orderId: string }) {
   const router = useRouter();
   const { locale } = useAdminLocale();
+  const t = useMemo(() => adminOrderKpStrings(locale), [locale]);
   const d = useMemo(() => adminOrderDetailStrings(locale), [locale]);
   const numberLocale = locale === 'zh' ? 'zh-CN' : 'ru-RU';
 
@@ -88,8 +112,19 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
   const [nextOrderStatus, setNextOrderStatus] = useState<NextOrderStatusChoice>('PROPOSAL_FORMED');
+  const [excelExportBusy, setExcelExportBusy] = useState(false);
+  const [excelImportBusy, setExcelImportBusy] = useState(false);
+  const [excelVersionBusy, setExcelVersionBusy] = useState<Record<number, boolean>>({});
+  const [excelPreview, setExcelPreview] = useState<PiExcelImportResult | null>(null);
+  const [excelPendingFile, setExcelPendingFile] = useState<File | null>(null);
+  const [excelApplying, setExcelApplying] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [successHint, setSuccessHint] = useState<string | null>(null);
+  const excelFileRef = useRef<HTMLInputElement | null>(null);
 
   const basePath = `orders/admin/${encodeURIComponent(orderId)}/commercial-proposals`;
+  useUnsavedChangesGuard(dirty);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -104,6 +139,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
       try {
         const dr = await adminBackendJson<CommercialProposalApi>(`${basePath}/draft`);
         setLines(dr.lines);
+        setDirty(false);
         setNeedsInit(false);
       } catch (e) {
         const msg = e instanceof Error ? e.message : '';
@@ -113,18 +149,20 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
           msg.toLowerCase().includes('не найден')
         ) {
           setLines([]);
+          setDirty(false);
           setNeedsInit(true);
         } else throw e;
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+      setError(e instanceof Error ? e.message : t.errLoad);
       setSummary(null);
       setLines([]);
       setOrderStatus(null);
+      setDirty(false);
     } finally {
       setLoading(false);
     }
-  }, [basePath, orderId]);
+  }, [basePath, orderId, t.errLoad]);
 
   useEffect(() => {
     void loadAll();
@@ -139,15 +177,16 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
         body: JSON.stringify(fromPublishedProposalId ? { fromPublishedProposalId } : {}),
       });
       setLines(dr.lines);
+      setDirty(false);
       setNeedsInit(false);
       const s = await adminBackendJson<CommercialProposalSummaryApi>(basePath);
       setSummary(s);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать черновик');
+      setError(e instanceof Error ? e.message : t.errInitDraft);
     }
   }
 
-  async function saveDraft(): Promise<boolean> {
+  async function saveDraft(opts?: { flash?: boolean }): Promise<boolean> {
     setSaving(true);
     setError(null);
     try {
@@ -172,22 +211,39 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
         }),
       });
       setLines(dr.lines);
+      setDirty(false);
+      if (opts?.flash !== false) setSavedFlash(true);
       const s = await adminBackendJson<CommercialProposalSummaryApi>(basePath);
       setSummary(s);
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить');
+      setError(e instanceof Error ? e.message : t.errSaveDraft);
       return false;
     } finally {
       setSaving(false);
     }
   }
 
+  useEffect(() => {
+    if (!savedFlash || dirty) return;
+    const timer = window.setTimeout(() => setSavedFlash(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [savedFlash, dirty]);
+
+  useEffect(() => {
+    if (dirty) setSavedFlash(false);
+  }, [dirty]);
+
+  async function discardDraftChanges() {
+    if (!window.confirm(t.discardConfirm)) return;
+    await loadAll();
+  }
+
   async function executePublish() {
     setPublishing(true);
     setError(null);
     try {
-      const draftSaved = await saveDraft();
+      const draftSaved = await saveDraft({ flash: false });
       if (!draftSaved) return;
       const publishBody =
         orderStatus === 'PENDING_APPROVAL' ? { nextOrderStatus: nextOrderStatus as NextOrderStatusChoice } : {};
@@ -201,14 +257,21 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
       router.push(`/admin/orders/${encodeURIComponent(orderId)}`);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось опубликовать');
+      setError(e instanceof Error ? e.message : t.errPublish);
     } finally {
       setPublishing(false);
     }
   }
 
   function updateLine(i: number, patch: Partial<CommercialProposalLineApi>) {
+    setDirty(true);
+    setSuccessHint(null);
     setLines((prev) => prev.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  }
+
+  function confirmExcelIfDirty(): boolean {
+    if (!dirty) return true;
+    return window.confirm(t.excelDirtyConfirm);
   }
 
   const kpTotals = useMemo(() => kpOfferAggregates(lines), [lines]);
@@ -217,17 +280,17 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
 
   const publishedHint =
     summary && summary.published.length > 0
-      ? `Опубликовано: v${summary.published[0]!.versionNumber} (${summary.published[0]!.lineCount} поз.)`
-      : d.kpNotSentYet;
+      ? t.publishedHint(summary.published[0]!.versionNumber, summary.published[0]!.lineCount)
+      : t.notSentYet;
 
   const publishConfirmLabels = useMemo(
     () => ({
-      title: d.kpPublishConfirmTitle,
-      cancel: d.kpPublishConfirmCancel,
-      submit: d.kpPublishConfirmSubmit,
-      submitting: d.kpPublishConfirmSending,
+      title: t.publishConfirmTitle,
+      cancel: t.publishConfirmCancel,
+      submit: t.publishConfirmSubmit,
+      submitting: t.publishConfirmSending,
     }),
-    [d],
+    [t],
   );
 
   useEffect(() => {
@@ -241,34 +304,68 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
       <p className={styles.muted}>{publishedHint}</p>
       {summary?.draft ? (
         <p className={styles.muted}>
-          Черновик: {summary.draft.lineCount} поз. · обновлён{' '}
-          {new Date(summary.draft.updatedAt).toLocaleString(numberLocale)}
+          {t.draftHint(
+            summary.draft.lineCount,
+            new Date(summary.draft.updatedAt).toLocaleString(numberLocale),
+          )}
         </p>
       ) : null}
 
-      {loading ? <p className={styles.muted}>Загрузка…</p> : null}
+      {loading ? <p className={styles.muted}>{t.loading}</p> : null}
       {error ? (
         <p className={styles.error} role="alert" aria-live="polite">
           {error}
         </p>
       ) : null}
+      {successHint ? (
+        <p className={styles.muted} role="status" aria-live="polite">
+          {successHint}
+        </p>
+      ) : null}
 
       {needsInit && !loading ? (
         <div className={styles.section}>
-          <h2 className={styles.groupHeading}>Создать черновик КП из состава заказа</h2>
+          <h2 className={styles.groupHeading}>{t.initDraftHeading}</h2>
           <div className={styles.formActions}>
             <AdminCompactBtn type="button" variant="accent" onClick={() => void initDraft()}>
-              Создать черновик
+              {t.initDraftBtn}
             </AdminCompactBtn>
           </div>
           {summary && summary.published.length > 0 ? (
             <div className={styles.section}>
-              <p className={styles.muted}>Или скопировать в новый черновик опубликованную версию:</p>
+              <p className={styles.muted}>{t.initCopyHint}</p>
               <ul className={kpStyles.initCopyList}>
                 {summary.published.map((p) => (
-                  <li key={p.id}>
+                  <li key={p.id} className={kpStyles.publishedVersionRow}>
                     <AdminCompactBtn type="button" variant="outline" onClick={() => void initDraft(p.id)}>
-                      Копия КП v{p.versionNumber} ({p.lineCount} поз.)
+                      {t.initCopyBtn(p.versionNumber, p.lineCount)}
+                    </AdminCompactBtn>
+                    <AdminCompactBtn
+                      type="button"
+                      variant="outline"
+                      disabled={Boolean(excelVersionBusy[p.versionNumber]) || p.lineCount === 0}
+                      title={t.excelSheetProtectHint}
+                      onClick={() => {
+                        setExcelVersionBusy((prev) => ({ ...prev, [p.versionNumber]: true }));
+                        void downloadPiExcel(
+                          `${basePath}/excel?source=published&version=${p.versionNumber}`,
+                          `PI-order-v${p.versionNumber}.xlsx`,
+                        )
+                          .catch((e) => {
+                            setError(e instanceof Error ? e.message : t.errExcelExport);
+                          })
+                          .finally(() => {
+                            setExcelVersionBusy((prev) => {
+                              const next = { ...prev };
+                              delete next[p.versionNumber];
+                              return next;
+                            });
+                          });
+                      }}
+                    >
+                      {excelVersionBusy[p.versionNumber]
+                        ? t.excelBusy
+                        : t.excelExportVersion(p.versionNumber)}
                     </AdminCompactBtn>
                   </li>
                 ))}
@@ -278,203 +375,451 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
         </div>
       ) : null}
 
-      {!loading && !needsInit ? (
-        <>
-          <div className={styles.section}>
-            <div className={`${styles.formActions} ${kpStyles.editorActions}`}>
-              <AdminCompactBtn type="button" variant="outline" disabled={saving} onClick={() => void saveDraft()}>
-                {saving ? 'Сохранение…' : 'Сохранить черновик'}
-              </AdminCompactBtn>
+      {!loading && !needsInit && summary && summary.published.length > 0 ? (
+        <div className={styles.section}>
+          <p className={styles.muted}>{t.publishedExcelHint}</p>
+          <div className={styles.formActions}>
+            {summary.published.map((p) => (
               <AdminCompactBtn
+                key={p.id}
                 type="button"
-                variant="accent"
-                disabled={publishing || lines.length === 0}
+                variant="outline"
+                disabled={Boolean(excelVersionBusy[p.versionNumber]) || p.lineCount === 0}
+                title={t.excelSheetProtectHint}
                 onClick={() => {
-                  setError(null);
-                  setPublishConfirmOpen(true);
+                  setExcelVersionBusy((prev) => ({ ...prev, [p.versionNumber]: true }));
+                  void downloadPiExcel(
+                    `${basePath}/excel?source=published&version=${p.versionNumber}`,
+                    `PI-order-v${p.versionNumber}.xlsx`,
+                  )
+                    .catch((e) => {
+                      setError(e instanceof Error ? e.message : t.errExcelExport);
+                    })
+                    .finally(() => {
+                      setExcelVersionBusy((prev) => {
+                        const next = { ...prev };
+                        delete next[p.versionNumber];
+                        return next;
+                      });
+                    });
                 }}
               >
-                {publishing ? d.kpPublishing : d.kpPublish}
+                {excelVersionBusy[p.versionNumber]
+                  ? t.excelBusy
+                  : t.excelExportVersion(p.versionNumber)}
               </AdminCompactBtn>
-            </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>{d.thProduct}</th>
-                    <th>Конфигурация</th>
-                    <th>Габариты брутто</th>
-                    <th>{d.kpQtyPieces}</th>
-                    <th>{d.thPrice}</th>
-                    <th>Скидка %</th>
-                    <th>Срок поставки</th>
-                    <th>{d.thLineTotal}</th>
-                    <th scope="col" style={{ width: 48 }} aria-label={d.kpBtnReplace}>
-                      <img src="/icons/change-product.svg" alt="" width={24} height={24} />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line, i) => {
-                    const snap = line.snapshot && typeof line.snapshot === 'object' ? line.snapshot : null;
-                    const meta = orderItemSnapshotMetaRows(snap, {
-                      modification: d.snapshotModification,
-                      elementFallback: d.snapshotElementFallback,
-                    });
-                    return (
-                      <tr key={line.id}>
-                        <td>
-                          <span className={styles.cardTitle} style={{ fontSize: '0.9375rem' }}>
-                            {lineTitle(snap)}
-                          </span>
-                        </td>
-                        <td>
-                          {meta.length ? (
-                            <ul className={`${styles.cardNote} ${kpStyles.itemMetaList}`}>
-                              {meta.map((m, k) => (
-                                <li key={k}>
-                                  {m.label}: {m.value}
-                                </li>
-                              ))}
-                            </ul>
+      {!loading && !needsInit ? (
+        <div className={styles.section}>
+          <div className={kpStyles.editorActions}>
+            <AdminCompactBtn
+              type="button"
+              variant="outline"
+              disabled={saving || !dirty}
+              onClick={() => void saveDraft()}
+            >
+              {saving ? t.savingDraft : t.saveDraft}
+            </AdminCompactBtn>
+            <AdminCompactBtn
+              type="button"
+              variant="accent"
+              disabled={publishing || lines.length === 0}
+              title={dirty ? t.publishSavesDraft : undefined}
+              onClick={() => {
+                setError(null);
+                setPublishConfirmOpen(true);
+              }}
+            >
+              {publishing ? t.publishing : dirty ? t.publishSavesDraft : t.publish}
+            </AdminCompactBtn>
+            <AdminCompactBtn
+              type="button"
+              variant="outline"
+              disabled={excelExportBusy || excelImportBusy || lines.length === 0}
+              title={t.excelSheetProtectHint}
+              onClick={() => {
+                setExcelExportBusy(true);
+                setSuccessHint(null);
+                void downloadPiExcel(`${basePath}/excel?source=draft`, `PI-order-draft.xlsx`)
+                  .catch((e) => {
+                    setError(e instanceof Error ? e.message : t.errExcelExport);
+                  })
+                  .finally(() => setExcelExportBusy(false));
+              }}
+            >
+              {excelExportBusy ? t.excelBusy : t.excelExportDraft}
+            </AdminCompactBtn>
+            <AdminCompactBtn
+              type="button"
+              variant="outline"
+              disabled={excelExportBusy || excelImportBusy}
+              onClick={() => {
+                if (!confirmExcelIfDirty()) return;
+                excelFileRef.current?.click();
+              }}
+            >
+              {excelImportBusy ? t.excelBusy : t.excelImportDraft}
+            </AdminCompactBtn>
+            {savedFlash && !dirty ? (
+              <span className={kpStyles.savedFlash} role="status">
+                {t.savedDraft}
+              </span>
+            ) : null}
+            <input
+              ref={excelFileRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (!file) return;
+                setExcelImportBusy(true);
+                setError(null);
+                setSuccessHint(null);
+                void importPiExcel(`${basePath}/draft/import-excel`, file, { dryRun: true })
+                  .then((r) => {
+                    setExcelPendingFile(file);
+                    setExcelPreview(r);
+                  })
+                  .catch((err) => {
+                    setError(err instanceof Error ? err.message : t.errExcelImport);
+                  })
+                  .finally(() => setExcelImportBusy(false));
+              }}
+            />
+          </div>
+
+          {lines.length > 0 ? (
+            <div className={kpStyles.totalsCard}>
+              <div>
+                <p className={kpStyles.totalsCardTitle}>{t.totalsHeading}</p>
+                <p className={kpStyles.totalsCardMeta}>{t.positionsCount(lines.length)}</p>
+                {grossTotals.hasAny ? (
+                  <p className={styles.cardNote} style={{ margin: '6px 0 0' }}>
+                    <strong>{t.totalGross}</strong> <KpGrossTotalsDisplay totals={grossTotals} />
+                  </p>
+                ) : null}
+              </div>
+              <div className={kpStyles.totalsSum}>
+                <span className={`${styles.cardNote} ${kpStyles.strikeTotal}`}>
+                  {formatRub(kpTotals.oldTotalRub, numberLocale)}
+                </span>
+                <span className={kpStyles.discountPct}>{avgDiscountPctLabel}</span>
+                <strong>{formatRub(kpTotals.newTotalRub, numberLocale)}</strong>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={kpStyles.tableScroll}>
+            <table className={`${styles.table} ${kpStyles.kpTable}`}>
+              <thead>
+                <tr>
+                  <th className={kpStyles.productSticky}>{t.thProduct}</th>
+                  <th>{t.thConfig}</th>
+                  <th>{t.thGrossDims}</th>
+                  <th>{t.thQtyPieces}</th>
+                  <th>{t.thPrice}</th>
+                  <th>{t.thDiscount}</th>
+                  <th>{t.thDelivery}</th>
+                  <th>{t.thLineTotal}</th>
+                  <th scope="col" style={{ width: 48 }} aria-label={t.btnReplace}>
+                    <img src="/icons/change-product.svg" alt="" width={24} height={24} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((line, i) => {
+                  const snap = line.snapshot && typeof line.snapshot === 'object' ? line.snapshot : null;
+                  const meta = orderItemSnapshotMetaRows(snap, {
+                    modification: t.snapshotModification,
+                    elementFallback: t.snapshotElementFallback,
+                  });
+                  const thumb = lineThumbUrl(snap);
+                  return (
+                    <tr key={line.id}>
+                      <td className={kpStyles.productSticky}>
+                        <div className={kpStyles.productCell}>
+                          {thumb ? (
+                            <img
+                              className={styles.productListThumb}
+                              src={thumb}
+                              alt=""
+                              width={46}
+                              height={46}
+                            />
                           ) : (
-                            '—'
+                            <div className={styles.productListThumbPh} aria-hidden />
                           )}
-                        </td>
-                        <td>
-                          <div className={kpStyles.grossCell}>
-                            <KpGrossDisplay snapshot={snap} className={`${styles.cardNote} ${kpStyles.grossDisplay}`} />
-                            <button
-                              type="button"
-                              className={kpStyles.iconBtn}
-                              aria-label="Редактировать габариты брутто"
-                              title="Редактировать габариты брутто"
-                              onClick={() => setGrossEditLineIndex(i)}
-                            >
-                              <img src="/icons/edit.svg" alt="" width={20} height={20} />
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          <div className={kpStyles.qtyRow}>
-                            <AdminTextField
-                              className={kpStyles.fieldQty}
-                              controlClassName={kpStyles.fieldQty}
-                              type="number"
-                              min={1}
-                              value={String(line.quantity)}
-                              onChange={(e) =>
-                                updateLine(i, { quantity: Math.max(1, parseInt(e.target.value, 10) || 1) })
-                              }
-                              aria-label={d.kpQtyPieces}
-                            />
-                            <AdminTextField
-                              className={kpStyles.fieldUnit}
-                              controlClassName={kpStyles.fieldUnit}
-                              value={line.unit}
-                              onChange={(e) => updateLine(i, { unit: e.target.value })}
-                              aria-label={d.thUnit}
-                            />
-                          </div>
-                        </td>
-                        <td>
-                          <OfferUnitPriceField
-                            value={line.offerUnitPrice}
-                            numberLocale={numberLocale}
-                            onChange={(n) => updateLine(i, { offerUnitPrice: n })}
+                          <span className={`${styles.cardTitle} ${kpStyles.productTitle}`}>
+                            {lineTitle(snap, t.dash)}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        {meta.length ? (
+                          <ul className={`${styles.cardNote} ${kpStyles.itemMetaList}`}>
+                            {meta.map((m, k) => (
+                              <li key={k}>
+                                {m.label}: {m.value}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          t.dash
+                        )}
+                      </td>
+                      <td>
+                        <div className={kpStyles.grossCell}>
+                          <KpGrossDisplay
+                            snapshot={snap}
+                            className={`${styles.cardNote} ${kpStyles.grossDisplay}`}
                           />
-                        </td>
-                        <td>
-                          <AdminTextField
-                            className={kpStyles.fieldDiscount}
-                            controlClassName={kpStyles.fieldDiscount}
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={0.1}
-                            value={line.discountPercent ?? ''}
-                            placeholder="0"
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              updateLine(i, {
-                                discountPercent: v === '' ? null : parseFloat(v) || 0,
-                              });
-                            }}
-                            aria-label="Скидка %"
-                          />
-                        </td>
-                        <td>
-                          <AdminTextField
-                            className={kpStyles.fieldDelivery}
-                            controlClassName={kpStyles.fieldDelivery}
-                            value={line.deliveryEta ?? ''}
-                            placeholder="65–80 дн."
-                            onChange={(e) => updateLine(i, { deliveryEta: e.target.value || null })}
-                            aria-label="Срок поставки"
-                          />
-                        </td>
-                        <td>
-                          {new Intl.NumberFormat(numberLocale, {
-                            style: 'currency',
-                            currency: 'RUB',
-                            maximumFractionDigits: 0,
-                          }).format(kpLineTotalRub(line))}
-                        </td>
-                        <td>
                           <button
                             type="button"
                             className={kpStyles.iconBtn}
-                            aria-label={d.kpBtnReplace}
-                            title={d.kpBtnReplace}
-                            onClick={() => setReplaceLineIndex(i)}
+                            aria-label={t.ariaEditGross}
+                            title={t.ariaEditGross}
+                            onClick={() => setGrossEditLineIndex(i)}
                           >
-                            <img src="/icons/change-product.svg" alt="" width={24} height={24} />
+                            <img src="/icons/edit.svg" alt="" width={20} height={20} />
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {lines.length > 0 ? (
-                    <tr>
-                      <td colSpan={8} className={styles.cardNote}>
-                        <div className={kpStyles.totalsRow}>
-                          <div>
-                            {grossTotals.hasAny ? (
-                              <>
-                                <strong>Итого (брутто):</strong>{' '}
-                                <KpGrossTotalsDisplay totals={grossTotals} />
-                              </>
-                            ) : null}
-                          </div>
-                          <div className={kpStyles.totalsSum}>
-                            <strong>Итого:</strong>
-                            <span className={`${styles.cardNote} ${kpStyles.strikeTotal}`}>
-                              {new Intl.NumberFormat(numberLocale, {
-                                style: 'currency',
-                                currency: 'RUB',
-                                maximumFractionDigits: 0,
-                              }).format(kpTotals.oldTotalRub)}
-                            </span>
-                            <span className={kpStyles.discountPct}>{avgDiscountPctLabel}</span>
-                            <strong>
-                              {new Intl.NumberFormat(numberLocale, {
-                                style: 'currency',
-                                currency: 'RUB',
-                                maximumFractionDigits: 0,
-                              }).format(kpTotals.newTotalRub)}
-                            </strong>
-                          </div>
                         </div>
                       </td>
-                      <td />
+                      <td>
+                        <div className={kpStyles.qtyRow}>
+                          <AdminTextField
+                            className={kpStyles.fieldQty}
+                            controlClassName={kpStyles.fieldQty}
+                            type="number"
+                            min={1}
+                            value={String(line.quantity)}
+                            onChange={(e) =>
+                              updateLine(i, { quantity: Math.max(1, parseInt(e.target.value, 10) || 1) })
+                            }
+                            aria-label={t.thQtyPieces}
+                          />
+                          <AdminTextField
+                            className={kpStyles.fieldUnit}
+                            controlClassName={kpStyles.fieldUnit}
+                            value={line.unit}
+                            onChange={(e) => updateLine(i, { unit: e.target.value })}
+                            aria-label={t.thUnit}
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        <OfferUnitPriceField
+                          value={line.offerUnitPrice}
+                          numberLocale={numberLocale}
+                          ariaLabel={t.ariaUnitPrice}
+                          onChange={(n) => updateLine(i, { offerUnitPrice: n })}
+                        />
+                      </td>
+                      <td>
+                        <AdminTextField
+                          className={kpStyles.fieldDiscount}
+                          controlClassName={kpStyles.fieldDiscount}
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.1}
+                          value={line.discountPercent ?? ''}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            updateLine(i, {
+                              discountPercent: v === '' ? null : parseFloat(v) || 0,
+                            });
+                          }}
+                          aria-label={t.ariaDiscount}
+                        />
+                      </td>
+                      <td>
+                        <AdminTextField
+                          className={kpStyles.fieldDelivery}
+                          controlClassName={kpStyles.fieldDelivery}
+                          value={line.deliveryEta ?? ''}
+                          placeholder={t.deliveryPlaceholder}
+                          onChange={(e) => updateLine(i, { deliveryEta: e.target.value || null })}
+                          aria-label={t.ariaDelivery}
+                        />
+                      </td>
+                      <td>{formatRub(kpLineTotalRub(line), numberLocale)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className={kpStyles.iconBtn}
+                          aria-label={t.btnReplace}
+                          title={t.btnReplace}
+                          onClick={() => setReplaceLineIndex(i)}
+                        >
+                          <img src="/icons/change-product.svg" alt="" width={24} height={24} />
+                        </button>
+                      </td>
                     </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </>
+
+          <div className={kpStyles.lineCards}>
+            {lines.map((line, i) => {
+              const snap = line.snapshot && typeof line.snapshot === 'object' ? line.snapshot : null;
+              const meta = orderItemSnapshotMetaRows(snap, {
+                modification: t.snapshotModification,
+                elementFallback: t.snapshotElementFallback,
+              });
+              const thumb = lineThumbUrl(snap);
+              return (
+                <article key={line.id} className={kpStyles.lineCard}>
+                  <div className={kpStyles.lineCardHead}>
+                    {thumb ? (
+                      <img className={styles.productListThumb} src={thumb} alt="" width={46} height={46} />
+                    ) : (
+                      <div className={styles.productListThumbPh} aria-hidden />
+                    )}
+                    <div className={kpStyles.lineCardHeadText}>
+                      <div className={`${styles.cardTitle} ${kpStyles.productTitle}`}>
+                        {lineTitle(snap, t.dash)}
+                      </div>
+                      {meta.length ? (
+                        <ul className={`${styles.cardNote} ${kpStyles.itemMetaList}`}>
+                          {meta.map((m, k) => (
+                            <li key={k}>
+                              {m.label}: {m.value}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      className={kpStyles.iconBtn}
+                      aria-label={t.btnReplace}
+                      title={t.btnReplace}
+                      onClick={() => setReplaceLineIndex(i)}
+                    >
+                      <img src="/icons/change-product.svg" alt="" width={24} height={24} />
+                    </button>
+                  </div>
+                  <div className={kpStyles.lineCardGrid}>
+                    <div className={`${kpStyles.lineCardField} ${kpStyles.lineCardFieldFull}`}>
+                      <span className={kpStyles.lineCardLabel}>{t.thGrossDims}</span>
+                      <div className={kpStyles.grossCell}>
+                        <KpGrossDisplay
+                          snapshot={snap}
+                          className={`${styles.cardNote} ${kpStyles.grossDisplay}`}
+                        />
+                        <button
+                          type="button"
+                          className={kpStyles.iconBtn}
+                          aria-label={t.ariaEditGross}
+                          title={t.ariaEditGross}
+                          onClick={() => setGrossEditLineIndex(i)}
+                        >
+                          <img src="/icons/edit.svg" alt="" width={20} height={20} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className={kpStyles.lineCardField}>
+                      <span className={kpStyles.lineCardLabel}>{t.thQtyPieces}</span>
+                      <div className={kpStyles.qtyRow}>
+                        <AdminTextField
+                          className={kpStyles.fieldQty}
+                          controlClassName={kpStyles.fieldQty}
+                          type="number"
+                          min={1}
+                          value={String(line.quantity)}
+                          onChange={(e) =>
+                            updateLine(i, { quantity: Math.max(1, parseInt(e.target.value, 10) || 1) })
+                          }
+                          aria-label={t.thQtyPieces}
+                        />
+                        <AdminTextField
+                          className={kpStyles.fieldUnit}
+                          controlClassName={kpStyles.fieldUnit}
+                          value={line.unit}
+                          onChange={(e) => updateLine(i, { unit: e.target.value })}
+                          aria-label={t.thUnit}
+                        />
+                      </div>
+                    </div>
+                    <div className={kpStyles.lineCardField}>
+                      <span className={kpStyles.lineCardLabel}>{t.thPrice}</span>
+                      <OfferUnitPriceField
+                        value={line.offerUnitPrice}
+                        numberLocale={numberLocale}
+                        ariaLabel={t.ariaUnitPrice}
+                        onChange={(n) => updateLine(i, { offerUnitPrice: n })}
+                      />
+                    </div>
+                    <div className={kpStyles.lineCardField}>
+                      <span className={kpStyles.lineCardLabel}>{t.thDiscount}</span>
+                      <AdminTextField
+                        className={kpStyles.fieldDiscount}
+                        controlClassName={kpStyles.fieldDiscount}
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        value={line.discountPercent ?? ''}
+                        placeholder="0"
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          updateLine(i, {
+                            discountPercent: v === '' ? null : parseFloat(v) || 0,
+                          });
+                        }}
+                        aria-label={t.ariaDiscount}
+                      />
+                    </div>
+                    <div className={kpStyles.lineCardField}>
+                      <span className={kpStyles.lineCardLabel}>{t.thDelivery}</span>
+                      <AdminTextField
+                        className={kpStyles.fieldDelivery}
+                        controlClassName={kpStyles.fieldDelivery}
+                        value={line.deliveryEta ?? ''}
+                        placeholder={t.deliveryPlaceholder}
+                        onChange={(e) => updateLine(i, { deliveryEta: e.target.value || null })}
+                        aria-label={t.ariaDelivery}
+                      />
+                    </div>
+                  </div>
+                  <div className={kpStyles.lineCardTotal}>
+                    <span>{t.thLineTotal}</span>
+                    <span>{formatRub(kpLineTotalRub(line), numberLocale)}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {lines.length > 0 ? (
+            <div className={kpStyles.totalsCard} style={{ marginTop: 14, marginBottom: 0 }}>
+              <div>
+                <p className={kpStyles.totalsCardTitle}>{t.totalsHeading}</p>
+                {grossTotals.hasAny ? (
+                  <p className={styles.cardNote} style={{ margin: 0 }}>
+                    <strong>{t.totalGross}</strong> <KpGrossTotalsDisplay totals={grossTotals} />
+                  </p>
+                ) : null}
+              </div>
+              <div className={kpStyles.totalsSum}>
+                <span className={`${styles.cardNote} ${kpStyles.strikeTotal}`}>
+                  {formatRub(kpTotals.oldTotalRub, numberLocale)}
+                </span>
+                <span className={kpStyles.discountPct}>{avgDiscountPctLabel}</span>
+                <strong>{formatRub(kpTotals.newTotalRub, numberLocale)}</strong>
+              </div>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       <OrderKpPublishConfirmModal
@@ -506,6 +851,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
           if (replaceLineIndex == null) return;
           const idx = replaceLineIndex;
           setReplaceLineIndex(null);
+          setDirty(true);
           setLines((prev) =>
             prev.map((l, j) =>
               j === idx
@@ -530,6 +876,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
             typeof lines[grossEditLineIndex].snapshot === 'object'
             ? (lines[grossEditLineIndex].snapshot as Record<string, unknown>)
             : null,
+          t.dash,
         )}
         snapshot={
           grossEditLineIndex != null &&
@@ -546,6 +893,61 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
           updateLine(idx, { snapshot: nextSnap });
         }}
       />
+
+      <PiExcelImportDiffModal
+        open={Boolean(excelPreview)}
+        preview={excelPreview}
+        applying={excelApplying}
+        labels={d.excelDiffLabels}
+        onClose={() => {
+          if (excelApplying) return;
+          setExcelPreview(null);
+          setExcelPendingFile(null);
+        }}
+        onApply={async () => {
+          if (!excelPendingFile || excelApplying) return;
+          if (!confirmExcelIfDirty()) return;
+          setExcelApplying(true);
+          setError(null);
+          try {
+            const r = await importPiExcel(`${basePath}/draft/import-excel`, excelPendingFile, {
+              expectedUpdatedAt: excelPreview?.draftUpdatedAt,
+            });
+            setExcelPreview(null);
+            setExcelPendingFile(null);
+            setSuccessHint(d.excelImportOk(r.updatedCount, r.unmatchedCount));
+            await loadAll();
+          } catch (err) {
+            setError(err instanceof Error ? err.message : t.errExcelImport);
+          } finally {
+            setExcelApplying(false);
+          }
+        }}
+      />
+
+      {!loading && !needsInit && dirty ? (
+        <div className={kpStyles.dirtyBar} role="status">
+          <p className={kpStyles.dirtyBarHint}>{t.dirtyHint}</p>
+          <div className={kpStyles.dirtyBarActions}>
+            <AdminCompactBtn
+              type="button"
+              variant="outline"
+              disabled={saving || publishing}
+              onClick={() => void discardDraftChanges()}
+            >
+              {t.discardDraft}
+            </AdminCompactBtn>
+            <AdminCompactBtn
+              type="button"
+              variant="accent"
+              disabled={saving || publishing}
+              onClick={() => void saveDraft({ flash: true })}
+            >
+              {saving ? t.savingDraft : t.saveDraft}
+            </AdminCompactBtn>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

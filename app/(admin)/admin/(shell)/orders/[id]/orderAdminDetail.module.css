@@ -28,6 +28,11 @@
   width: auto;
 }
 
+.statusHint {
+  margin: -16px 0 24px;
+  max-width: 42rem;
+}
+
 .preWrap {
   white-space: pre-wrap;
 }
@@ -40,7 +45,14 @@
 .kpPublishedStack {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 10px;
+}
+
+.kpVersionAccordion {
+  border-width: var(--account-hairline-width, 0.7px);
+  border-style: solid;
+  border-color: var(--account-hairline-color, rgba(0, 0, 0, 0.12));
+  background: var(--color-white, #fff);
 }
 
 .kpVersionCaptionRow {
@@ -48,13 +60,57 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 0 12px;
+  margin: 0;
+  padding: 10px 12px;
 }
 
 .kpVersionCaption {
   margin: 0;
   flex: 1;
   min-width: 0;
+}
+
+.kpVersionToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.kpVersionToggle:hover .kpVersionCaption {
+  text-decoration: underline;
+}
+
+.kpVersionArrow {
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: transform 0.15s ease;
+}
+
+.kpVersionArrowOpen {
+  transform: rotate(180deg);
+}
+
+.kpVersionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.kpVersionPanel {
+  padding: 0 12px 12px;
+  border-top-width: var(--account-hairline-width, 0.7px);
+  border-top-style: solid;
+  border-top-color: var(--account-hairline-color, rgba(0, 0, 0, 0.08));
 }
 
 .actionsHint {
@@ -108,4 +164,18 @@
   min-height: 220px;
   height: 100%;
   resize: vertical;
+}
+
+.notesFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.notesFooter p {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
 }

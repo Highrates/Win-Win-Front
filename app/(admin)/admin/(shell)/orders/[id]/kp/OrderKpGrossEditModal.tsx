@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminOrderKpStrings } from '@/lib/admin-i18n/adminOrderKpI18n';
 import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import { KpGrossFieldsEditor } from './KpGrossFieldsEditor';
 
@@ -16,6 +18,8 @@ type Props = {
 };
 
 export function OrderKpGrossEditModal({ open, productName, snapshot, onClose, onSave }: Props) {
+  const { locale } = useAdminLocale();
+  const t = useMemo(() => adminOrderKpStrings(locale), [locale]);
   const [draft, setDraft] = useState<Record<string, unknown> | null>(snapshot);
 
   useEffect(() => {
@@ -44,7 +48,7 @@ export function OrderKpGrossEditModal({ open, productName, snapshot, onClose, on
 
   if (!open) return null;
 
-  const title = productName.trim() || 'Позиция';
+  const title = productName.trim() || t.positionFallback;
 
   return (
     <div
@@ -59,9 +63,9 @@ export function OrderKpGrossEditModal({ open, productName, snapshot, onClose, on
       <div className={modalStyles.panel} style={{ maxWidth: 420, width: '100%' }}>
         <div className={modalStyles.panelHead}>
           <h2 id="kp-gross-edit-title" className={modalStyles.panelTitle}>
-            Габариты брутто
+            {t.grossEditTitle}
           </h2>
-          <AdminModalCloseButton label="Закрыть" onClick={onClose} />
+          <AdminModalCloseButton label={t.modalClose} onClick={onClose} />
         </div>
         <div className={modalStyles.body} style={{ width: '100%', boxSizing: 'border-box' }}>
           <p className={styles.cardNote} style={{ marginTop: 0, marginBottom: 16 }}>
@@ -71,14 +75,14 @@ export function OrderKpGrossEditModal({ open, productName, snapshot, onClose, on
         </div>
         <div className={modalStyles.panelFooter}>
           <AdminCompactBtn type="button" variant="outline" onClick={onClose}>
-            Отмена
+            {t.cancel}
           </AdminCompactBtn>
           <AdminCompactBtn
             type="button"
             variant="accent"
             onClick={() => onSave(draft && typeof draft === 'object' ? draft : {})}
           >
-            Сохранить
+            {t.save}
           </AdminCompactBtn>
         </div>
       </div>

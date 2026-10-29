@@ -25,6 +25,7 @@
     "@fontsource-variable/commissioner": "^5.0.0",
     "@tanstack/react-query": "^5.101.0",
     "@win-win/admin-sections": "file:./packages/admin-sections",
+    "@win-win/media-proxy-allowlist": "file:./packages/media-proxy-allowlist",
     "@win-win/order-item-snapshot": "file:./packages/order-item-snapshot",
     "@win-win/order-status": "file:./packages/order-status",
     "@win-win/sourcing-request": "file:./packages/sourcing-request",

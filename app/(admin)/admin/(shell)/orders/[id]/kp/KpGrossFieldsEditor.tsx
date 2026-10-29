@@ -1,6 +1,9 @@
 'use client';
 
+import { useMemo } from 'react';
 import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
+import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import { adminOrderKpStrings } from '@/lib/admin-i18n/adminOrderKpI18n';
 import {
   type KpGrossDimensions,
   mmToCmInput,
@@ -28,6 +31,8 @@ function patchGross(
 }
 
 export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = false }: Props) {
+  const { locale } = useAdminLocale();
+  const t = useMemo(() => adminOrderKpStrings(locale), [locale]);
   const g = readKpGrossFromSnapshot(snapshot);
 
   if (fullWidth) {
@@ -37,8 +42,8 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
-          placeholder="Длина, см"
-          aria-label="Длина брутто, см"
+          placeholder={t.grossLengthCm}
+          aria-label={t.ariaGrossLength}
           value={mmToCmInput(g.lengthMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { lengthMm: parseCmInputToMm(e.target.value) }))
@@ -48,8 +53,8 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
-          placeholder="Ширина, см"
-          aria-label="Ширина брутто, см"
+          placeholder={t.grossWidthCm}
+          aria-label={t.ariaGrossWidth}
           value={mmToCmInput(g.widthMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { widthMm: parseCmInputToMm(e.target.value) }))
@@ -59,8 +64,8 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
-          placeholder="Высота, см"
-          aria-label="Высота брутто, см"
+          placeholder={t.grossHeightCm}
+          aria-label={t.ariaGrossHeight}
           value={mmToCmInput(g.heightMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { heightMm: parseCmInputToMm(e.target.value) }))
@@ -70,8 +75,8 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
-          placeholder="Объём, м³"
-          aria-label="Объём брутто, м³"
+          placeholder={t.grossVolumeM3}
+          aria-label={t.ariaGrossVolume}
           value={m3InputFromVolumeLiters(g.volumeLiters)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { volumeLiters: parseOptionalM3(e.target.value) }))
@@ -81,12 +86,12 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldFull}
           type="text"
           inputMode="decimal"
-          placeholder="Вес, кг"
-          aria-label="Вес брутто, кг"
+          placeholder={t.grossWeightKg}
+          aria-label={t.ariaGrossWeight}
           value={g.weightKg != null ? String(g.weightKg).replace('.', ',') : ''}
           onChange={(e) => {
-            const t = e.target.value.trim().replace(',', '.');
-            const n = t === '' ? null : parseFloat(t);
+            const raw = e.target.value.trim().replace(',', '.');
+            const n = raw === '' ? null : parseFloat(raw);
             onSnapshotChange(
               patchGross(snapshot, {
                 weightKg: n != null && Number.isFinite(n) && n >= 0 ? n : null,
@@ -106,8 +111,8 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldTiny52}
           type="text"
           inputMode="decimal"
-          placeholder="Д, см"
-          aria-label="Длина брутто, см"
+          placeholder={t.grossLenShort}
+          aria-label={t.ariaGrossLength}
           value={mmToCmInput(g.lengthMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { lengthMm: parseCmInputToMm(e.target.value) }))
@@ -118,8 +123,8 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldTiny52}
           type="text"
           inputMode="decimal"
-          placeholder="Ш, см"
-          aria-label="Ширина брутто, см"
+          placeholder={t.grossWidShort}
+          aria-label={t.ariaGrossWidth}
           value={mmToCmInput(g.widthMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { widthMm: parseCmInputToMm(e.target.value) }))
@@ -130,8 +135,8 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldTiny52}
           type="text"
           inputMode="decimal"
-          placeholder="В, см"
-          aria-label="Высота брутто, см"
+          placeholder={t.grossHeiShort}
+          aria-label={t.ariaGrossHeight}
           value={mmToCmInput(g.heightMm)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { heightMm: parseCmInputToMm(e.target.value) }))
@@ -144,8 +149,8 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldTiny72}
           type="text"
           inputMode="decimal"
-          placeholder="м³"
-          aria-label="Объём брутто, м³"
+          placeholder={t.grossVolShort}
+          aria-label={t.ariaGrossVolume}
           value={m3InputFromVolumeLiters(g.volumeLiters)}
           onChange={(e) =>
             onSnapshotChange(patchGross(snapshot, { volumeLiters: parseOptionalM3(e.target.value) }))
@@ -156,12 +161,12 @@ export function KpGrossFieldsEditor({ snapshot, onSnapshotChange, fullWidth = fa
           className={kpStyles.fieldTiny72}
           type="text"
           inputMode="decimal"
-          placeholder="кг"
-          aria-label="Вес брутто, кг"
+          placeholder={t.grossWgtShort}
+          aria-label={t.ariaGrossWeight}
           value={g.weightKg != null ? String(g.weightKg).replace('.', ',') : ''}
           onChange={(e) => {
-            const t = e.target.value.trim().replace(',', '.');
-            const n = t === '' ? null : parseFloat(t);
+            const raw = e.target.value.trim().replace(',', '.');
+            const n = raw === '' ? null : parseFloat(raw);
             onSnapshotChange(
               patchGross(snapshot, {
                 weightKg: n != null && Number.isFinite(n) && n >= 0 ? n : null,

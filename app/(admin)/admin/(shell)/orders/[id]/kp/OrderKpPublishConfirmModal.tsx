@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import modalStyles from '@/components/admin/AdminModal/AdminModal.module.css';
 import { AdminOrderSideChat } from '../AdminOrderSideChat';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
-import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
+import { adminOrderKpStrings } from '@/lib/admin-i18n/adminOrderKpI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
 import { KP_PUBLISH_NEXT_STATUSES } from '@/lib/orders/orderStatus';
@@ -77,7 +77,7 @@ export function OrderKpPublishConfirmModal({
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const { locale } = useAdminLocale();
-  const d = useMemo(() => adminOrderDetailStrings(locale), [locale]);
+  const t = useMemo(() => adminOrderKpStrings(locale), [locale]);
   const statusLabels = useMergedAdminOrderStatusLabels();
 
   useModalFocusTrap(open, panelRef);
@@ -129,15 +129,15 @@ export function OrderKpPublishConfirmModal({
             {labels.title}
           </h2>
           <AdminModalCloseButton
-            label="Закрыть"
+            label={t.modalClose}
             disabled={publishing}
             onClick={onClose}
           />
         </div>
         <div className={own.bodySplit}>
           <div className={own.summaryCol}>
-            <p className={own.summaryTitle}>{d.kpPublishSummaryHeading}</p>
-            <p className={own.summaryMeta}>{d.kpPublishPositions(lineCount)}</p>
+            <p className={own.summaryTitle}>{t.publishSummaryHeading}</p>
+            <p className={own.summaryMeta}>{t.publishPositions(lineCount)}</p>
             <p className={own.digitsRow}>
               <span className={showDiscountRed ? own.digitsDiscount : undefined}>{pctLabel}</span>
               <span className={own.sep} aria-hidden>
@@ -159,7 +159,7 @@ export function OrderKpPublishConfirmModal({
             {showNextStatus ? (
               <div className={own.statusBlock}>
                 <AdminSelect
-                  label={d.kpPublishNextStatus}
+                  label={t.publishNextStatus}
                   id="kp-publish-next-status"
                   className={own.statusSelect}
                   value={nextOrderStatus}
@@ -176,7 +176,7 @@ export function OrderKpPublishConfirmModal({
             ) : null}
 
             {lines.length > 0 ? (
-              <ul className={own.linesList} aria-label="Позиции в предложении">
+              <ul className={own.linesList} aria-label={t.publishLinesAria}>
                 {lines.map((line) => {
                   const snap =
                     line.snapshot && typeof line.snapshot === 'object'

@@ -39,7 +39,7 @@ export function adminDashboardAnalyticsStrings(locale: AdminLocale) {
     chatActive: pick(locale, 'В работе', '进行中'),
 
     partnersTitle: pick(locale, '🤝 Партнёры', '🤝 合作伙伴'),
-    partnersNew: pick(locale, 'Новые', '新申请'),
+    partnersNew: pick(locale, 'Одобрено', '新通过'),
 
     usersTitle: pick(locale, '👤 Новые пользователи', '👤 新用户'),
     usersNew: pick(locale, 'Новые', '新用户'),

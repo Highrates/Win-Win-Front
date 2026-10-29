@@ -11,16 +11,18 @@ import {
 } from '@/lib/admin-i18n/adminOrdersI18n';
 import { useMergedAdminOrderStatusLabels } from '@/lib/admin-i18n/useMergedAdminOrderStatusLabels';
 import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
-import {
-  downloadCommercialProposalPdf,
-  kpPdfFailedImagesMessage,
-} from '@/lib/commercialProposal/exportCommercialProposalPdf';
+import { downloadCommercialProposalPdf } from '@/lib/commercialProposal/exportCommercialProposalPdf';
+import { downloadPiExcel } from '@/lib/commercialProposal/piExcelAdmin';
 import { kpLineTotalRub, kpLineUnitAfterDiscount } from '@/lib/commercialProposal/kpOfferTotals';
 import type {
   CommercialProposalApi,
   CommercialProposalSummaryApi,
 } from '@/lib/commercialProposal/types';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import {
+  AdminFlashBanner,
+  type AdminFlashBannerState,
+} from '@/components/admin/AdminFlashBanner/AdminFlashBanner';
 import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
 import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import clientsStyles from '../../clients/clients.module.css';
@@ -53,6 +55,7 @@ type AdminOrderDetail = {
   totalAmount: string | number;
   currency: string;
   comment: string | null;
+  adminNotes?: string | null;
   customerName: string | null;
   deliveryAddress: string | null;
   createdAt: string;
@@ -184,10 +187,14 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [kpSummaryLoading, setKpSummaryLoading] = useState(false);
   const [kpSummary, setKpSummary] = useState<CommercialProposalSummaryApi | null>(null);
-  const [publishedKpFull, setPublishedKpFull] = useState<CommercialProposalApi[]>([]);
-  const [loadingPublishedKpFull, setLoadingPublishedKpFull] = useState(false);
-  const [pdfBusyProposalId, setPdfBusyProposalId] = useState<string | null>(null);
-  const [pdfBusyLabel, setPdfBusyLabel] = useState('PDF');
+  const [expandedKpVersion, setExpandedKpVersion] = useState<number | null>(null);
+  const [publishedKpByVersion, setPublishedKpByVersion] = useState<
+    Record<number, CommercialProposalApi | 'loading' | 'error'>
+  >({});
+  const [pdfBusyById, setPdfBusyById] = useState<Record<string, string>>({});
+  const [excelBusyById, setExcelBusyById] = useState<Record<string, boolean>>({});
+  const [flash, setFlash] = useState<AdminFlashBannerState>(null);
+  const clearFlash = useCallback(() => setFlash(null), []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -195,7 +202,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
     try {
       const res = await adminBackendJson<AdminOrderDetail>(`orders/admin/${orderId}`);
       setOrder(res);
-      setSelectedStatus(res.status === 'PENDING_APPROVAL' ? 'PROPOSAL_FORMED' : res.status);
+      setSelectedStatus(res.status);
     } catch (e) {
       const msg = e instanceof Error ? e.message : d.errLoad;
       setError(msg);
@@ -237,32 +244,41 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   useEffect(() => {
     const st = order?.status;
     if (!kpSummary?.published?.length || st === ORDER_STATUS_DRAFT) {
-      setPublishedKpFull([]);
-      setLoadingPublishedKpFull(false);
+      setExpandedKpVersion(null);
+      setPublishedKpByVersion({});
       return;
     }
-    let cancelled = false;
-    const base = `orders/admin/${encodeURIComponent(orderId)}/commercial-proposals/published/`;
-    setLoadingPublishedKpFull(true);
-    setPublishedKpFull([]);
-    void (async () => {
+    setExpandedKpVersion(kpSummary.published[0]!.versionNumber);
+    setPublishedKpByVersion({});
+  }, [kpSummary?.published, order?.status]);
+
+  const loadPublishedVersion = useCallback(
+    async (version: number) => {
+      let skip = false;
+      setPublishedKpByVersion((prev) => {
+        if (prev[version] && prev[version] !== 'error') {
+          skip = true;
+          return prev;
+        }
+        return { ...prev, [version]: 'loading' };
+      });
+      if (skip) return;
       try {
-        const rows = await Promise.all(
-          kpSummary.published.map((p) =>
-            adminBackendJson<CommercialProposalApi>(`${base}${p.versionNumber}`),
-          ),
+        const row = await adminBackendJson<CommercialProposalApi>(
+          `orders/admin/${encodeURIComponent(orderId)}/commercial-proposals/published/${version}`,
         );
-        if (!cancelled) setPublishedKpFull(rows);
+        setPublishedKpByVersion((prev) => ({ ...prev, [version]: row }));
       } catch {
-        if (!cancelled) setPublishedKpFull([]);
-      } finally {
-        if (!cancelled) setLoadingPublishedKpFull(false);
+        setPublishedKpByVersion((prev) => ({ ...prev, [version]: 'error' }));
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [kpSummary?.published, orderId, order?.status]);
+    },
+    [orderId],
+  );
+
+  useEffect(() => {
+    if (expandedKpVersion == null || order?.status === ORDER_STATUS_DRAFT) return;
+    void loadPublishedVersion(expandedKpVersion);
+  }, [expandedKpVersion, loadPublishedVersion, order?.status]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !order) return;
@@ -343,6 +359,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   return (
     <>
       {error ? <p className={styles.error}>{error}</p> : null}
+      <AdminFlashBanner flash={flash} onClear={clearFlash} dismissLabel={d.flashDismiss} />
 
       <div className={`${pn.productFormGrid} ${od.orderDetailGrid}`}>
         <div className={pn.productFormMain}>
@@ -368,6 +385,9 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
               {saving ? d.saving : d.save}
             </AdminCompactBtn>
           </div>
+          {order.status === 'PENDING_APPROVAL' ? (
+            <p className={`${styles.cardNote} ${od.statusHint}`}>{d.statusPendingHint}</p>
+          ) : null}
 
           <dl className={clientsStyles.detailList}>
             <div>
@@ -503,152 +523,273 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                 <p className={styles.muted}>{d.kpPublishedLoading}</p>
               ) : kpSummary && kpSummary.published.length === 0 ? (
                 <p className={styles.muted}>{d.kpPublishedNone}</p>
-              ) : loadingPublishedKpFull ? (
-                <p className={styles.muted}>{d.kpPublishedLoading}</p>
-              ) : kpSummary!.published.length > 0 && publishedKpFull.length === 0 ? (
-                <p className={styles.error}>{d.kpPublishedDetailError}</p>
               ) : (
                 <div className={od.kpPublishedStack}>
-                  {publishedKpFull.map((proposal) => {
-                    const kpTotalRub = proposal.lines.reduce((acc, ln) => acc + kpLineTotalRub(ln), 0);
-                    const kpTotalRounded = Math.round(kpTotalRub * 100) / 100;
-                    const dateStr = proposal.publishedAt
-                      ? formatAdminOrderDateTime(proposal.publishedAt, locale)
+                  {(kpSummary?.published ?? []).map((meta) => {
+                    const open = expandedKpVersion === meta.versionNumber;
+                    const cached = publishedKpByVersion[meta.versionNumber];
+                    const proposal = typeof cached === 'object' ? cached : null;
+                    const dateStr = meta.publishedAt
+                      ? formatAdminOrderDateTime(meta.publishedAt, locale)
                       : '—';
+                    const pdfBusyLabel = pdfBusyById[meta.id];
                     return (
-                      <div key={proposal.id}>
+                      <div key={meta.id} className={od.kpVersionAccordion}>
                         <div className={od.kpVersionCaptionRow}>
-                          <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
-                            {d.kpPublishedVersionCaption(
-                              proposal.versionNumber,
-                              dateStr,
-                              listS.itemsCount(proposal.lines.length),
-                            )}
-                          </p>
-                          {proposal.lines.length > 0 ? (
+                          <button
+                            type="button"
+                            className={od.kpVersionToggle}
+                            aria-expanded={open}
+                            onClick={() =>
+                              setExpandedKpVersion((cur) =>
+                                cur === meta.versionNumber ? null : meta.versionNumber,
+                              )
+                            }
+                          >
+                            <img
+                              src="/icons/arrow.svg"
+                              alt=""
+                              width={18}
+                              height={18}
+                              className={`${od.kpVersionArrow} ${open ? od.kpVersionArrowOpen : ''}`}
+                              aria-hidden
+                            />
+                            <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
+                              {d.kpPublishedVersionCaption(
+                                meta.versionNumber,
+                                dateStr,
+                                listS.itemsCount(meta.lineCount),
+                              )}
+                            </p>
+                          </button>
+                          <div className={od.kpVersionActions}>
                             <AdminCompactBtn
                               type="button"
                               variant="outline"
-                              disabled={pdfBusyProposalId != null}
+                              disabled={Boolean(pdfBusyLabel) || meta.lineCount === 0}
                               onClick={() => {
-                                if (pdfBusyProposalId) return;
-                                setPdfBusyProposalId(proposal.id);
-                                setPdfBusyLabel('PDF…');
-                                void downloadCommercialProposalPdf({
-                                  orderId: order.id,
-                                  proposal,
-                                  onProgress: (p) => setPdfBusyLabel(p.label),
-                                })
-                                  .then((r) => {
-                                    if (r.failedImageCount > 0) {
-                                      window.alert(
-                                        `PDF сохранён, но ${kpPdfFailedImagesMessage(r.failedImageCount).toLowerCase()}`,
+                                if (pdfBusyById[meta.id]) return;
+                                const run = async () => {
+                                  let full = proposal;
+                                  if (!full) {
+                                    setPublishedKpByVersion((prev) => ({
+                                      ...prev,
+                                      [meta.versionNumber]: 'loading',
+                                    }));
+                                    try {
+                                      full = await adminBackendJson<CommercialProposalApi>(
+                                        `orders/admin/${encodeURIComponent(order.id)}/commercial-proposals/published/${meta.versionNumber}`,
                                       );
+                                      setPublishedKpByVersion((prev) => ({
+                                        ...prev,
+                                        [meta.versionNumber]: full!,
+                                      }));
+                                    } catch {
+                                      setPublishedKpByVersion((prev) => ({
+                                        ...prev,
+                                        [meta.versionNumber]: 'error',
+                                      }));
+                                      setFlash({ kind: 'error', text: d.kpPublishedDetailError });
+                                      return;
                                     }
-                                  })
+                                  }
+                                  if (!full.lines.length) return;
+                                  setPdfBusyById((prev) => ({ ...prev, [meta.id]: d.actionPdfBusy }));
+                                  try {
+                                    const r = await downloadCommercialProposalPdf({
+                                      orderId: order.id,
+                                      proposal: full,
+                                      onProgress: (p) =>
+                                        setPdfBusyById((prev) => ({
+                                          ...prev,
+                                          [meta.id]: p.label || d.actionPdfBusy,
+                                        })),
+                                    });
+                                    if (r.failedImageCount > 0) {
+                                      setFlash({
+                                        kind: 'ok',
+                                        text: d.pdfSavedWithImageWarnings(r.failedImageCount),
+                                      });
+                                    }
+                                  } catch (e) {
+                                    setFlash({
+                                      kind: 'error',
+                                      text: e instanceof Error ? e.message : d.errPdf,
+                                    });
+                                  } finally {
+                                    setPdfBusyById((prev) => {
+                                      const next = { ...prev };
+                                      delete next[meta.id];
+                                      return next;
+                                    });
+                                  }
+                                };
+                                void run();
+                              }}
+                            >
+                              {pdfBusyLabel ?? d.actionPdf}
+                            </AdminCompactBtn>
+                            <AdminCompactBtn
+                              type="button"
+                              variant="outline"
+                              disabled={Boolean(excelBusyById[meta.id]) || meta.lineCount === 0}
+                              title={d.excelSheetProtectHint}
+                              onClick={() => {
+                                if (excelBusyById[meta.id]) return;
+                                setExcelBusyById((prev) => ({ ...prev, [meta.id]: true }));
+                                void downloadPiExcel(
+                                  `orders/admin/${encodeURIComponent(order.id)}/commercial-proposals/excel?source=published&version=${meta.versionNumber}`,
+                                  `PI-order-v${meta.versionNumber}.xlsx`,
+                                )
                                   .catch((e) => {
-                                    window.alert(
-                                      e instanceof Error ? e.message : 'Не удалось сформировать PDF',
-                                    );
+                                    setFlash({
+                                      kind: 'error',
+                                      text: e instanceof Error ? e.message : d.errExcelExport,
+                                    });
                                   })
                                   .finally(() => {
-                                    setPdfBusyProposalId(null);
-                                    setPdfBusyLabel('PDF');
+                                    setExcelBusyById((prev) => {
+                                      const next = { ...prev };
+                                      delete next[meta.id];
+                                      return next;
+                                    });
                                   });
                               }}
                             >
-                              {pdfBusyProposalId === proposal.id ? pdfBusyLabel : 'PDF'}
+                              {excelBusyById[meta.id]
+                                ? d.excelBusy
+                                : d.actionExcelVersion(meta.versionNumber)}
                             </AdminCompactBtn>
-                          ) : null}
-                        </div>
-                        {proposal.lines.length === 0 ? (
-                          <p className={styles.muted}>{d.noItems}</p>
-                        ) : (
-                          <div className={styles.tableWrap}>
-                            <table className={styles.table}>
-                              <thead>
-                                <tr>
-                                  <th style={{ width: 54 }} aria-hidden />
-                                  <th>{d.thProduct}</th>
-                                  <th>{d.thQtyUnit}</th>
-                                  <th>{d.thPrice}</th>
-                                  <th>{d.thLineTotal}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {proposal.lines.map((ln) => {
-                                  const snap =
-                                    ln.snapshot && typeof ln.snapshot === 'object'
-                                      ? ln.snapshot
-                                      : null;
-                                  const meta = orderItemSnapshotMetaRows(snap, {
-                                    modification: d.snapshotModification,
-                                    elementFallback: d.snapshotElementFallback,
-                                  });
-                                  const unitEff = kpLineUnitAfterDiscount(ln);
-                                  const lineTotal = kpLineTotalRub(ln);
-                                  const img = kpLineImageUrl(snap);
-                                  const dc = kpDiscountShown(
-                                    ln.discountPercent != null && Number.isFinite(ln.discountPercent)
-                                      ? ln.discountPercent
-                                      : null,
-                                  );
-                                  return (
-                                    <tr key={ln.id}>
-                                      <td>
-                                        {img ? (
-                                          <img
-                                            className={styles.productListThumb}
-                                            src={img}
-                                            alt=""
-                                            width={46}
-                                            height={46}
-                                          />
-                                        ) : (
-                                          <div className={styles.productListThumbPh} aria-hidden />
-                                        )}
-                                      </td>
-                                      <td>
-                                        <Link
-                                          href={`/admin/catalog/products/${encodeURIComponent(ln.productId)}`}
-                                          className={styles.backLink}
-                                        >
-                                          <div className={styles.cardTitle}>{kpLineDisplayTitle(snap)}</div>
-                                        </Link>
-                                        {dc ? (
-                                          <div className={styles.cardNote}>
-                                            {d.kpDiscountLabel}: {dc}
-                                          </div>
-                                        ) : null}
-                                        {meta.length > 0 ? (
-                                          <ul className={`${styles.cardNote} ${od.itemMetaList}`}>
-                                            {meta.map((m, mi) => (
-                                              <li key={mi}>
-                                                {m.label}: {m.value}
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        ) : null}
-                                      </td>
-                                      <td>{formatQtyUnit(ln.quantity, ln.unit)}</td>
-                                      <td>{formatMoneyInt(unitEff, order.currency, numberLocale)}</td>
-                                      <td>{formatMoneyInt(lineTotal, order.currency, numberLocale)}</td>
-                                    </tr>
-                                  );
-                                })}
-                                <tr>
-                                  <td aria-hidden />
-                                  <td colSpan={3} style={{ textAlign: 'right', fontWeight: 600 }}>
-                                    {d.footerSumLabel}
-                                  </td>
-                                  <td style={{ fontWeight: 600 }}>
-                                    {formatMoneyInt(kpTotalRounded, order.currency, numberLocale)}
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
                           </div>
-                        )}
+                        </div>
+                        {open ? (
+                          <div className={od.kpVersionPanel}>
+                            {cached === 'loading' || cached == null ? (
+                              <p className={styles.muted}>{d.kpPublishedLoading}</p>
+                            ) : cached === 'error' ? (
+                              <p className={styles.error}>{d.kpPublishedDetailError}</p>
+                            ) : proposal!.lines.length === 0 ? (
+                              <p className={styles.muted}>{d.noItems}</p>
+                            ) : (
+                              (() => {
+                                const kpTotalRub = proposal!.lines.reduce(
+                                  (acc, ln) => acc + kpLineTotalRub(ln),
+                                  0,
+                                );
+                                const kpTotalRounded = Math.round(kpTotalRub * 100) / 100;
+                                return (
+                                  <div className={styles.tableWrap}>
+                                    <table className={styles.table}>
+                                      <thead>
+                                        <tr>
+                                          <th style={{ width: 54 }} aria-hidden />
+                                          <th>{d.thProduct}</th>
+                                          <th>{d.thQtyUnit}</th>
+                                          <th>{d.thPrice}</th>
+                                          <th>{d.thLineTotal}</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {proposal!.lines.map((ln) => {
+                                          const snap =
+                                            ln.snapshot && typeof ln.snapshot === 'object'
+                                              ? ln.snapshot
+                                              : null;
+                                          const rows = orderItemSnapshotMetaRows(snap, {
+                                            modification: d.snapshotModification,
+                                            elementFallback: d.snapshotElementFallback,
+                                          });
+                                          const unitEff = kpLineUnitAfterDiscount(ln);
+                                          const lineTotal = kpLineTotalRub(ln);
+                                          const img = kpLineImageUrl(snap);
+                                          const dc = kpDiscountShown(
+                                            ln.discountPercent != null &&
+                                              Number.isFinite(ln.discountPercent)
+                                              ? ln.discountPercent
+                                              : null,
+                                          );
+                                          return (
+                                            <tr key={ln.id}>
+                                              <td>
+                                                {img ? (
+                                                  <img
+                                                    className={styles.productListThumb}
+                                                    src={img}
+                                                    alt=""
+                                                    width={46}
+                                                    height={46}
+                                                  />
+                                                ) : (
+                                                  <div
+                                                    className={styles.productListThumbPh}
+                                                    aria-hidden
+                                                  />
+                                                )}
+                                              </td>
+                                              <td>
+                                                <Link
+                                                  href={`/admin/catalog/products/${encodeURIComponent(ln.productId)}`}
+                                                  className={styles.backLink}
+                                                >
+                                                  <div className={styles.cardTitle}>
+                                                    {kpLineDisplayTitle(snap)}
+                                                  </div>
+                                                </Link>
+                                                {dc ? (
+                                                  <div className={styles.cardNote}>
+                                                    {d.kpDiscountLabel}: {dc}
+                                                  </div>
+                                                ) : null}
+                                                {rows.length > 0 ? (
+                                                  <ul
+                                                    className={`${styles.cardNote} ${od.itemMetaList}`}
+                                                  >
+                                                    {rows.map((m, mi) => (
+                                                      <li key={mi}>
+                                                        {m.label}: {m.value}
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                ) : null}
+                                              </td>
+                                              <td>{formatQtyUnit(ln.quantity, ln.unit)}</td>
+                                              <td>
+                                                {formatMoneyInt(unitEff, order.currency, numberLocale)}
+                                              </td>
+                                              <td>
+                                                {formatMoneyInt(
+                                                  lineTotal,
+                                                  order.currency,
+                                                  numberLocale,
+                                                )}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                        <tr>
+                                          <td aria-hidden />
+                                          <td
+                                            colSpan={3}
+                                            style={{ textAlign: 'right', fontWeight: 600 }}
+                                          >
+                                            {d.footerSumLabel}
+                                          </td>
+                                          <td style={{ fontWeight: 600 }}>
+                                            {formatMoneyInt(
+                                              kpTotalRounded,
+                                              order.currency,
+                                              numberLocale,
+                                            )}
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                );
+                              })()
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })}
@@ -782,9 +923,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
             ) : null}
             {kpSummary?.draft ? (
               <p className={`${styles.cardNote} ${od.draftHint}`}>
-                {locale === 'zh'
-                  ? `草稿：${kpSummary.draft.lineCount} 项`
-                  : `Черновик КП: ${kpSummary.draft.lineCount} поз.`}
+                {d.kpDraftLineCount(kpSummary.draft.lineCount)}
               </p>
             ) : null}
             <div className={styles.formActions}>
@@ -800,7 +939,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                   type="button"
                   variant="accent"
                   disabled
-                  title="КП доступно после отправки заказа на согласование"
+                  title={d.actionKpDisabledDraft}
                 >
                   {d.actionPrepareCp}
                 </AdminCompactBtn>
@@ -819,7 +958,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
           className={`${pn.productFormPlacement} ${od.orderDetailPlacement}`}
           aria-label={d.chatAsideAria}
         >
-          <AdminOrderSideChat orderId={orderId} />
+          <AdminOrderSideChat orderId={orderId} initialAdminNotes={order.adminNotes ?? ''} />
         </aside>
       </div>
 

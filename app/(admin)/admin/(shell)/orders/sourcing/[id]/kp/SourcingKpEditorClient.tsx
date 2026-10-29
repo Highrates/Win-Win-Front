@@ -8,6 +8,7 @@ import { AdminTextField, AdminTextArea } from '@/components/AdminTextField/Admin
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminOrderDetailStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { adminSourcingKpStrings } from '@/lib/admin-i18n/adminSourcingKpI18n';
+import { useUnsavedChangesGuard } from '@/lib/adminConfirm/useUnsavedChangesGuard';
 import {
   fetchPricingForwardDefaultPreviewBatch,
   TYPICAL_SOURCING_VOLUME_M3,
@@ -17,12 +18,18 @@ import { resolveSourcingTypicalDims } from '@win-win/sourcing-request';
 import { sourcingKpLineTotalRub, sourcingKpOrderTotalRub } from '@/lib/sourcingCommercialProposal/kpLineTotals';
 import type { SourcingCommercialProposalLineApi } from '@/lib/sourcingCommercialProposal/types';
 import {
+  downloadPiExcel,
+  importPiExcel,
+  type PiExcelImportResult,
+} from '@/lib/commercialProposal/piExcelAdmin';
+import {
   fetchSourcingKpDraft,
   fetchSourcingKpSummary,
   initSourcingKpDraft,
   publishSourcingKpDraft,
   saveSourcingKpDraft,
 } from '@/lib/userSourcingRequests/sourcingKpAdminApi';
+import { PiExcelImportDiffModal } from '@/components/admin/PiExcelImportDiffModal/PiExcelImportDiffModal';
 import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import kpStyles from '../../../[id]/kp/kpEditor.module.css';
 import skStyles from './sourcingKpEditor.module.css';
@@ -293,6 +300,18 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
   const [needsInit, setNeedsInit] = useState(false);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [imagePickerLineIndex, setImagePickerLineIndex] = useState<number | null>(null);
+  const [excelExportBusy, setExcelExportBusy] = useState(false);
+  const [excelImportBusy, setExcelImportBusy] = useState(false);
+  const [excelVersionBusy, setExcelVersionBusy] = useState<Record<number, boolean>>({});
+  const [excelPreview, setExcelPreview] = useState<PiExcelImportResult | null>(null);
+  const [excelPendingFile, setExcelPendingFile] = useState<File | null>(null);
+  const [excelApplying, setExcelApplying] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [successHint, setSuccessHint] = useState<string | null>(null);
+  const excelFileRef = useRef<HTMLInputElement | null>(null);
+  const excelBasePath = `sourcing-requests/admin/${encodeURIComponent(sourcingRequestId)}/commercial-proposals`;
+  useUnsavedChangesGuard(dirty);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -303,6 +322,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
       try {
         const dr = await fetchSourcingKpDraft(sourcingRequestId);
         setLines(dr.lines.map(normalizeDraftLine));
+        setDirty(false);
         setNeedsInit(false);
       } catch (e) {
         const msg = e instanceof Error ? e.message : '';
@@ -312,6 +332,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
           msg.toLowerCase().includes('не найден')
         ) {
           setLines([]);
+          setDirty(false);
           setNeedsInit(true);
         } else throw e;
       }
@@ -319,6 +340,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
       setError(e instanceof Error ? e.message : t.errLoad);
       setSummary(null);
       setLines([]);
+      setDirty(false);
     } finally {
       setLoading(false);
     }
@@ -333,6 +355,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
     try {
       const dr = await initSourcingKpDraft(sourcingRequestId, fromPublishedProposalId);
       setLines(dr.lines.map(normalizeDraftLine));
+      setDirty(false);
       setNeedsInit(false);
       setSummary(await fetchSourcingKpSummary(sourcingRequestId));
     } catch (e) {
@@ -340,7 +363,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
     }
   }
 
-  async function saveDraft(): Promise<boolean> {
+  async function saveDraft(opts?: { flash?: boolean }): Promise<boolean> {
     setSaving(true);
     setError(null);
     try {
@@ -362,6 +385,8 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
         })),
       );
       setLines(dr.lines.map(normalizeDraftLine));
+      setDirty(false);
+      if (opts?.flash !== false) setSavedFlash(true);
       setSummary(await fetchSourcingKpSummary(sourcingRequestId));
       return true;
     } catch (e) {
@@ -372,11 +397,31 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
     }
   }
 
+  useEffect(() => {
+    if (!savedFlash || dirty) return;
+    const timer = window.setTimeout(() => setSavedFlash(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [savedFlash, dirty]);
+
+  useEffect(() => {
+    if (dirty) setSavedFlash(false);
+  }, [dirty]);
+
+  async function discardDraftChanges() {
+    if (!window.confirm(d.kpDiscardConfirm)) return;
+    await loadAll();
+  }
+
+  function confirmExcelIfDirty(): boolean {
+    if (!dirty) return true;
+    return window.confirm(d.kpExcelDirtyConfirm);
+  }
+
   async function executePublish() {
     setPublishing(true);
     setError(null);
     try {
-      const draftSaved = await saveDraft();
+      const draftSaved = await saveDraft({ flash: false });
       if (!draftSaved) return;
       await publishSourcingKpDraft(sourcingRequestId);
       setPublishConfirmOpen(false);
@@ -390,20 +435,25 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
   }
 
   const updateLine = useCallback((i: number, patch: Partial<SourcingCommercialProposalLineApi>) => {
+    setDirty(true);
+    setSuccessHint(null);
     setLines((prev) => prev.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   }, []);
 
   const setLineRetailRub = useCallback((i: number, rub: number) => {
+    // Pricing preview write-back — do not mark dirty (user didn't edit ₽ directly).
     setLines((prev) => prev.map((l, j) => (j === i ? { ...l, offerUnitPrice: rub } : l)));
   }, []);
 
   const { retailByIndex, rubPreviewLoading } = useSourcingKpRubPreviews(lines, setLineRetailRub);
 
   function removeLine(i: number) {
+    setDirty(true);
     setLines((prev) => prev.filter((_, j) => j !== i));
   }
 
   function addLine() {
+    setDirty(true);
     setLines((prev) => [...prev, newDraftLine(prev.length)]);
   }
 
@@ -461,6 +511,11 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
           {error}
         </p>
       ) : null}
+      {successHint ? (
+        <p className={styles.muted} role="status" aria-live="polite">
+          {successHint}
+        </p>
+      ) : null}
 
       {needsInit && !loading ? (
         <div className={styles.section}>
@@ -476,9 +531,36 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
               <p className={styles.muted}>{t.initCopyHint}</p>
               <ul className={kpStyles.initCopyList}>
                 {summary.published.map((p) => (
-                  <li key={p.id}>
+                  <li key={p.id} className={kpStyles.publishedVersionRow}>
                     <AdminCompactBtn type="button" variant="outline" onClick={() => void initDraft(p.id)}>
                       {t.initCopyBtn(p.versionNumber, p.lineCount)}
+                    </AdminCompactBtn>
+                    <AdminCompactBtn
+                      type="button"
+                      variant="outline"
+                      disabled={Boolean(excelVersionBusy[p.versionNumber]) || p.lineCount === 0}
+                      title={d.excelSheetProtectHint}
+                      onClick={() => {
+                        setExcelVersionBusy((prev) => ({ ...prev, [p.versionNumber]: true }));
+                        void downloadPiExcel(
+                          `${excelBasePath}/excel?source=published&version=${p.versionNumber}`,
+                          `PI-sourcing-v${p.versionNumber}.xlsx`,
+                        )
+                          .catch((e) => {
+                            setError(e instanceof Error ? e.message : d.errExcelExport);
+                          })
+                          .finally(() => {
+                            setExcelVersionBusy((prev) => {
+                              const next = { ...prev };
+                              delete next[p.versionNumber];
+                              return next;
+                            });
+                          });
+                      }}
+                    >
+                      {excelVersionBusy[p.versionNumber]
+                        ? d.excelBusy
+                        : t.excelExportVersion(p.versionNumber)}
                     </AdminCompactBtn>
                   </li>
                 ))}
@@ -488,20 +570,64 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
         </div>
       ) : null}
 
+      {!loading && !needsInit && summary && summary.published.length > 0 ? (
+        <div className={styles.section}>
+          <p className={styles.muted}>{t.publishedExcelHint}</p>
+          <div className={styles.formActions}>
+            {summary.published.map((p) => (
+              <AdminCompactBtn
+                key={p.id}
+                type="button"
+                variant="outline"
+                disabled={Boolean(excelVersionBusy[p.versionNumber]) || p.lineCount === 0}
+                title={d.excelSheetProtectHint}
+                onClick={() => {
+                  setExcelVersionBusy((prev) => ({ ...prev, [p.versionNumber]: true }));
+                  void downloadPiExcel(
+                    `${excelBasePath}/excel?source=published&version=${p.versionNumber}`,
+                    `PI-sourcing-v${p.versionNumber}.xlsx`,
+                  )
+                    .catch((e) => {
+                      setError(e instanceof Error ? e.message : d.errExcelExport);
+                    })
+                    .finally(() => {
+                      setExcelVersionBusy((prev) => {
+                        const next = { ...prev };
+                        delete next[p.versionNumber];
+                        return next;
+                      });
+                    });
+                }}
+              >
+                {excelVersionBusy[p.versionNumber]
+                  ? d.excelBusy
+                  : t.excelExportVersion(p.versionNumber)}
+              </AdminCompactBtn>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {!loading && !needsInit ? (
         <>
           <div className={styles.section}>
             <div className={`${styles.formActions} ${kpStyles.editorActions}`}>
-              <AdminCompactBtn type="button" variant="outline" disabled={saving} onClick={() => void saveDraft()}>
-                {saving ? t.savingDraft : t.saveDraft}
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                disabled={saving || !dirty}
+                onClick={() => void saveDraft()}
+              >
+                {saving ? d.kpSavingDraft : d.kpSaveDraft}
               </AdminCompactBtn>
               <AdminCompactBtn
                 type="button"
                 variant="accent"
                 disabled={publishing || lines.length === 0}
+                title={dirty ? d.kpPublishSavesDraft : undefined}
                 onClick={() => setPublishConfirmOpen(true)}
               >
-                {publishing ? d.kpPublishing : d.kpPublish}
+                {publishing ? d.kpPublishing : dirty ? d.kpPublishSavesDraft : d.kpPublish}
               </AdminCompactBtn>
               <AdminCompactBtn type="button" variant="outline" onClick={addLine}>
                 {t.addLine}
@@ -511,6 +637,62 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
                   {t.fillFromRequest}
                 </AdminCompactBtn>
               ) : null}
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                disabled={excelExportBusy || excelImportBusy || lines.length === 0}
+                title={d.excelSheetProtectHint}
+                onClick={() => {
+                  setExcelExportBusy(true);
+                  setSuccessHint(null);
+                  void downloadPiExcel(`${excelBasePath}/excel?source=draft`, `PI-sourcing-draft.xlsx`)
+                    .catch((e) => {
+                      setError(e instanceof Error ? e.message : d.errExcelExport);
+                    })
+                    .finally(() => setExcelExportBusy(false));
+                }}
+              >
+                {excelExportBusy ? d.excelBusy : d.actionExcelExportDraft}
+              </AdminCompactBtn>
+              <AdminCompactBtn
+                type="button"
+                variant="outline"
+                disabled={excelExportBusy || excelImportBusy}
+                onClick={() => {
+                  if (!confirmExcelIfDirty()) return;
+                  excelFileRef.current?.click();
+                }}
+              >
+                {excelImportBusy ? d.excelBusy : d.actionExcelImportDraft}
+              </AdminCompactBtn>
+              {savedFlash && !dirty ? (
+                <span className={kpStyles.savedFlash} role="status">
+                  {t.savedDraft}
+                </span>
+              ) : null}
+              <input
+                ref={excelFileRef}
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setExcelImportBusy(true);
+                  setError(null);
+                  setSuccessHint(null);
+                  void importPiExcel(`${excelBasePath}/draft/import-excel`, file, { dryRun: true })
+                    .then((r) => {
+                      setExcelPendingFile(file);
+                      setExcelPreview(r);
+                    })
+                    .catch((err) => {
+                      setError(err instanceof Error ? err.message : d.errExcelImport);
+                    })
+                    .finally(() => setExcelImportBusy(false));
+                }}
+              />
             </div>
 
             <div className={styles.tableWrap}>
@@ -696,6 +878,61 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
         }}
         onConfirm={() => void executePublish()}
       />
+
+      <PiExcelImportDiffModal
+        open={Boolean(excelPreview)}
+        preview={excelPreview}
+        applying={excelApplying}
+        labels={d.excelDiffLabels}
+        onClose={() => {
+          if (excelApplying) return;
+          setExcelPreview(null);
+          setExcelPendingFile(null);
+        }}
+        onApply={async () => {
+          if (!excelPendingFile || excelApplying) return;
+          if (!confirmExcelIfDirty()) return;
+          setExcelApplying(true);
+          setError(null);
+          try {
+            const r = await importPiExcel(`${excelBasePath}/draft/import-excel`, excelPendingFile, {
+              expectedUpdatedAt: excelPreview?.draftUpdatedAt,
+            });
+            setExcelPreview(null);
+            setExcelPendingFile(null);
+            setSuccessHint(d.excelImportOk(r.updatedCount, r.unmatchedCount));
+            await loadAll();
+          } catch (err) {
+            setError(err instanceof Error ? err.message : d.errExcelImport);
+          } finally {
+            setExcelApplying(false);
+          }
+        }}
+      />
+
+      {!loading && !needsInit && dirty ? (
+        <div className={kpStyles.dirtyBar} role="status">
+          <p className={kpStyles.dirtyBarHint}>{d.kpDirtyHint}</p>
+          <div className={kpStyles.dirtyBarActions}>
+            <AdminCompactBtn
+              type="button"
+              variant="outline"
+              disabled={saving || publishing}
+              onClick={() => void discardDraftChanges()}
+            >
+              {d.kpDiscardDraft}
+            </AdminCompactBtn>
+            <AdminCompactBtn
+              type="button"
+              variant="accent"
+              disabled={saving || publishing}
+              onClick={() => void saveDraft({ flash: true })}
+            >
+              {saving ? d.kpSavingDraft : d.kpSaveDraft}
+            </AdminCompactBtn>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

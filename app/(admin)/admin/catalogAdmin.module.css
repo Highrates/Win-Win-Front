@@ -84,6 +84,37 @@
   text-decoration: none;
 }
 
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0 0 16px;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 0.875rem;
+  color: var(--color-ink-black, #051826);
+}
+
+.breadcrumbLink {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.72;
+}
+
+.breadcrumbLink:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.breadcrumbSep {
+  opacity: 0.4;
+  user-select: none;
+}
+
+.breadcrumbCurrent {
+  font-weight: 500;
+}
+
 .detailTitleRow {
   display: flex;
   flex-wrap: wrap;

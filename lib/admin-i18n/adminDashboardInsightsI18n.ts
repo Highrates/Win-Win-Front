@@ -84,7 +84,7 @@ function insightStrings(locale: AdminLocale) {
         `订单聊天有 ${n} 条未读客户消息。`,
       ),
     partnersNew: (n: number) =>
-      pick(locale, `${n} заявк(и) партнёров ждут решения.`, `${n} 个合作伙伴申请待处理。`),
+      pick(locale, `${n} новых партнёров за период.`, `${n} 位新合作伙伴（本周期）。`),
     signupsNew: (n: number, paren: string) =>
       pick(locale, `${n} новых пользователей ${paren}.`, `${paren}新增 ${n} 位用户。`),
     catalogHygiene: pick(

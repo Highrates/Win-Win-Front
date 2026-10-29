@@ -34,6 +34,7 @@ export function adminSourcingStrings(locale: AdminLocale) {
     thRequest: pick(locale, 'Заявка', '申请'),
     thCity: pick(locale, 'Город', '城市'),
     takeInWork: pick(locale, 'Взять в работу', '接手处理'),
+    takeInWorkFirst: pick(locale, 'Сначала возьмите заявку в работу', '请先接手处理申请'),
     backList: pick(locale, '← К заявкам на подбор', '← 返回选品申请'),
     errLoadDetail: pick(locale, 'Не удалось загрузить заявку', '无法加载申请详情'),
     statusLine: (label: string) => pick(locale, `Статус: ${label}`, `状态：${label}`),
@@ -125,14 +126,106 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     tabChat: pick(locale, 'Чат', '聊天'),
     tabNotes: pick(locale, 'Записки', '备注'),
     notesPlaceholder: pick(locale, 'Внутренние заметки по заказу…', '内部订单备注…'),
-    notesHint: pick(locale, 'Видно только в админке; сохранение на сервере — позже.', '仅管理端可见；稍后支持服务端保存。'),
+    notesHint: pick(locale, 'Видно только в админке.', '仅管理端可见。'),
+    notesSaving: pick(locale, 'Сохранение…', '保存中…'),
+    notesSaved: pick(locale, 'Сохранено', '已保存'),
+    notesSaveError: pick(locale, 'Не удалось сохранить записки', '备注保存失败'),
+    notesSave: pick(locale, 'Сохранить', '保存'),
     chatPlaceholder: pick(locale, 'Сообщение…', '消息…'),
     chatEmpty: pick(locale, 'Пока нет сообщений', '暂无消息'),
     chatLoadOlder: pick(locale, 'Показать раньше', '更早消息'),
     footerSumLabel: pick(locale, 'Сумма', '合计'),
-    actionPrepareCp: pick(locale, 'Сформировать КП', '生成报价单'),
+    actionPrepareCp: pick(locale, 'КП / Excel', '报价 / Excel'),
+    actionKpDisabledDraft: pick(
+      locale,
+      'КП доступно после отправки заказа на согласование',
+      '订单提交审批后可编辑报价 / Excel',
+    ),
+    actionExcelExport: pick(locale, 'Скачать Excel', '下载 Excel'),
+    actionExcelExportDraft: pick(locale, 'Скачать Excel (черновик)', '下载 Excel（草稿）'),
+    actionExcelImportDraft: pick(locale, 'Загрузить Excel', '上传 Excel'),
+    actionExcelVersion: (version: number) => pick(locale, `Excel v${version}`, `Excel v${version}`),
+    excelBusy: pick(locale, 'Excel…', 'Excel…'),
+    excelSheetProtectHint: pick(
+      locale,
+      'Excel защищён: правьте qty/цену (и габариты). Не снимайте защиту и не чистите скрытую колонку match (T) — иначе строки не сопоставятся.',
+      'Excel 已保护：可改数量/价格（及尺寸）。请勿取消保护或清理隐藏的 match 列（T），否则无法匹配行。',
+    ),
+    excelImportOk: (updated: number, unmatched?: number) =>
+      pick(
+        locale,
+        unmatched && unmatched > 0
+          ? `Обновлено позиций из Excel: ${updated}. Не сопоставлено: ${unmatched} (оставлены без изменений).`
+          : `Обновлено позиций из Excel: ${updated}`,
+        unmatched && unmatched > 0
+          ? `已从 Excel 更新 ${updated} 项；未匹配 ${unmatched} 项（未改动）。`
+          : `已从 Excel 更新 ${updated} 项`,
+      ),
+    excelDiffLabels: {
+      title: pick(locale, 'Превью импорта Excel', 'Excel 导入预览'),
+      apply: pick(locale, 'Применить', '应用'),
+      cancel: pick(locale, 'Отмена', '取消'),
+      downloadReport: pick(locale, 'Скачать отчёт', '下载报告'),
+      sheetProtectHint: pick(
+        locale,
+        'Не снимайте защиту листа и не чистите скрытую колонку match (T).',
+        '请勿取消工作表保护，也勿清理隐藏的 match 列（T）。',
+      ),
+      matched: (n: number) => pick(locale, `Сопоставлено: ${n}`, `已匹配：${n}`),
+      changed: (n: number) => pick(locale, `С изменениями полей: ${n}`, `字段有变更：${n}`),
+      unchanged: (n: number) =>
+        pick(locale, `Без изменений в черновике: ${n}`, `草稿未改：${n}`),
+      unmatched: (n: number) => pick(locale, `Не сопоставлено: ${n}`, `未匹配：${n}`),
+      emptyMatchKey: (rows: number[]) =>
+        pick(
+          locale,
+          `Пустой ключ в колонке T (строки Excel: ${rows.join(', ')}). Сопоставление может уйти на No. — проверьте файл.`,
+          `T 列匹配键为空（Excel 行：${rows.join(', ')}）。可能回退到 No.，请检查文件。`,
+        ),
+      noFieldChanges: pick(
+        locale,
+        'Сопоставленные строки без отличий qty/price/dims/weight/volume.',
+        '已匹配行在数量/价格/尺寸/重量/体积上无差异。',
+      ),
+      excelRow: (n: number) => pick(locale, `стр. Excel ${n}`, `Excel 第 ${n} 行`),
+      fieldLabel: (field: string) => {
+        const mapRu: Record<string, string> = {
+          quantity: 'Кол-во',
+          offerUnitPriceRub: 'Цена ₽ (после)',
+          unitPriceCny: 'Цена ¥ (Excel)',
+          costPriceCny: 'Себест. ¥',
+          weightKg: 'Вес кг',
+          grossWeightKg: 'Вес брутто кг',
+          volumeM3: 'Объём м³',
+          dimsMm: 'Габариты мм',
+          description: 'Описание',
+        };
+        const mapZh: Record<string, string> = {
+          quantity: '数量',
+          offerUnitPriceRub: '价格 ₽（换算后）',
+          unitPriceCny: '价格 ¥（Excel）',
+          costPriceCny: '成本 ¥',
+          weightKg: '重量 kg',
+          grossWeightKg: '毛重 kg',
+          volumeM3: '体积 m³',
+          dimsMm: '尺寸 mm',
+          description: '描述',
+        };
+        return pick(locale, mapRu[field] || field, mapZh[field] || field);
+      },
+      formatValue: (v: string | number | null) => (v == null || v === '' ? '—' : String(v)),
+    },
+    errExcelExport: pick(locale, 'Не удалось скачать Excel', '无法下载 Excel'),
+    errExcelImport: pick(locale, 'Не удалось загрузить Excel', '无法上传 Excel'),
     actionCancelOrder: pick(locale, 'Удалить заявку', '删除申请'),
-    actionsHintPrepareCp: pick(locale, '', ''),
+    actionsHintPrepareCp: pick(
+      locale,
+      'Черновик КП и Excel для поставщика — в разделе «КП / Excel».',
+      '报价草稿与供应商 Excel 在「报价 / Excel」。',
+    ),
+    kpDraftLineCount: (n: number) =>
+      pick(locale, `Черновик КП: ${n} поз.`, `报价草稿：${n} 项`),
+    flashDismiss: pick(locale, 'Закрыть', '关闭'),
     cancelModalReminder: pick(
       locale,
       'Перед удалением напишите в чате справа причину — клиент увидит её в личном кабинете.',
@@ -144,12 +237,37 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     errDeleteOrder: pick(locale, 'Не удалось удалить заказ', '删除失败'),
     statusPendingHint: pick(
       locale,
-      'Заказ на согласовании. После публикации КП можно перевести на следующий этап.',
-      '订单待审批。发布报价后可进入下一阶段。',
+      'Сейчас заказ «На согласовании». Следующий статус лучше выбирать при отправке КП (или вручную после него).',
+      '当前为「待审批」。建议在发送报价时选择下一状态，或发送后再手动更改。',
     ),
+    actionPdf: pick(locale, 'PDF', 'PDF'),
+    actionPdfBusy: pick(locale, 'PDF…', 'PDF…'),
+    errPdf: pick(locale, 'Не удалось сформировать PDF', '无法生成 PDF'),
+    pdfSavedWithImageWarnings: (failedCount: number) =>
+      pick(
+        locale,
+        `PDF сохранён, но ${failedCount} изображ. не загрузилось`,
+        `PDF 已保存，但有 ${failedCount} 张图片加载失败`,
+      ),
     kpPublish: pick(locale, 'Отправить', '发送'),
     kpPublishing: pick(locale, 'Отправка…', '发送中…'),
+    kpPublishSavesDraft: pick(locale, 'Отправить (сохранит черновик)', '发送（会先保存草稿）'),
     kpNotSentYet: pick(locale, 'Предложение ещё не отправлено', '报价尚未发送'),
+    kpDirtyHint: pick(locale, 'Есть несохранённые изменения', '有未保存的更改'),
+    kpSaveDraft: pick(locale, 'Сохранить черновик', '保存草稿'),
+    kpSavingDraft: pick(locale, 'Сохранение…', '保存中…'),
+    kpDiscardDraft: pick(locale, 'Сбросить', '放弃'),
+    kpDiscardConfirm: pick(
+      locale,
+      'Сбросить несохранённые правки и вернуть черновик с сервера?',
+      '放弃未保存修改并恢复服务器上的草稿？',
+    ),
+    kpExcelDirtyConfirm: pick(
+      locale,
+      'Есть несохранённые правки. Импорт Excel перезапишет их на сервере. Продолжить?',
+      '有未保存修改。导入 Excel 将在服务器上覆盖它们。继续？',
+    ),
+
     kpQtyPieces: pick(locale, 'Кол-во (шт)', '数量（件）'),
     kpColumnActions: pick(locale, 'Действия', '操作'),
     kpBtnReplace: pick(locale, 'Заменить товар', '更换商品'),
@@ -183,6 +301,8 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     kpCustomerReqCorrAccount: pick(locale, 'Корр. счёт', '代理账户'),
     kpCustomerNoResponse: pick(locale, 'Клиент ещё не ответил на КП.', '客户尚未回复报价。'),
     kpPublishedLoading: pick(locale, 'Загрузка КП…', '加载报价中…'),
+    kpPublishedExpand: pick(locale, 'Показать состав', '展开明细'),
+    kpPublishedCollapse: pick(locale, 'Скрыть состав', '收起明细'),
     kpPublishedNone: pick(
       locale,
       'Отправленных коммерческих предложений пока нет.',

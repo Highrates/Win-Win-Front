@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
+import {
+  AdminFlashBanner,
+  type AdminFlashBannerState,
+} from '@/components/admin/AdminFlashBanner/AdminFlashBanner';
 import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
@@ -11,7 +15,7 @@ import { adminOrderDetailStrings, adminSourcingStrings } from '@/lib/admin-i18n/
 import { adminSourcingKpStrings } from '@/lib/admin-i18n/adminSourcingKpI18n';
 import { formatAdminOrderDateTime } from '@/lib/dates/formatAdminOrderDateTime';
 import { downloadSourcingCommercialProposalPdf } from '@/lib/commercialProposal/downloadSourcingCommercialProposalPdf';
-import { kpPdfFailedImagesMessage } from '@/lib/commercialProposal/exportCommercialProposalPdf';
+import { downloadPiExcel } from '@/lib/commercialProposal/piExcelAdmin';
 import { sourcingKpLineTotalRub, sourcingKpOrderTotalRub } from '@/lib/sourcingCommercialProposal/kpLineTotals';
 import type { SourcingCommercialProposalApi, SourcingCommercialProposalSummaryApi } from '@/lib/sourcingCommercialProposal/types';
 import {
@@ -70,8 +74,10 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
 
   const [detail, setDetail] = useState<AdminSourcingRequestDetailApi | null>(null);
   const [kpSummary, setKpSummary] = useState<SourcingCommercialProposalSummaryApi | null>(null);
-  const [publishedKpFull, setPublishedKpFull] = useState<SourcingCommercialProposalApi[]>([]);
-  const [loadingPublishedKpFull, setLoadingPublishedKpFull] = useState(false);
+  const [expandedKpVersion, setExpandedKpVersion] = useState<number | null>(null);
+  const [publishedKpByVersion, setPublishedKpByVersion] = useState<
+    Record<number, SourcingCommercialProposalApi | 'loading' | 'error'>
+  >({});
   const [kpSummaryLoading, setKpSummaryLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -80,8 +86,10 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
-  const [pdfBusyProposalId, setPdfBusyProposalId] = useState<string | null>(null);
-  const [pdfBusyLabel, setPdfBusyLabel] = useState('PDF');
+  const [pdfBusyById, setPdfBusyById] = useState<Record<string, string>>({});
+  const [excelBusyById, setExcelBusyById] = useState<Record<string, boolean>>({});
+  const [flash, setFlash] = useState<AdminFlashBannerState>(null);
+  const clearFlash = useCallback(() => setFlash(null), []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,29 +139,41 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
     const st = detail?.status;
     const showBlock = st === 'IN_PROGRESS' || st === 'COMPLETED' || st === 'CANCELLED';
     if (!showBlock || !kpSummary?.published.length) {
-      setPublishedKpFull([]);
-      setLoadingPublishedKpFull(false);
+      setExpandedKpVersion(null);
+      setPublishedKpByVersion({});
       return;
     }
-    let cancelled = false;
-    setLoadingPublishedKpFull(true);
-    setPublishedKpFull([]);
-    void (async () => {
+    setExpandedKpVersion(kpSummary.published[0]!.versionNumber);
+    setPublishedKpByVersion({});
+  }, [detail?.status, kpSummary?.published]);
+
+  const loadPublishedVersion = useCallback(
+    async (version: number) => {
+      let skip = false;
+      setPublishedKpByVersion((prev) => {
+        if (prev[version] && prev[version] !== 'error') {
+          skip = true;
+          return prev;
+        }
+        return { ...prev, [version]: 'loading' };
+      });
+      if (skip) return;
       try {
-        const rows = await Promise.all(
-          kpSummary.published.map((p) => fetchSourcingKpPublished(id, p.versionNumber)),
-        );
-        if (!cancelled) setPublishedKpFull(rows);
+        const row = await fetchSourcingKpPublished(id, version);
+        setPublishedKpByVersion((prev) => ({ ...prev, [version]: row }));
       } catch {
-        if (!cancelled) setPublishedKpFull([]);
-      } finally {
-        if (!cancelled) setLoadingPublishedKpFull(false);
+        setPublishedKpByVersion((prev) => ({ ...prev, [version]: 'error' }));
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, detail?.status, kpSummary?.published]);
+    },
+    [id],
+  );
+
+  useEffect(() => {
+    const st = detail?.status;
+    const showBlock = st === 'IN_PROGRESS' || st === 'COMPLETED' || st === 'CANCELLED';
+    if (!showBlock || expandedKpVersion == null) return;
+    void loadPublishedVersion(expandedKpVersion);
+  }, [detail?.status, expandedKpVersion, loadPublishedVersion]);
 
   async function updateStatus(status: SourcingRequestStatus) {
     setSaving(true);
@@ -207,6 +227,7 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
   return (
     <>
       {mutationError ? <p className={styles.error}>{mutationError}</p> : null}
+      <AdminFlashBanner flash={flash} onClear={clearFlash} dismissLabel={d.flashDismiss} />
 
       <div className={`${pn.productFormGrid} ${od.orderDetailGrid}`}>
         <div className={pn.productFormMain}>
@@ -332,119 +353,227 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
                 <p className={styles.muted}>{kp.kpPublishedLoading}</p>
               ) : kpSummary && kpSummary.published.length === 0 ? (
                 <p className={styles.muted}>{kp.kpPublishedNone}</p>
-              ) : loadingPublishedKpFull ? (
-                <p className={styles.muted}>{kp.kpPublishedLoading}</p>
-              ) : kpSummary && kpSummary.published.length > 0 && publishedKpFull.length === 0 ? (
-                <p className={styles.error}>{kp.kpPublishedDetailError}</p>
               ) : (
                 <div className={od.kpPublishedStack}>
-                  {publishedKpFull.map((proposal) => {
-                    const kpTotalRub = sourcingKpOrderTotalRub(proposal.lines);
-                    const dateStr = proposal.publishedAt
-                      ? formatAdminOrderDateTime(proposal.publishedAt, locale)
+                  {(kpSummary?.published ?? []).map((meta) => {
+                    const open = expandedKpVersion === meta.versionNumber;
+                    const cached = publishedKpByVersion[meta.versionNumber];
+                    const proposal = typeof cached === 'object' ? cached : null;
+                    const dateStr = meta.publishedAt
+                      ? formatAdminOrderDateTime(meta.publishedAt, locale)
                       : '—';
+                    const pdfBusyLabel = pdfBusyById[meta.id];
                     return (
-                      <div key={proposal.id}>
+                      <div key={meta.id} className={od.kpVersionAccordion}>
                         <div className={od.kpVersionCaptionRow}>
-                          <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
-                            {kp.kpPublishedVersionCaption(
-                              proposal.versionNumber,
-                              dateStr,
-                              kp.itemsCount(proposal.lines.length),
-                            )}
-                          </p>
-                          {proposal.lines.length > 0 ? (
+                          <button
+                            type="button"
+                            className={od.kpVersionToggle}
+                            aria-expanded={open}
+                            onClick={() =>
+                              setExpandedKpVersion((cur) =>
+                                cur === meta.versionNumber ? null : meta.versionNumber,
+                              )
+                            }
+                          >
+                            <img
+                              src="/icons/arrow.svg"
+                              alt=""
+                              width={18}
+                              height={18}
+                              className={`${od.kpVersionArrow} ${open ? od.kpVersionArrowOpen : ''}`}
+                              aria-hidden
+                            />
+                            <p className={`${styles.cardNote} ${od.kpVersionCaption}`}>
+                              {kp.kpPublishedVersionCaption(
+                                meta.versionNumber,
+                                dateStr,
+                                kp.itemsCount(meta.lineCount),
+                              )}
+                            </p>
+                          </button>
+                          <div className={od.kpVersionActions}>
                             <AdminCompactBtn
                               type="button"
                               variant="outline"
-                              disabled={pdfBusyProposalId != null}
+                              disabled={Boolean(pdfBusyLabel) || meta.lineCount === 0}
                               onClick={() => {
-                                if (pdfBusyProposalId) return;
-                                setPdfBusyProposalId(proposal.id);
-                                setPdfBusyLabel('PDF…');
-                                void downloadSourcingCommercialProposalPdf({
-                                  requestId: id,
-                                  proposal,
-                                  onProgress: (p) => setPdfBusyLabel(p.label),
-                                })
-                                  .then((r) => {
-                                    if (r.failedImageCount > 0) {
-                                      window.alert(
-                                        `PDF сохранён, но ${kpPdfFailedImagesMessage(r.failedImageCount).toLowerCase()}`,
-                                      );
+                                if (pdfBusyById[meta.id]) return;
+                                const run = async () => {
+                                  let full = proposal;
+                                  if (!full) {
+                                    setPublishedKpByVersion((prev) => ({
+                                      ...prev,
+                                      [meta.versionNumber]: 'loading',
+                                    }));
+                                    try {
+                                      full = await fetchSourcingKpPublished(id, meta.versionNumber);
+                                      setPublishedKpByVersion((prev) => ({
+                                        ...prev,
+                                        [meta.versionNumber]: full!,
+                                      }));
+                                    } catch {
+                                      setPublishedKpByVersion((prev) => ({
+                                        ...prev,
+                                        [meta.versionNumber]: 'error',
+                                      }));
+                                      setFlash({ kind: 'error', text: kp.kpPublishedDetailError });
+                                      return;
                                     }
-                                  })
+                                  }
+                                  if (!full.lines.length) return;
+                                  setPdfBusyById((prev) => ({ ...prev, [meta.id]: d.actionPdfBusy }));
+                                  try {
+                                    const r = await downloadSourcingCommercialProposalPdf({
+                                      requestId: id,
+                                      proposal: full,
+                                      onProgress: (p) =>
+                                        setPdfBusyById((prev) => ({
+                                          ...prev,
+                                          [meta.id]: p.label || d.actionPdfBusy,
+                                        })),
+                                    });
+                                    if (r.failedImageCount > 0) {
+                                      setFlash({
+                                        kind: 'ok',
+                                        text: d.pdfSavedWithImageWarnings(r.failedImageCount),
+                                      });
+                                    }
+                                  } catch (e) {
+                                    setFlash({
+                                      kind: 'error',
+                                      text: e instanceof Error ? e.message : d.errPdf,
+                                    });
+                                  } finally {
+                                    setPdfBusyById((prev) => {
+                                      const next = { ...prev };
+                                      delete next[meta.id];
+                                      return next;
+                                    });
+                                  }
+                                };
+                                void run();
+                              }}
+                            >
+                              {pdfBusyLabel ?? d.actionPdf}
+                            </AdminCompactBtn>
+                            <AdminCompactBtn
+                              type="button"
+                              variant="outline"
+                              disabled={Boolean(excelBusyById[meta.id]) || meta.lineCount === 0}
+                              title={d.excelSheetProtectHint}
+                              onClick={() => {
+                                if (excelBusyById[meta.id]) return;
+                                setExcelBusyById((prev) => ({ ...prev, [meta.id]: true }));
+                                void downloadPiExcel(
+                                  `sourcing-requests/admin/${encodeURIComponent(id)}/commercial-proposals/excel?source=published&version=${meta.versionNumber}`,
+                                  `PI-sourcing-v${meta.versionNumber}.xlsx`,
+                                )
                                   .catch((e) => {
-                                    window.alert(
-                                      e instanceof Error ? e.message : 'Не удалось сформировать PDF',
-                                    );
+                                    setFlash({
+                                      kind: 'error',
+                                      text: e instanceof Error ? e.message : d.errExcelExport,
+                                    });
                                   })
                                   .finally(() => {
-                                    setPdfBusyProposalId(null);
-                                    setPdfBusyLabel('PDF');
+                                    setExcelBusyById((prev) => {
+                                      const next = { ...prev };
+                                      delete next[meta.id];
+                                      return next;
+                                    });
                                   });
                               }}
                             >
-                              {pdfBusyProposalId === proposal.id ? pdfBusyLabel : 'PDF'}
+                              {excelBusyById[meta.id]
+                                ? d.excelBusy
+                                : d.actionExcelVersion(meta.versionNumber)}
                             </AdminCompactBtn>
-                          ) : null}
-                        </div>
-                        {proposal.lines.length === 0 ? (
-                          <p className={styles.muted}>{kp.noItems}</p>
-                        ) : (
-                          <div className={styles.tableWrap}>
-                            <table className={styles.table}>
-                              <thead>
-                                <tr>
-                                  <th>{kp.thProduct}</th>
-                                  <th>{kp.thQtyUnit}</th>
-                                  <th>{kp.thPriceRub}</th>
-                                  <th>{kp.thDelivery}</th>
-                                  <th>{kp.thLineTotal}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {proposal.lines.map((ln) => (
-                                  <tr key={ln.id}>
-                                    <td>
-                                      <div className={styles.cardTitle}>{ln.productName}</div>
-                                      {ln.description?.trim() ? (
-                                        <p className={styles.cardNote} style={{ whiteSpace: 'pre-wrap', margin: '4px 0 0' }}>
-                                          {ln.description}
-                                        </p>
-                                      ) : null}
-                                      {(ln.imageUrls ?? []).length > 0 ? (
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                                          {(ln.imageUrls ?? []).map((url, idx) => (
-                                            <img
-                                              key={`${url}-${idx}`}
-                                              src={url}
-                                              alt=""
-                                              loading="lazy"
-                                              style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6 }}
-                                            />
-                                          ))}
-                                        </div>
-                                      ) : null}
-                                    </td>
-                                    <td>{formatQtyUnit(ln.quantity, ln.unit)}</td>
-                                    <td>{formatMoneyInt(ln.offerUnitPrice, numberLocale)}</td>
-                                    <td>{ln.deliveryEta?.trim() || '—'}</td>
-                                    <td>{formatMoneyInt(sourcingKpLineTotalRub(ln), numberLocale)}</td>
-                                  </tr>
-                                ))}
-                                <tr>
-                                  <td colSpan={4} style={{ textAlign: 'right', fontWeight: 600 }}>
-                                    {kp.footerSumLabel}
-                                  </td>
-                                  <td style={{ fontWeight: 600 }}>
-                                    {formatMoneyInt(kpTotalRub, numberLocale)}
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
                           </div>
-                        )}
+                        </div>
+                        {open ? (
+                          <div className={od.kpVersionPanel}>
+                            {cached === 'loading' || cached == null ? (
+                              <p className={styles.muted}>{kp.kpPublishedLoading}</p>
+                            ) : cached === 'error' ? (
+                              <p className={styles.error}>{kp.kpPublishedDetailError}</p>
+                            ) : proposal!.lines.length === 0 ? (
+                              <p className={styles.muted}>{kp.noItems}</p>
+                            ) : (
+                              <div className={styles.tableWrap}>
+                                <table className={styles.table}>
+                                  <thead>
+                                    <tr>
+                                      <th>{kp.thProduct}</th>
+                                      <th>{kp.thQtyUnit}</th>
+                                      <th>{kp.thPriceRub}</th>
+                                      <th>{kp.thDelivery}</th>
+                                      <th>{kp.thLineTotal}</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {proposal!.lines.map((ln) => (
+                                      <tr key={ln.id}>
+                                        <td>
+                                          <div className={styles.cardTitle}>{ln.productName}</div>
+                                          {ln.description?.trim() ? (
+                                            <p
+                                              className={styles.cardNote}
+                                              style={{ whiteSpace: 'pre-wrap', margin: '4px 0 0' }}
+                                            >
+                                              {ln.description}
+                                            </p>
+                                          ) : null}
+                                          {(ln.imageUrls ?? []).length > 0 ? (
+                                            <div
+                                              style={{
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                gap: 8,
+                                                marginTop: 8,
+                                              }}
+                                            >
+                                              {(ln.imageUrls ?? []).map((url, idx) => (
+                                                <img
+                                                  key={`${url}-${idx}`}
+                                                  src={url}
+                                                  alt=""
+                                                  loading="lazy"
+                                                  style={{
+                                                    width: 56,
+                                                    height: 56,
+                                                    objectFit: 'cover',
+                                                    borderRadius: 6,
+                                                  }}
+                                                />
+                                              ))}
+                                            </div>
+                                          ) : null}
+                                        </td>
+                                        <td>{formatQtyUnit(ln.quantity, ln.unit)}</td>
+                                        <td>{formatMoneyInt(ln.offerUnitPrice, numberLocale)}</td>
+                                        <td>{ln.deliveryEta?.trim() || '—'}</td>
+                                        <td>
+                                          {formatMoneyInt(sourcingKpLineTotalRub(ln), numberLocale)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                    <tr>
+                                      <td colSpan={4} style={{ textAlign: 'right', fontWeight: 600 }}>
+                                        {kp.footerSumLabel}
+                                      </td>
+                                      <td style={{ fontWeight: 600 }}>
+                                        {formatMoneyInt(
+                                          sourcingKpOrderTotalRub(proposal!.lines),
+                                          numberLocale,
+                                        )}
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })}
@@ -454,9 +583,12 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
           ) : null}
 
           <div className={styles.section}>
+            {d.actionsHintPrepareCp.trim() ? (
+              <p className={`${styles.cardNote} ${od.actionsHint}`}>{d.actionsHintPrepareCp}</p>
+            ) : null}
             {kpSummary?.draft ? (
               <p className={`${styles.cardNote} ${od.draftHint}`}>
-                {kp.draftLineCount(kpSummary.draft.lineCount)}
+                {d.kpDraftLineCount(kpSummary.draft.lineCount)}
               </p>
             ) : null}
             <div className={styles.formActions}>
@@ -468,7 +600,12 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
                   {d.actionPrepareCp}
                 </AdminCompactBtnLink>
               ) : isPendingReview ? (
-                <AdminCompactBtn type="button" variant="accent" disabled title="Сначала возьмите заявку в работу">
+                <AdminCompactBtn
+                  type="button"
+                  variant="accent"
+                  disabled
+                  title={s.takeInWorkFirst}
+                >
                   {d.actionPrepareCp}
                 </AdminCompactBtn>
               ) : null}
@@ -484,7 +621,7 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
         <aside
           id="order-chat"
           className={`${pn.productFormPlacement} ${od.orderDetailPlacement}`}
-          aria-label="Чат по заявке"
+          aria-label={s.chatAsideAria}
         >
           <AdminSourcingSideChat sourcingRequestId={detail.id} />
         </aside>

@@ -1,0 +1,47 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-width: var(--account-hairline-width, 0.7px);
+  border-style: solid;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: 0.875rem;
+}
+
+.ok {
+  background: var(--color-bright-snow, #f5f7f8);
+  border-color: var(--account-hairline-color, rgba(0, 0, 0, 0.12));
+  color: var(--color-ink-black, #051826);
+}
+
+.error {
+  background: #fdf2f1;
+  border-color: rgba(197, 48, 41, 0.35);
+  color: var(--color-red, #c53029);
+}
+
+.text {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.dismiss {
+  flex-shrink: 0;
+  margin: -2px -4px 0 0;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.65;
+}
+
+.dismiss:hover {
+  opacity: 1;
+}
