@@ -900,7 +900,7 @@ export function SourcingKpEditorClient({ sourcingRequestId }: { sourcingRequestI
             });
             setExcelPreview(null);
             setExcelPendingFile(null);
-            setSuccessHint(d.excelImportOk(r.updatedCount, r.unmatchedCount));
+            setSuccessHint(d.excelImportOk(r.updatedCount, r.unmatchedCount, r.addedCount));
             await loadAll();
           } catch (err) {
             setError(err instanceof Error ? err.message : d.errExcelImport);

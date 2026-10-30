@@ -62,6 +62,9 @@ export type PiExcelImportResult = {
   /** Parsed from Excel header F6 (logged server-side; informational) */
   invoiceNoHint?: string | null;
   updatedCount: number;
+  /** New KP lines created from unmatched Excel rows (sourcing). */
+  addedCount?: number;
+  added?: string[];
   changedLineCount?: number;
   unchangedCount: number;
   unmatchedCount?: number;
@@ -122,16 +125,25 @@ export async function importPiExcel(
 
 /** Client-side text report for soft unmatched + empty match-key rows. */
 export function downloadPiExcelImportReport(
-  result: Pick<PiExcelImportResult, 'unmatched' | 'emptyMatchKeyRows' | 'updatedCount' | 'unchangedCount'>,
+  result: Pick<
+    PiExcelImportResult,
+    'unmatched' | 'emptyMatchKeyRows' | 'updatedCount' | 'unchangedCount' | 'addedCount' | 'added'
+  >,
   filename = 'pi-excel-import-report.txt',
 ): void {
   const lines: string[] = [
     `Updated (matched): ${result.updatedCount}`,
+    `Added (new lines): ${result.addedCount ?? 0}`,
     `Unchanged draft lines: ${result.unchangedCount}`,
     `Unmatched Excel rows: ${result.unmatched?.length ?? 0}`,
     `Empty match-key (col T) rows: ${result.emptyMatchKeyRows?.length ?? 0}`,
     '',
   ];
+  if (result.added?.length) {
+    lines.push('Added:');
+    for (const a of result.added) lines.push(`  - ${a}`);
+    lines.push('');
+  }
   if (result.emptyMatchKeyRows?.length) {
     lines.push('Empty col T (Excel rows):');
     for (const r of result.emptyMatchKeyRows) lines.push(`  - row ${r}`);

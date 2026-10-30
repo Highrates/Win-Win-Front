@@ -148,19 +148,22 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     excelBusy: pick(locale, 'Excel…', 'Excel…'),
     excelSheetProtectHint: pick(
       locale,
-      'Excel защищён: правьте qty/цену (и габариты). Не снимайте защиту и не чистите скрытую колонку match (T) — иначе строки не сопоставятся.',
-      'Excel 已保护：可改数量/价格（及尺寸）。请勿取消保护或清理隐藏的 match 列（T），否则无法匹配行。',
+      'Можно править любые ячейки. Не чистите скрытую колонку match (T) и заметки к ней — иначе строки не сопоставятся при загрузке.',
+      '可编辑任意单元格。请勿清理隐藏的 match 列（T）及其批注，否则上传时无法匹配行。',
     ),
-    excelImportOk: (updated: number, unmatched?: number) =>
-      pick(
-        locale,
-        unmatched && unmatched > 0
-          ? `Обновлено позиций из Excel: ${updated}. Не сопоставлено: ${unmatched} (оставлены без изменений).`
-          : `Обновлено позиций из Excel: ${updated}`,
-        unmatched && unmatched > 0
-          ? `已从 Excel 更新 ${updated} 项；未匹配 ${unmatched} 项（未改动）。`
-          : `已从 Excel 更新 ${updated} 项`,
-      ),
+    excelImportOk: (updated: number, unmatched?: number, added?: number) => {
+      const partsRu = [`Обновлено позиций из Excel: ${updated}`];
+      const partsZh = [`已从 Excel 更新 ${updated} 项`];
+      if (added && added > 0) {
+        partsRu.push(`добавлено новых: ${added}`);
+        partsZh.push(`新增 ${added} 项`);
+      }
+      if (unmatched && unmatched > 0) {
+        partsRu.push(`не сопоставлено: ${unmatched}`);
+        partsZh.push(`未匹配 ${unmatched} 项`);
+      }
+      return pick(locale, partsRu.join('. ') + '.', partsZh.join('；') + '。');
+    },
     excelDiffLabels: {
       title: pick(locale, 'Превью импорта Excel', 'Excel 导入预览'),
       apply: pick(locale, 'Применить', '应用'),
@@ -168,10 +171,12 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
       downloadReport: pick(locale, 'Скачать отчёт', '下载报告'),
       sheetProtectHint: pick(
         locale,
-        'Не снимайте защиту листа и не чистите скрытую колонку match (T).',
-        '请勿取消工作表保护，也勿清理隐藏的 match 列（T）。',
+        'Не чистите скрытую колонку match (T) и заметки к ней.',
+        '请勿清理隐藏的 match 列（T）及其批注。',
       ),
       matched: (n: number) => pick(locale, `Сопоставлено: ${n}`, `已匹配：${n}`),
+      added: (n: number) =>
+        pick(locale, `Будут добавлены в КП: ${n}`, `将新增到报价：${n}`),
       changed: (n: number) => pick(locale, `С изменениями полей: ${n}`, `字段有变更：${n}`),
       unchanged: (n: number) =>
         pick(locale, `Без изменений в черновике: ${n}`, `草稿未改：${n}`),
@@ -190,6 +195,7 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
       excelRow: (n: number) => pick(locale, `стр. Excel ${n}`, `Excel 第 ${n} 行`),
       fieldLabel: (field: string) => {
         const mapRu: Record<string, string> = {
+          productName: 'Название',
           quantity: 'Кол-во',
           offerUnitPriceRub: 'Цена ₽ (после)',
           unitPriceCny: 'Цена ¥ (Excel)',
@@ -201,6 +207,7 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
           description: 'Описание',
         };
         const mapZh: Record<string, string> = {
+          productName: '名称',
           quantity: '数量',
           offerUnitPriceRub: '价格 ₽（换算后）',
           unitPriceCny: '价格 ¥（Excel）',

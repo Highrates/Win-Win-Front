@@ -46,8 +46,8 @@ export function adminOrderKpStrings(locale: AdminLocale) {
     excelBusy: pick(locale, 'Excel…', 'Excel…'),
     excelSheetProtectHint: pick(
       locale,
-      'Excel защищён: правьте qty/цену (и габариты). Не снимайте защиту и не чистите скрытую колонку match (T) — иначе строки не сопоставятся.',
-      'Excel 已保护：可改数量/价格（及尺寸）。请勿取消保护或清理隐藏的 match 列（T），否则无法匹配行。',
+      'Можно править любые ячейки. Не чистите скрытую колонку match (T) и заметки к ней — иначе строки не сопоставятся при загрузке.',
+      '可编辑任意单元格。请勿清理隐藏的 match 列（T）及其批注，否则上传时无法匹配行。',
     ),
     excelDirtyConfirm: pick(
       locale,

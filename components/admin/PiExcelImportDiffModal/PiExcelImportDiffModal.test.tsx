@@ -21,6 +21,7 @@ const labels: PiExcelImportDiffLabels = {
   cancel: 'Отмена',
   downloadReport: 'Скачать отчёт',
   matched: (n) => `Сопоставлено: ${n}`,
+  added: (n) => `Будут добавлены: ${n}`,
   changed: (n) => `С изменениями полей: ${n}`,
   unchanged: (n) => `Без изменений: ${n}`,
   unmatched: (n) => `Не сопоставлено: ${n}`,

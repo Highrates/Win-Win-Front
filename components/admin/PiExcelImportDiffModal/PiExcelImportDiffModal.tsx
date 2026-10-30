@@ -15,6 +15,7 @@ import styles from './PiExcelImportDiffModal.module.css';
 
 /** Prefer Excel CNY before converted RUB in the field list. */
 const FIELD_ORDER: Record<string, number> = {
+  productName: -1,
   quantity: 0,
   unitPriceCny: 1,
   costPriceCny: 1,
@@ -38,6 +39,7 @@ export type PiExcelImportDiffLabels = {
   cancel: string;
   downloadReport: string;
   matched: (n: number) => string;
+  added: (n: number) => string;
   changed: (n: number) => string;
   unchanged: (n: number) => string;
   unmatched: (n: number) => string;
@@ -94,8 +96,10 @@ export function PiExcelImportDiffModal({
 
   const changes = preview.changes ?? [];
   const unmatched = preview.unmatched ?? [];
+  const added = preview.added ?? [];
+  const addedCount = preview.addedCount ?? added.length;
   const emptyRows = preview.emptyMatchKeyRows ?? [];
-  const hasReport = unmatched.length > 0 || emptyRows.length > 0;
+  const hasReport = unmatched.length > 0 || emptyRows.length > 0 || addedCount > 0;
 
   return createPortal(
     <div
@@ -125,6 +129,11 @@ export function PiExcelImportDiffModal({
             <span className={styles.summaryItem}>
               <strong>{labels.matched(preview.updatedCount)}</strong>
             </span>
+            {addedCount > 0 ? (
+              <span className={styles.summaryItem}>
+                <strong>{labels.added(addedCount)}</strong>
+              </span>
+            ) : null}
             <span className={styles.summaryItem}>
               {labels.changed(preview.changedLineCount ?? changes.length)}
             </span>
@@ -142,6 +151,19 @@ export function PiExcelImportDiffModal({
 
           {emptyRows.length > 0 ? (
             <p className={styles.warn}>{labels.emptyMatchKey(emptyRows)}</p>
+          ) : null}
+
+          {addedCount > 0 ? (
+            <>
+              <p className={styles.sectionTitle}>{labels.added(addedCount)}</p>
+              {added.length > 0 ? (
+                <ul className={styles.unmatched}>
+                  {added.map((a) => (
+                    <li key={a}>{a}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
           ) : null}
 
           {unmatched.length > 0 ? (

@@ -915,7 +915,7 @@ export function OrderKpEditorClient({ orderId }: { orderId: string }) {
             });
             setExcelPreview(null);
             setExcelPendingFile(null);
-            setSuccessHint(d.excelImportOk(r.updatedCount, r.unmatchedCount));
+            setSuccessHint(d.excelImportOk(r.updatedCount, r.unmatchedCount, r.addedCount));
             await loadAll();
           } catch (err) {
             setError(err instanceof Error ? err.message : t.errExcelImport);
