@@ -44,8 +44,11 @@ export function dispatchAccountWorkFeedRefreshEvent(): void {
 
 export const ORDER_TABS = ['Подготовка заказа', 'В работе', 'Завершенные'] as const;
 
+/** Индекс иконки архива справа от текстовых вкладок (не в ORDER_TABS). */
+export const ORDER_ARCHIVE_TAB_INDEX = ORDER_TABS.length;
+
 /** Значения query `?tab=` на `/account/orders` — чтобы вкладка сохранялась при обновлении */
-export const ORDER_TAB_QUERY_VALUES = ['preparation', 'work', 'completed'] as const;
+export const ORDER_TAB_QUERY_VALUES = ['preparation', 'work', 'completed', 'archived'] as const;
 
 export function orderTabIndexFromQuery(tab: string | null | undefined): number {
   if (tab == null || tab === '') return 0;

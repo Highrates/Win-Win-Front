@@ -1,0 +1,14 @@
+.lead {
+  margin: 0 0 16px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footerLink {
+  margin-top: 16px;
+}

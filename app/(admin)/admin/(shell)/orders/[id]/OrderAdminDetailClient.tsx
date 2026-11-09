@@ -23,6 +23,7 @@ import {
   AdminFlashBanner,
   type AdminFlashBannerState,
 } from '@/components/admin/AdminFlashBanner/AdminFlashBanner';
+import { AdminImageLightbox } from '@/components/admin/AdminImageLightbox/AdminImageLightbox';
 import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
 import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import clientsStyles from '../../clients/clients.module.css';
@@ -194,6 +195,7 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
   const [pdfBusyById, setPdfBusyById] = useState<Record<string, string>>({});
   const [excelBusyById, setExcelBusyById] = useState<Record<string, boolean>>({});
   const [flash, setFlash] = useState<AdminFlashBannerState>(null);
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
   const clearFlash = useCallback(() => setFlash(null), []);
 
   const load = useCallback(async () => {
@@ -460,13 +462,20 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                         <tr key={row.id}>
                           <td>
                             {img ? (
-                              <img
-                                className={styles.productListThumb}
-                                src={img}
-                                alt=""
-                                width={46}
-                                height={46}
-                              />
+                              <button
+                                type="button"
+                                className={od.thumbBtn}
+                                onClick={() => setLightbox({ src: img, alt: itemTitle(row) })}
+                                aria-label={`Открыть фото: ${itemTitle(row)}`}
+                              >
+                                <img
+                                  className={styles.productListThumb}
+                                  src={img}
+                                  alt=""
+                                  width={46}
+                                  height={46}
+                                />
+                              </button>
                             ) : (
                               <div className={styles.productListThumbPh} aria-hidden />
                             )}
@@ -712,13 +721,25 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
                                             <tr key={ln.id}>
                                               <td>
                                                 {img ? (
-                                                  <img
-                                                    className={styles.productListThumb}
-                                                    src={img}
-                                                    alt=""
-                                                    width={46}
-                                                    height={46}
-                                                  />
+                                                  <button
+                                                    type="button"
+                                                    className={od.thumbBtn}
+                                                    onClick={() =>
+                                                      setLightbox({
+                                                        src: img,
+                                                        alt: kpLineDisplayTitle(snap),
+                                                      })
+                                                    }
+                                                    aria-label={`Открыть фото: ${kpLineDisplayTitle(snap)}`}
+                                                  >
+                                                    <img
+                                                      className={styles.productListThumb}
+                                                      src={img}
+                                                      alt=""
+                                                      width={46}
+                                                      height={46}
+                                                    />
+                                                  </button>
                                                 ) : (
                                                   <div
                                                     className={styles.productListThumbPh}
@@ -975,6 +996,13 @@ export function OrderAdminDetailClient({ orderId }: { orderId: string }) {
           {d.cancelModalReminder}
         </p>
       </AdminOrdersConfirmModal>
+
+      <AdminImageLightbox
+        open={Boolean(lightbox)}
+        src={lightbox?.src ?? null}
+        alt={lightbox?.alt}
+        onClose={() => setLightbox(null)}
+      />
     </>
   );
 }

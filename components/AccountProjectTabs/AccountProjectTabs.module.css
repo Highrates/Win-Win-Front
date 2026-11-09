@@ -13,6 +13,54 @@
   scrollbar-width: none;
 }
 
+.tabsWrapperWithEnd {
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  overflow: visible;
+}
+
+.tabsEndSlot {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.archiveTabBtn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 100px;
+  background: transparent;
+  color: var(--color-black);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.archiveTabBtn:hover {
+  background: var(--color-bright-snow);
+}
+
+.archiveTabBtnActive {
+  background: var(--color-bright-snow);
+}
+
+.archiveTabBtn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.archiveTabIcon {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
 .tabsWrapper::-webkit-scrollbar {
   display: none;
 }

@@ -48,7 +48,7 @@ export type PiExcelImportDiffLabels = {
   excelRow: (n: number) => string;
   fieldLabel: (field: string) => string;
   formatValue: (v: string | number | null) => string;
-  /** Optional sheet-protect / col T reminder */
+  /** Optional col N match-key reminder */
   sheetProtectHint?: string;
 };
 

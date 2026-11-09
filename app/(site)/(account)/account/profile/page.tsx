@@ -57,6 +57,10 @@ function ProfilePageContent() {
   const designerBonusPercent = profile?.designerOwnCatalogBonusPercent ?? 0;
   const {
     items: activeInvites,
+    total: activeInvitesTotal,
+    truncated: activeInvitesTruncated,
+    listLimit: activeInvitesListLimit,
+    statusCounts: activeInvitesStatusCounts,
     loading: activeInvitesLoading,
     error: activeInvitesError,
     reload: reloadActiveInvites,
@@ -94,7 +98,14 @@ function ProfilePageContent() {
     setPartnerAppModalOpen(true);
   }, []);
 
-  const { referralWarningBanner, searchParams, pathname, router } = useProfileDeepLinks({
+  const {
+    referralWarningBanner,
+    partnerSuggest,
+    dismissPartnerSuggest,
+    searchParams,
+    pathname,
+    router,
+  } = useProfileDeepLinks({
     loading,
     profile,
     availableTabKeys,
@@ -139,6 +150,26 @@ function ProfilePageContent() {
           {referralWarningBanner}
         </p>
       ) : null}
+      {partnerSuggest ? (
+        <div className={styles.partnerReferralExemptNote} role="status">
+          <p style={{ margin: '0 0 8px' }}>Хотите стать дизайнером-партнёром Wupapa?</p>
+          <p style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <button
+              type="button"
+              className={styles.partnerSuggestCta}
+              onClick={() => {
+                openPartnerApply(partnerSuggest.prefillRef);
+                dismissPartnerSuggest();
+              }}
+            >
+              Подать заявку
+            </button>
+            <button type="button" className={styles.partnerSuggestDismiss} onClick={dismissPartnerSuggest}>
+              Не сейчас
+            </button>
+          </p>
+        </div>
+      ) : null}
 
       <AccountProjectTabs
         projects={availableTabLabels}
@@ -155,6 +186,10 @@ function ProfilePageContent() {
           activeInvites={activeInvites}
           activeInvitesLoading={activeInvitesLoading}
           activeInvitesError={activeInvitesError}
+          activeInvitesTotal={activeInvitesTotal}
+          activeInvitesTruncated={activeInvitesTruncated}
+          activeInvitesListLimit={activeInvitesListLimit}
+          activeInvitesStatusCounts={activeInvitesStatusCounts}
           onRetryActiveInvites={() => void reloadActiveInvites()}
           onOpenProfileEdit={openProfileEdit}
           onOpenAboutEdit={() => setAboutModalOpen(true)}
@@ -209,10 +244,7 @@ function ProfilePageContent() {
         open={inviteDesignerModalOpen}
         onClose={() => setInviteDesignerModalOpen(false)}
         referralCode={myWinWinReferral}
-        onSent={() => {
-          dispatchDesignerInvitesChanged();
-          void reloadActiveInvites();
-        }}
+        onSent={dispatchDesignerInvitesChanged}
       />
     </section>
   );

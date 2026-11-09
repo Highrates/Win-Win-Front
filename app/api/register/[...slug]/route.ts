@@ -17,11 +17,23 @@ function isRegisterComplete(slug: string[]): boolean {
   return s.length === 1 && s[0] === 'complete';
 }
 
-async function readNestErrorMessage(buf: ArrayBuffer): Promise<string | null> {
+async function readNestError(
+  buf: ArrayBuffer,
+): Promise<{ message: string; code?: string } | null> {
   try {
-    const errBody = JSON.parse(new TextDecoder().decode(buf)) as { message?: string | string[] };
-    if (Array.isArray(errBody.message)) return errBody.message.join(', ');
-    if (typeof errBody.message === 'string') return errBody.message;
+    const errBody = JSON.parse(new TextDecoder().decode(buf)) as {
+      message?: string | string[];
+      code?: string;
+    };
+    let message: string | null = null;
+    if (Array.isArray(errBody.message)) message = errBody.message.join(', ');
+    else if (typeof errBody.message === 'string') message = errBody.message;
+    if (!message?.trim()) return null;
+    const code =
+      typeof errBody.code === 'string' && errBody.code.trim()
+        ? errBody.code.trim()
+        : undefined;
+    return { message: message.trim(), code };
   } catch {
     /* empty */
   }
@@ -80,10 +92,10 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
   }
 
   if (!res.ok) {
-    const nestMsg = await readNestErrorMessage(buf);
-    if (nestMsg) {
-      const code = res.status === 429 ? 'RATE_LIMITED' : undefined;
-      return guestAuthError(nestMsg, res.status, code);
+    const nestErr = await readNestError(buf);
+    if (nestErr) {
+      const code = res.status === 429 ? 'RATE_LIMITED' : nestErr.code;
+      return guestAuthError(nestErr.message, res.status, code);
     }
     return guestAuthError(`Ошибка API (${res.status})`, res.status);
   }

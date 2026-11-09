@@ -43,10 +43,11 @@ export function AdminOrdersSectionClient() {
     (index: number) => {
       setSectionIndex(index);
       const section = SECTIONS[index] ?? 'orders';
+      const status = searchParams.get('status')?.trim() || undefined;
       if (section === 'orders') {
         router.replace(
           hrefPreservingPeriod('/admin/orders', searchParams, {
-            bucket: searchParams.get('bucket') ?? undefined,
+            status,
           }),
           { scroll: false },
         );
@@ -54,7 +55,7 @@ export function AdminOrdersSectionClient() {
         router.replace(
           hrefPreservingPeriod('/admin/orders', searchParams, {
             section: 'sourcing',
-            bucket: searchParams.get('bucket') ?? 'new',
+            status,
           }),
           { scroll: false },
         );

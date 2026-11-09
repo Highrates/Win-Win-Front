@@ -85,6 +85,35 @@ describe('BFF guest auth (mocked Nest)', () => {
     expect(res.status).toBe(502);
     await expect(res.json()).resolves.toEqual({ error: 'No access_token in response' });
   });
+
+  it('register/complete forwards Nest invite error code', async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      jsonResponse(
+        {
+          message: 'Ссылка приглашения недействительна или истекла',
+          code: 'invite_invalid',
+        },
+        400,
+      ),
+    );
+
+    const { POST } = await import('../app/api/register/[...slug]/route');
+    const req = new Request('http://localhost/api/register/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        completionToken: 't',
+        password: 'Password1',
+        designerInviteToken: 'revoked',
+      }),
+    });
+    const res = await POST(req, { params: { slug: ['complete'] } });
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      message: 'Ссылка приглашения недействительна или истекла',
+      code: 'invite_invalid',
+    });
+  });
 });
 
 describe('BFF OTP → complete → password-reset journey (mocked Nest)', () => {

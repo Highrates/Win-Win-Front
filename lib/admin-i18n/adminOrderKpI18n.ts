@@ -46,8 +46,8 @@ export function adminOrderKpStrings(locale: AdminLocale) {
     excelBusy: pick(locale, 'Excel…', 'Excel…'),
     excelSheetProtectHint: pick(
       locale,
-      'Можно править любые ячейки. Не чистите скрытую колонку match (T) и заметки к ней — иначе строки не сопоставятся при загрузке.',
-      '可编辑任意单元格。请勿清理隐藏的 match 列（T）及其批注，否则上传时无法匹配行。',
+      'Можно править любые ячейки. Не чистите скрытую колонку match (N) и заметки к ней — иначе строки не сопоставятся при загрузке.',
+      '可编辑任意单元格。请勿清理隐藏的 match 列（N）及其批注，否则上传时无法匹配行。',
     ),
     excelDirtyConfirm: pick(
       locale,

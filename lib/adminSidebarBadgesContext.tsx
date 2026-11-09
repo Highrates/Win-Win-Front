@@ -40,10 +40,13 @@ export function AdminSidebarBadgesProvider({
 
   const loadPendingPartnerApps = useCallback(async () => {
     try {
-      const j = await adminBackendJson<{ total?: number }>(
-        'users/admin/partner-applications/pending-count',
-      );
-      setPendingPartnerApps(typeof j.total === 'number' ? j.total : 0);
+      const [partner, structure] = await Promise.all([
+        adminBackendJson<{ total?: number }>('users/admin/partner-applications/pending-count'),
+        adminBackendJson<{ total?: number }>('users/admin/designer-invites/pending-structure/count'),
+      ]);
+      const partnerTotal = typeof partner.total === 'number' ? partner.total : 0;
+      const structureTotal = typeof structure.total === 'number' ? structure.total : 0;
+      setPendingPartnerApps(partnerTotal + structureTotal);
     } catch (e) {
       warnBadgeLoadFailure('partner applications', e);
     }

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode, WheelEvent } from 'react';
 import styles from './AccountProjectTabs.module.css';
 import { ACCOUNT_PROJECT_NAMES } from './accountProjectNames';
 
@@ -15,6 +16,8 @@ type AccountProjectTabsProps = {
    * для фильтров и режимов вида, у которых нет своей tabpanel.
    */
   mode?: 'tabs' | 'toggle';
+  /** Правый слот внутри tabsWrapper (напр. иконка архива). */
+  endSlot?: ReactNode;
 };
 
 export function AccountProjectTabs({
@@ -24,10 +27,11 @@ export function AccountProjectTabs({
   ariaLabel = 'Проекты',
   tabHasNotification,
   mode = 'tabs',
+  endSlot,
 }: AccountProjectTabsProps) {
   const list = projects.length ? projects : ACCOUNT_PROJECT_NAMES;
   const isTabs = mode === 'tabs';
-  const onTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+  const onTabsWheel = (e: WheelEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     // Windows mouse wheel usually emits deltaY; map it to horizontal scroll.
     if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
@@ -38,7 +42,7 @@ export function AccountProjectTabs({
 
   return (
     <div
-      className={styles.tabsWrapper}
+      className={`${styles.tabsWrapper}${endSlot ? ` ${styles.tabsWrapperWithEnd}` : ''}`}
       role={isTabs ? 'tablist' : 'group'}
       aria-label={ariaLabel}
       onWheel={onTabsWheel}
@@ -63,6 +67,7 @@ export function AccountProjectTabs({
           </button>
         ))}
       </div>
+      {endSlot ? <div className={styles.tabsEndSlot}>{endSlot}</div> : null}
     </div>
   );
 }

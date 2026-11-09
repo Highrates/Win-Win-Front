@@ -136,7 +136,7 @@ export function downloadPiExcelImportReport(
     `Added (new lines): ${result.addedCount ?? 0}`,
     `Unchanged draft lines: ${result.unchangedCount}`,
     `Unmatched Excel rows: ${result.unmatched?.length ?? 0}`,
-    `Empty match-key (col T) rows: ${result.emptyMatchKeyRows?.length ?? 0}`,
+    `Empty match-key (col N) rows: ${result.emptyMatchKeyRows?.length ?? 0}`,
     '',
   ];
   if (result.added?.length) {
@@ -145,7 +145,7 @@ export function downloadPiExcelImportReport(
     lines.push('');
   }
   if (result.emptyMatchKeyRows?.length) {
-    lines.push('Empty col T (Excel rows):');
+    lines.push('Empty col N (Excel rows):');
     for (const r of result.emptyMatchKeyRows) lines.push(`  - row ${r}`);
     lines.push('');
   }

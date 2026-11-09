@@ -10,6 +10,7 @@ import { AccountProjectTabs } from '@/components/AccountProjectTabs/AccountProje
 import productListStyles from '@/components/AccountProductList/AccountProductList.module.css';
 import {
   ORDER_TABS,
+  ORDER_ARCHIVE_TAB_INDEX,
   ACCOUNT_WORK_NOTIFICATIONS_EVENT,
   ACCOUNT_WORK_FEED_REFRESH_EVENT,
   accountOrdersTabForStatus,
@@ -18,6 +19,7 @@ import {
   type AccountOrdersDetailLink,
   type AccountWorkNotificationsDetail,
 } from '@/lib/account/orders';
+import tabStyles from '@/components/AccountProjectTabs/AccountProjectTabs.module.css';
 import {
   accountWorkHasNotification,
   parseAccountWorkUnreadSummary,
@@ -72,11 +74,14 @@ export function AccountOrdersPageClient({
   const isPreparationTab = selectedIndex === 0;
   const isInWorkTab = selectedIndex === 1;
   const isCompletedTab = selectedIndex === 2;
+  const isArchivedTab = selectedIndex === ORDER_ARCHIVE_TAB_INDEX;
 
   const work = useScopedOrdersFeed('work');
   const completed = useScopedOrdersFeed('completed');
+  const archived = useScopedOrdersFeed('archived');
   const { load: loadWork, loadMore: loadMoreWork, clearEntityUnread: clearWorkEntityUnread } = work;
   const { load: loadCompleted, loadMore: loadMoreCompleted } = completed;
+  const { load: loadArchived, loadMore: loadMoreArchived } = archived;
 
   const replaceDetailHref = useCallback(
     (opts: {
@@ -253,11 +258,12 @@ export function AccountOrdersPageClient({
     const refreshWorkFeed = () => {
       if (isInWorkTab) void loadWork({ background: true });
       if (isCompletedTab) void loadCompleted({ background: true });
+      if (isArchivedTab) void loadArchived({ background: true });
       void fetchWorkTabHasNotification().then(setWorkTabHasNotification);
     };
     window.addEventListener(ACCOUNT_WORK_FEED_REFRESH_EVENT, refreshWorkFeed);
     return () => window.removeEventListener(ACCOUNT_WORK_FEED_REFRESH_EVENT, refreshWorkFeed);
-  }, [isInWorkTab, isCompletedTab, loadWork, loadCompleted]);
+  }, [isInWorkTab, isCompletedTab, isArchivedTab, loadWork, loadCompleted, loadArchived]);
 
   useEffect(() => {
     if (!isInWorkTab) return;
@@ -289,14 +295,31 @@ export function AccountOrdersPageClient({
     void loadCompleted();
   }, [isCompletedTab, loadCompleted]);
 
+  useEffect(() => {
+    if (!isArchivedTab) return;
+    void loadArchived();
+  }, [isArchivedTab, loadArchived]);
+
   return (
     <div className={productListStyles.page}>
       <div className={productListStyles.toolbar}>
         <AccountProjectTabs
           projects={ORDER_TABS}
-          selectedIndex={selectedIndex}
+          selectedIndex={isArchivedTab ? -1 : selectedIndex}
           onSelect={onSelectOrderTab}
           tabHasNotification={[false, workTabHasNotification, false]}
+          endSlot={
+            <button
+              type="button"
+              className={`${tabStyles.archiveTabBtn}${isArchivedTab ? ` ${tabStyles.archiveTabBtnActive}` : ''}`}
+              aria-label="Архив заказов"
+              aria-pressed={isArchivedTab}
+              title="Архив"
+              onClick={() => onSelectOrderTab(ORDER_ARCHIVE_TAB_INDEX)}
+            >
+              <img src="/icons/archive-box.svg" alt="" width={22} height={22} className={tabStyles.archiveTabIcon} />
+            </button>
+          }
         />
       </div>
 
@@ -347,6 +370,20 @@ export function AccountOrdersPageClient({
         />
       ) : null}
 
+      {isArchivedTab ? (
+        <WorkTabFeed
+          feed={archived.feed}
+          loading={archived.loading}
+          loadingMore={archived.loadingMore}
+          error={archived.error}
+          remainingCount={archived.remainingCount}
+          orderProgram={orderProgram}
+          onLoadMore={() => void loadMoreArchived()}
+          onOpenOrder={openOrderDetail}
+          onOpenSourcing={openSourcingDetail}
+        />
+      ) : null}
+
       <AccountOrderDetailModal
         orderId={workOrderDetailId}
         initialChatOpen={detailChatOpen}
@@ -385,7 +422,7 @@ export function AccountOrdersPageClient({
         }}
       />
 
-      {!isPreparationTab && !isInWorkTab && !isCompletedTab ? (
+      {!isPreparationTab && !isInWorkTab && !isCompletedTab && !isArchivedTab ? (
         <p className={styles.inWorkEmpty}>Раздел в разработке.</p>
       ) : null}
     </div>

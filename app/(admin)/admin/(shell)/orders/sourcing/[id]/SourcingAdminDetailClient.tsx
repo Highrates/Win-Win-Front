@@ -8,6 +8,7 @@ import {
   AdminFlashBanner,
   type AdminFlashBannerState,
 } from '@/components/admin/AdminFlashBanner/AdminFlashBanner';
+import { AdminImageLightbox } from '@/components/admin/AdminImageLightbox/AdminImageLightbox';
 import { AdminSelect } from '@/components/AdminTextField/AdminTextField';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
@@ -89,6 +90,7 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
   const [pdfBusyById, setPdfBusyById] = useState<Record<string, string>>({});
   const [excelBusyById, setExcelBusyById] = useState<Record<string, boolean>>({});
   const [flash, setFlash] = useState<AdminFlashBannerState>(null);
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
   const clearFlash = useCallback(() => setFlash(null), []);
 
   const load = useCallback(async () => {
@@ -324,7 +326,11 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
 
           <div className={styles.section}>
             <h2 className={styles.groupHeading}>{s.sectionProducts(detail.items.length)}</h2>
-            <AdminSourcingProductAccordion items={detail.items} requestTitle={detail.title} />
+            <AdminSourcingProductAccordion
+              items={detail.items}
+              requestTitle={detail.title}
+              onImageClick={(src, alt) => setLightbox({ src, alt })}
+            />
           </div>
 
           {detail.attachments.length > 0 ? (
@@ -533,18 +539,31 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
                                               }}
                                             >
                                               {(ln.imageUrls ?? []).map((url, idx) => (
-                                                <img
+                                                <button
                                                   key={`${url}-${idx}`}
-                                                  src={url}
-                                                  alt=""
-                                                  loading="lazy"
-                                                  style={{
-                                                    width: 56,
-                                                    height: 56,
-                                                    objectFit: 'cover',
-                                                    borderRadius: 6,
-                                                  }}
-                                                />
+                                                  type="button"
+                                                  className={od.thumbBtn}
+                                                  onClick={() =>
+                                                    setLightbox({
+                                                      src: url,
+                                                      alt: ln.productName || 'Фото',
+                                                    })
+                                                  }
+                                                  aria-label={`Открыть фото: ${ln.productName || 'позиция'}`}
+                                                >
+                                                  <img
+                                                    src={url}
+                                                    alt=""
+                                                    loading="lazy"
+                                                    style={{
+                                                      width: 56,
+                                                      height: 56,
+                                                      objectFit: 'cover',
+                                                      borderRadius: 6,
+                                                      display: 'block',
+                                                    }}
+                                                  />
+                                                </button>
                                               ))}
                                             </div>
                                           ) : null}
@@ -640,6 +659,13 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
           Заявка будет удалена без возможности восстановления.
         </p>
       </AdminOrdersConfirmModal>
+
+      <AdminImageLightbox
+        open={Boolean(lightbox)}
+        src={lightbox?.src ?? null}
+        alt={lightbox?.alt}
+        onClose={() => setLightbox(null)}
+      />
     </>
   );
 }

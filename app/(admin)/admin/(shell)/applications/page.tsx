@@ -6,6 +6,12 @@ export default function AdminApplicationsPage() {
   const locale = getAdminLocale();
   const t = adminApplicationsPage(locale);
   return (
-    <ApplicationsAdminClient title={t.title} labels={t.tabLabels} leads={t.tabLeads} designer={t.designer} />
+    <ApplicationsAdminClient
+      title={t.title}
+      labels={t.tabLabels}
+      leads={t.tabLeads}
+      designer={t.designer}
+      structure={t.structure}
+    />
   );
 }

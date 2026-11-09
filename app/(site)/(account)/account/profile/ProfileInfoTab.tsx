@@ -3,7 +3,10 @@
 import { Button } from '@/components/Button';
 import { ActiveDesignerInvites } from '@/components/ActiveDesignerInvites/ActiveDesignerInvites';
 import btnStyles from '@/components/Button/Button.module.css';
-import type { ActiveDesignerInviteApi } from '@/lib/designerInvites/activeInvites';
+import type {
+  ActiveDesignerInviteApi,
+  DesignerInviteStatusCounts,
+} from '@/lib/designerInvites/activeInvites';
 import { displayName, parseStringArray } from './profileFormUtils';
 import type { ProfileDto } from './profileTypes';
 import styles from './page.module.css';
@@ -13,6 +16,10 @@ type Props = {
   activeInvites: ActiveDesignerInviteApi[];
   activeInvitesLoading?: boolean;
   activeInvitesError?: string | null;
+  activeInvitesTotal?: number;
+  activeInvitesTruncated?: boolean;
+  activeInvitesListLimit?: number;
+  activeInvitesStatusCounts?: DesignerInviteStatusCounts | null;
   onRetryActiveInvites?: () => void;
   onOpenProfileEdit: () => void;
   onOpenAboutEdit: () => void;
@@ -25,6 +32,10 @@ export function ProfileInfoTab({
   activeInvites,
   activeInvitesLoading = false,
   activeInvitesError = null,
+  activeInvitesTotal,
+  activeInvitesTruncated = false,
+  activeInvitesListLimit = 50,
+  activeInvitesStatusCounts = null,
   onRetryActiveInvites,
   onOpenProfileEdit,
   onOpenAboutEdit,
@@ -155,9 +166,14 @@ export function ProfileInfoTab({
       {winWinPartnerApproved ? (
         <ActiveDesignerInvites
           items={activeInvites}
+          total={activeInvitesTotal}
+          truncated={activeInvitesTruncated}
+          listLimit={activeInvitesListLimit}
+          statusCounts={activeInvitesStatusCounts}
           loading={activeInvitesLoading}
           error={activeInvitesError}
           onRetry={onRetryActiveInvites}
+          onChanged={onRetryActiveInvites}
         />
       ) : null}
 

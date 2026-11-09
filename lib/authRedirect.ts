@@ -34,6 +34,20 @@ export function buildDesignerInviteProfilePath(prefillRef?: string): string {
   return `/account/profile?${q.toString()}`;
 }
 
+/** Подтверждение claim: «Вы войдёте в команду X». */
+export function buildDesignerInviteConfirmPath(token: string): string {
+  const q = new URLSearchParams();
+  q.set('t', token.trim());
+  return `/invite/designer/confirm?${q.toString()}`;
+}
+
+/** Вход в invite-flow: сервер сам решит confirm / mismatch / login. */
+export function buildDesignerInviteEntryPath(token: string): string {
+  const q = new URLSearchParams();
+  q.set('t', token.trim());
+  return `/invite/designer?${q.toString()}`;
+}
+
 export function isGuestAuthPath(pathname: string): boolean {
   if (pathname === '/login/forgot-password' || pathname === '/login/reset-password') {
     return false;

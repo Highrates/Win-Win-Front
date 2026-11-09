@@ -11,7 +11,7 @@ import type { UserSourcingRequestListItemApi } from '@/lib/userSourcingRequests/
 
 export const ORDERS_FEED_PAGE_SIZE = 50;
 
-export type OrdersFeedScope = 'work' | 'completed';
+export type OrdersFeedScope = 'work' | 'completed' | 'archived';
 
 export type ScopedOrdersFeed = {
   orders: UserOrderListItemApi[];
@@ -43,19 +43,32 @@ type PageResult = {
 async function fetchScopePages(scope: OrdersFeedScope, fromPage: number, toPage: number): Promise<PageResult> {
   const pages: number[] = [];
   for (let p = fromPage; p <= toPage; p += 1) pages.push(p);
+  const includeSourcing = scope !== 'archived';
   const results = await Promise.all(
-    pages.map((page) =>
-      Promise.all([
-        fetchUserOrdersList(page, ORDERS_FEED_PAGE_SIZE, { scope }),
-        fetchUserSourcingRequestsList(page, ORDERS_FEED_PAGE_SIZE, { scope }),
-      ]),
-    ),
+    pages.map(async (page) => {
+      const ordersRes = await fetchUserOrdersList(page, ORDERS_FEED_PAGE_SIZE, { scope });
+      if (!includeSourcing) {
+        return {
+          ordersRes,
+          sourcingRes: {
+            items: [] as UserSourcingRequestListItemApi[],
+            total: 0,
+            page,
+            limit: ORDERS_FEED_PAGE_SIZE,
+          },
+        };
+      }
+      const sourcingRes = await fetchUserSourcingRequestsList(page, ORDERS_FEED_PAGE_SIZE, {
+        scope: scope === 'completed' ? 'completed' : 'work',
+      });
+      return { ordersRes, sourcingRes };
+    }),
   );
   let orders: UserOrderListItemApi[] = [];
   let sourcing: UserSourcingRequestListItemApi[] = [];
   let ordersTotal = 0;
   let sourcingTotal = 0;
-  for (const [ordersRes, sourcingRes] of results) {
+  for (const { ordersRes, sourcingRes } of results) {
     orders = mergeUniqueById(orders, ordersRes.items);
     sourcing = mergeUniqueById(sourcing, sourcingRes.items);
     ordersTotal = ordersRes.total;

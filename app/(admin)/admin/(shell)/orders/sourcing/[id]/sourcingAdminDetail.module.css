@@ -66,6 +66,21 @@
   height: 80px;
   object-fit: cover;
   border-radius: 6px;
+  display: block;
+}
+
+.thumbBtn {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: zoom-in;
+  border-radius: 6px;
+}
+
+.thumbBtn:focus-visible {
+  outline: 2px solid var(--color-blue, #2563eb);
+  outline-offset: 2px;
 }
 
 .accordionTitle {

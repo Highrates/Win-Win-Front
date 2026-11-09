@@ -78,6 +78,7 @@ export function adminOrdersStrings(locale: AdminLocale) {
     pageOf: (page: number, totalPages: number, total: number) =>
       pick(locale, `Стр. ${page} из ${totalPages} (${total})`, `第 ${page} / ${totalPages} 页（${total}）`),
     forward: pick(locale, 'Вперёд', '下一页'),
+    filterStatusAll: pick(locale, 'Все статусы', '全部状态'),
     tabsAria: pick(locale, 'Разделы списка заказов', '订单列表分区'),
     tabNew: pick(locale, 'Новые заказы', '新订单'),
     tabActive: pick(locale, 'В работе', '进行中'),
@@ -148,8 +149,8 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
     excelBusy: pick(locale, 'Excel…', 'Excel…'),
     excelSheetProtectHint: pick(
       locale,
-      'Можно править любые ячейки. Не чистите скрытую колонку match (T) и заметки к ней — иначе строки не сопоставятся при загрузке.',
-      '可编辑任意单元格。请勿清理隐藏的 match 列（T）及其批注，否则上传时无法匹配行。',
+      'Можно править любые ячейки. Не чистите скрытую колонку match (N) и заметки к ней — иначе строки не сопоставятся при загрузке.',
+      '可编辑任意单元格。请勿清理隐藏的 match 列（N）及其批注，否则上传时无法匹配行。',
     ),
     excelImportOk: (updated: number, unmatched?: number, added?: number) => {
       const partsRu = [`Обновлено позиций из Excel: ${updated}`];
@@ -171,8 +172,8 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
       downloadReport: pick(locale, 'Скачать отчёт', '下载报告'),
       sheetProtectHint: pick(
         locale,
-        'Не чистите скрытую колонку match (T) и заметки к ней.',
-        '请勿清理隐藏的 match 列（T）及其批注。',
+        'Не чистите скрытую колонку match (N) и заметки к ней.',
+        '请勿清理隐藏的 match 列（N）及其批注。',
       ),
       matched: (n: number) => pick(locale, `Сопоставлено: ${n}`, `已匹配：${n}`),
       added: (n: number) =>
@@ -184,8 +185,8 @@ export function adminOrderDetailStrings(locale: AdminLocale) {
       emptyMatchKey: (rows: number[]) =>
         pick(
           locale,
-          `Пустой ключ в колонке T (строки Excel: ${rows.join(', ')}). Сопоставление может уйти на No. — проверьте файл.`,
-          `T 列匹配键为空（Excel 行：${rows.join(', ')}）。可能回退到 No.，请检查文件。`,
+          `Пустой ключ в колонке N (строки Excel: ${rows.join(', ')}). Сопоставление может уйти на No. — проверьте файл.`,
+          `N 列匹配键为空（Excel 行：${rows.join(', ')}）。可能回退到 No.，请检查文件。`,
         ),
       noFieldChanges: pick(
         locale,

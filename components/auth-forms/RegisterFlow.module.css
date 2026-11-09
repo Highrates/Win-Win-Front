@@ -29,3 +29,10 @@
   font-size: var(--text-caption, 0.8125rem);
   color: #b42318;
 }
+
+.inviteBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 4px;
+}

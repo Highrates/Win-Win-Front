@@ -1,22 +1,22 @@
 /**
  * Регистрация: same-origin POST → Next Route Handler → Nest (`/api/register/...`).
  */
+import { ApiRequestError, parseApiErrorJson } from '@/lib/readApiErrorMessage';
+
 const PREFIX = '/api/register';
 
-async function readApiError(res: Response): Promise<string> {
+async function readRegisterApiError(res: Response): Promise<ApiRequestError> {
   if (res.status === 429) {
-    return 'Слишком много попыток. Подождите минуту и попробуйте снова.';
+    return new ApiRequestError('Слишком много попыток. Подождите минуту и попробуйте снова.');
   }
   const t = await res.text();
   try {
-    const j = JSON.parse(t) as { message?: string | string[]; error?: string };
-    if (Array.isArray(j.message)) return j.message.join(', ');
-    if (typeof j.message === 'string') return j.message;
-    if (typeof j.error === 'string') return j.error;
+    const parsed = parseApiErrorJson(JSON.parse(t) as unknown);
+    if (parsed) return new ApiRequestError(parsed.message, parsed.code);
   } catch {
     /* not JSON */
   }
-  return t.trim() || res.statusText || `Ошибка ${res.status}`;
+  return new ApiRequestError(t.trim() || res.statusText || `Ошибка ${res.status}`);
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
@@ -26,7 +26,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
     credentials: 'same-origin',
   });
-  if (!res.ok) throw new Error(await readApiError(res));
+  if (!res.ok) throw await readRegisterApiError(res);
   return res.json() as Promise<T>;
 }
 

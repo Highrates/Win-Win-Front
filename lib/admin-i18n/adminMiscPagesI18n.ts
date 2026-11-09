@@ -49,6 +49,7 @@ export function adminApplicationsPage(locale: AdminLocale) {
     title: pick(locale, 'Взаимодействия', '互动'),
     tabLabels: {
       designer: pick(locale, 'Заявки на статус дизайнера', '设计师资格申请'),
+      structure: pick(locale, 'Перевод в структуру', '结构转移'),
       payouts: pick(locale, 'Выплаты', '打款'),
     },
     tabLeads: {
@@ -56,6 +57,11 @@ export function adminApplicationsPage(locale: AdminLocale) {
         locale,
         'Очередь заявок «Стать партнёром»: CV, образование, реферальный код, модерация.',
         '「成为合作伙伴」申请队列：简历、教育、推荐码与审核。',
+      ),
+      structure: pick(
+        locale,
+        'Заявки на привязку одобренного партнёра или пользователя с командой к структуре пригласившего.',
+        '已通过合作方或有下级的用户申请加入邀请人结构。',
       ),
       payouts: pick(
         locale,
@@ -85,6 +91,26 @@ export function adminApplicationsPage(locale: AdminLocale) {
       errLoad: pick(locale, 'Не удалось загрузить заявки', '无法加载申请'),
       errAccept: pick(locale, 'Ошибка при принятии заявки', '通过失败'),
       errReject: pick(locale, 'Ошибка при отклонении заявки', '拒绝失败'),
+    },
+    structure: {
+      loading: pick(locale, 'Загрузка…', '加载中…'),
+      empty: pick(locale, 'Нет заявок на перевод', '暂无结构转移申请'),
+      thEmail: pick(locale, 'Приглашённый', '被邀请人'),
+      thInviter: pick(locale, 'Пригласивший', '邀请人'),
+      thRef: pick(locale, 'Реф. код', '推荐码'),
+      thRequested: pick(locale, 'Заявка', '申请于'),
+      thActions: pick(locale, 'Действия', '操作'),
+      accept: pick(locale, 'Одобрить', '通过'),
+      reject: pick(locale, 'Отклонить', '拒绝'),
+      rejectConfirm: pick(
+        locale,
+        'Отклонить перевод в структуру? Обе стороны получат письмо.',
+        '拒绝结构转移？双方将收到邮件。',
+      ),
+      openInviter: pick(locale, 'Пригласивший', '邀请人'),
+      errLoad: pick(locale, 'Не удалось загрузить заявки на перевод', '无法加载结构转移申请'),
+      errAccept: pick(locale, 'Ошибка при одобрении перевода', '通过失败'),
+      errReject: pick(locale, 'Ошибка при отклонении перевода', '拒绝失败'),
     },
   };
 }

@@ -17,7 +17,8 @@ type Args = {
 };
 
 /**
- * Query-параметры страницы профиля: tab / welcome / profileEdit / inviteDesigner / partnerApply / referralWarning.
+ * Query-параметры страницы профиля: tab / welcome / profileEdit / inviteDesigner /
+ * partnerApply / partnerSuggest / referralWarning.
  */
 export function useProfileDeepLinks({
   loading,
@@ -32,11 +33,15 @@ export function useProfileDeepLinks({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [referralWarningBanner, setReferralWarningBanner] = useState<string | null>(null);
+  const [partnerSuggest, setPartnerSuggest] = useState<{ prefillRef?: string } | null>(null);
   const handledKeys = useRef(new Set<string>());
 
+  /** Читаем актуальный query из location — иначе async strip (welcome) поднимает устаревший снимок. */
   const stripParams = useCallback(
     (...keys: string[]) => {
-      const next = new URLSearchParams(searchParams.toString());
+      const raw =
+        typeof window !== 'undefined' ? window.location.search : `?${searchParams.toString()}`;
+      const next = new URLSearchParams(raw.startsWith('?') ? raw.slice(1) : raw);
       for (const k of keys) next.delete(k);
       const q = next.toString();
       router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
@@ -112,5 +117,35 @@ export function useProfileDeepLinks({
     stripParams('partnerApply', 'prefillRef');
   }, [loading, profile, searchParams, selectTab, openPartnerApply, stripParams]);
 
-  return { referralWarningBanner, searchParams, pathname, router };
+  /** Мягкое предложение после регистрации по общей ?ref= — без автооткрытия модалки. */
+  useEffect(() => {
+    if (searchParams.get('partnerSuggest') !== '1') return;
+    if (loading || !profile) return;
+    const prefill =
+      searchParams.get('prefillRef')?.trim() ||
+      profile.partnerApplicationReferralCode?.trim() ||
+      '';
+    const pending =
+      Boolean(profile.partnerApplicationSubmittedAt) &&
+      !profile.winWinPartnerApproved &&
+      !profile.partnerApplicationRejectedAt;
+    if (pending || profile.winWinPartnerApproved) {
+      stripParams('partnerSuggest', 'prefillRef');
+      return;
+    }
+    selectTab('info');
+    setPartnerSuggest({ prefillRef: prefill || undefined });
+    stripParams('partnerSuggest', 'prefillRef');
+  }, [loading, profile, searchParams, selectTab, stripParams]);
+
+  const dismissPartnerSuggest = useCallback(() => setPartnerSuggest(null), []);
+
+  return {
+    referralWarningBanner,
+    partnerSuggest,
+    dismissPartnerSuggest,
+    searchParams,
+    pathname,
+    router,
+  };
 }

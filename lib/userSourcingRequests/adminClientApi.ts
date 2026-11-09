@@ -15,7 +15,8 @@ import type {
 export type FetchAdminSourcingListParams = {
   page: number;
   limit: number;
-  bucket: AdminSourcingBucket;
+  bucket?: AdminSourcingBucket | 'all';
+  status?: SourcingRequestStatus | '';
   q?: string;
   from?: string;
   to?: string;
@@ -27,8 +28,9 @@ export async function fetchAdminSourcingRequestsList(
   const qs = new URLSearchParams({
     page: String(params.page),
     limit: String(params.limit),
-    bucket: params.bucket,
   });
+  if (params.bucket && params.bucket !== 'all') qs.set('bucket', params.bucket);
+  if (params.status?.trim()) qs.set('status', params.status.trim());
   if (params.q?.trim()) qs.set('q', params.q.trim());
   if (params.from?.trim() && params.to?.trim()) {
     qs.set('from', params.from.trim());

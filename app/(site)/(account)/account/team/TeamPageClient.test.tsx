@@ -22,6 +22,10 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/hooks/useActiveDesignerInvites', () => ({
   useActiveDesignerInvites: () => ({
+    total: 0,
+    truncated: false,
+    listLimit: 50,
+    statusCounts: null,
     items: [],
     loading: false,
     error: null,
@@ -60,12 +64,10 @@ describe('TeamPageClient', () => {
         if (url.includes('/api/user/winwin-team')) {
           return jsonResponse({
             inviter: null,
+            myReferralCode: 'ABC',
             counts: { total: 0, level1: 0, level2: 0 },
             l1: [],
           });
-        }
-        if (url.includes('/api/user/profile')) {
-          return jsonResponse({ winWinReferralCode: 'ABC' });
         }
         return jsonResponse({}, { status: 404, ok: false });
       }),
@@ -79,7 +81,7 @@ describe('TeamPageClient', () => {
     );
     render(<TeamPageClient />);
     expect(await screen.findByRole('heading', { name: 'Команда' })).toBeInTheDocument();
-    expect(screen.getByText(/доступен одобренным партнёрам/)).toBeInTheDocument();
+    expect(screen.getByText(/доступен одобренным дизайнерам-партнёрам/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'В профиль' })).toBeInTheDocument();
   });
 
@@ -98,6 +100,7 @@ describe('TeamPageClient', () => {
         if (url.includes('/api/user/winwin-team')) {
           return jsonResponse({
             inviter: null,
+            myReferralCode: 'ABC',
             counts: { total: 1, level1: 1, level2: 0 },
             l1: [
               {
@@ -112,9 +115,6 @@ describe('TeamPageClient', () => {
               },
             ],
           });
-        }
-        if (url.includes('/api/user/profile')) {
-          return jsonResponse({ winWinReferralCode: 'ABC' });
         }
         return jsonResponse({}, { status: 404, ok: false });
       }),

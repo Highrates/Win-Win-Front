@@ -56,7 +56,8 @@ export const adminQueryKeys = {
     list: (params: {
       page: number;
       q: string;
-      bucket: string;
+      bucket?: string;
+      status?: string;
       userId?: string;
       from?: string;
       to?: string;
@@ -67,7 +68,8 @@ export const adminQueryKeys = {
     list: (params: {
       page: number;
       q: string;
-      bucket: string;
+      bucket?: string;
+      status?: string;
       from?: string;
       to?: string;
     }) => ['admin', 'sourcing-requests', 'list', params] as const,
@@ -84,6 +86,7 @@ export const adminQueryKeys = {
       const p = typeof params === 'number' ? { page: params } : params;
       return ['admin', 'applications', 'partner-list', p] as const;
     },
+    structurePending: ['admin', 'applications', 'structure-pending'] as const,
   },
   designerProjects: {
     all: ['admin', 'designer-projects'] as const,

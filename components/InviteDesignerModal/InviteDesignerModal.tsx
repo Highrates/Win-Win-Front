@@ -12,6 +12,9 @@ import { useInviteDesigner } from '@/hooks/useInviteDesigner';
 import { copyTextToClipboard } from '@/lib/copyToClipboard';
 import profileSheetStyles from '@/app/(site)/(account)/account/profile/page.module.css';
 import flowStyles from '@/components/auth-forms/RegisterFlow.module.css';
+import {
+  INVITE_TAB_EMAIL_CAPTION,
+} from '@/lib/referral/partnerRegistrationLink';
 import { PartnerReferralLinkTab } from './PartnerReferralLinkTab';
 import styles from './InviteDesignerModal.module.css';
 
@@ -19,6 +22,8 @@ export type InviteDesignerModalProps = {
   open: boolean;
   onClose: () => void;
   referralCode: string | null;
+  /** Пока код ещё грузится (команда / профиль) — не показывать ложную ошибку на вкладке «По ссылке». */
+  referralCodeLoading?: boolean;
   /** После успешной отправки (обновить список активных инвайтов). */
   onSent?: () => void;
 };
@@ -27,10 +32,37 @@ type InviteTab = 'email' | 'public';
 
 const TAB_ORDER: InviteTab[] = ['email', 'public'];
 
-export function InviteDesignerModal({ open, onClose, referralCode, onSent }: InviteDesignerModalProps) {
+export function InviteDesignerModal({
+  open,
+  onClose,
+  referralCode,
+  referralCodeLoading = false,
+  onSent,
+}: InviteDesignerModalProps) {
   const invite = useInviteDesigner();
-  const { reset, resetForAnother, submit, setEmail, setError, setCopied, email, sending, error, done, sentEmail, inviteLink, copied } =
-    invite;
+  const {
+    reset,
+    resetForAnother,
+    submit,
+    setEmail,
+    clearErrors,
+    email,
+    sending,
+    error,
+    fieldError,
+    done,
+    sentEmail,
+    inviteLink,
+    emailSent,
+    pendingWarning,
+    dismissPendingWarning,
+    confirmDespiteWarning,
+    inviteTtlLabel,
+    copied,
+    setCopied,
+    copyError,
+    setCopyError,
+  } = invite;
   const [tab, setTab] = useState<InviteTab>('email');
   const emailTabId = useId();
   const publicTabId = useId();
@@ -38,6 +70,7 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
   const publicPanelId = useId();
   const emailTabRef = useRef<HTMLButtonElement>(null);
   const publicTabRef = useRef<HTMLButtonElement>(null);
+  const successTitleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -46,9 +79,18 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
     }
   }, [open, reset]);
 
+  const onSentRef = useRef(onSent);
+  onSentRef.current = onSent;
+  const prevDoneRef = useRef(false);
   useEffect(() => {
-    if (done) onSent?.();
-  }, [done, onSent]);
+    if (done && !prevDoneRef.current) {
+      onSentRef.current?.();
+      window.setTimeout(() => {
+        successTitleRef.current?.focus();
+      }, 0);
+    }
+    prevDoneRef.current = done;
+  }, [done]);
 
   const handleClose = useCallback(() => {
     reset();
@@ -58,14 +100,16 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
 
   const copyDesignerInviteLink = useCallback(async () => {
     if (!inviteLink) return;
+    setCopyError(null);
     try {
       await copyTextToClipboard(inviteLink);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 3000);
     } catch {
       setCopied(false);
+      setCopyError('Не удалось скопировать. Выделите ссылку и скопируйте вручную.');
     }
-  }, [inviteLink, setCopied]);
+  }, [inviteLink, setCopied, setCopyError]);
 
   const submitInviteDesigner = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -99,45 +143,60 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
     focusTab(next);
   };
 
-  const isFieldValidationError =
-    error === 'Введите email' || error === 'Некорректный email';
-  const formAlertError = error && !isFieldValidationError ? error : null;
+  const successBody = emailSent
+    ? sentEmail
+      ? `Ссылка работает только для ${sentEmail}. Срок — ${inviteTtlLabel}, одно использование.`
+      : `Ссылка одноразовая. Срок — ${inviteTtlLabel}.`
+    : sentEmail
+      ? `Письмо не удалось отправить — передайте ссылку сами. Ссылка работает только для ${sentEmail}. Срок — ${inviteTtlLabel}, одно использование.`
+      : `Письмо не удалось отправить — передайте ссылку сами. Срок — ${inviteTtlLabel}, одно использование.`;
 
   return (
-    <SlideInPanelModal open={open} onClose={handleClose} ariaLabel="Пригласить дизайнера">
+    <SlideInPanelModal open={open} onClose={handleClose} ariaLabel="Пригласить дизайнера-партнёра">
       <div className={panelModal.inner}>
         {done ? (
           <>
-            <h3 className={panelModal.title}>
-              {sentEmail ? `Приглашение отправлено на ${sentEmail}` : 'Приглашение отправлено'}
-            </h3>
-            <p className={profileSheetStyles.partnerSuccessText}>
-              Ссылку с приглашением можно скопировать и отправить напрямую! Срок действия — 14 дней, одно
-              использование.
-            </p>
-            <div className={panelModal.actions}>
-              {inviteLink ? (
+            <div role="status">
+              <h3 ref={successTitleRef} className={panelModal.title} tabIndex={-1}>
+                {emailSent
+                  ? sentEmail
+                    ? `Приглашение отправлено на ${sentEmail}`
+                    : 'Приглашение отправлено'
+                  : 'Письмо не отправлено'}
+              </h3>
+            </div>
+            <p className={profileSheetStyles.partnerSuccessText}>{successBody}</p>
+            {inviteLink ? (
+              <div className={styles.successLinkRow}>
+                <p className={styles.linkPreview}>{inviteLink}</p>
                 <button
                   type="button"
-                  className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${profileSheetStyles.inviteLinkCopyBtn} ${copied ? profileSheetStyles.inviteLinkCopyBtnDone : ''}`}
+                  className={`${btnStyles.btn} ${btnStyles.btnSecondary} ${profileSheetStyles.inviteLinkCopyBtn} ${copied ? profileSheetStyles.inviteLinkCopyBtnDone : ''} ${styles.copyBesideLink}`}
                   onClick={() => {
                     void copyDesignerInviteLink();
                   }}
                 >
-                  {copied ? 'Скопировано!' : 'Скопировать ссылку с приглашением'}
+                  {copied ? 'Скопировано!' : 'Копировать ссылку'}
                 </button>
-              ) : null}
-              <Button type="button" variant="primary" onClick={resetForAnother}>
-                Пригласить ещё одного
+                {copyError ? (
+                  <p className={flowStyles.formError} role="alert">
+                    {copyError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            <div className={panelModal.actions}>
+              <Button type="button" variant="primary" onClick={handleClose}>
+                Готово
               </Button>
-              <Button type="button" variant="secondary" onClick={handleClose}>
-                Понятно
-              </Button>
+              <button type="button" className={styles.textLink} onClick={resetForAnother}>
+                Пригласить ещё
+              </button>
             </div>
           </>
         ) : (
           <>
-            <h3 className={panelModal.title}>Пригласить дизайнера</h3>
+            <h3 className={panelModal.title}>Пригласить дизайнера-партнёра</h3>
             <div
               className={styles.tabList}
               role="tablist"
@@ -179,6 +238,7 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
                 onSubmit={submitInviteDesigner}
                 noValidate
               >
+                <p className={styles.tabCaption}>{INVITE_TAB_EMAIL_CAPTION}</p>
                 <div className={profileSheetStyles.partnerFormField}>
                   <TextField
                     label="Email"
@@ -188,31 +248,63 @@ export function InviteDesignerModal({ open, onClose, referralCode, onSent }: Inv
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
-                      setError(null);
+                      clearErrors();
+                      if (pendingWarning) dismissPendingWarning();
                     }}
-                    error={isFieldValidationError ? error || undefined : undefined}
+                    error={fieldError || undefined}
                   />
                 </div>
                 {referralCode ? (
                   <p className={profileSheetStyles.partnerReferralExemptNote}>
-                    Приглашённый будет закреплён под вашим номером{' '}
+                    Приглашённый будет закреплён под вашим реферальным кодом{' '}
                     <strong>{referralCode}</strong>.
                   </p>
                 ) : null}
-                {formAlertError ? (
+                {pendingWarning ? (
+                  <div className={styles.confirmWarning} role="status">
+                    <p className={flowStyles.formError}>{pendingWarning}</p>
+                    <p className={styles.confirmHint}>Отправить приглашение всё равно?</p>
+                    <div className={panelModal.actions}>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        disabled={sending}
+                        onClick={() => {
+                          void confirmDespiteWarning();
+                        }}
+                      >
+                        {sending ? 'Отправка…' : 'Всё равно отправить'}
+                      </Button>
+                      <button
+                        type="button"
+                        className={styles.textLink}
+                        disabled={sending}
+                        onClick={dismissPendingWarning}
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {error ? (
                   <p className={flowStyles.formError} role="alert">
-                    {formAlertError}
+                    {error}
                   </p>
                 ) : null}
-                <div className={panelModal.actions}>
-                  <Button type="submit" variant="primary" disabled={sending}>
-                    {sending ? 'Отправка…' : 'Отправить приглашение'}
-                  </Button>
-                </div>
+                {!pendingWarning ? (
+                  <div className={panelModal.actions}>
+                    <Button type="submit" variant="primary" disabled={sending}>
+                      {sending ? 'Отправка…' : 'Отправить приглашение'}
+                    </Button>
+                  </div>
+                ) : null}
               </form>
             ) : (
               <div id={publicPanelId} role="tabpanel" aria-labelledby={publicTabId}>
-                <PartnerReferralLinkTab referralCode={referralCode} />
+                <PartnerReferralLinkTab
+                  referralCode={referralCode}
+                  referralCodeLoading={referralCodeLoading}
+                />
               </div>
             )}
           </>

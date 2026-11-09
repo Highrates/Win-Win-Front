@@ -9,6 +9,7 @@ import { TurnstileWidget } from '@/components/TurnstileWidget/TurnstileWidget';
 import { navigateAfterUserAuth } from '@/lib/userAuthNavigation';
 import {
   DESIGNER_INVITE_EXISTING_ACCOUNT_HINT,
+  DESIGNER_INVITE_PHONE_ACCOUNT_HINT,
   formatDesignerInviteClaimError,
 } from '@/lib/designerInvites/loginHints';
 import { isTurnstileRequired } from '@/lib/turnstile';
@@ -174,6 +175,11 @@ function LoginEmailFormInner({ callbackUrl: callbackUrlProp, onAuthenticated }: 
         ) : inviteEmailHint ? (
           <p className={styles.authOtpHint}>
             Войдите с email из приглашения: <strong>{inviteEmailHint}</strong>
+          </p>
+        ) : null}
+        {designerInviteToken ? (
+          <p className={styles.authOtpHint} role="note">
+            {DESIGNER_INVITE_PHONE_ACCOUNT_HINT}
           </p>
         ) : null}
         <TextField

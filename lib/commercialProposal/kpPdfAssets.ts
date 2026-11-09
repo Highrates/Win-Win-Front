@@ -40,14 +40,25 @@ export function isPlaceholderMediaUrl(url: string): boolean {
 /**
  * URL для загрузки в PDF:
  * - same-origin `/uploads|/images|/api/...` — как есть (через rewrite Next);
- * - абсолютные — через `/api/media-proxy` (без CORS/tainted canvas).
+ * - абсолютные API `/uploads` — в относительный `/uploads/...` (Next rewrite);
+ * - прочие абсолютные — через `/api/media-proxy` (без CORS/tainted canvas).
  */
 export function mediaUrlForPdf(url: string): string {
   if (!url) return url;
   if (url.startsWith('data:')) return url;
+  // Уже нормализованный клиентский путь (resolveMediaUrlForClient).
   if (url.startsWith('/') && !url.startsWith('//')) return url;
   if (typeof window !== 'undefined' && url.startsWith(`${window.location.origin}/`)) {
     return url.slice(window.location.origin.length) || '/';
+  }
+  // `https://api…/uploads/…` → `/uploads/…` (тот же rewrite, что у <img>).
+  try {
+    const u = new URL(url);
+    if (u.pathname.startsWith('/uploads/')) {
+      return `${u.pathname}${u.search}`;
+    }
+  } catch {
+    /* keep absolute → proxy */
   }
   return `/api/media-proxy?url=${encodeURIComponent(url)}`;
 }
@@ -200,13 +211,27 @@ export async function loadLogo(): Promise<KpPdfRasterImage | null> {
   return null;
 }
 
-/** Кандидаты fetch для PDF-картинки (/uploads → + media-proxy). */
+/** Кандидаты fetch для PDF-картинки (/uploads → + media-proxy; absolute → proxy + path). */
 export function imageFetchCandidates(src: string): string[] {
   const candidates = [src];
   if (src.startsWith('/uploads/')) {
     candidates.push(`/api/media-proxy?url=${encodeURIComponent(src)}`);
+    return candidates;
   }
-  return candidates;
+  if (/^https?:\/\//i.test(src)) {
+    candidates.push(`/api/media-proxy?url=${encodeURIComponent(src)}`);
+    try {
+      const u = new URL(src);
+      if (u.pathname.startsWith('/uploads/')) {
+        const path = `${u.pathname}${u.search}`;
+        if (!candidates.includes(path)) candidates.unshift(path);
+        candidates.push(`/api/media-proxy?url=${encodeURIComponent(path)}`);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return Array.from(new Set(candidates));
 }
 
 export function throwIfAborted(signal?: AbortSignal): void {

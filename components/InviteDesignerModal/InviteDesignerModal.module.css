@@ -1,3 +1,10 @@
+.tabCaption {
+  margin: 0 0 16px;
+  font-size: var(--text-caption, 14px);
+  line-height: 1.45;
+  color: var(--text-secondary, var(--color-gray, #9d9d9d));
+}
+
 .tabList {
   display: flex;
   flex-wrap: wrap;
@@ -40,6 +47,53 @@
   line-height: 1.45;
   word-break: break-all;
   color: var(--color-ink-black, #000);
+}
+
+.successLinkRow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.copyBesideLink {
+  align-self: flex-start;
+}
+
+.textLink {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: var(--font-commissioner, system-ui);
+  font-size: var(--text-caption, 14px);
+  font-weight: var(--text-caption-weight, 300);
+  line-height: 1.45;
+  color: var(--color-ink-black, #000);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.textLink:hover {
+  opacity: 0.75;
+}
+
+.textLink:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmWarning {
+  margin: 0 0 8px;
+}
+
+.confirmHint {
+  margin: 0 0 12px;
+  font-size: var(--text-caption, 14px);
+  line-height: 1.45;
+  color: var(--text-secondary, var(--color-gray, #9d9d9d));
 }
 
 .qrWrap {

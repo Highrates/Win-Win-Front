@@ -36,7 +36,10 @@ export function adminProductQaPendingBadgeTitle(locale: AdminLocale): string {
 export function adminNavBadgeTitles(locale: AdminLocale) {
   const pick = (ru: string, zh: string) => (locale === 'zh' ? zh : ru);
   return {
-    partnerApps: pick('Необработанные заявки партнёров', '待处理合作申请'),
+    partnerApps: pick(
+      'Необработанные заявки партнёров и переводы в структуру',
+      '待处理合作申请与结构转移',
+    ),
     ordersPending: pick('Заказы на согласование', '待审批订单'),
     sourcingPending: pick('Новые заявки на подбор', '新采购申请'),
     ordersChatUnread: pick('Непрочитанные сообщения от клиента', '未读客户消息'),

@@ -229,11 +229,12 @@ describe('downloadCommercialProposalPdf', () => {
 });
 
 describe('media proxy for PDF images', () => {
-  it('абсолютный URL уходит в /api/media-proxy', async () => {
+  it('абсолютный URL уходит в /api/media-proxy; API /uploads → relative', async () => {
     const { mediaUrlForPdf } = await import('./exportCommercialProposalPdf');
     expect(mediaUrlForPdf('https://cdn.example.com/a.jpg')).toBe(
       '/api/media-proxy?url=' + encodeURIComponent('https://cdn.example.com/a.jpg'),
     );
+    expect(mediaUrlForPdf('https://api.example.com/uploads/x.jpg')).toBe('/uploads/x.jpg');
     expect(mediaUrlForPdf('/uploads/x.jpg')).toBe('/uploads/x.jpg');
     expect(mediaUrlForPdf('data:image/png;base64,abc')).toBe('data:image/png;base64,abc');
   });

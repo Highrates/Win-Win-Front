@@ -3,7 +3,7 @@ import type { UserOrderDetailApi, UserOrdersListResponse } from './types';
 export async function fetchUserOrdersList(
   page = 1,
   limit = 50,
-  opts?: { scope?: 'work' | 'completed' },
+  opts?: { scope?: 'work' | 'completed' | 'archived' },
 ): Promise<UserOrdersListResponse> {
   const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (opts?.scope) qs.set('scope', opts.scope);

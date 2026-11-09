@@ -41,17 +41,8 @@ describe('navigateAfterUserAuth (L5 hard nav)', () => {
     expect(replace).toHaveBeenCalledWith('/account/orders');
   });
 
-  it('after designer invite claim → profile hard nav', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ prefillRef: 'REF' }),
-      }),
-    );
+  it('after designer invite → entry hard nav (mismatch/confirm на сервере)', async () => {
     await navigateAfterUserAuth({ designerInviteToken: 'tok' });
-    expect(replace).toHaveBeenCalledWith(
-      '/account/profile?tab=info&partnerApply=1&prefillRef=REF',
-    );
+    expect(replace).toHaveBeenCalledWith('/invite/designer?t=tok');
   });
 });

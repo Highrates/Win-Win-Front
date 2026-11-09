@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildDesignerInviteEntryPath,
   buildDesignerInviteProfilePath,
   defaultPostAuthPath,
   isGuestAuthPath,
@@ -59,5 +60,11 @@ describe('buildDesignerInviteProfilePath', () => {
     expect(buildDesignerInviteProfilePath('REF1')).toBe(
       '/account/profile?tab=info&partnerApply=1&prefillRef=REF1',
     );
+  });
+});
+
+describe('buildDesignerInviteEntryPath', () => {
+  it('mismatch «выйти» ведёт на entry — сервер выберет register/login', () => {
+    expect(buildDesignerInviteEntryPath('invite-tok')).toBe('/invite/designer?t=invite-tok');
   });
 });

@@ -22,14 +22,23 @@ import {
 } from '@/lib/authRedirect';
 import {
   buildLoginWithInviteHref,
+  DESIGNER_INVITE_DROPPED_HINT,
+  stripDroppedDesignerInviteParams,
+  DESIGNER_INVITE_PHONE_ACCOUNT_HINT,
   DESIGNER_INVITE_STAFF_EMAIL_ERROR,
+  isDesignerInviteRegistrationError,
   REGISTER_EMAIL_OTP_FALLBACK_HINT,
 } from '@/lib/designerInvites/loginHints';
+import { ApiRequestError } from '@/lib/readApiErrorMessage';
+import { buildPartnerSuggestAfterRefRegistrationPath } from '@/lib/referral/partnerRegistrationLink';
 import { invalidateUserClientCaches } from '@/lib/userSessionClient';
 import { isTurnstileRequired } from '@/lib/turnstile';
 import { validateEmailRequired, validateE164Phone, validatePassword } from '@/lib/validation';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 import flowStyles from './RegisterFlow.module.css';
+
+const DESIGNER_INVITE_STEPS_HINT =
+  'Дальше: аккаунт → заявка (анкета и CV в PDF) → проверка модератором.';
 
 function appendReferralWarningParam(url: string, warning?: string): string {
   const w = warning?.trim();
@@ -63,7 +72,7 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     () => (searchParams.get('ref') ?? searchParams.get('r') ?? '').trim() || undefined,
     [searchParams],
   );
-  const designerInviteToken = useMemo(
+  const inviteFromUrl = useMemo(
     () => (searchParams.get('designerInvite') ?? '').trim() || undefined,
     [searchParams],
   );
@@ -78,6 +87,11 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
   const pdId = useId();
   const smsId = useId();
 
+  const [inviteDropped, setInviteDropped] = useState(false);
+  const designerInviteToken = inviteDropped ? undefined : inviteFromUrl;
+  /** Код из verify — только для редиректа в профиль; в URL ?ref= не кладём. */
+  const [inviteRefCode, setInviteRefCode] = useState<string | null>(null);
+  const [inviterLabel, setInviterLabel] = useState<string | null>(null);
   const [step, setStep] = useState<Step>(1);
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -101,10 +115,9 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     if (!designerInviteToken || channel !== 'phone') return;
     const q = new URLSearchParams();
     q.set('designerInvite', designerInviteToken);
-    if (refFromUrl) q.set('ref', refFromUrl);
     if (prefillEmail) q.set('prefillEmail', prefillEmail);
     router.replace(`/register/email?${q.toString()}`);
-  }, [designerInviteToken, channel, refFromUrl, prefillEmail, router]);
+  }, [designerInviteToken, channel, prefillEmail, router]);
 
   /** Приглашение на уже существующий / staff email → сразу на логин с понятным текстом. */
   useEffect(() => {
@@ -119,10 +132,31 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
         });
         const body = (await res.json().catch(() => ({}))) as {
           email?: string;
+          message?: string;
+          inviterLabel?: string;
+          prefillRef?: string;
           accountExists?: boolean;
           accountKind?: 'none' | 'customer' | 'staff';
         };
-        if (cancelled || !res.ok) return;
+        if (cancelled) return;
+        if (!res.ok) {
+          setInviteDropped(true);
+          setInviterLabel(null);
+          setInviteRefCode(null);
+          const q = stripDroppedDesignerInviteParams(searchParams);
+          const next = q.toString();
+          router.replace(next ? `/register/email?${next}` : '/register/email');
+          const msg =
+            typeof body.message === 'string' && body.message.trim()
+              ? body.message.trim()
+              : 'Ссылка приглашения недействительна или истекла';
+          setFormError(`${DESIGNER_INVITE_DROPPED_HINT} ${msg}`);
+          return;
+        }
+        const label = (body.inviterLabel ?? '').trim();
+        if (label) setInviterLabel(label);
+        const refFromInvite = (body.prefillRef ?? '').trim();
+        setInviteRefCode(refFromInvite || null);
         const kind = body.accountKind ?? (body.accountExists ? 'customer' : 'none');
         const inviteEmail = (body.email ?? prefillEmail ?? '').trim();
         if (kind === 'staff') {
@@ -148,7 +182,7 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     return () => {
       cancelled = true;
     };
-  }, [designerInviteToken, channel, prefillEmail, router]);
+  }, [designerInviteToken, channel, prefillEmail, router, searchParams]);
 
   const inviteEmailLocked = Boolean(designerInviteToken);
   const altRegisterHref = buildRegisterAltHref(channel === 'phone' ? 'email' : 'phone', {
@@ -306,14 +340,23 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
       const data = await registerComplete({
         completionToken,
         password,
-        ...(refFromUrl && refFromUrl.length >= 3 ? { referralCode: refFromUrl } : {}),
-        ...(designerInviteToken ? { designerInviteToken } : {}),
+        ...(designerInviteToken
+          ? { designerInviteToken }
+          : !inviteDropped && refFromUrl && refFromUrl.length >= 3
+            ? { referralCode: refFromUrl }
+            : {}),
       });
       invalidateUserClientCaches({ authenticated: true });
       let target: string;
       if (designerInviteToken) {
         target = appendReferralWarningParam(
-          buildDesignerInviteProfilePath(refFromUrl),
+          buildDesignerInviteProfilePath(inviteRefCode ?? undefined),
+          data.referralWarning,
+        );
+      } else if (!inviteDropped && refFromUrl && refFromUrl.length >= 3) {
+        /** Общая ссылка ?ref= — welcome + мягкий баннер, без автооткрытия заявки. */
+        target = appendReferralWarningParam(
+          buildPartnerSuggestAfterRefRegistrationPath(refFromUrl),
           data.referralWarning,
         );
       } else {
@@ -328,7 +371,18 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
       // Hard nav — не зависеть от soft RSC / чужого `_rsc`-шторма.
       window.location.replace(target);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Не удалось завершить регистрацию');
+      const message = err instanceof Error ? err.message : 'Не удалось завершить регистрацию';
+      const code = err instanceof ApiRequestError ? err.code : undefined;
+      if (designerInviteToken && isDesignerInviteRegistrationError(code)) {
+        setInviteDropped(true);
+        setInviteRefCode(null);
+        const q = stripDroppedDesignerInviteParams(searchParams);
+        const next = q.toString();
+        router.replace(next ? `/register/email?${next}` : '/register/email');
+        setFormError(`${DESIGNER_INVITE_DROPPED_HINT} ${message}`);
+      } else {
+        setFormError(message);
+      }
     } finally {
       setBusy(false);
     }
@@ -426,7 +480,19 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
             ) : (
               <>
                 {inviteEmailLocked ? (
-                  <p className={styles.authOtpHint}>Регистрация только на адрес из приглашения.</p>
+                  <div className={flowStyles.inviteBanner} role="status">
+                    {inviterLabel ? (
+                      <p className={styles.authOtpHint}>
+                        Вас пригласил(а) <strong>{inviterLabel}</strong>.
+                      </p>
+                    ) : (
+                      <p className={styles.authOtpHint}>Вас пригласили стать партнёром Wupapa.</p>
+                    )}
+                    <p className={styles.authOtpHint}>
+                      Регистрация только на адрес из приглашения. {DESIGNER_INVITE_STEPS_HINT}
+                    </p>
+                    <p className={styles.authOtpHint}>{DESIGNER_INVITE_PHONE_ACCOUNT_HINT}</p>
+                  </div>
                 ) : null}
                 <TextField
                   label="Email"
@@ -492,6 +558,15 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
     );
   }
 
+  const inviteContextHint =
+    inviteEmailLocked && inviterLabel ? (
+      <p className={styles.authOtpHint}>
+        Вас пригласил(а) <strong>{inviterLabel}</strong>. {DESIGNER_INVITE_STEPS_HINT}
+      </p>
+    ) : inviteEmailLocked ? (
+      <p className={styles.authOtpHint}>{DESIGNER_INVITE_STEPS_HINT}</p>
+    ) : null;
+
   if (step === 2) {
     const otpHint =
       channel === 'phone' ? (
@@ -500,6 +575,7 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
         </p>
       ) : (
         <>
+          {inviteContextHint}
           <p className={styles.authOtpHint}>
             Мы отправили код на {email}. Введите код из письма.
           </p>
@@ -563,7 +639,14 @@ export function RegisterFlow({ channel }: { channel: RegisterChannel }) {
       sectionAriaLabel="Пароль для нового аккаунта"
       title="Задайте пароль"
       subtitle={
-        <p className={styles.authOtpHint}>После сохранения вы войдёте в личный кабинет.</p>
+        <>
+          {inviteContextHint}
+          <p className={styles.authOtpHint}>
+            {inviteEmailLocked
+              ? 'После сохранения откроется заявка на партнёрство.'
+              : 'После сохранения вы войдёте в личный кабинет.'}
+          </p>
+        </>
       }
       backSlot={backToStep2}
     >

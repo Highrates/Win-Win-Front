@@ -19,9 +19,10 @@ function formatBudget(value: string | null): string {
 type Props = {
   items: SourcingRequestItemApi[];
   requestTitle: string;
+  onImageClick?: (src: string, alt: string) => void;
 };
 
-export function AdminSourcingProductAccordion({ items, requestTitle }: Props) {
+export function AdminSourcingProductAccordion({ items, requestTitle, onImageClick }: Props) {
   const { locale } = useAdminLocale();
   const t = useMemo(() => adminSourcingStrings(locale), [locale]);
   const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
@@ -94,11 +95,23 @@ export function AdminSourcingProductAccordion({ items, requestTitle }: Props) {
               <div className={sd.productRowFull}>
                 <p className={sd.productLabel}>{t.referencesLabel}</p>
                 <div className={sd.thumbs}>
-                  {item.referenceImages.map((img) => (
-                    <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer">
-                      <img src={img.url} alt={img.filename} className={sd.thumb} loading="lazy" />
-                    </a>
-                  ))}
+                  {item.referenceImages.map((img) =>
+                    onImageClick ? (
+                      <button
+                        key={img.id}
+                        type="button"
+                        className={sd.thumbBtn}
+                        onClick={() => onImageClick(img.url, img.filename || title)}
+                        aria-label={`Открыть фото: ${img.filename || title}`}
+                      >
+                        <img src={img.url} alt={img.filename} className={sd.thumb} loading="lazy" />
+                      </button>
+                    ) : (
+                      <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer">
+                        <img src={img.url} alt={img.filename} className={sd.thumb} loading="lazy" />
+                      </a>
+                    ),
+                  )}
                 </div>
               </div>
             ) : null}

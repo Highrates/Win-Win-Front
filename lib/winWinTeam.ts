@@ -36,6 +36,8 @@ export type WinWinTeamL1Dto = {
 
 export type WinWinTeamOverviewDto = {
   inviter: null | { userId: string; name: string; designerSlug: string | null };
+  /** Публичный реф. код текущего партнёра (для ссылки приглашения). */
+  myReferralCode?: string | null;
   counts: { total: number; level1: number; level2: number };
   l1: WinWinTeamL1Dto[];
 };

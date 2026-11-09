@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { AuthPageShell } from '@/components/AuthPageShell';
 import { LoginEmailForm } from '@/components/auth-forms';
-import { redirectIfUserAuthenticated } from '@/lib/authGuestServer';
+import { buildDesignerInviteEntryPath, sanitizeCallbackUrl } from '@/lib/authRedirect';
+import { buildRegisterWithInviteHref } from '@/lib/designerInvites/loginHints';
+import { getServerUserSession } from '@/lib/userSessionServer';
 import styles from '@/components/AuthPageShell/AuthPageShell.module.css';
 
 export const metadata: Metadata = {
@@ -13,9 +16,30 @@ export const metadata: Metadata = {
 export default async function LoginEmailPage({
   searchParams,
 }: {
-  searchParams?: { callbackUrl?: string };
+  searchParams?: {
+    callbackUrl?: string;
+    designerInvite?: string;
+    prefillEmail?: string;
+    designerInviteError?: string;
+  };
 }) {
-  await redirectIfUserAuthenticated(searchParams?.callbackUrl);
+  const inviteToken = (searchParams?.designerInvite ?? '').trim();
+  const session = await getServerUserSession();
+  if (session.authenticated) {
+    /** С invite не уводим в кабинет «молча» — иначе токен теряется. */
+    if (inviteToken) {
+      redirect(buildDesignerInviteEntryPath(inviteToken));
+    }
+    redirect(sanitizeCallbackUrl(searchParams?.callbackUrl));
+  }
+
+  const registerHref = inviteToken
+    ? buildRegisterWithInviteHref({
+        token: inviteToken,
+        email: searchParams?.prefillEmail,
+      })
+    : '/register/email';
+
   return (
     <AuthPageShell
       sectionAriaLabel="Вход в аккаунт"
@@ -23,7 +47,7 @@ export default async function LoginEmailPage({
       subtitle={
         <>
           Впервые у нас?{' '}
-          <Link href="/register/email" className={styles.authLinkAccent}>
+          <Link href={registerHref} className={styles.authLinkAccent}>
             Зарегистрироваться
           </Link>
         </>

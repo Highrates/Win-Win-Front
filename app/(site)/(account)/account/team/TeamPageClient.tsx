@@ -21,8 +21,6 @@ import { TeamSheetSection } from './TeamSheetSection';
 import { TeamPageSkeleton } from './TeamPageSkeleton';
 import styles from './page.module.css';
 
-type ProfileRefDto = { winWinReferralCode?: string | null };
-
 /** Контент страницы команды с модальным окном приглашения (оставляем пользователя на /account/team). */
 export function TeamPageClient() {
   const router = useRouter();
@@ -40,6 +38,10 @@ export function TeamPageClient() {
   const teamLoaded = !loading && !error && Boolean(data);
   const {
     items: activeInvites,
+    total: activeInvitesTotal,
+    truncated: activeInvitesTruncated,
+    listLimit: activeInvitesListLimit,
+    statusCounts: activeInvitesStatusCounts,
     loading: activeInvitesLoading,
     error: activeInvitesError,
     reload: reloadActiveInvites,
@@ -66,6 +68,7 @@ export function TeamPageClient() {
       if (res.status === 403) {
         setError('forbidden');
         setData(null);
+        setMyWinWinReferral(null);
         setPartnerSummary(null);
         setPartnerIncomeError(null);
         setPartnerIncomeLoading(false);
@@ -74,16 +77,20 @@ export function TeamPageClient() {
       if (!res.ok) {
         setError(await readApiErrorMessage(res));
         setData(null);
+        setMyWinWinReferral(null);
         setPartnerSummary(null);
         setPartnerIncomeError(null);
         setPartnerIncomeLoading(false);
         return;
       }
-      setData((await res.json()) as WinWinTeamOverviewDto);
+      const overview = (await res.json()) as WinWinTeamOverviewDto;
+      setData(overview);
+      setMyWinWinReferral(overview.myReferralCode?.trim() || null);
       void loadPartnerIncome();
     } catch {
       setError('Не удалось загрузить данные команды. Попробуйте позже.');
       setData(null);
+      setMyWinWinReferral(null);
       setPartnerSummary(null);
       setPartnerIncomeError(null);
       setPartnerIncomeLoading(false);
@@ -101,20 +108,6 @@ export function TeamPageClient() {
     setInviteDesignerModalOpen(true);
     router.replace(pathname || '/account/team', { scroll: false });
   }, [pathname, router, searchParams]);
-
-  useEffect(() => {
-    if (!data) return;
-    void (async () => {
-      try {
-        const res = await fetch('/api/user/profile', { credentials: 'same-origin', cache: 'no-store' });
-        if (!res.ok) return;
-        const p = (await res.json()) as ProfileRefDto;
-        setMyWinWinReferral(p.winWinReferralCode?.trim() || null);
-      } catch {
-        /* ignore */
-      }
-    })();
-  }, [data]);
 
   const branchCards = useMemo(() => (data?.l1 ? mapWinWinL1ToBranchCards(data.l1) : []), [data]);
   const searchActive = search.trim().length > 0;
@@ -137,7 +130,7 @@ export function TeamPageClient() {
       <div className={styles.page}>
         <h1 className={styles.pageTitle}>Команда</h1>
         <p className={styles.partnerGateText}>
-          Раздел «Команда» доступен одобренным партнёрам Win‑Win.
+          Раздел «Команда» доступен одобренным дизайнерам-партнёрам Wupapa в программе Win‑Win.
         </p>
         <Button type="button" variant="primary" onClick={() => router.push('/account/profile?tab=info')}>
           В профиль
@@ -173,22 +166,15 @@ export function TeamPageClient() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <Button type="button" variant="primary" onClick={() => setInviteDesignerModalOpen(true)}>
-          Пригласить дизайнера
+          Пригласить дизайнера-партнёра
         </Button>
       </div>
 
-      <ActiveDesignerInvites
-        items={activeInvites}
-        loading={activeInvitesLoading}
-        error={activeInvitesError}
-        onRetry={() => void reloadActiveInvites()}
-      />
-
       <div className={styles.summaryColumn}>
         <div className={styles.summaryRowTop}>
-          <p className={report.partnerStatus}>Партнёр Wupapa</p>
+          <p className={report.partnerStatus}>Дизайнер-партнёр Wupapa</p>
           <Link href="/referral" className={styles.programLink}>
-            Подробнее о программе Win Win
+            Подробнее о программе Win‑Win
           </Link>
         </div>
 
@@ -222,6 +208,20 @@ export function TeamPageClient() {
         </div>
       </div>
 
+      <ActiveDesignerInvites
+        items={activeInvites}
+        total={activeInvitesTotal}
+        truncated={activeInvitesTruncated}
+        listLimit={activeInvitesListLimit}
+        statusCounts={activeInvitesStatusCounts}
+        loading={activeInvitesLoading}
+        error={activeInvitesError}
+        onRetry={() => void reloadActiveInvites()}
+        onChanged={() => void reloadActiveInvites()}
+        collapsible
+        visibleLimit={5}
+      />
+
       <TeamSheetSection
         branchCards={filteredBranchCards}
         searchActive={searchActive}
@@ -235,7 +235,8 @@ export function TeamPageClient() {
         open={inviteDesignerModalOpen}
         onClose={() => setInviteDesignerModalOpen(false)}
         referralCode={myWinWinReferral}
-        onSent={() => void reloadActiveInvites()}
+        referralCodeLoading={loading}
+        onSent={reloadActiveInvites}
       />
     </div>
   );

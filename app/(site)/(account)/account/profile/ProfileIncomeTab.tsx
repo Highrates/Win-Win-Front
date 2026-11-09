@@ -77,7 +77,7 @@ export function ProfileIncomeTab() {
       : DASH;
 
   const statusLabel = summary?.isWinWinPartner
-    ? 'Партнёр Wupapa'
+    ? 'Дизайнер-партнёр Wupapa'
     : summary && summary.designerBonus.bonusPercent > 0
       ? `Бонус со своего заказа: ${summary.designerBonus.bonusPercent}%`
       : null;

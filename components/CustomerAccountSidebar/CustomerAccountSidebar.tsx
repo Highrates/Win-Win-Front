@@ -223,7 +223,7 @@ export function CustomerAccountSidebar({
             {userGroupLabel ? (
               <span className={styles.groupBadge}>{userGroupLabel}</span>
             ) : showDesignerNav ? (
-              <p className={styles.partnerStatus}>Партнёр Wupapa</p>
+              <p className={styles.partnerStatus}>Дизайнер-партнёр Wupapa</p>
             ) : (
               <p className={styles.partnerStatus} aria-hidden />
             )}
