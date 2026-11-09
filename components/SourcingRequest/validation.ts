@@ -9,8 +9,7 @@ import {
   SOURCING_PRODUCT_DESCRIPTION_MAX,
   SOURCING_PRODUCT_NAME_MAX,
   SOURCING_TITLE_MAX,
-  countSourcingUploadFiles,
-  validateSourcingIncomingFiles,
+  validateSourcingFilesTotals,
 } from './sourcingLimits';
 
 export type SourcingProductFieldErrors = {
@@ -84,10 +83,8 @@ export function validateSourcingForm(
     errors.productErrors = productErrors;
   }
 
-  if (countSourcingUploadFiles(products, formAttachments) > 0) {
-    const filesError = validateSourcingIncomingFiles([], products, formAttachments);
-    if (filesError) errors.filesGeneral = filesError;
-  }
+  const filesError = validateSourcingFilesTotals(products, formAttachments);
+  if (filesError) errors.filesGeneral = filesError;
 
   return errors;
 }

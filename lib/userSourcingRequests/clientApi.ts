@@ -27,6 +27,7 @@ function buildSourcingRequestFormData(snapshot: SourcingFormSnapshot): FormData 
       referenceImageKeys: p.referenceImages.map((img) => img.id),
     })),
     attachmentKeys: snapshot.formAttachments.map((a) => a.id),
+    clientRequestId: snapshot.clientRequestId || undefined,
   };
   fd.append('payload', JSON.stringify(payload));
   for (const product of snapshot.products) {
@@ -52,16 +53,93 @@ async function readApiError(res: Response): Promise<string> {
   return msg || `HTTP ${res.status}`;
 }
 
-export async function submitSourcingRequest(
+export type SourcingUploadProgress = {
+  loaded: number;
+  total: number;
+  /** `saving` — файлы доставлены, сервер сохраняет заявку (отмена уже не поможет). */
+  phase: 'uploading' | 'saving';
+};
+
+const SUBMIT_ABORTED = 'SourcingSubmitAborted';
+
+export function isSourcingSubmitAborted(e: unknown): boolean {
+  return e instanceof Error && e.name === SUBMIT_ABORTED;
+}
+
+function messageFromXhr(xhr: XMLHttpRequest): string {
+  if (xhr.status === 413) return 'Файлы заявки слишком большие: суммарно не больше 100 МБ';
+  if (xhr.status === 502 || xhr.status === 504) {
+    return 'Сервер не ответил вовремя. Отправьте ещё раз — повторная отправка не создаст дубль заявки.';
+  }
+  try {
+    const j = JSON.parse(xhr.responseText) as { message?: unknown };
+    if (typeof j?.message === 'string' && j.message.trim()) return j.message;
+    if (Array.isArray(j?.message)) return j.message.join(', ');
+  } catch {
+    /* не JSON — например HTML-страница прокси */
+  }
+  return `Не удалось отправить заявку (ошибка ${xhr.status || 'сети'})`;
+}
+
+/** XHR вместо fetch: у fetch нет прогресса загрузки тела. */
+export function submitSourcingRequest(
   snapshot: SourcingFormSnapshot,
+  opts?: { signal?: AbortSignal; onProgress?: (p: SourcingUploadProgress) => void },
 ): Promise<UserSourcingRequestDetailApi> {
-  const res = await fetch('/api/user/sourcing-requests', {
-    method: 'POST',
-    credentials: 'include',
-    body: buildSourcingRequestFormData(snapshot),
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/user/sourcing-requests');
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Accept', 'application/json');
+
+    const aborted = () => {
+      const err = new Error('Отправка отменена');
+      err.name = SUBMIT_ABORTED;
+      reject(err);
+    };
+    const onAbortSignal = () => xhr.abort();
+    opts?.signal?.addEventListener('abort', onAbortSignal, { once: true });
+    const cleanup = () => opts?.signal?.removeEventListener('abort', onAbortSignal);
+
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      opts?.onProgress?.({
+        loaded: e.loaded,
+        total: e.total,
+        phase: e.loaded >= e.total ? 'saving' : 'uploading',
+      });
+    };
+    xhr.upload.onload = () => {
+      opts?.onProgress?.({ loaded: 1, total: 1, phase: 'saving' });
+    };
+    xhr.onload = () => {
+      cleanup();
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(messageFromXhr(xhr)));
+        return;
+      }
+      try {
+        resolve(parseUserSourcingRequestDetail(JSON.parse(xhr.responseText)));
+      } catch (e) {
+        reject(e instanceof Error ? e : new Error('Некорректный ответ сервера'));
+      }
+    };
+    xhr.onerror = () => {
+      cleanup();
+      reject(new Error('Нет соединения с сервером. Проверьте интернет и отправьте ещё раз.'));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      aborted();
+    };
+
+    if (opts?.signal?.aborted) {
+      cleanup();
+      aborted();
+      return;
+    }
+    xhr.send(buildSourcingRequestFormData(snapshot));
   });
-  if (!res.ok) throw new Error(await readApiError(res));
-  return parseUserSourcingRequestDetail(await res.json());
 }
 
 export async function fetchUserSourcingRequestsList(

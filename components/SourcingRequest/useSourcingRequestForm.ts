@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCachedIsAuthenticated } from '@/lib/userSessionClient';
-import { submitSourcingRequest } from '@/lib/userSourcingRequests/clientApi';
+import {
+  isSourcingSubmitAborted,
+  submitSourcingRequest,
+  type SourcingUploadProgress,
+} from '@/lib/userSourcingRequests/clientApi';
+import { prepareSourcingReferenceImage } from './compressReferenceImage';
 import {
   buildSourcingResumeCallbackUrl,
   clearSourcingDraft,
@@ -30,6 +35,14 @@ import {
 } from './validation';
 
 export type SourcingModalView = 'form' | 'auth-required' | 'success';
+
+/** Ошибки добавления файлов — показываются у того контрола, где их добавляли. */
+export type SourcingFileNotices = {
+  references: Record<string, string>;
+  attachments?: string;
+};
+
+const EMPTY_FILE_NOTICES: SourcingFileNotices = { references: {} };
 
 function newId(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -63,6 +76,16 @@ export function useSourcingRequestForm({
   const [draftError, setDraftError] = useState<string | null>(null);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<SourcingFormErrors>({});
+  const [fileNotices, setFileNotices] = useState<SourcingFileNotices>(EMPTY_FILE_NOTICES);
+  const [processingByProduct, setProcessingByProduct] = useState<Record<string, number>>({});
+  const processingImages = Object.values(processingByProduct).reduce((a, b) => a + b, 0);
+  const [clientRequestId, setClientRequestId] = useState(newId);
+  const [uploadProgress, setUploadProgress] = useState<SourcingUploadProgress | null>(null);
+  const submitAbortRef = useRef<AbortController | null>(null);
+  const productsRef = useRef(products);
+  productsRef.current = products;
+  const attachmentsRef = useRef(formAttachments);
+  attachmentsRef.current = formAttachments;
   const resumeAppliedRef = useRef(false);
   const [resumeCallbackUrl, setResumeCallbackUrl] = useState(() => buildSourcingResumeCallbackUrl('/'));
 
@@ -86,8 +109,9 @@ export function useSourcingRequestForm({
       products,
       formAttachments,
       openProductId,
+      clientRequestId,
     };
-  }, [requestTitle, deliveryCity, products, formAttachments, openProductId]);
+  }, [requestTitle, deliveryCity, products, formAttachments, openProductId, clientRequestId]);
 
   const applySnapshot = useCallback((snapshot: SourcingFormSnapshot) => {
     setRequestTitle(snapshot.requestTitle);
@@ -95,11 +119,15 @@ export function useSourcingRequestForm({
     setProducts(snapshot.products);
     setOpenProductId(snapshot.openProductId || snapshot.products[0]?.id || '');
     setFormAttachments(snapshot.formAttachments);
+    if (snapshot.clientRequestId) setClientRequestId(snapshot.clientRequestId);
     setFormErrors({});
+    setFileNotices(EMPTY_FILE_NOTICES);
     setView('form');
   }, []);
 
   const resetFormState = useCallback(() => {
+    submitAbortRef.current?.abort();
+    submitAbortRef.current = null;
     const next = createEmptySourcingProduct();
     setProducts((prev) => {
       revokeSourcingProducts(prev);
@@ -111,7 +139,10 @@ export function useSourcingRequestForm({
     setFormAttachments([]);
     setView('form');
     setSubmitLoading(false);
+    setUploadProgress(null);
     setFormErrors({});
+    setFileNotices(EMPTY_FILE_NOTICES);
+    setClientRequestId(newId());
     setDraftError(null);
   }, []);
 
@@ -143,14 +174,25 @@ export function useSourcingRequestForm({
 
   const performSubmitFromSnapshot = useCallback(
     async (snapshot: SourcingFormSnapshot) => {
+      const ac = new AbortController();
+      submitAbortRef.current = ac;
       setSubmitLoading(true);
       setSubmitError(null);
+      setUploadProgress({ loaded: 0, total: 0, phase: 'uploading' });
       try {
-        await submitSourcingRequest(snapshot);
+        await submitSourcingRequest(snapshot, {
+          signal: ac.signal,
+          onProgress: (p) => setUploadProgress(p),
+        });
         await clearSourcingDraft();
+        setClientRequestId(newId());
         onSubmitted?.();
         setView('success');
       } catch (e) {
+        if (isSourcingSubmitAborted(e)) {
+          setSubmitError('Отправка отменена. Данные формы сохранены — можно отправить снова.');
+          return;
+        }
         setSubmitError(e instanceof Error ? e.message : 'Не удалось отправить заявку');
         try {
           await saveSourcingDraft({ ...snapshot, pendingSubmit: false });
@@ -158,11 +200,17 @@ export function useSourcingRequestForm({
           setSubmitError(SOURCING_DRAFT_SAVE_ERROR);
         }
       } finally {
+        if (submitAbortRef.current === ac) submitAbortRef.current = null;
         setSubmitLoading(false);
+        setUploadProgress(null);
       }
     },
     [onSubmitted],
   );
+
+  const cancelSubmit = useCallback(() => {
+    submitAbortRef.current?.abort();
+  }, []);
 
   useEffect(() => {
     if (!open || !resumeDraft || resumeAppliedRef.current) return;
@@ -225,12 +273,19 @@ export function useSourcingRequestForm({
     });
   }, []);
 
-  const rejectFilesError = useCallback((message: string) => {
-    setFormErrors((prev) => ({ ...prev, filesGeneral: message }));
+  const setReferenceNotice = useCallback((productId: string, message: string | undefined) => {
+    setFileNotices((prev) => {
+      const references = { ...prev.references };
+      if (message) references[productId] = message;
+      else delete references[productId];
+      return { ...prev, references };
+    });
+    if (!message) setFormErrors((prev) => (prev.filesGeneral ? { ...prev, filesGeneral: undefined } : prev));
   }, []);
 
-  const clearFilesError = useCallback(() => {
-    setFormErrors((prev) => ({ ...prev, filesGeneral: undefined }));
+  const setAttachmentsNotice = useCallback((message: string | undefined) => {
+    setFileNotices((prev) => ({ ...prev, attachments: message }));
+    if (!message) setFormErrors((prev) => (prev.filesGeneral ? { ...prev, filesGeneral: undefined } : prev));
   }, []);
 
   const removeProduct = useCallback((id: string) => {
@@ -248,16 +303,47 @@ export function useSourcingRequestForm({
   }, []);
 
   const addReferenceImages = useCallback(
-    (productId: string, files: FileList | File[]) => {
-      const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    async (productId: string, files: FileList | File[]) => {
+      const list = Array.from(files);
       if (!list.length) return;
-      const err = validateSourcingIncomingFiles(list, products, formAttachments, { productId });
-      if (err) {
-        rejectFilesError(err);
+      const countErr = validateSourcingIncomingFiles(
+        list.map((f) => new File([], f.name)),
+        productsRef.current,
+        attachmentsRef.current,
+        { productId },
+      );
+      if (countErr) {
+        setReferenceNotice(productId, countErr);
         return;
       }
-      clearFilesError();
-      const added: SourcingReferenceImage[] = list.map((file) => ({
+
+      const bump = (delta: number) =>
+        setProcessingByProduct((prev) => {
+          const next = { ...prev, [productId]: Math.max(0, (prev[productId] ?? 0) + delta) };
+          if (!next[productId]) delete next[productId];
+          return next;
+        });
+      bump(list.length);
+      let prepared: Awaited<ReturnType<typeof prepareSourcingReferenceImage>>[];
+      try {
+        prepared = await Promise.all(list.map((file) => prepareSourcingReferenceImage(file)));
+      } finally {
+        bump(-list.length);
+      }
+
+      const ready = prepared.flatMap((r) => (r.ok ? [r.file] : []));
+      const rejected = prepared.flatMap((r) => (r.ok ? [] : [r.error]));
+      const sizeErr = ready.length
+        ? validateSourcingIncomingFiles(ready, productsRef.current, attachmentsRef.current, { productId })
+        : null;
+      if (sizeErr) {
+        setReferenceNotice(productId, sizeErr);
+        return;
+      }
+      setReferenceNotice(productId, rejected.length ? rejected.join('\n') : undefined);
+      if (!ready.length) return;
+
+      const added: SourcingReferenceImage[] = ready.map((file) => ({
         id: newId(),
         file,
         previewUrl: URL.createObjectURL(file),
@@ -268,7 +354,7 @@ export function useSourcingRequestForm({
         ),
       );
     },
-    [products, formAttachments, rejectFilesError, clearFilesError],
+    [setReferenceNotice],
   );
 
   const removeReferenceImage = useCallback((productId: string, imageId: string) => {
@@ -286,15 +372,15 @@ export function useSourcingRequestForm({
     (files: FileList | File[]) => {
       const list = Array.from(files);
       if (!list.length) return;
-      const err = validateSourcingIncomingFiles(list, products, formAttachments);
+      const err = validateSourcingIncomingFiles(list, productsRef.current, attachmentsRef.current);
       if (err) {
-        rejectFilesError(err);
+        setAttachmentsNotice(err);
         return;
       }
-      clearFilesError();
+      setAttachmentsNotice(undefined);
       setFormAttachments((prev) => [...prev, ...list.map((file) => ({ id: newId(), file }))]);
     },
-    [products, formAttachments, rejectFilesError, clearFilesError],
+    [setAttachmentsNotice],
   );
 
   const removeFormAttachment = useCallback((id: string) => {
@@ -308,6 +394,7 @@ export function useSourcingRequestForm({
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+      if (processingImages > 0) return;
       const errors = validateSourcingForm(requestTitle, products, formAttachments);
       if (hasSourcingFormErrors(errors)) {
         setFormErrors(errors);
@@ -339,7 +426,7 @@ export function useSourcingRequestForm({
       }
       await performSubmit();
     },
-    [requestTitle, products, formAttachments, buildSnapshot, performSubmit],
+    [processingImages, requestTitle, products, formAttachments, buildSnapshot, performSubmit],
   );
 
   return {
@@ -347,6 +434,11 @@ export function useSourcingRequestForm({
     draftLoading,
     draftError,
     submitLoading,
+    uploadProgress,
+    cancelSubmit,
+    processingImages,
+    processingByProduct,
+    fileNotices,
     submitError,
     discardConfirmOpen,
     setDiscardConfirmOpen,

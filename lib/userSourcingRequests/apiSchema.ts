@@ -13,7 +13,6 @@ export const sourcingRequestStatusSchema = z.enum([
 
 export const sourcingRequestFileSchema = z.object({
   id: z.string(),
-  url: z.string(),
   filename: z.string(),
   mimeType: z.string().nullable(),
 });
@@ -51,8 +50,7 @@ const sourcingRequestCoreSchema = z.object({
 const userListItemSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
-  referenceImageUrl: z.string().nullable().optional(),
-  referenceImageUrls: z.array(z.string()).optional(),
+  referenceImageIds: z.array(z.string()).optional(),
 });
 
 const commercialProposalOfferSchema = z
@@ -149,8 +147,7 @@ export function parseUserSourcingRequestsList(raw: unknown): UserSourcingRequest
       ...item,
       items: item.items.map((summary) => ({
         ...summary,
-        referenceImageUrl: summary.referenceImageUrl ?? null,
-        referenceImageUrls: summary.referenceImageUrls ?? [],
+        referenceImageIds: summary.referenceImageIds ?? [],
       })),
     })),
   };

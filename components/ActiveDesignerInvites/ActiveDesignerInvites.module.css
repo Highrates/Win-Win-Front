@@ -133,8 +133,19 @@
   border: none;
   background: none;
   cursor: pointer;
+  font: inherit;
   font-size: var(--text-caption);
   font-weight: 500;
-  color: var(--color-blue, #2563eb);
+  color: var(--color-blue);
+  text-decoration: none;
+}
+
+.showMore:hover {
   text-decoration: underline;
+}
+
+.showMore:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
 }

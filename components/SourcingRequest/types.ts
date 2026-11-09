@@ -1,3 +1,5 @@
+import { SOURCING_REFERENCE_ACCEPT as SOURCING_REFERENCE_ACCEPT_BASE } from '@win-win/sourcing-request';
+
 export type SourcingReferenceImage = {
   id: string;
   file: File;
@@ -24,7 +26,8 @@ export const SOURCING_UNIT_OPTIONS = [
 
 export type SourcingUnit = (typeof SOURCING_UNIT_OPTIONS)[number];
 
-export const SOURCING_REFERENCE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
+/** HEIC в accept: Safari/iOS отдаёт его как есть, а мы конвертируем в JPEG перед загрузкой. */
+export const SOURCING_REFERENCE_ACCEPT = `${SOURCING_REFERENCE_ACCEPT_BASE},image/heic,image/heif,.heic,.heif`;
 
 export const SOURCING_ATTACHMENT_ACCEPT =
   '.pdf,.dwg,.dxf,.jpg,.jpeg,.png,.webp,.xls,.xlsx,.doc,.docx,.zip,.obj,.fbx,.stl,application/pdf';

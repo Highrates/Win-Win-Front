@@ -209,7 +209,7 @@ export function OrdersAdminClient({ filterUserId, embedded }: { filterUserId?: s
             />
             <AdminSelect
               className={listStyles.statusFilter}
-              label={s.thStatus}
+              aria-label={s.thStatus}
               value={statusFilter}
               onChange={(e) => onStatusFilterChange(e.target.value)}
             >

@@ -22,6 +22,8 @@ export type SourcingFormSnapshot = {
   formAttachments: SourcingFormAttachment[];
   openProductId: string;
   pendingSubmit?: boolean;
+  /** Тот же ключ при повторе после ошибки/входа — сервер не создаст дубль. */
+  clientRequestId?: string;
 };
 
 export type SaveSourcingDraftOptions = {
@@ -48,6 +50,7 @@ type StoredDraft = {
   formAttachments: StoredFileMeta[];
   openProductId: string;
   pendingSubmit?: boolean;
+  clientRequestId?: string;
 };
 
 function openDraftDb(): Promise<IDBDatabase> {
@@ -85,6 +88,24 @@ async function getDraftFile(id: string): Promise<Blob | null> {
   });
   db.close();
   return blob;
+}
+
+/** Удаляет из IndexedDB файлы, которые убрали из формы после прошлого сохранения черновика. */
+async function pruneDraftFiles(keep: Set<string>): Promise<void> {
+  const db = await openDraftDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    const req = store.getAllKeys();
+    req.onsuccess = () => {
+      for (const key of req.result) {
+        if (typeof key === 'string' && !keep.has(key)) store.delete(key);
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB prune failed'));
+  });
+  db.close();
 }
 
 async function clearDraftFiles(): Promise<void> {
@@ -163,6 +184,15 @@ export async function saveSourcingDraft(
   for (const attachment of snapshot.formAttachments) {
     await putDraftFile(attachment.file, attachment.id);
   }
+  const keep = new Set<string>([
+    ...snapshot.products.flatMap((p) => p.referenceImages.map((img) => img.id)),
+    ...snapshot.formAttachments.map((a) => a.id),
+  ]);
+  try {
+    await pruneDraftFiles(keep);
+  } catch {
+    /* лишние файлы не мешают восстановлению */
+  }
 
   const stored: StoredDraft = {
     version: 1,
@@ -170,6 +200,7 @@ export async function saveSourcingDraft(
     requestTitle: snapshot.requestTitle,
     deliveryCity: snapshot.deliveryCity,
     openProductId: snapshot.openProductId,
+    clientRequestId: snapshot.clientRequestId,
     pendingSubmit: opts?.pendingSubmit ?? snapshot.pendingSubmit ?? false,
     products: snapshot.products.map((product) => ({
       id: product.id,
@@ -250,6 +281,7 @@ export async function loadSourcingDraft(): Promise<SourcingFormSnapshot | null> 
     formAttachments,
     openProductId: stored.openProductId,
     pendingSubmit: stored.pendingSubmit === true,
+    clientRequestId: stored.clientRequestId,
   };
 }
 

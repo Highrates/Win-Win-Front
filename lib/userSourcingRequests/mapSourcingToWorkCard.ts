@@ -4,21 +4,17 @@ import {
   formatDesignerOwnExpectedBonusLabel,
   type OrderProgramPublic,
 } from '@/lib/orderProgram/publicOrderProgram';
+import { privateFileHref } from '@/lib/privateFiles';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import { sourcingStatusLabel } from './sourcingStatus';
 import type { UserSourcingRequestListItemApi } from './types';
 
+const SOURCING_CARD_THUMBS_LIMIT = 4;
 const COMPLETED_CHAT_NOTICE = 'Переписка доступна 90 дней после завершения заявки';
 const CANCELLED_CHAT_NOTICE = 'Чат закрыт — заявка отменена';
 
 function itemReferenceThumbSrcs(item: UserSourcingRequestListItemApi['items'][number]): string[] {
-  const raw =
-    item.referenceImageUrls?.length
-      ? item.referenceImageUrls
-      : item.referenceImageUrl?.trim()
-        ? [item.referenceImageUrl.trim()]
-        : [];
-  return raw.map((url) => url.trim()).filter(Boolean).map((url) => resolveMediaUrlForClient(url));
+  return (item.referenceImageIds ?? []).map((id) => privateFileHref(`sourcing:${id}`));
 }
 
 function formatSourcingDate(iso: string): string {
@@ -113,6 +109,7 @@ export function mapSourcingRequestToWorkCard(
     chatSubject: 'sourcing' as const,
     metaRows,
     productThumbSrcs: hasPublishedKp ? kpThumbs : requestThumbs,
+    thumbsLimit: SOURCING_CARD_THUMBS_LIMIT,
     /** Архив только у заказов — меню ⋯ у заявок не показываем. */
     hideMoreMenu: true,
     cornerChipLabel: 'Подбор',

@@ -32,6 +32,7 @@ import clientsStyles from '../../../clients/clients.module.css';
 import pn from '../../../catalog/products/new/productNew.module.css';
 import od from '../../[id]/orderAdminDetail.module.css';
 import { privateFileHref, privateFileLinkProps } from '@/lib/privateFiles';
+import { AdminSourcingThumbGallery } from './AdminSourcingThumbGallery';
 import { AdminOrdersConfirmModal } from '../../AdminOrdersConfirmModal';
 import { AdminSourcingSideChat } from './AdminSourcingSideChat';
 import { AdminSourcingProductAccordion } from './AdminSourcingProductAccordion';
@@ -218,6 +219,11 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
   if (loadError) return <p className={styles.error}>{loadError}</p>;
   if (!detail) return null;
 
+  const isImageAttachment = (a: (typeof detail.attachments)[number]) =>
+    a.inline && (a.mimeType ?? '').toLowerCase().startsWith('image/');
+  const imageAttachments = detail.attachments.filter(isImageAttachment);
+  const fileAttachments = detail.attachments.filter((a) => !isImageAttachment(a));
+
   const isPendingReview = detail.status === 'PENDING_REVIEW';
   const isActive = detail.status === 'IN_PROGRESS';
   const isTerminal = detail.status === 'COMPLETED' || detail.status === 'CANCELLED';
@@ -326,29 +332,36 @@ export function SourcingAdminDetailClient({ id }: { id: string }) {
 
           <div className={styles.section}>
             <h2 className={styles.groupHeading}>{s.sectionProducts(detail.items.length)}</h2>
-            <AdminSourcingProductAccordion
-              items={detail.items}
-              requestTitle={detail.title}
-              onImageClick={(src, alt) => setLightbox({ src, alt })}
-            />
+            <AdminSourcingProductAccordion items={detail.items} requestTitle={detail.title} />
           </div>
 
           {detail.attachments.length > 0 ? (
             <div className={styles.section}>
               <h2 className={styles.groupHeading}>{s.sectionAttachments}</h2>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {detail.attachments.map((a) => (
-                  <li key={a.id}>
-                    <a
-                      href={privateFileHref(`sourcing:${a.id}`, 'admin')}
-                      {...privateFileLinkProps(a.inline)}
-                      className={styles.backLink}
-                    >
-                      {a.filename}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              {imageAttachments.length > 0 ? (
+                <AdminSourcingThumbGallery
+                  images={imageAttachments.map((a) => ({
+                    id: a.id,
+                    src: privateFileHref(`sourcing:${a.id}`, 'admin'),
+                    alt: a.filename,
+                  }))}
+                />
+              ) : null}
+              {fileAttachments.length > 0 ? (
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {fileAttachments.map((a) => (
+                    <li key={a.id}>
+                      <a
+                        href={privateFileHref(`sourcing:${a.id}`, 'admin')}
+                        {...privateFileLinkProps(a.inline)}
+                        className={styles.backLink}
+                      >
+                        {a.filename}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
 

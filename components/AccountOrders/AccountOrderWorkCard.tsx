@@ -50,6 +50,8 @@ export type AccountOrderWorkCardProps = {
   dateLine: string;
   metaRows: AccountOrderWorkMetaRow[];
   productThumbSrcs: string[];
+  /** Показать не больше N миниатюр, остальные — плиткой «+M» (галерея открывает все). */
+  thumbsLimit?: number;
   /** Ссылка на страницу заказа, если не задан onOpenDetails */
   detailHref?: string;
   /** Открыть детали в модалке (приоритетнее detailHref) */
@@ -108,6 +110,7 @@ export function AccountOrderWorkCard({
   dateLine,
   metaRows,
   productThumbSrcs,
+  thumbsLimit,
   detailHref,
   onOpenDetails,
   offer,
@@ -245,6 +248,8 @@ export function AccountOrderWorkCard({
 
   const thumbs = productThumbSrcs.filter(isZoomableThumb);
   const galleryUrls = thumbs;
+  const visibleThumbs = thumbsLimit && thumbsLimit > 0 ? thumbs.slice(0, thumbsLimit) : thumbs;
+  const hiddenThumbsCount = thumbs.length - visibleThumbs.length;
 
   function openThumbGallery(startSrc: string) {
     const idx = galleryUrls.indexOf(startSrc);
@@ -467,7 +472,7 @@ export function AccountOrderWorkCard({
 
         {thumbs.length > 0 ? (
           <div className={styles.orderProductImgs}>
-            {thumbs.map((src, i) => (
+            {visibleThumbs.map((src, i) => (
               <div key={`${src}-${i}`} className={styles.orderProductImg}>
                 <button
                   type="button"
@@ -475,10 +480,32 @@ export function AccountOrderWorkCard({
                   aria-label="Открыть фото"
                   onClick={() => openThumbGallery(src)}
                 >
-                  <img src={src} alt="" width={68} height={73} loading="lazy" />
+                  <img
+                    src={src}
+                    alt=""
+                    width={68}
+                    height={73}
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = PLACEHOLDER;
+                    }}
+                  />
                 </button>
               </div>
             ))}
+            {hiddenThumbsCount > 0 ? (
+              <div className={styles.orderProductImg}>
+                <button
+                  type="button"
+                  className={`${styles.orderProductImgBtn} ${styles.orderProductImgMore}`}
+                  aria-label={`Ещё ${hiddenThumbsCount} фото`}
+                  onClick={() => void openOrderChatPhotoSwipe(galleryUrls, visibleThumbs.length)}
+                >
+                  +{hiddenThumbsCount}
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 

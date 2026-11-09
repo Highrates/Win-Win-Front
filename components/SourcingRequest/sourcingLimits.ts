@@ -3,6 +3,7 @@ import {
   SOURCING_FILE_MAX_BYTES,
   SOURCING_MAX_FILES,
   SOURCING_MAX_REFERENCE_KEYS_PER_PRODUCT,
+  SOURCING_REFERENCE_FORMATS_LABEL,
   SOURCING_UPLOAD_TOTAL_MAX_BYTES,
 } from '@win-win/sourcing-request';
 
@@ -31,6 +32,44 @@ export function sourcingUploadTotalMaxMb(): number {
 }
 
 export const SOURCING_FILES_HINT = `До ${SOURCING_MAX_FILES} файлов: каждый до ${sourcingFileMaxMb()} МБ, суммарно до ${sourcingUploadTotalMaxMb()} МБ`;
+
+export const SOURCING_REFERENCE_HINT = `До ${SOURCING_MAX_REFERENCE_KEYS_PER_PRODUCT} фото на товар: ${SOURCING_REFERENCE_FORMATS_LABEL}. Можно перетащить файлы или вставить скриншот из буфера. Фото сжимаются автоматически.`;
+
+function formatMb(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  if (mb > 0 && mb < 0.1) return '0,1';
+  return mb.toFixed(1).replace('.', ',').replace(/,0$/, '');
+}
+
+/** «12 из 50 файлов · 48 из 100 МБ» — над кнопкой отправки. */
+export function sourcingFilesUsageLabel(
+  products: SourcingProductItem[],
+  formAttachments: SourcingFormAttachment[],
+): string | null {
+  const count = countSourcingUploadFiles(products, formAttachments);
+  if (count === 0) return null;
+  const bytes = totalSourcingUploadBytes(products, formAttachments);
+  return `Файлы: ${count} из ${SOURCING_MAX_FILES} · ${formatMb(bytes)} из ${sourcingUploadTotalMaxMb()} МБ`;
+}
+
+/** Итоговая проверка перед отправкой (по уже добавленным файлам). */
+export function validateSourcingFilesTotals(
+  products: SourcingProductItem[],
+  formAttachments: SourcingFormAttachment[],
+): string | null {
+  if (countSourcingUploadFiles(products, formAttachments) > SOURCING_MAX_FILES) {
+    return `Не больше ${SOURCING_MAX_FILES} файлов на заявку`;
+  }
+  for (const product of products) {
+    if (product.referenceImages.length > SOURCING_MAX_REFERENCE_KEYS_PER_PRODUCT) {
+      return `Не больше ${SOURCING_MAX_REFERENCE_KEYS_PER_PRODUCT} изображений на товар`;
+    }
+  }
+  if (totalSourcingUploadBytes(products, formAttachments) > SOURCING_UPLOAD_TOTAL_MAX_BYTES) {
+    return `Суммарный размер файлов не больше ${sourcingUploadTotalMaxMb()} МБ`;
+  }
+  return null;
+}
 
 export function countSourcingUploadFiles(
   products: SourcingProductItem[],

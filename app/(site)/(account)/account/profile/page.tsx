@@ -6,7 +6,7 @@ import { AccountErrorState } from '@/components/AccountErrorState/AccountErrorSt
 import { InviteDesignerModal } from '@/components/InviteDesignerModal/InviteDesignerModal';
 import { PartnerApplicationModal } from '@/components/PartnerApplicationModal/PartnerApplicationModal';
 import { useAccountProfile } from '@/hooks/useAccountProfile';
-import { useActiveDesignerInvites, dispatchDesignerInvitesChanged } from '@/hooks/useActiveDesignerInvites';
+import { dispatchDesignerInvitesChanged } from '@/hooks/useActiveDesignerInvites';
 import { ProfileAboutModal } from './ProfileAboutModal';
 import { ProfileEditModal } from './ProfileEditModal';
 import { ProfileIncomeTab } from './ProfileIncomeTab';
@@ -55,16 +55,6 @@ function ProfilePageContent() {
 
   const winWinPartnerApproved = Boolean(profile?.winWinPartnerApproved);
   const designerBonusPercent = profile?.designerOwnCatalogBonusPercent ?? 0;
-  const {
-    items: activeInvites,
-    total: activeInvitesTotal,
-    truncated: activeInvitesTruncated,
-    listLimit: activeInvitesListLimit,
-    statusCounts: activeInvitesStatusCounts,
-    loading: activeInvitesLoading,
-    error: activeInvitesError,
-    reload: reloadActiveInvites,
-  } = useActiveDesignerInvites(winWinPartnerApproved && !loading);
   const showIncomeTab = winWinPartnerApproved || designerBonusPercent > 0;
   const availableTabKeys = useMemo<readonly ProfileTabKey[]>(
     () => (showIncomeTab ? (['info', 'income', 'settings'] as const) : (['info', 'settings'] as const)),
@@ -183,14 +173,6 @@ function ProfilePageContent() {
       ) : activeTabKey === 'info' ? (
         <ProfileInfoTab
           profile={profile}
-          activeInvites={activeInvites}
-          activeInvitesLoading={activeInvitesLoading}
-          activeInvitesError={activeInvitesError}
-          activeInvitesTotal={activeInvitesTotal}
-          activeInvitesTruncated={activeInvitesTruncated}
-          activeInvitesListLimit={activeInvitesListLimit}
-          activeInvitesStatusCounts={activeInvitesStatusCounts}
-          onRetryActiveInvites={() => void reloadActiveInvites()}
           onOpenProfileEdit={openProfileEdit}
           onOpenAboutEdit={() => setAboutModalOpen(true)}
           onOpenPartnerApply={() => openPartnerApply(undefined)}

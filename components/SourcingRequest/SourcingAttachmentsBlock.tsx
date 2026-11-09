@@ -7,9 +7,10 @@ type Props = {
   attachments: SourcingFormAttachment[];
   onAdd: (files: FileList | File[]) => void;
   onRemove: (id: string) => void;
+  notice?: string;
 };
 
-export function SourcingAttachmentsBlock({ attachments, onAdd, onRemove }: Props) {
+export function SourcingAttachmentsBlock({ attachments, onAdd, onRemove, notice }: Props) {
   return (
     <div className={styles.attachmentsBlock}>
       <h3 className={styles.productsTitle}>Файлы к заявке</h3>
@@ -27,6 +28,11 @@ export function SourcingAttachmentsBlock({ attachments, onAdd, onRemove }: Props
         />
         Прикрепить файлы
       </label>
+      {notice ? (
+        <p className={styles.fileNotice} role="alert">
+          {notice}
+        </p>
+      ) : null}
       {attachments.length > 0 ? (
         <ul className={styles.attachmentsList}>
           {attachments.map((attachment) => (

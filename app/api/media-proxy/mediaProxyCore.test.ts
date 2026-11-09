@@ -22,6 +22,9 @@ describe('media-proxy allowlist', () => {
       true,
     );
     expect(isAllowedMediaProxyTarget(new URL('https://res.cloudinary.com/demo/image.jpg'))).toBe(true);
+    expect(
+      isAllowedMediaProxyTarget(new URL('https://s3.regru.cloud/winwin-media/objects/brendy/a.jpg')),
+    ).toBe(true);
   });
 
   it('denies unknown hosts unless env allowlist expands them', async () => {

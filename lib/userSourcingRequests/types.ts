@@ -14,9 +14,9 @@ export type SourcingRequestStatus =
   | 'COMPLETED'
   | 'CANCELLED';
 
+/** Референс или вложение заявки без адреса хранилища: `sourcing:<id>` через `privateFileHref`. */
 export type SourcingRequestFileApi = {
   id: string;
-  url: string;
   filename: string;
   mimeType: string | null;
 };
@@ -65,8 +65,8 @@ export type UserSourcingRequestItemApi = SourcingRequestItemApi;
 export type UserSourcingRequestListItemSummaryApi = {
   id: string;
   name: string;
-  referenceImageUrl: string | null;
-  referenceImageUrls?: string[];
+  /** Id референсов для `privateFileHref(\`sourcing:${id}\`)`. */
+  referenceImageIds?: string[];
 };
 
 export type UserSourcingRequestListItemApi = SourcingRequestCoreApi & {

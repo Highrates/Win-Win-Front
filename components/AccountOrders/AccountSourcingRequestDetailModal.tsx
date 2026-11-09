@@ -1,7 +1,6 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { resolveSourcingProductDisplayName } from '@win-win/sourcing-request';
 import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig';
 import panelModal from '@/components/SlideInPanelModal/slideInPanelModal.module.css';
 import { ChatWindow } from '@/components/ChatWindow/ChatWindow';
@@ -13,7 +12,6 @@ import {
   type AccountWorkNotificationsDetail,
 } from '@/lib/account/orders';
 import { formatOrderDisplayId } from '@/lib/orders/formatOrderDisplayId';
-import { formatBudgetDigitsGrouped } from '@/lib/formatBudgetRub';
 import { sourcingKpLineTotalRub, sourcingKpOrderTotalRub } from '@/lib/sourcingCommercialProposal/kpLineTotals';
 import type { SourcingCommercialProposalApi, SourcingCommercialProposalLineApi } from '@/lib/sourcingCommercialProposal/types';
 import { downloadSourcingCommercialProposalPdf } from '@/lib/commercialProposal/downloadSourcingCommercialProposalPdf';
@@ -27,7 +25,7 @@ import { sourcingStatusLabel } from '@/lib/userSourcingRequests/sourcingStatus';
 import type { UserSourcingRequestDetailApi } from '@/lib/userSourcingRequests/types';
 import { AccountGalleryThumb } from '@/components/AccountOrders/AccountGalleryThumb';
 import { OrderKpActionFooter } from '@/components/AccountOrders/OrderKpActionFooter';
-import { privateFileHref, privateFileLinkProps } from '@/lib/privateFiles';
+import { AccountSourcingRequestOriginal } from '@/components/AccountOrders/AccountSourcingRequestOriginal';
 import orderDetailStyles from './AccountOrderDetailModal.module.css';
 import styles from './AccountSourcingRequestDetailModal.module.css';
 
@@ -51,13 +49,6 @@ function formatDetailDate(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-function formatBudget(value: string | null): string {
-  if (!value?.trim()) return '—';
-  const digits = value.replace(/\D/g, '');
-  if (!digits) return '—';
-  return `${formatBudgetDigitsGrouped(digits)} ₽`;
 }
 
 function formatMoney(n: number): string {
@@ -298,10 +289,6 @@ export function AccountSourcingRequestDetailModal({
   }, [detail?.publishedCommercialProposals, detail?.latestCommercialProposal]);
   const hasKp = publishedKps.length > 0;
   const latestKp = publishedKps[0] ?? null;
-  const referenceGalleryUrls = useMemo(
-    () => (detail?.items ?? []).flatMap((item) => item.referenceImages.map((img) => img.url)),
-    [detail?.items],
-  );
 
   async function handleDownloadKpPdf() {
     if (!detail?.id || pdfBusy) return;
@@ -427,107 +414,7 @@ export function AccountSourcingRequestDetailModal({
                 ) : null}
               </div>
 
-              {!hasKp ? (
-              <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Товары</h3>
-                <div className={styles.accordionList}>
-                  {detail.items.map((item, index) => (
-                    <AccordionBig
-                      key={item.id}
-                      title={resolveSourcingProductDisplayName({
-                        name: item.name,
-                        requestTitle: detail.title,
-                        productIndex: index,
-                        productCount: detail.items.length,
-                      })}
-                      defaultOpen={index === 0}
-                      className={styles.accordionFullWidth}
-                      panelClassName={styles.itemGrid}
-                    >
-                      {item.productLink?.trim() ? (
-                        <div className={styles.itemRow}>
-                          <span className={styles.label}>Ссылка</span>
-                          <a href={item.productLink} target="_blank" rel="noopener noreferrer" className={styles.link}>
-                            {item.productLink}
-                          </a>
-                        </div>
-                      ) : null}
-                      {item.material?.trim() ? (
-                        <div className={styles.itemRow}>
-                          <span className={styles.label}>Материал</span>
-                          <span>{item.material}</span>
-                        </div>
-                      ) : null}
-                      {item.color?.trim() ? (
-                        <div className={styles.itemRow}>
-                          <span className={styles.label}>Цвет</span>
-                          <span>{item.color}</span>
-                        </div>
-                      ) : null}
-                      {item.size?.trim() ? (
-                        <div className={styles.itemRow}>
-                          <span className={styles.label}>Размер</span>
-                          <span>{item.size}</span>
-                        </div>
-                      ) : null}
-                      <div className={styles.itemRow}>
-                        <span className={styles.label}>Количество</span>
-                        <span>
-                          {item.quantity} {item.unit}
-                        </span>
-                      </div>
-                      {item.expectedBudget ? (
-                        <div className={styles.itemRow}>
-                          <span className={styles.label}>Бюджет за ед.</span>
-                          <span>{formatBudget(item.expectedBudget)}</span>
-                        </div>
-                      ) : null}
-                      {item.description?.trim() ? (
-                        <div className={styles.itemRowFull}>
-                          <span className={styles.label}>Описание</span>
-                          <p className={styles.description}>{item.description}</p>
-                        </div>
-                      ) : null}
-                      {item.referenceImages.length > 0 ? (
-                        <div className={styles.itemRowFull}>
-                          <span className={styles.label}>Референсы</span>
-                          <div className={styles.thumbs}>
-                            {item.referenceImages.map((img) => (
-                              <AccountGalleryThumb
-                                key={img.id}
-                                src={img.url}
-                                galleryUrls={referenceGalleryUrls}
-                                className={styles.thumb}
-                                alt={img.filename}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </AccordionBig>
-                  ))}
-                </div>
-              </div>
-              ) : null}
-
-              {!hasKp && detail.attachments.length > 0 ? (
-                <div className={styles.section}>
-                  <h3 className={styles.sectionTitle}>Вложения</h3>
-                  <ul className={styles.attachments}>
-                    {detail.attachments.map((a) => (
-                      <li key={a.id}>
-                        <a
-                          href={privateFileHref(`sourcing:${a.id}`)}
-                          {...privateFileLinkProps(a.inline)}
-                          className={styles.link}
-                        >
-                          {a.filename}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
+              {!hasKp ? <AccountSourcingRequestOriginal detail={detail} /> : null}
 
               {hasKp ? (
                 <div className={styles.section}>
@@ -549,6 +436,17 @@ export function AccountSourcingRequestDetailModal({
                     ))}
                   </div>
                 </div>
+              ) : null}
+
+              {hasKp ? (
+                <AccordionBig
+                  title="Исходная заявка"
+                  defaultOpen={false}
+                  className={styles.accordionFullWidth}
+                  panelClassName={styles.section}
+                >
+                  <AccountSourcingRequestOriginal detail={detail} showRequestMeta />
+                </AccordionBig>
               ) : null}
             </>
           ) : null}

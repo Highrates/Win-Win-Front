@@ -6,7 +6,9 @@ import { AccordionBig } from '@/app/(site)/(account)/account/orders/AccordionBig
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import { adminSourcingStrings } from '@/lib/admin-i18n/adminOrdersI18n';
 import { formatBudgetDigitsGrouped } from '@/lib/formatBudgetRub';
+import { privateFileHref } from '@/lib/privateFiles';
 import type { SourcingRequestItemApi } from '@/lib/userSourcingRequests/types';
+import { AdminSourcingThumbGallery } from './AdminSourcingThumbGallery';
 import sd from './sourcingAdminDetail.module.css';
 
 function formatBudget(value: string | null): string {
@@ -19,10 +21,9 @@ function formatBudget(value: string | null): string {
 type Props = {
   items: SourcingRequestItemApi[];
   requestTitle: string;
-  onImageClick?: (src: string, alt: string) => void;
 };
 
-export function AdminSourcingProductAccordion({ items, requestTitle, onImageClick }: Props) {
+export function AdminSourcingProductAccordion({ items, requestTitle }: Props) {
   const { locale } = useAdminLocale();
   const t = useMemo(() => adminSourcingStrings(locale), [locale]);
   const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
@@ -93,26 +94,16 @@ export function AdminSourcingProductAccordion({ items, requestTitle, onImageClic
             ) : null}
             {item.referenceImages.length > 0 ? (
               <div className={sd.productRowFull}>
-                <p className={sd.productLabel}>{t.referencesLabel}</p>
-                <div className={sd.thumbs}>
-                  {item.referenceImages.map((img) =>
-                    onImageClick ? (
-                      <button
-                        key={img.id}
-                        type="button"
-                        className={sd.thumbBtn}
-                        onClick={() => onImageClick(img.url, img.filename || title)}
-                        aria-label={`Открыть фото: ${img.filename || title}`}
-                      >
-                        <img src={img.url} alt={img.filename} className={sd.thumb} loading="lazy" />
-                      </button>
-                    ) : (
-                      <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer">
-                        <img src={img.url} alt={img.filename} className={sd.thumb} loading="lazy" />
-                      </a>
-                    ),
-                  )}
-                </div>
+                <p className={sd.productLabel}>
+                  {t.referencesLabel} · {item.referenceImages.length}
+                </p>
+                <AdminSourcingThumbGallery
+                  images={item.referenceImages.map((img) => ({
+                    id: img.id,
+                    src: privateFileHref(`sourcing:${img.id}`, 'admin'),
+                    alt: img.filename || title,
+                  }))}
+                />
               </div>
             ) : null}
           </AccordionBig>

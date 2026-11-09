@@ -4,7 +4,7 @@ import { TextField } from '@/components/TextField';
 import textFieldStyles from '@/components/TextField/TextField.module.css';
 import { formatBudgetDigitsGrouped, parseBudgetDigits } from '@/lib/formatBudgetRub';
 import {
-  SOURCING_FILES_HINT,
+  SOURCING_REFERENCE_HINT,
   SOURCING_PRODUCT_DESCRIPTION_MAX,
   SOURCING_PRODUCT_FIELD_MAX,
   SOURCING_PRODUCT_NAME_MAX,
@@ -37,6 +37,8 @@ type Props = {
   onUpdate: (patch: Partial<SourcingProductItem>) => void;
   onAddReferenceImages: (files: FileList | File[]) => void;
   onRemoveReferenceImage: (imageId: string) => void;
+  referenceNotice?: string;
+  referenceProcessing?: boolean;
 };
 
 export function SourcingProductAccordion({
@@ -50,6 +52,8 @@ export function SourcingProductAccordion({
   onUpdate,
   onAddReferenceImages,
   onRemoveReferenceImage,
+  referenceNotice,
+  referenceProcessing,
 }: Props) {
   const title = productAccordionTitle(product, index);
 
@@ -83,12 +87,14 @@ export function SourcingProductAccordion({
         />
 
         <h4 className={styles.subsectionTitle}>Референсы (фото, скриншоты)</h4>
-        <p className={styles.referenceHint}>{SOURCING_FILES_HINT}</p>
+        <p className={styles.referenceHint}>{SOURCING_REFERENCE_HINT}</p>
         <div className={styles.referenceBlock}>
           <SourcingReferenceGrid
             images={product.referenceImages}
             onAdd={onAddReferenceImages}
             onRemove={onRemoveReferenceImage}
+            notice={referenceNotice}
+            processing={referenceProcessing}
           />
           <TextField
             label="Ссылка на товар или аналог"

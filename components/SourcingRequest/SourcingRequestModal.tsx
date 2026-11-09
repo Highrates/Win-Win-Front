@@ -9,10 +9,46 @@ import { SourcingAttachmentsBlock } from './SourcingAttachmentsBlock';
 import { SourcingAuthGateView } from './SourcingAuthGateView';
 import { SourcingProductAccordion } from './SourcingProductAccordion';
 import { SourcingSuccessView } from './SourcingSuccessView';
-import { SOURCING_CITY_MAX, SOURCING_MAX_PRODUCTS, SOURCING_TITLE_MAX } from './sourcingLimits';
+import {
+  SOURCING_CITY_MAX,
+  SOURCING_MAX_PRODUCTS,
+  SOURCING_TITLE_MAX,
+  sourcingFilesUsageLabel,
+} from './sourcingLimits';
 import styles from './SourcingRequestModal.module.css';
 import { useSourcingRequestForm } from './useSourcingRequestForm';
 import { productsCountLabel } from './validation';
+import type { SourcingUploadProgress } from '@/lib/userSourcingRequests/clientApi';
+
+function SourcingUploadProgressView({ progress }: { progress: SourcingUploadProgress }) {
+  const percent =
+    progress.phase === 'saving' || progress.total <= 0
+      ? progress.phase === 'saving'
+        ? 100
+        : 0
+      : Math.min(100, Math.round((progress.loaded / progress.total) * 100));
+  const mb = (n: number) => (n / (1024 * 1024)).toFixed(1).replace('.', ',');
+  const label =
+    progress.phase === 'saving'
+      ? 'Файлы загружены, сохраняем заявку…'
+      : progress.total > 0
+        ? `Загружаем файлы: ${percent}% (${mb(progress.loaded)} из ${mb(progress.total)} МБ)`
+        : 'Начинаем загрузку…';
+  return (
+    <div className={styles.uploadProgress} role="status" aria-live="polite">
+      <div
+        className={styles.uploadProgressBar}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+      >
+        <div className={styles.uploadProgressFill} style={{ width: `${percent}%` }} />
+      </div>
+      <p className={styles.uploadProgressLabel}>{label}</p>
+    </div>
+  );
+}
 
 function CloseIcon() {
   return (
@@ -67,7 +103,13 @@ export function SourcingRequestModal({
     removeFormAttachment,
     submitError,
     submitLoading,
+    uploadProgress,
+    cancelSubmit,
+    processingImages,
+    processingByProduct,
+    fileNotices,
   } = form;
+  const filesUsage = sourcingFilesUsageLabel(products, formAttachments);
 
   useModalFocusTrap(open, panelRef);
 
@@ -141,7 +183,21 @@ export function SourcingRequestModal({
               onBackToForm={() => setView('form')}
             />
           ) : (
-            <form className={styles.form} onSubmit={(e) => void handleSubmit(e)}>
+            <form
+              className={styles.form}
+              onSubmit={(e) => void handleSubmit(e)}
+              onPaste={(e) => {
+                const images = Array.from(e.clipboardData?.files ?? []).filter((f) =>
+                  f.type.startsWith('image/'),
+                );
+                if (!images.length || e.clipboardData.getData('text/plain').trim()) return;
+                e.preventDefault();
+                const targetId = openProductId || products[0]?.id;
+                if (!targetId) return;
+                if (targetId !== openProductId) setOpenProductId(targetId);
+                void addReferenceImages(targetId, images);
+              }}
+            >
               <div className={styles.fieldRow}>
                 <TextField
                   label="Название заявки"
@@ -179,12 +235,6 @@ export function SourcingRequestModal({
                   </Button>
                 </div>
 
-                {formErrors.filesGeneral ? (
-                  <p className={styles.formErrorBanner} role="alert">
-                    {formErrors.filesGeneral}
-                  </p>
-                ) : null}
-
                 {formErrors.productsGeneral ? (
                   <p className={styles.formErrorBanner} role="alert">
                     {formErrors.productsGeneral}
@@ -206,8 +256,10 @@ export function SourcingRequestModal({
                       onRemove={() => removeProduct(product.id)}
                       fieldErrors={formErrors.productErrors?.[product.id]}
                       onUpdate={(patch) => updateProduct(product.id, patch)}
-                      onAddReferenceImages={(files) => addReferenceImages(product.id, files)}
+                      onAddReferenceImages={(files) => void addReferenceImages(product.id, files)}
                       onRemoveReferenceImage={(imageId) => removeReferenceImage(product.id, imageId)}
+                      referenceNotice={fileNotices.references[product.id]}
+                      referenceProcessing={(processingByProduct[product.id] ?? 0) > 0}
                     />
                   ))}
                 </div>
@@ -217,7 +269,16 @@ export function SourcingRequestModal({
                 attachments={formAttachments}
                 onAdd={addFormAttachments}
                 onRemove={removeFormAttachment}
+                notice={fileNotices.attachments}
               />
+
+              {filesUsage ? <p className={styles.filesUsage}>{filesUsage}</p> : null}
+
+              {formErrors.filesGeneral ? (
+                <p className={styles.formErrorBanner} role="alert">
+                  {formErrors.filesGeneral}
+                </p>
+              ) : null}
 
               {submitError ? (
                 <p className={styles.submitError} role="alert">
@@ -225,13 +286,25 @@ export function SourcingRequestModal({
                 </p>
               ) : null}
 
+              {uploadProgress ? <SourcingUploadProgressView progress={uploadProgress} /> : null}
+
               <div className={panelModal.actions}>
-                <Button type="submit" variant="primary" disabled={submitLoading}>
-                  {submitLoading ? 'Отправка…' : 'Отправить заявку'}
+                <Button type="submit" variant="primary" disabled={submitLoading || processingImages > 0}>
+                  {submitLoading
+                    ? 'Отправка…'
+                    : processingImages > 0
+                      ? 'Обрабатываем фото…'
+                      : 'Отправить заявку'}
                 </Button>
-                <Button type="button" variant="secondary" onClick={requestClose}>
-                  Отмена
-                </Button>
+                {submitLoading && uploadProgress?.phase === 'uploading' ? (
+                  <Button type="button" variant="secondary" onClick={cancelSubmit}>
+                    Остановить загрузку
+                  </Button>
+                ) : (
+                  <Button type="button" variant="secondary" onClick={requestClose} disabled={submitLoading}>
+                    Отмена
+                  </Button>
+                )}
               </div>
             </form>
           )}

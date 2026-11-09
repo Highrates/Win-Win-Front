@@ -25,4 +25,5 @@
   flex: 0 1 220px;
   max-width: 240px;
   min-width: 160px;
+  margin-left: auto;
 }

@@ -155,10 +155,76 @@
   gap: 12px;
 }
 
+.referenceGridWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .referenceGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
   gap: 10px;
+  border-radius: 10px;
+  outline: 2px dashed transparent;
+  outline-offset: 4px;
+  transition: outline-color 0.15s ease, background-color 0.15s ease;
+}
+
+.referenceGridDragOver {
+  outline-color: var(--color-gray);
+  background: color-mix(in srgb, var(--color-bright-snow) 70%, transparent);
+}
+
+.referenceProcessing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-family: var(--font-commissioner);
+}
+
+.fileNotice {
+  margin: 0;
+  color: var(--color-red);
+  font-size: var(--text-caption);
+  font-family: var(--font-commissioner);
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.filesUsage {
+  margin: 0;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-family: var(--font-commissioner);
+}
+
+.uploadProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.uploadProgressBar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--account-hairline-color, #e2e6e8);
+  overflow: hidden;
+}
+
+.uploadProgressFill {
+  height: 100%;
+  background: var(--color-black, #111);
+  transition: width 0.2s ease;
+}
+
+.uploadProgressLabel {
+  margin: 0;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-family: var(--font-commissioner);
 }
 
 .referenceAddTile {

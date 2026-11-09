@@ -4,6 +4,8 @@ import {
   SOURCING_MAX_REFERENCE_KEYS_PER_PRODUCT,
   SOURCING_PRODUCT_NAME_MAX,
   SOURCING_TITLE_MAX,
+  sourcingFilesUsageLabel,
+  validateSourcingFilesTotals,
   validateSourcingIncomingFiles,
 } from './sourcingLimits';
 import { createEmptySourcingProduct } from './types';
@@ -107,5 +109,37 @@ describe('isProductMinimallyFilled (frontend adapter)', () => {
       },
     ];
     expect(isProductMinimallyFilled(product)).toBe(true);
+  });
+});
+
+describe('validateSourcingFilesTotals', () => {
+  const fileOf = (bytes: number, name = 'a.jpg') =>
+    new File([new Uint8Array(bytes)], name, { type: 'image/jpeg' });
+
+  it('ловит превышение суммарного размера уже добавленных файлов', () => {
+    const product = createEmptySourcingProduct();
+    product.referenceImages = Array.from({ length: 8 }, (_, i) => ({
+      id: `r${i}`,
+      file: fileOf(14 * 1024 * 1024),
+      previewUrl: '',
+    }));
+    expect(validateSourcingFilesTotals([product], [])).toMatch(/Суммарный размер/);
+  });
+
+  it('ловит превышение количества файлов с учётом вложений', () => {
+    const product = createEmptySourcingProduct();
+    product.referenceImages = [{ id: 'r', file: fileOf(1), previewUrl: '' }];
+    const attachments = Array.from({ length: SOURCING_MAX_FILES }, (_, i) => ({
+      id: `a${i}`,
+      file: fileOf(1, 'x.pdf'),
+    }));
+    expect(validateSourcingFilesTotals([product], attachments)).toMatch(/файлов на заявку/);
+  });
+
+  it('показывает счётчик файлов и объёма', () => {
+    const product = createEmptySourcingProduct();
+    expect(sourcingFilesUsageLabel([product], [])).toBeNull();
+    product.referenceImages = [{ id: 'r', file: fileOf(1024 * 1024), previewUrl: '' }];
+    expect(sourcingFilesUsageLabel([product], [])).toMatch(new RegExp(`^Файлы: 1 из ${SOURCING_MAX_FILES}`));
   });
 });

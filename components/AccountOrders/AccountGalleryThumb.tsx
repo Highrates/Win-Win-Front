@@ -1,9 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { openOrderChatPhotoSwipe } from '@/lib/orderChat/openOrderChatPhotoSwipe';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import thumbStyles from './AccountGalleryThumb.module.css';
+
+const BROKEN_THUMB_SRC = '/images/placeholder.svg';
 
 function resolveUrl(url: string): string {
   return resolveMediaUrlForClient(url).trim();
@@ -26,12 +28,21 @@ export function AccountGalleryThumb({ src, galleryUrls, className, width, height
   const resolvedSrc = resolveUrl(src);
   const resolvedGallery = useMemo(() => resolveAccountGalleryUrls(galleryUrls), [galleryUrls]);
   const idx = resolvedGallery.indexOf(resolvedSrc);
+  const [broken, setBroken] = useState(false);
 
-  if (idx < 0 || resolvedGallery.length === 0) {
-    return (
-      <img className={className} src={resolvedSrc} alt={alt} width={width} height={height} loading="lazy" />
-    );
-  }
+  const img = (
+    <img
+      className={className}
+      src={broken ? BROKEN_THUMB_SRC : resolvedSrc}
+      alt={broken ? `${alt} — не удалось загрузить`.trim() : alt}
+      width={width}
+      height={height}
+      loading="lazy"
+      onError={() => setBroken(true)}
+    />
+  );
+
+  if (broken || idx < 0 || resolvedGallery.length === 0) return img;
 
   return (
     <button
@@ -40,7 +51,7 @@ export function AccountGalleryThumb({ src, galleryUrls, className, width, height
       onClick={() => void openOrderChatPhotoSwipe(resolvedGallery, idx)}
       aria-label="Открыть фото"
     >
-      <img className={className} src={resolvedSrc} alt={alt} width={width} height={height} loading="lazy" />
+      {img}
     </button>
   );
 }
