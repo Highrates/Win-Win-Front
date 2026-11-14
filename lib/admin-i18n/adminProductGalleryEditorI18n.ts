@@ -2,6 +2,15 @@ import type { AdminLocale } from '@/lib/admin-i18n/adminChromeI18n';
 
 const pick = <T,>(locale: AdminLocale, ru: T, zh: T): T => (locale === 'zh' ? zh : ru);
 
+function framesWordRu(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return 'кадров';
+  if (mod10 === 1) return 'кадр';
+  if (mod10 >= 2 && mod10 <= 4) return 'кадра';
+  return 'кадров';
+}
+
 export function adminProductGalleryEditorStrings(locale: AdminLocale) {
   return {
     add: pick(locale, 'Добавить', '添加'),
@@ -9,7 +18,7 @@ export function adminProductGalleryEditorStrings(locale: AdminLocale) {
     remove: pick(locale, 'Удалить', '删除'),
     dragAria: pick(locale, 'Перетащить кадр', '拖动图片'),
     pickerTitle: pick(locale, 'Изображения галереи', '图库图片'),
-    framesCount: (n: number) => pick(locale, `${n} кадров`, `${n} 帧`),
+    framesCount: (n: number) => pick(locale, `${n} ${framesWordRu(n)}`, `${n} 帧`),
     poolHeading: pick(locale, 'Кадры товара', '商品图片'),
     poolHint: pick(
       locale,

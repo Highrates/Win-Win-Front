@@ -40,27 +40,43 @@
 }
 
 .btnPrimary {
+  position: relative;
   background: var(--color-ink-black);
   color: var(--color-white);
   border-radius: 100px;
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
-  transition:
-    background-color 0.15s ease,
-    filter 0.15s ease;
+}
+
+/* Градиент поверх — opacity, без смены background (нет мигания) */
+.btnPrimary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
 }
 
 .btnPrimary span {
+  position: relative;
+  z-index: 1;
   font-size: inherit;
   font-weight: inherit;
 }
 
-.btnPrimary:hover:not(:disabled) {
-  filter: brightness(1.22);
+.btnPrimary:hover:not(:disabled)::before {
+  opacity: 1;
 }
 
 .btnPrimary:active:not(:disabled) {
-  filter: brightness(0.94);
+  background: #141312;
 }
 
 .btnIcon {
@@ -85,5 +101,7 @@
 }
 
 .btnPrimary .btnChevron {
+  position: relative;
+  z-index: 1;
   color: var(--color-white);
 }

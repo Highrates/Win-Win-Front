@@ -80,8 +80,15 @@ function AdminSidebar({
   pathname: string;
   setAdminLocale: (next: AdminLocale) => void;
 }) {
-  const { pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread, productQaUnread } =
-    useAdminSidebarBadges();
+  const {
+    pendingPartnerApps,
+    pendingOrdersApproval,
+    pendingSourcingReview,
+    pendingTourApplications,
+    pendingTourReviews,
+    ordersChatUnread,
+    productQaUnread,
+  } = useAdminSidebarBadges();
   const { canAccessSection, isSuperAdmin, staff, email, loading: permissionsLoading } =
     useAdminPermissions();
   const t = adminChromeStrings(locale);
@@ -142,6 +149,19 @@ function AdminSidebar({
               <AdminNavBadge
                 count={ordersChatUnread ?? 0}
                 title={badgeTitles.ordersChatUnread}
+              />
+            </>
+          ) : null}
+          {href === '/admin/tours' ? (
+            <>
+              <AdminNavBadge
+                count={pendingTourApplications ?? 0}
+                title={badgeTitles.tourApplicationsPending}
+              />
+              <AdminNavBadge
+                count={pendingTourReviews ?? 0}
+                title={badgeTitles.tourReviewsPending}
+                variant="bracket"
               />
             </>
           ) : null}

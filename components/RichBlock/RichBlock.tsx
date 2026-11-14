@@ -126,6 +126,8 @@ type RichBlockProps = {
   pickMediaFromLibrary?: RichBlockPickMediaFromLibrary;
   /** Дополнительно к сообщению под тулбаром (например, общий toast в родителе). */
   onUploadError?: (message: string) => void;
+  /** false — только текст (без тулбара медиа и вставок изображений/видео). */
+  allowMedia?: boolean;
 };
 
 export function RichBlock({
@@ -135,6 +137,7 @@ export function RichBlock({
   uploadMedia,
   pickMediaFromLibrary,
   onUploadError,
+  allowMedia = true,
 }: RichBlockProps) {
   const fieldId = useId();
   const imageInputId = `${fieldId}-rich-img`;
@@ -891,10 +894,11 @@ export function RichBlock({
     <div
       ref={wrapRef}
       className={styles.richEditorWrap}
-      onClickCapture={handleEditorClickCapture}
-      onKeyDownCapture={handleEditorKeyDownCapture}
+      onClickCapture={allowMedia ? handleEditorClickCapture : undefined}
+      onKeyDownCapture={allowMedia ? handleEditorKeyDownCapture : undefined}
     >
       <div ref={toolbarStackRef} className={styles.richEditorStickyToolbars}>
+        {allowMedia ? (
         <div className={styles.richMediaToolbar}>
           <span
             className={
@@ -1014,13 +1018,14 @@ export function RichBlock({
             wrap-r
           </button>
         </div>
-        {uploadError ? (
+        ) : null}
+        {allowMedia && uploadError ? (
           <p className={styles.uploadError} role="alert">
             {uploadError}
           </p>
         ) : null}
       </div>
-      {!useLibraryPicker ? (
+      {allowMedia && !useLibraryPicker ? (
         <>
           <input
             id={imageInputId}

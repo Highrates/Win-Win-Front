@@ -1,3 +1,4 @@
+import { HomeToursSkeleton } from './HomeTours/HomeToursSkeleton';
 import skeletonStyles from './homeSkeleton.module.css';
 import styles from './HomeBelowFoldSkeleton.module.css';
 
@@ -41,6 +42,8 @@ export function HomeBelowFoldSkeleton() {
           <div className={`${skeletonStyles.shimmer} ${styles.aboutTagline}`} />
         </div>
       </section>
+
+      <HomeToursSkeleton />
     </div>
   );
 }

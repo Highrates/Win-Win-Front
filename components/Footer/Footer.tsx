@@ -19,6 +19,7 @@ const infoLinksBeforeSourcing = [
   { href: '/brands', label: 'Бренды' },
   { href: '/designers', label: 'Дизайнеры' },
   { href: '/projects', label: 'Проекты и концепции' },
+  { href: '/tours', label: 'Туры в Китай' },
 ] as const;
 
 const infoLinksAfterSourcing = [

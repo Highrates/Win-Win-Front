@@ -9,6 +9,7 @@ const links = [
   { href: '/brands', label: 'Бренды' },
   { href: '/designers', label: 'Дизайнеры' },
   { href: '/projects', label: 'Проекты' },
+  { href: '/tours', label: 'Туры в Китай' },
   { href: '/blog', label: 'Статьи' },
 ];
 

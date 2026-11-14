@@ -87,6 +87,7 @@ const IDLE_SECTION_LINKS = [
   { href: '/catalog', label: 'Каталог', key: 'sec-catalog' },
   { href: '/brands', label: 'Бренды', key: 'sec-brands' },
   { href: '/collections', label: 'Коллекции', key: 'sec-collections' },
+  { href: '/tours', label: 'Туры в Китай', key: 'sec-tours' },
   { href: '/blog', label: 'Блог', key: 'sec-blog' },
 ] as const;
 

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SiteTransitionProvider } from '@/components/SiteTransition';
 import { ClientOnlyOverlays } from '@/components/ClientOnlyOverlays';
+import { YandexMetrika } from '@/components/YandexMetrika/YandexMetrika';
 import { SITE_FAVICON_SRC, SITE_NAME, SITE_WEBCLIP_SRC } from '@/lib/brand';
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* Первый кадр до гидратации: без этого видна разметка страницы до клиентского SiteLoader */}
         <div id="site-boot-loader" className="site-boot-loader" aria-hidden />
+        <YandexMetrika />
         <SiteTransitionProvider>
           <ClientOnlyOverlays />
           {children}

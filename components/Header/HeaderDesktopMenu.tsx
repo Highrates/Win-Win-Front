@@ -13,6 +13,7 @@ export const INFO_ABOUT_LINKS = [
   { href: '/about', label: 'О нас' },
   { href: '/designers', label: 'Дизайнеры' },
   { href: '/projects', label: 'Проекты' },
+  { href: '/tours', label: 'Туры в Китай' },
   { href: '/blog', label: 'Новости и статьи' },
 ] as const;
 

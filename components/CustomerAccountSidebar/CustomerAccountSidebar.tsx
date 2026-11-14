@@ -38,6 +38,7 @@ const ICON = {
   docs: '/icons/doc.svg',
   contact: '/icons/sms.svg',
   questions: '/icons/account-sidebar/message-question.svg',
+  tours: '/icons/location.svg',
 } as const;
 
 type MenuDef = { href: string; iconSrc: string; label: string };
@@ -156,6 +157,7 @@ export function CustomerAccountSidebar({
     const primary: MenuDef[] = [
       { href: '/account/orders', iconSrc: ICON.orders, label: 'Заказы' },
       { href: '/account/questions', iconSrc: ICON.questions, label: 'Мои вопросы' },
+      { href: '/account/tours', iconSrc: ICON.tours, label: 'Туры в Китай' },
       { href: '/account/favorites', iconSrc: ICON.favorites, label: 'Избранное' },
     ];
     if (showDesignerNav) {

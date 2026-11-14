@@ -8,6 +8,8 @@ import { AboutTeaser } from './AboutTeaser/AboutTeaser';
 import { News } from './News/News';
 import { NewsSkeleton } from './News/NewsSkeleton';
 import { HomeProjects } from './HomeProjects/HomeProjects';
+import { HomeTours } from './HomeTours/HomeTours';
+import { HomeToursSkeleton } from './HomeTours/HomeToursSkeleton';
 import { HomeProductCollections } from './HomeProductCollections';
 import { HomeProductLikesScope } from './HomeProductLikesScope';
 
@@ -26,6 +28,9 @@ export async function HomeBelowFold() {
       </Suspense>
       <Suspense fallback={null}>
         <HomeProjects />
+      </Suspense>
+      <Suspense fallback={<HomeToursSkeleton />}>
+        <HomeTours />
       </Suspense>
       <HomeProductCollections
         sections={sections.recommendationsRail ? [sections.recommendationsRail] : []}

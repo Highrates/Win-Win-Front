@@ -17,6 +17,8 @@ export type AdminSidebarBadgesValue = {
   pendingPartnerApps: number | null;
   pendingOrdersApproval: number | null;
   pendingSourcingReview: number | null;
+  pendingTourApplications: number | null;
+  pendingTourReviews: number | null;
   ordersChatUnread: number | null;
   productQaUnread: number | null;
   productQaPending: number | null;
@@ -34,6 +36,8 @@ export function AdminSidebarBadgesProvider({
   const [pendingPartnerApps, setPendingPartnerApps] = useState<number | null>(null);
   const [pendingOrdersApproval, setPendingOrdersApproval] = useState<number | null>(null);
   const [pendingSourcingReview, setPendingSourcingReview] = useState<number | null>(null);
+  const [pendingTourApplications, setPendingTourApplications] = useState<number | null>(null);
+  const [pendingTourReviews, setPendingTourReviews] = useState<number | null>(null);
   const [ordersChatUnread, setOrdersChatUnread] = useState<number | null>(null);
   const [productQaUnread, setProductQaUnread] = useState<number | null>(null);
   const [productQaPending, setProductQaPending] = useState<number | null>(null);
@@ -67,6 +71,19 @@ export function AdminSidebarBadgesProvider({
       setPendingSourcingReview(typeof j.total === 'number' ? j.total : 0);
     } catch (e) {
       warnBadgeLoadFailure('sourcing pending review', e);
+    }
+  }, []);
+
+  const loadPendingTours = useCallback(async () => {
+    try {
+      const [apps, reviews] = await Promise.all([
+        adminBackendJson<{ total?: number }>('china-tours/admin/applications/pending-count'),
+        adminBackendJson<{ total?: number }>('china-tours/admin/reviews/pending-count'),
+      ]);
+      setPendingTourApplications(typeof apps.total === 'number' ? apps.total : 0);
+      setPendingTourReviews(typeof reviews.total === 'number' ? reviews.total : 0);
+    } catch (e) {
+      warnBadgeLoadFailure('china tours pending', e);
     }
   }, []);
 
@@ -112,6 +129,11 @@ export function AdminSidebarBadgesProvider({
         setPendingSourcingReview(null);
         setOrdersChatUnread(null);
       }
+      if (permissions.canAccessSection('tours')) void loadPendingTours();
+      else {
+        setPendingTourApplications(null);
+        setPendingTourReviews(null);
+      }
       if (permissions.canAccessSection('catalog')) {
         void loadProductQaUnread();
         void loadProductQaPending();
@@ -126,6 +148,7 @@ export function AdminSidebarBadgesProvider({
     loadPendingPartnerApps,
     loadPendingOrdersApproval,
     loadPendingSourcingReview,
+    loadPendingTours,
     loadOrdersChatUnread,
     loadProductQaUnread,
     loadProductQaPending,
@@ -152,6 +175,9 @@ export function AdminSidebarBadgesProvider({
     const onRefreshSourcingPending = () => {
       void loadPendingSourcingReview();
     };
+    const onRefreshToursPending = () => {
+      void loadPendingTours();
+    };
     const onRefreshOrdersChatUnread = () => {
       void loadOrdersChatUnread();
     };
@@ -164,6 +190,7 @@ export function AdminSidebarBadgesProvider({
     document.addEventListener('admin-partner-pending-refresh', onRefreshPartner);
     document.addEventListener('admin-orders-pending-refresh', onRefreshOrders);
     document.addEventListener('admin-sourcing-pending-refresh', onRefreshSourcingPending);
+    document.addEventListener('admin-tours-pending-refresh', onRefreshToursPending);
     document.addEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
     document.addEventListener(ADMIN_PRODUCT_QA_UNREAD_REFRESH_EVENT, onRefreshProductQaUnread);
     document.addEventListener(ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT, onRefreshProductQaPending);
@@ -171,6 +198,7 @@ export function AdminSidebarBadgesProvider({
       document.removeEventListener('admin-partner-pending-refresh', onRefreshPartner);
       document.removeEventListener('admin-orders-pending-refresh', onRefreshOrders);
       document.removeEventListener('admin-sourcing-pending-refresh', onRefreshSourcingPending);
+      document.removeEventListener('admin-tours-pending-refresh', onRefreshToursPending);
       document.removeEventListener('admin-orders-chat-unread-refresh', onRefreshOrdersChatUnread);
       document.removeEventListener(ADMIN_PRODUCT_QA_UNREAD_REFRESH_EVENT, onRefreshProductQaUnread);
       document.removeEventListener(ADMIN_PRODUCT_QA_PENDING_REFRESH_EVENT, onRefreshProductQaPending);
@@ -180,6 +208,7 @@ export function AdminSidebarBadgesProvider({
     loadPendingPartnerApps,
     loadPendingOrdersApproval,
     loadPendingSourcingReview,
+    loadPendingTours,
     loadOrdersChatUnread,
     loadProductQaUnread,
     loadProductQaPending,
@@ -190,11 +219,22 @@ export function AdminSidebarBadgesProvider({
       pendingPartnerApps,
       pendingOrdersApproval,
       pendingSourcingReview,
+      pendingTourApplications,
+      pendingTourReviews,
       ordersChatUnread,
       productQaUnread,
       productQaPending,
     }),
-    [pendingPartnerApps, pendingOrdersApproval, pendingSourcingReview, ordersChatUnread, productQaUnread, productQaPending],
+    [
+      pendingPartnerApps,
+      pendingOrdersApproval,
+      pendingSourcingReview,
+      pendingTourApplications,
+      pendingTourReviews,
+      ordersChatUnread,
+      productQaUnread,
+      productQaPending,
+    ],
   );
 
   return (

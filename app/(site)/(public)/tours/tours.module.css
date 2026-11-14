@@ -1,0 +1,542 @@
+.pageSection {
+  --tours-ink: #051826;
+  --tours-muted: #9d9d9d;
+  --tours-grid-pad: max(2rem, calc((100vw - 1536px) / 2 + 2rem));
+  margin-top: 0;
+  padding-bottom: 96px;
+  color: var(--tours-ink);
+  background: #fff;
+}
+
+/* Listing: крошки/чипы под фиксированным хедером */
+.pageSectionListing {
+  margin-top: 94px;
+}
+
+/* Врезка на главной: без отступа под хедер, компактнее снизу */
+.pageSectionHome {
+  padding-bottom: 0;
+}
+
+.breadcrumbs {
+  align-self: stretch;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+}
+
+.breadcrumbsLink {
+  color: var(--color-gray);
+  text-decoration: none;
+}
+
+.breadcrumbsLink:hover {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsCurrent {
+  color: var(--color-ink-black);
+}
+
+.breadcrumbsSep {
+  color: var(--color-gray);
+  user-select: none;
+}
+
+.dateChips {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+  margin: 0 0 56px;
+  list-style: none;
+  padding: 0;
+}
+
+.dateChip {
+  position: relative;
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-family: var(--font-commissioner);
+  font-size: var(--h5-size, 16px);
+  font-weight: var(--h5-weight, 300);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tours-muted);
+  padding: 16px 32px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.dateChip:hover {
+  color: var(--tours-ink);
+}
+
+.dateChipActive {
+  color: var(--tours-ink);
+}
+
+.dateChipLabel {
+  position: relative;
+  z-index: 1;
+  letter-spacing: 0;
+}
+
+.dateChipOutline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  color: var(--tours-ink);
+  overflow: visible;
+}
+
+.handOutlinePath {
+  fill: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: handOutlineDraw 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes handOutlineDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handOutlinePath {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+.trackShell {
+  position: relative;
+  width: 100%;
+}
+
+.trackArrows {
+  position: absolute;
+  top: 12px;
+  right: max(1rem, calc((100vw - 1536px) / 2 + 2rem));
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.trackArrow {
+  pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-ink-black, #1d1c1b) 18%, transparent);
+  background: color-mix(in srgb, #fff 88%, transparent);
+  color: var(--color-ink-black, #1d1c1b);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.trackArrow:hover:not(:disabled) {
+  background: #fff;
+  border-color: color-mix(in srgb, var(--color-ink-black, #1d1c1b) 32%, transparent);
+}
+
+.trackArrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.trackArrow:focus-visible {
+  outline: 2px solid var(--color-ink-black, #1d1c1b);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .pageSection {
+    padding-bottom: 64px;
+  }
+
+  .pageSectionListing {
+    margin-top: 72px;
+  }
+
+  .trackArrows {
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    top: 4px;
+  }
+
+  .trackArrow {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/*
+ * Трек на всю ширину .page (sibling к .padding-global).
+ * Стартовый отступ = формула сетки (как BestBrands / ScrollCatalog).
+ * Не padding-left: scroll-snap съедает padding и уезжает с сетки.
+ * Спейсер + scroll-padding-left держат intro на сетке при snap.
+ */
+.layoutTrack {
+  --tours-grid-pad: max(2rem, calc((100vw - 1536px) / 2 + 2rem));
+  --tours-track-gap: 56px;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tours-track-gap);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: var(--tours-grid-pad);
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
+  min-height: 420px;
+}
+
+.layoutTrack::-webkit-scrollbar {
+  display: none;
+}
+
+.trackGridPad {
+  flex: 0 0 var(--tours-grid-pad);
+  width: var(--tours-grid-pad);
+  height: 1px;
+  margin-right: calc(-1 * var(--tours-track-gap));
+  pointer-events: none;
+  /* стартовый snap-якорь: intro остаётся на сетке */
+  scroll-snap-align: start;
+}
+
+@media (max-width: 768px) {
+  .layoutTrack {
+    --tours-grid-pad: max(1rem, env(safe-area-inset-left, 0px));
+    --tours-track-gap: 20px;
+    min-height: 0;
+    /* место под peek следующей карточки + safe-area */
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (max-width: 960px) {
+  .dateChips {
+    margin-bottom: 28px;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    margin-left: calc(-1 * max(1rem, env(safe-area-inset-left, 0px)));
+    margin-right: calc(-1 * max(1rem, env(safe-area-inset-right, 0px)));
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+
+  .dateChips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dateChip {
+    flex-shrink: 0;
+    padding: 12px 18px;
+  }
+
+  .layoutTrack {
+    --tours-track-gap: 28px;
+  }
+}
+
+.intro {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: min(480px, 85vw);
+  margin-right: 120px;
+  scroll-snap-align: start;
+}
+
+.introTitle {
+  margin: 0 0 22px;
+  font-size: 48px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.introTitleLine {
+  display: block;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .introTitle {
+    font-size: var(--h1-size);
+    margin-bottom: 16px;
+  }
+
+  .introTitleLine {
+    white-space: normal;
+  }
+}
+
+.introImage {
+  width: 403px;
+  height: 253px;
+  max-width: 100%;
+  object-fit: cover;
+  margin: 0 0 22px;
+  display: block;
+}
+
+.introText {
+  margin: 0 0 14px;
+  font-size: var(--text-body, 15px);
+  font-weight: var(--text-body-weight, 300);
+  line-height: var(--text-body-long-height, 22px);
+  color: var(--color-ink-black, #1d1c1b);
+  max-width: 34ch;
+  text-transform: none;
+}
+
+.cardSlide {
+  flex: 0 0 min(62vw, 560px);
+  scroll-snap-align: start;
+  opacity: 0.72;
+  transition: opacity 0.25s ease;
+}
+
+.cardSlideLink {
+  display: grid;
+  gap: 18px;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cardSlideLink:focus-visible {
+  outline: 2px solid var(--color-ink-black, #1d1c1b);
+  outline-offset: 4px;
+}
+
+.cardSlideActive {
+  opacity: 1;
+}
+
+.cardSlideActive .cardSlideLink {
+  cursor: pointer;
+}
+
+.collage {
+  position: relative;
+  height: min(58vw, 460px);
+  max-height: 520px;
+  margin-right: 8%;
+}
+
+.collagePlaceholder {
+  position: absolute;
+  inset: 0 18% 8% 0;
+  background: #e8ecef;
+}
+
+.collagePrimary {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 62%;
+  height: 94%;
+  object-fit: cover;
+  display: block;
+}
+
+.collageSecondary {
+  position: absolute;
+  right: 0;
+  bottom: 2%;
+  width: 50%;
+  height: 72%;
+  object-fit: cover;
+  display: block;
+  transform: rotate(7deg);
+  transform-origin: center center;
+  box-shadow: 0 14px 36px rgba(5, 24, 38, 0.14);
+  transition: transform 0.35s ease;
+  will-change: transform;
+}
+
+.collageSecondaryFlat {
+  transform: rotate(0deg);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding-right: 12%;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--h2-size, 32px);
+  font-weight: var(--h2-weight, 350);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.seats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-card-16-400, 16px);
+  font-weight: 400;
+  color: var(--color-ink-black, #1d1c1b);
+  white-space: nowrap;
+  text-transform: none;
+}
+
+.seats svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.cardBottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding-right: 8%;
+}
+
+.cardText {
+  margin: 0;
+  font-size: var(--text-body, 15px);
+  font-weight: var(--text-body-weight, 300);
+  line-height: var(--text-body-long-height, 22px);
+  max-width: 42ch;
+  color: var(--color-ink-black, #1d1c1b);
+  flex: 1;
+  min-width: 0;
+  text-transform: none;
+}
+
+.roundLink {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tours-ink);
+  text-decoration: none;
+  background: #fff;
+}
+
+.roundLinkOutline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  color: currentColor;
+  overflow: visible;
+}
+
+.roundLinkIcon {
+  position: relative;
+  z-index: 1;
+}
+
+.roundLink:hover {
+  color: var(--tours-ink);
+  background: transparent;
+}
+
+.empty {
+  color: var(--tours-muted);
+  font-size: 15px;
+}
+
+/* Mobile overrides — после базовых правил, иначе cascade проигрывает */
+@media (max-width: 768px) {
+  .intro {
+    flex: 0 0 min(82vw, 320px);
+    width: min(82vw, 320px);
+    max-width: none;
+    margin-right: 0;
+  }
+
+  .introImage {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 403 / 253;
+    margin-bottom: 16px;
+  }
+
+  .introText {
+    max-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .cardSlide {
+    flex: 0 0 min(82vw, 340px);
+    width: min(82vw, 340px);
+  }
+
+  .collage {
+    height: min(72vw, 300px);
+    max-height: none;
+    margin-right: 4%;
+  }
+
+  .cardMeta {
+    gap: 10px 14px;
+    padding-right: 0;
+  }
+
+  .cardTitle {
+    font-size: clamp(22px, 6vw, 28px);
+  }
+
+  .cardBottom {
+    gap: 12px;
+    padding-right: 0;
+    align-items: center;
+  }
+
+  .cardText {
+    max-width: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .roundLink {
+    width: 44px;
+    height: 44px;
+  }
+}
