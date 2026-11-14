@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import type { RefObject } from 'react';
+import type { Ref } from 'react';
 import { tourImageUnoptimized } from '@/lib/chinaTours/tourImage';
 import type { ChinaTourDetailDay } from '@/lib/chinaTours/types';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
@@ -17,7 +17,7 @@ type Props = {
   thumbUrls: string[];
   slideIndex: number;
   thumbsVisible: boolean;
-  timelineScrollRef: RefObject<HTMLDivElement | null>;
+  timelineScrollRef: Ref<HTMLDivElement>;
   onSelectThumb: (url: string) => void;
 };
 
