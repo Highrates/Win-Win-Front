@@ -42,8 +42,7 @@ export function TourDayBrands({ brands }: Props) {
 
   return (
     <div className={styles.dayBrands}>
-      <p className={`h5 ${styles.dayBrandsLabel}`}>Фабрики дня</p>
-      <ul className={styles.dayBrandList}>
+      <ul className={styles.dayBrandList} aria-label="Фабрики дня">
         {list.map((b) => {
           const openable = canOpenAbout(b);
           const thumb = b.logoUrl ? resolveMediaUrlForClient(b.logoUrl) : null;

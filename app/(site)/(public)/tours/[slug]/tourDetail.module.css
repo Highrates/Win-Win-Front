@@ -181,12 +181,17 @@
   /* колонки 4–7; старт на уровне joinRow */
   grid-column: 4 / 8;
   grid-row: 3;
-  align-self: stretch;
+  /* +48px в padding-bottom layout — timeline до дивидера reviews; thumbs остаются в gutter */
+  align-self: start;
+  height: calc(100% + 48px);
+  max-height: calc(100% + 48px);
+  margin-bottom: -48px;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* visible: чипы времени уезжают в gutter (negative margin у timelineScroll) */
+  overflow: visible;
 }
 
 .program :global(a) {
@@ -204,10 +209,17 @@
  * контент не сжимается, а уезжает/открывается плоскостью.
  */
 .daySwap {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: visible;
+}
+
+.daySwapOut,
+.daySwapIn {
+  overflow: hidden;
   will-change: transform, opacity, clip-path;
 }
 
@@ -270,15 +282,6 @@
 .dayBrands {
   flex-shrink: 0;
   margin: 0 0 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.dayBrandsLabel {
-  margin: 0;
-  color: var(--tours-muted);
-  letter-spacing: 0.06em;
 }
 
 .dayBrandList {
@@ -365,8 +368,10 @@
  * чипы сидят в gutter без клипа.
  */
 .timelineScroll {
-  flex: 1 1 auto;
+  /* 1 1 0 — добирает высоту до низа program / дивидера reviews */
+  flex: 1 1 0;
   min-height: 0;
+  /* chips внутри расширенной ширины — x не нужен visible (иначе с y:auto браузер всё равно клипит) */
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
