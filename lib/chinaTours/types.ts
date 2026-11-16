@@ -21,6 +21,18 @@ export type ChinaTourScheduleItem = {
   sortOrder?: number;
 };
 
+/** Бренд/фабрика в дне (admin DTO + editor). */
+export type ChinaTourDayBrand = {
+  id?: string;
+  brandId?: string | null;
+  customName?: string | null;
+  sortOrder?: number;
+  /** Display name (catalog name or custom). */
+  name?: string;
+  slug?: string | null;
+  logoUrl?: string | null;
+};
+
 /** День как в admin editor / DTO (с images). */
 export type ChinaTourDay = {
   id?: string;
@@ -30,6 +42,7 @@ export type ChinaTourDay = {
   sortOrder?: number;
   items: ChinaTourScheduleItem[];
   images: ChinaTourImage[];
+  brands?: ChinaTourDayBrand[];
 };
 
 export type ChinaToursLanding = {
@@ -53,6 +66,20 @@ export type ChinaTourListItem = {
   cardSecondaryUrl: string | null;
 };
 
+/** Бренд дня на публичной detail (для чипов + MoreAboutBrand). */
+export type ChinaTourDetailDayBrand = {
+  id: string;
+  name: string;
+  slug: string | null;
+  logoUrl: string | null;
+  shortDescription: string | null;
+  descriptionHtml: string | null;
+  siteUrl: string | null;
+  galleryUrls: string[];
+  catalogPdfUrl: string | null;
+  hasAbout: boolean;
+};
+
 /** День на публичной detail (hero/gallery уже разложены). */
 export type ChinaTourDetailDay = {
   id: string;
@@ -62,6 +89,7 @@ export type ChinaTourDetailDay = {
   items: Array<{ id: string; timeLabel: string; title: string; body: string }>;
   heroUrl: string | null;
   galleryUrls: string[];
+  brands: ChinaTourDetailDayBrand[];
 };
 
 export type ChinaTourDetail = {

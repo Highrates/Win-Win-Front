@@ -6,6 +6,7 @@ import { tourImageUnoptimized } from '@/lib/chinaTours/tourImage';
 import type { ChinaTourDetailDay } from '@/lib/chinaTours/types';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import shared from '../tours.module.css';
+import { TourDayBrands } from './TourDayBrands';
 import styles from './tourDetail.module.css';
 
 type Props = {
@@ -74,6 +75,7 @@ export function TourDetailProgram({
               {day.title?.trim() || `День ${day.dayNumber}`}
             </h2>
             {day.subtitle ? <p className={`h5 ${styles.daySub}`}>{day.subtitle}</p> : null}
+            <TourDayBrands brands={day.brands ?? []} />
             <div className={styles.timelineScroll} ref={timelineScrollRef}>
               <ul className={styles.timeline}>
                 {day.items.map((it) => (

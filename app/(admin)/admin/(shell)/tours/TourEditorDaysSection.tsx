@@ -12,6 +12,7 @@ import { RichBlock } from '@/components/RichBlock/RichBlock';
 import catalogStyles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import pn from '@/app/(admin)/admin/(shell)/catalog/products/new/productNew.module.css';
 import type { adminProductGalleryEditorStrings } from '@/lib/admin-i18n/adminProductGalleryEditorI18n';
+import { TourDayBrandsEditor } from './TourDayBrandsEditor';
 import { emptyScheduleItem, type EditorDay } from './tourEditorHelpers';
 import styles from './toursAdmin.module.css';
 
@@ -133,6 +134,15 @@ export function TourEditorDaysSection({
                     }
                   />
                 </div>
+
+                <TourDayBrandsEditor
+                  brands={day.brands}
+                  onChange={(next) =>
+                    setDays((prev) =>
+                      prev.map((d, i) => (i === di ? { ...d, brands: next } : d)),
+                    )
+                  }
+                />
 
                 {day.items.map((it, ii) => {
                   const itemClosed = itemCollapsed[di]?.[ii] ?? false;

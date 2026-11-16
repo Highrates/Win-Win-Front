@@ -270,6 +270,12 @@ export function TourEditorClient({ tourId }: Props) {
             sortOrder: ii,
           })),
           images: selectedFramesToDayImages(gallery, daySelectedIds[di] ?? []),
+          brands: d.brands.map((b, bi) => ({
+            ...(b.id ? { id: b.id } : {}),
+            brandId: b.brandId || null,
+            customName: b.brandId ? null : b.customName || b.name || null,
+            sortOrder: bi,
+          })),
         })),
       };
       if (isNew) {

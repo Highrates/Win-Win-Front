@@ -244,6 +244,110 @@
   gap: 12px;
 }
 
+.dayBrands {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  background: #fff;
+}
+
+.dayBrandsLabel {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-ink-black, #051826);
+}
+
+.dayBrandsEmpty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: rgba(5, 24, 38, 0.55);
+}
+
+.dayBrandChips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dayBrandChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  background: var(--color-bright-snow, #f5f7f8);
+}
+
+.dayBrandChipName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-black, #051826);
+}
+
+.dayBrandChipHint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(5, 24, 38, 0.5);
+}
+
+.dayBrandsAdd {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dayBrandHits {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--account-hairline-color, #e2e6e8);
+  border-radius: 8px;
+  padding: 6px;
+  background: #fff;
+}
+
+.dayBrandHit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--color-ink-black, #051826);
+}
+
+.dayBrandHit:hover {
+  background: var(--color-bright-snow, #f5f7f8);
+}
+
+.dayBrandsCustomRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
 .featuredList {
   display: flex;
   flex-direction: column;

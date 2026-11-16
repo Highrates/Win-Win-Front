@@ -9,9 +9,14 @@ import type {
 
 export type EditorItem = AdminChinaTourScheduleItem & { clientKey: string };
 
-export type EditorDay = Omit<AdminChinaTourDay, 'items'> & {
+export type EditorDayBrand = NonNullable<AdminChinaTourDay['brands']>[number] & {
+  clientKey: string;
+};
+
+export type EditorDay = Omit<AdminChinaTourDay, 'items' | 'brands'> & {
   clientKey: string;
   items: EditorItem[];
+  brands: EditorDayBrand[];
 };
 
 export function emptyScheduleItem(): EditorItem {
@@ -23,6 +28,19 @@ export function emptyScheduleItem(): EditorItem {
   };
 }
 
+export function emptyDayBrand(partial?: Partial<EditorDayBrand>): EditorDayBrand {
+  return {
+    brandId: partial?.brandId ?? null,
+    customName: partial?.customName ?? null,
+    name: partial?.name ?? partial?.customName ?? '',
+    slug: partial?.slug ?? null,
+    logoUrl: partial?.logoUrl ?? null,
+    clientKey: partial?.id ?? createClientRandomId(),
+    id: partial?.id,
+    sortOrder: partial?.sortOrder,
+  };
+}
+
 export function emptyDay(n: number): EditorDay {
   return {
     dayNumber: n,
@@ -31,6 +49,7 @@ export function emptyDay(n: number): EditorDay {
     sortOrder: n - 1,
     items: [emptyScheduleItem()],
     images: [],
+    brands: [],
     clientKey: createClientRandomId(),
   };
 }
@@ -42,6 +61,16 @@ export function hydrateEditorItem(it: AdminChinaTourScheduleItem): EditorItem {
   };
 }
 
+export function hydrateEditorDayBrand(
+  b: NonNullable<AdminChinaTourDay['brands']>[number],
+): EditorDayBrand {
+  return {
+    ...b,
+    name: b.name || b.customName || '',
+    clientKey: b.id ?? createClientRandomId(),
+  };
+}
+
 export function hydrateEditorDay(d: AdminChinaTourDay): EditorDay {
   const items = d.items.length ? d.items.map(hydrateEditorItem) : [emptyScheduleItem()];
   return {
@@ -49,6 +78,7 @@ export function hydrateEditorDay(d: AdminChinaTourDay): EditorDay {
     clientKey: d.id ?? createClientRandomId(),
     items,
     images: d.images ?? [],
+    brands: (d.brands ?? []).map(hydrateEditorDayBrand),
   };
 }
 

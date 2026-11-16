@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { AccountDocRow } from '@/components/AccountDocRow/AccountDocRow';
+import { useState, useCallback } from 'react';
 import { SideSheetModal } from '@/components/SideSheetModal/SideSheetModal';
-import styles from './BrandPage.module.css';
+import { BrandAboutSheetContent } from './BrandAboutSheetContent';
 
 type Props = {
   brandName: string;
@@ -50,22 +49,6 @@ function ExternalArrowIcon({ className }: { className?: string }) {
   );
 }
 
-function normalizeExternalHref(raw: string): string | null {
-  const t = raw.trim();
-  if (!t) return null;
-  if (/^https?:\/\//i.test(t)) return t;
-  if (/^\/\//.test(t)) return `https:${t}`;
-  return `https://${t}`;
-}
-
-function siteHostLabel(href: string): string {
-  try {
-    return new URL(href).hostname.replace(/^www\./i, '');
-  } catch {
-    return 'Сайт бренда';
-  }
-}
-
 export function MoreAboutBrandModal({
   brandName,
   linkClassName,
@@ -89,18 +72,6 @@ export function MoreAboutBrandModal({
 
   const closeModal = useCallback(() => setOpen(false), []);
 
-  const siteHref = useMemo(
-    () => (siteUrl ? normalizeExternalHref(siteUrl) : null),
-    [siteUrl],
-  );
-  const gallery = useMemo(
-    () => (galleryUrls ?? []).map((u) => u.trim()).filter(Boolean).slice(0, 3),
-    [galleryUrls],
-  );
-  const pdfHref = catalogPdfHref?.trim() || '';
-  const short = shortDescription?.trim() || '';
-  const logo = logoUrl?.trim() || '';
-
   if (!hasBody || !bodyHtml) return null;
 
   return (
@@ -123,64 +94,15 @@ export function MoreAboutBrandModal({
         srTitle={`Ещё о бренде: ${brandName}`}
         onPanelId={setPanelId}
       >
-        <div className={styles.aboutBrandSheet}>
-          {(logo || short) && (
-            <header className={styles.aboutBrandIntro}>
-              {logo ? (
-                <img
-                  src={logo}
-                  alt=""
-                  className={styles.aboutBrandLogo}
-                  width={160}
-                  height={64}
-                />
-              ) : null}
-              {short ? <p className={styles.aboutBrandShort}>{short}</p> : null}
-            </header>
-          )}
-
-          {gallery.length > 0 ? (
-            <div className={styles.aboutBrandGallery} aria-label="Галерея бренда">
-              {gallery.map((url, i) => (
-                <img
-                  key={`${url}-${i}`}
-                  src={url}
-                  alt=""
-                  className={styles.aboutBrandGalleryImg}
-                />
-              ))}
-            </div>
-          ) : null}
-
-          <div
-            className={`${styles.richContent} rich-content`}
-            dangerouslySetInnerHTML={{ __html: bodyHtml }}
-          />
-
-          {(pdfHref || siteHref) && (
-            <footer className={styles.aboutBrandFooter}>
-              {pdfHref ? (
-                <AccountDocRow
-                  title="КАТАЛОГ БРЕНДА"
-                  fileType={{ kind: 'pdf', badge: 'PDF' }}
-                  href={pdfHref}
-                  action="open"
-                />
-              ) : null}
-              {siteHref ? (
-                <a
-                  href={siteHref}
-                  className={styles.aboutBrandSiteLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {siteHostLabel(siteHref)}
-                  <ExternalArrowIcon className={styles.aboutBrandSiteArrow} />
-                </a>
-              ) : null}
-            </footer>
-          )}
-        </div>
+        <BrandAboutSheetContent
+          brandName={brandName}
+          bodyHtml={bodyHtml}
+          shortDescription={shortDescription}
+          logoUrl={logoUrl}
+          siteUrl={siteUrl}
+          galleryUrls={galleryUrls}
+          catalogPdfHref={catalogPdfHref}
+        />
       </SideSheetModal>
     </>
   );

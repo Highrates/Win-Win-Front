@@ -262,6 +262,103 @@
   letter-spacing: 0.06em;
 }
 
+.dayHeading:has(+ .dayBrands),
+.daySub:has(+ .dayBrands) {
+  margin-bottom: 14px;
+}
+
+.dayBrands {
+  flex-shrink: 0;
+  margin: 0 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dayBrandsLabel {
+  margin: 0;
+  color: var(--tours-muted);
+  letter-spacing: 0.06em;
+}
+
+.dayBrandList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dayBrandChip {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--tours-ink) 14%, transparent);
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 14px 6px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--tours-ink);
+  font: inherit;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.dayBrandChip:hover {
+  border-color: color-mix(in srgb, var(--tours-ink) 32%, transparent);
+  background: var(--color-bright-snow, #f6f6f6);
+}
+
+.dayBrandChip:focus-visible {
+  outline: 2px solid var(--tours-ink);
+  outline-offset: 2px;
+}
+
+.dayBrandChipStatic {
+  cursor: default;
+}
+
+.dayBrandChipStatic:hover {
+  border-color: color-mix(in srgb, var(--tours-ink) 14%, transparent);
+  background: #fff;
+}
+
+.dayBrandLogo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--color-bright-snow, #f6f6f6);
+}
+
+.dayBrandLogoFallback {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bright-snow, #f6f6f6);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tours-ink);
+}
+
+.dayBrandName {
+  font-size: var(--text-card-16-400, 16px);
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /*
  * Скролл timeline до reviews.
  * Расширяем влево на колонку времени — текст (.timeContent) совпадает с dayHeading,
