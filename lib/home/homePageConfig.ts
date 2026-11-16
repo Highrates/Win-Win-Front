@@ -1,10 +1,6 @@
-/** Slug-и кураторских коллекций и прочие константы главной. */
+/** Константы главной. Product-рельсы — из API `curated-collections/home` (не slug-хардкод). */
 export const homePageConfig = {
+  /** Brand-коллекция BestBrands (отдельный кейс, не showOnHome). */
   brandCollectionSlug: 'luchshie-brendy-mesyatsa',
-  collection1Slug: 'kollektsiya-1',
-  collection1Limit: 4,
-  collection1FallbackTitle: 'Коллекция 1',
-  recommendationsCollectionSlug: 'rekomendatsii',
-  recommendationsFallbackTitle: 'Рекомендации',
   heroRotationCookie: 'winwin-hero-idx',
 } as const;

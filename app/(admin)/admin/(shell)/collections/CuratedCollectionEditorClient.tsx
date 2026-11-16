@@ -17,7 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
@@ -25,7 +25,11 @@ import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/
 import { AdminTableRemoveButton } from '@/components/admin/AdminTableRemoveButton/AdminTableRemoveButton';
 import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
-import { AdminTextArea, AdminTextField } from '@/components/AdminTextField/AdminTextField';
+import {
+  AdminSelect,
+  AdminTextArea,
+  AdminTextField,
+} from '@/components/AdminTextField/AdminTextField';
 import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
 import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
@@ -33,10 +37,19 @@ import { adminCollectionEditorStrings } from '@/lib/admin-i18n/adminCollectionsI
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
+import {
+  computeHomePreviewCount,
+  parseAdminListPrice,
+  parseRubPriceInput,
+} from '@/lib/home/computeHomePreviewCount';
 import type { AdminProductRow } from '../catalog/products/adminProductTypes';
 import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
 import objStyles from '../objects/objectsLibrary.module.css';
-import type { CuratedCollectionDetail } from './collectionsAdminTypes';
+import type {
+  CuratedCollectionDetail,
+  CuratedHomeGridSize,
+  CuratedHomeOrderMode,
+} from './collectionsAdminTypes';
 
 const COLLECTION_FORM_ID = 'curated-collection-editor-form';
 
@@ -44,7 +57,14 @@ function rowKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-type ProductRow = { key: string; productId: string; name: string; slug: string };
+type ProductRow = {
+  key: string;
+  productId: string;
+  name: string;
+  slug: string;
+  price: number | null;
+  isActive: boolean;
+};
 type BrandRow = { key: string; brandId: string; name: string; slug: string };
 
 type BrandListRow = { id: string; name: string; slug: string };
@@ -100,8 +120,17 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
   const [description, setDescription] = useState('');
   const [kind, setKind] = useState<'PRODUCT' | 'BRAND'>('PRODUCT');
   const [isActive, setIsActive] = useState(true);
+  const [showOnHome, setShowOnHome] = useState(false);
+  const [homeOrder, setHomeOrder] = useState('1');
+  const [homeGridSize, setHomeGridSize] = useState<CuratedHomeGridSize>('FOUR');
+  const [homeOrderMode, setHomeOrderMode] = useState<CuratedHomeOrderMode>('FIXED');
+  const [homePriceMin, setHomePriceMin] = useState('');
+  const [homePriceMax, setHomePriceMax] = useState('');
+  const [homeOrderError, setHomeOrderError] = useState<string | null>(null);
+  const [homePriceError, setHomePriceError] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState('');
   const [coverMediaObjectId, setCoverMediaObjectId] = useState<string | null>(null);
+  const saveErrorRef = useRef<HTMLParagraphElement>(null);
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [productRows, setProductRows] = useState<ProductRow[]>([]);
@@ -152,6 +181,14 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
         setDescription(d.description ?? '');
         setKind(d.kind);
         setIsActive(d.isActive);
+        setShowOnHome(Boolean(d.showOnHome));
+        setHomeOrder(d.homeOrder != null ? String(d.homeOrder) : '1');
+        setHomeGridSize(d.homeGridSize ?? 'FOUR');
+        setHomeOrderMode(d.homeOrderMode ?? 'FIXED');
+        setHomePriceMin(d.homePriceMin != null ? String(d.homePriceMin) : '');
+        setHomePriceMax(d.homePriceMax != null ? String(d.homePriceMax) : '');
+        setHomeOrderError(null);
+        setHomePriceError(null);
         setCoverUrl(d.coverImageUrl ?? '');
         setCoverMediaObjectId(d.coverMediaObjectId ?? null);
         setSeoTitle(d.seoTitle ?? '');
@@ -162,6 +199,8 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
             productId: it.productId,
             name: it.name,
             slug: it.slug,
+            price: typeof it.price === 'number' ? it.price : parseAdminListPrice(it.price),
+            isActive: it.isActive !== false,
           })),
         );
         setBrandRows(
@@ -222,6 +261,11 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
   }, [loadAddHits]);
 
   useEffect(() => {
+    if (!saveError) return;
+    saveErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [saveError]);
+
+  useEffect(() => {
     if (addPickerOpen) setAddModalSelected(new Set());
   }, [addDebouncedQ, addPickerOpen]);
 
@@ -258,7 +302,14 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
         .filter((p): p is AdminProductRow => !!p && !productRows.some((r) => r.productId === p.id));
       setProductRows((prev) => [
         ...prev,
-        ...picks.map((p) => ({ key: rowKey(), productId: p.id, name: p.name, slug: p.slug })),
+        ...picks.map((p) => ({
+          key: rowKey(),
+          productId: p.id,
+          name: p.name,
+          slug: p.slug,
+          price: parseAdminListPrice(p.price),
+          isActive: p.isActive,
+        })),
       ]);
     } else {
       const picks = Array.from(addModalSelected)
@@ -283,6 +334,12 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
     setKind(next);
     setProductRows([]);
     setBrandRows([]);
+    if (next === 'BRAND') {
+      setShowOnHome(false);
+      setHomeOrderMode('FIXED');
+      setHomePriceMin('');
+      setHomePriceMax('');
+    }
   }
 
   function onProductDragEnd(e: DragEndEvent) {
@@ -303,14 +360,62 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
     setBrandRows((prev) => arrayMove(prev, oldIndex, newIndex));
   }
 
+  const liveHomePreviewCount = useMemo(() => {
+    if (kind !== 'PRODUCT') return 0;
+    const min = homeOrderMode === 'RANDOM' ? parseRubPriceInput(homePriceMin) : null;
+    const max = homeOrderMode === 'RANDOM' ? parseRubPriceInput(homePriceMax) : null;
+    return computeHomePreviewCount({
+      showOnHome,
+      isActive,
+      homeGridSize,
+      homeOrderMode,
+      homePriceMin: min,
+      homePriceMax: max,
+      prices: productRows.filter((r) => r.isActive).map((r) => r.price),
+    });
+  }, [
+    kind,
+    showOnHome,
+    isActive,
+    homeGridSize,
+    homeOrderMode,
+    homePriceMin,
+    homePriceMax,
+    productRows,
+  ]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSaveError(null);
+    setHomeOrderError(null);
+    setHomePriceError(null);
     const nameTrim = name.trim();
     if (!nameTrim) {
       setSaveError(str.nameRequired);
       return;
     }
+
+    let orderNum: number | null = null;
+    let priceMin: number | null = null;
+    let priceMax: number | null = null;
+    if (kind === 'PRODUCT' && showOnHome && isActive) {
+      orderNum = Number.parseInt(homeOrder.trim(), 10);
+      if (!Number.isInteger(orderNum) || orderNum < 1) {
+        setHomeOrderError(str.homeOrderRequired);
+        setSaveError(str.homeOrderRequired);
+        return;
+      }
+      if (homeOrderMode === 'RANDOM') {
+        priceMin = parseRubPriceInput(homePriceMin);
+        priceMax = parseRubPriceInput(homePriceMax);
+        if (priceMin != null && priceMax != null && priceMin > priceMax) {
+          setHomePriceError(str.homePriceRangeInvalid);
+          setSaveError(str.homePriceRangeInvalid);
+          return;
+        }
+      }
+    }
+
     setSaving(true);
     try {
       const body: Record<string, unknown> = {
@@ -328,14 +433,59 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
       } else {
         body.coverImageUrl = null;
       }
-      if (kind === 'PRODUCT') body.productIds = productRows.map((r) => r.productId);
-      if (kind === 'BRAND') body.brandIds = brandRows.map((r) => r.brandId);
+      if (kind === 'PRODUCT') {
+        body.productIds = productRows.map((r) => r.productId);
+        body.showOnHome = showOnHome;
+        if (showOnHome) {
+          body.homeOrder = orderNum;
+          body.homeGridSize = homeGridSize;
+          body.homeOrderMode = homeOrderMode;
+          if (homeOrderMode === 'RANDOM') {
+            body.homePriceMin = priceMin;
+            body.homePriceMax = priceMax;
+          } else {
+            body.homePriceMin = null;
+            body.homePriceMax = null;
+          }
+        } else {
+          body.homeOrder = null;
+          body.homePriceMin = null;
+          body.homePriceMax = null;
+        }
+      } else {
+        body.brandIds = brandRows.map((r) => r.brandId);
+        body.showOnHome = false;
+        body.homeOrder = null;
+        body.homePriceMin = null;
+        body.homePriceMax = null;
+      }
 
       if (isEdit) {
         await adminBackendJson(`catalog/admin/curated-collections/${collectionId}`, {
           method: 'PATCH',
           body: JSON.stringify(body),
         });
+        const refreshed = await adminBackendJson<CuratedCollectionDetail>(
+          `catalog/admin/curated-collections/${collectionId}`,
+        );
+        setShowOnHome(Boolean(refreshed.showOnHome));
+        setHomeOrder(refreshed.homeOrder != null ? String(refreshed.homeOrder) : '1');
+        setHomeGridSize(refreshed.homeGridSize ?? 'FOUR');
+        setHomeOrderMode(refreshed.homeOrderMode ?? 'FIXED');
+        setHomePriceMin(refreshed.homePriceMin != null ? String(refreshed.homePriceMin) : '');
+        setHomePriceMax(refreshed.homePriceMax != null ? String(refreshed.homePriceMax) : '');
+        setProductRows(
+          refreshed.productItems.map((it) => ({
+            key: it.id,
+            productId: it.productId,
+            name: it.name,
+            slug: it.slug,
+            price: typeof it.price === 'number' ? it.price : parseAdminListPrice(it.price),
+            isActive: it.isActive !== false,
+          })),
+        );
+        setHomeOrderError(null);
+        setHomePriceError(null);
       } else {
         const created = await adminBackendJson<CuratedCollectionDetail>(
           'catalog/admin/curated-collections',
@@ -362,6 +512,24 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
     return <p className={styles.muted}>{c.loading}</p>;
   }
 
+  if (isEdit && loadError) {
+    return (
+      <>
+        <p className={styles.backRow}>
+          <Link className={styles.backLink} href="/admin/collections">
+            {str.backList}
+          </Link>
+        </p>
+        <p className={styles.error} role="alert">
+          {loadError}
+        </p>
+        <AdminCompactBtnLink href="/admin/collections" variant="outline">
+          {c.backToList}
+        </AdminCompactBtnLink>
+      </>
+    );
+  }
+
   return (
     <>
       <p className={styles.backRow}>
@@ -369,8 +537,6 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
           {str.backList}
         </Link>
       </p>
-
-      {loadError ? <p className={styles.error}>{loadError}</p> : null}
 
       <MediaLibraryPickerModal
         open={coverPickerOpen}
@@ -546,11 +712,21 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
           type="submit"
           form={COLLECTION_FORM_ID}
           variant="accent"
-          disabled={saving || !!loadError || (isEdit && !loaded)}
+          disabled={saving || (isEdit && !loaded)}
         >
           {saving ? str.saveBusy : isEdit ? str.saveEdit : str.create}
         </AdminCompactBtn>
       </div>
+      {saveError ? (
+        <p
+          ref={saveErrorRef}
+          className={styles.error}
+          role="alert"
+          aria-live="polite"
+        >
+          {saveError}
+        </p>
+      ) : null}
 
       <form
         id={COLLECTION_FORM_ID}
@@ -636,17 +812,6 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
           onChange={(e) => setSeoDescription(e.target.value)}
           rows={3}
         />
-
-        <div className={styles.labelCheckboxRow}>
-          <AccountCheckbox
-            id="curated-collection-active"
-            className={styles.adminCheckboxForm}
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-            aria-label={str.activeAria}
-          />
-          <label htmlFor="curated-collection-active">{str.activeLabel}</label>
-        </div>
 
         <div className={styles.sectionHead} style={{ marginTop: 8 }}>
           <h2 className={styles.groupHeading}>
@@ -748,7 +913,110 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
           </DndContext>
         )}
 
-        {saveError ? <p className={styles.error}>{saveError}</p> : null}
+        <div className={styles.labelCheckboxRow}>
+          <AccountCheckbox
+            id="curated-collection-active"
+            className={styles.adminCheckboxForm}
+            checked={isActive}
+            onChange={(e) => {
+              const next = e.target.checked;
+              setIsActive(next);
+              if (!next && showOnHome) setShowOnHome(false);
+            }}
+            aria-label={str.activeAria}
+          />
+          <label htmlFor="curated-collection-active">{str.activeLabel}</label>
+        </div>
+        {!isActive && kind === 'PRODUCT' ? (
+          <p className={styles.muted}>{str.homeNeedsActive}</p>
+        ) : null}
+
+        {kind === 'PRODUCT' ? (
+          <>
+            <h2 className={styles.groupHeading}>{str.homeHeading}</h2>
+            <div className={styles.labelCheckboxRow}>
+              <AccountCheckbox
+                id="curated-collection-home"
+                className={styles.adminCheckboxForm}
+                checked={showOnHome}
+                disabled={!isActive}
+                onChange={(e) => setShowOnHome(e.target.checked)}
+                aria-label={str.homeShowAria}
+              />
+              <label htmlFor="curated-collection-home">{str.homeShowLabel}</label>
+            </div>
+            {showOnHome && isActive ? (
+              <>
+                <AdminTextField
+                  label={str.homeOrder}
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={homeOrder}
+                  error={homeOrderError ?? undefined}
+                  onChange={(e) => {
+                    setHomeOrder(e.target.value);
+                    setHomeOrderError(null);
+                  }}
+                />
+                <p className={styles.muted}>{str.homeOrderHint}</p>
+                <AdminSelect
+                  label={str.homeGrid}
+                  value={homeGridSize}
+                  onChange={(e) => setHomeGridSize(e.target.value as CuratedHomeGridSize)}
+                >
+                  <option value="FOUR">{str.homeGrid4}</option>
+                  <option value="EIGHT">{str.homeGrid8}</option>
+                  <option value="UNLIMITED">{str.homeGridUnlimited}</option>
+                </AdminSelect>
+                <AdminSelect
+                  label={str.homeMode}
+                  value={homeOrderMode}
+                  onChange={(e) => {
+                    setHomeOrderMode(e.target.value as CuratedHomeOrderMode);
+                    setHomePriceError(null);
+                  }}
+                >
+                  <option value="FIXED">{str.homeModeFixed}</option>
+                  <option value="RANDOM">{str.homeModeRandom}</option>
+                </AdminSelect>
+                {homeOrderMode === 'RANDOM' ? (
+                  <>
+                    <AdminTextField
+                      label={str.homePriceMin}
+                      type="number"
+                      min={0}
+                      value={homePriceMin}
+                      error={homePriceError ?? undefined}
+                      onChange={(e) => {
+                        setHomePriceMin(e.target.value);
+                        setHomePriceError(null);
+                      }}
+                    />
+                    <AdminTextField
+                      label={str.homePriceMax}
+                      type="number"
+                      min={0}
+                      value={homePriceMax}
+                      error={homePriceError ?? undefined}
+                      onChange={(e) => {
+                        setHomePriceMax(e.target.value);
+                        setHomePriceError(null);
+                      }}
+                    />
+                    <p className={styles.muted}>{str.homePriceHint}</p>
+                  </>
+                ) : null}
+                {liveHomePreviewCount > 0 ? (
+                  <p className={styles.muted}>{str.homePreviewOk(liveHomePreviewCount)}</p>
+                ) : (
+                  <p className={styles.error}>{str.homePreviewEmpty}</p>
+                )}
+                <p className={styles.muted}>{str.homePreviewTierNote}</p>
+              </>
+            ) : null}
+          </>
+        ) : null}
 
         <div className={styles.formActions}>
           <AdminCompactBtnLink href="/admin/collections" variant="outline">

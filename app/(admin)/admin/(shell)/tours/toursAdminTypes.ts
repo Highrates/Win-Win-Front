@@ -22,7 +22,10 @@ export type AdminChinaTourListItem = {
   sortOrder: number;
   daysCount: number;
   applicationsCount: number;
+  /** Одобренные (витрина). */
   reviewsCount: number;
+  /** Все статусы. */
+  reviewsTotal: number;
   updatedAt: string;
 };
 
@@ -63,7 +66,11 @@ export type AdminChinaTourReview = {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   body: string;
   rating: number | null;
+  authorName: string | null;
+  photoUrls: string[];
+  videoUrl: string | null;
+  isAdminAuthored: boolean;
   createdAt: string;
   tour: { id: string; title: string; slug: string };
-  user: { id: string; email: string | null; name: string | null };
+  user: { id: string; email: string | null; name: string | null } | null;
 };

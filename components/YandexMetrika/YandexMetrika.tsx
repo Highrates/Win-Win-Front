@@ -52,7 +52,7 @@ export function YandexMetrika() {
   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
 })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=${YANDEX_METRIKA_ID}', 'ym');
 ym(${YANDEX_METRIKA_ID}, 'init', {
-  ssr: true,
+  /* без ssr:true — иначе tag.js preload’ит /watch/… и браузер ругается, что ресурс не использован */
   webvisor: true,
   clickmap: true,
   ecommerce: 'dataLayer',
@@ -62,12 +62,15 @@ ym(${YANDEX_METRIKA_ID}, 'init', {
   trackLinks: true
 });
 `}</Script>
+      {/* noscript без preload: только для браузеров без JS */}
       <noscript>
         <div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`https://mc.yandex.ru/watch/${YANDEX_METRIKA_ID}`}
             style={{ position: 'absolute', left: '-9999px' }}
             alt=""
+            loading="lazy"
           />
         </div>
       </noscript>

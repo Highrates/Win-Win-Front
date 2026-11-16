@@ -8,10 +8,13 @@ import type {
   PublicProductCollectionPayload,
   PublicSetSiblingProduct,
 } from '@/lib/catalogPublic';
+import type { HomeCuratedProductRail } from '@/lib/home/mapHomeSections';
 import { dedupeById } from '@/lib/dedupeById';
 import { jsonFromResponse } from '@/lib/jsonFromResponse';
 import { getServerApiBase } from '@/lib/serverApiBase';
 import { publicFetchInitWithOptionalUserAuth } from '@/lib/server/publicFetchInit';
+
+export type { HomeCuratedProductRail } from '@/lib/home/mapHomeSections';
 
 /** PDP: `GET /catalog/products/:slug` с tier-ценами при валидной сессии. */
 export async function fetchPublicProductBySlug(
@@ -183,6 +186,35 @@ export async function fetchCuratedProductCollectionBySlug(
     };
   } catch {
     return null;
+  }
+}
+
+/** `GET /catalog/curated-collections/home` — product-рельсы для главной. */
+export async function fetchHomeCuratedProductRails(): Promise<HomeCuratedProductRail[]> {
+  const base = getServerApiBase();
+  try {
+    const res = await fetch(
+      `${base}/catalog/curated-collections/home`,
+      await publicFetchInitWithOptionalUserAuth(),
+    );
+    if (!res.ok) return [];
+    const data = await jsonFromResponse<{ rails?: HomeCuratedProductRail[] }>(res, { rails: [] });
+    const rails = Array.isArray(data.rails) ? data.rails : [];
+    return rails
+      .filter(
+        (r) =>
+          r &&
+          typeof r.slug === 'string' &&
+          typeof r.name === 'string' &&
+          typeof r.homeOrder === 'number' &&
+          Array.isArray(r.products),
+      )
+      .map((r) => ({
+        ...r,
+        products: dedupeById(r.products),
+      }));
+  } catch {
+    return [];
   }
 }
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ChinaTourMyApplicationListItem } from './types';
 
 const applicationStatusSchema = z.enum(['PENDING', 'ACCEPTED', 'REJECTED']);
+const reviewStatusSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED']);
 
 export const chinaTourMyApplicationListItemSchema = z.object({
   id: z.string(),
@@ -9,6 +10,8 @@ export const chinaTourMyApplicationListItemSchema = z.object({
   comment: z.string().nullable(),
   createdAt: z.string(),
   canReview: z.boolean(),
+  hasReview: z.boolean(),
+  reviewStatus: reviewStatusSchema.nullable(),
   tour: z.object({
     id: z.string(),
     slug: z.string(),

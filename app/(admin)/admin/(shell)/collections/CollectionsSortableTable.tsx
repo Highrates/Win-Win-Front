@@ -64,6 +64,13 @@ function SortableRow({
       <td>{kindLabel}</td>
       <td>{row.itemCount}</td>
       <td>
+        {row.showOnHome && row.isActive && row.homeOrder != null ? (
+          <span className={`${styles.badge} ${styles.badgeOn}`}>{t.homeSlot(row.homeOrder)}</span>
+        ) : (
+          <span className={styles.muted}>{t.homeOff}</span>
+        )}
+      </td>
+      <td>
         <AdminCatalogVisibilityBadge
           isActive={row.isActive}
           publishedLabel={t.published}
@@ -117,6 +124,7 @@ export function CollectionsSortableTable({
               <th>{t.thName}</th>
               <th>{t.thType}</th>
               <th>{t.thCount}</th>
+              <th>{t.thHome}</th>
               <th>{t.thVis}</th>
             </tr>
           </thead>

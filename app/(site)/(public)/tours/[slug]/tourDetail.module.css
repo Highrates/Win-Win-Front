@@ -38,6 +38,10 @@
   /* перебить .breadcrumbs { align-self: stretch } — иначе текст уезжает вниз */
   align-self: start;
   margin: 94px 0 56px;
+  /* узкая колонка: одна строка, длинный current — ellipsis */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .detailHead {
@@ -665,16 +669,7 @@
   .detailCrumbs {
     order: 1;
     margin: 72px 0 20px;
-    flex-wrap: wrap;
-    row-gap: 4px;
     max-width: 100%;
-  }
-
-  .detailCrumbs [class*='breadcrumbsCurrent'] {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: min(42vw, 160px);
   }
 
   .detailHead {
@@ -915,6 +910,112 @@
 
 .reviewBody {
   margin: 0;
+}
+
+.myReviewCard {
+  margin: 24px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid #eee;
+}
+
+.myReviewHint {
+  margin: 8px 0 0;
+  color: var(--tours-muted);
+}
+
+.reviewForm {
+  margin-top: 24px;
+  padding: 20px 0 0;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 480px;
+}
+
+.reviewFormTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tours-ink);
+}
+
+.reviewFormField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reviewFormLabel {
+  font-size: var(--text-caption, 12px);
+  font-weight: 500;
+  color: var(--tours-muted);
+}
+
+.reviewFormSelect {
+  width: max-content;
+  min-width: 4.5rem;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+
+.reviewFormTextarea {
+  width: 100%;
+  min-height: 110px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.reviewFormCounter {
+  margin: 0;
+  align-self: flex-end;
+  color: var(--tours-muted);
+}
+
+.reviewFormMsg {
+  margin: 0;
+  color: var(--tours-muted);
+  font-size: var(--text-caption, 12px);
+}
+
+.reviewFormActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.reviewPhotos {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reviewPhoto {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f3f3f3;
+}
+
+.reviewVideo {
+  display: block;
+  width: min(100%, 480px);
+  margin-top: 12px;
+  border-radius: 8px;
+  background: #111;
+  max-height: 320px;
 }
 
 .modalBackdrop {

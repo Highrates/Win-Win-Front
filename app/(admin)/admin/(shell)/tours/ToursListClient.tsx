@@ -100,6 +100,9 @@ function SortableTourRow({
         </span>
       </td>
       <td>{tour.applicationsCount}</td>
+      <td title="Одобренные / всего">
+        {tour.reviewsCount}/{tour.reviewsTotal ?? tour.reviewsCount}
+      </td>
       <td
         className={catalogStyles.tableCellActions}
         onClick={(e) => e.stopPropagation()}
@@ -227,6 +230,7 @@ export function ToursListClient() {
               <th>Места</th>
               <th>Статус</th>
               <th>Заявки</th>
+              <th>Отзывы</th>
               <th style={{ width: 44 }} aria-label="Действия" />
             </tr>
           </thead>

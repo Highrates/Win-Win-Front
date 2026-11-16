@@ -23,8 +23,12 @@
   display: inline-flex;
   justify-content: flex-start;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 6px;
   margin: 0 0 4px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
   font-size: var(--text-caption);
   font-weight: var(--text-caption-weight);
 }
@@ -32,6 +36,8 @@
 .breadcrumbsLink {
   color: var(--color-gray);
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .breadcrumbsLink:hover {
@@ -40,11 +46,18 @@
 
 .breadcrumbsCurrent {
   color: var(--color-ink-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .breadcrumbsSep {
   color: var(--color-gray);
   user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .dateChips {

@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { PublicBrandProductRow } from '@/lib/brandsPublic';
 import { productPriceToNumber } from '@/lib/brandsPublic';
-import { homePageConfig } from '@/lib/home/homePageConfig';
 import type { HomeProductRailSection } from '@/lib/home/mapHomeSections';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
 import type { RecommendationsStaticItem } from '@/sections/home/Recommendations/recommendationsStaticItem';
 import { HomeProductCollections } from '@/sections/home/HomeProductCollections';
 import { HomeProductLikesScope } from '@/sections/home/HomeProductLikesScope';
 import styles from './CatalogHubCollections.module.css';
+
+/** Превью на хабе каталога (не настройки home). Home-рельсы API уже исключает через showOnHome. */
+const HUB_COLLECTION_PREVIEW_LIMIT = 4;
 
 type ApiSection = {
   kind: 'collection' | 'set';
@@ -42,18 +44,15 @@ function mapRowsToItems(rows: PublicBrandProductRow[]): RecommendationsStaticIte
 }
 
 function mapApiSections(items: ApiSection[]): HomeProductRailSection[] {
-  const skipSlug = homePageConfig.recommendationsCollectionSlug;
-  const perCollectionLimit = homePageConfig.collection1Limit;
   const sections: HomeProductRailSection[] = [];
   for (const section of items) {
-    if (section.kind === 'collection' && section.slug === skipSlug) continue;
     if (!section.products?.length) continue;
-    const mappedItems = mapRowsToItems(section.products).slice(0, perCollectionLimit);
+    const mappedItems = mapRowsToItems(section.products).slice(0, HUB_COLLECTION_PREVIEW_LIMIT);
     if (!mappedItems.length) continue;
     sections.push({
       title: section.name,
       items: mappedItems,
-      advanceGalleryOnScroll: true,
+      advanceGalleryOnScroll: false,
       progressiveLoad: true,
       allHref:
         section.kind === 'collection'

@@ -150,7 +150,15 @@ export function AccountToursPageClient() {
                       {a.comment ? <p className={styles.comment}>{a.comment}</p> : null}
                       {a.canReview ? (
                         <Link href={reviewHref} className={styles.reviewLink}>
-                          Оставить отзыв
+                          {a.reviewStatus === 'REJECTED' ? 'Переписать отзыв' : 'Оставить отзыв'}
+                        </Link>
+                      ) : a.hasReview && a.reviewStatus === 'PENDING' ? (
+                        <Link href={reviewHref} className={styles.reviewLink}>
+                          На модерации
+                        </Link>
+                      ) : a.hasReview && a.reviewStatus === 'APPROVED' ? (
+                        <Link href={reviewHref} className={styles.reviewLink}>
+                          Смотреть отзыв
                         </Link>
                       ) : null}
                     </div>

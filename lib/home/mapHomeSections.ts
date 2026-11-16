@@ -1,12 +1,18 @@
-import { fetchCuratedBrandCollectionBySlug } from '@/lib/catalogPublic';
 import type { PublicBrandCollectionPayload } from '@/lib/catalogPublic';
-import { fetchCuratedProductCollectionBySlug } from '@/lib/server/catalogAuthFetch';
 import type { PublicBrandProductRow } from '@/lib/brandsPublic';
 import { mapBrandProductRowsToRecommendationItems } from '@/lib/publicCollectionsPublic';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import type { BestBrandsBrandItem } from '@/sections/home/BestBrands/BestBrands';
 import type { RecommendationsStaticItem } from '@/sections/home/Recommendations/recommendationsStaticItem';
-import { homePageConfig } from './homePageConfig';
+
+/** Product-рельс с `GET /catalog/curated-collections/home` (без server-only). */
+export type HomeCuratedProductRail = {
+  slug: string;
+  name: string;
+  homeOrder: number;
+  homeGridSize: 'FOUR' | 'EIGHT' | 'UNLIMITED';
+  products: PublicBrandProductRow[];
+};
 
 export type HomeProductCollectionSection = {
   title: string;
@@ -19,6 +25,7 @@ export type HomeProductRailSection = HomeProductCollectionSection & {
   progressiveLoad?: boolean;
   /** Ссылка «ВСЕ» рядом с заголовком (страница коллекции). */
   allHref?: string;
+  homeOrder?: number;
 };
 
 export type HomeRecommendationsSection = HomeProductCollectionSection;
@@ -51,14 +58,16 @@ export function mapProductCollectionSection(
   };
 }
 
-export function mapRecommendationsSection(
-  collection: { name?: string | null; products?: PublicBrandProductRow[] } | null,
-  fallbackTitle: string,
-): HomeRecommendationsSection | null {
-  if (!collection?.products?.length) return null;
+export function mapHomeRail(rail: HomeCuratedProductRail): HomeProductRailSection | null {
+  if (!rail.products.length) return null;
+  const progressiveLoad = rail.homeGridSize === 'UNLIMITED';
   return {
-    title: collection.name?.trim() || fallbackTitle,
-    items: mapBrandProductRowsToRecommendationItems(collection.products),
+    title: rail.name.trim() || 'Коллекция',
+    items: mapBrandProductRowsToRecommendationItems(rail.products),
+    progressiveLoad,
+    advanceGalleryOnScroll: false,
+    allHref: `/collections/${encodeURIComponent(rail.slug)}`,
+    homeOrder: rail.homeOrder,
   };
 }
 
@@ -75,61 +84,31 @@ export function resolveHeroImageUrl(
 
 /** Собирает все product-items главной для bulk-лайков. */
 export function mergeHomeRecommendationItems(
-  collection1: HomeProductCollectionSection | null,
-  recommendations: HomeRecommendationsSection | null,
+  ...sections: Array<HomeProductCollectionSection | null | undefined>
 ): RecommendationsStaticItem[] {
-  return [...(collection1?.items ?? []), ...(recommendations?.items ?? [])];
+  return sections.flatMap((s) => s?.items ?? []);
 }
 
 export type HomePageCuratedFetches = {
   brandCollection: PublicBrandCollectionPayload | null;
-  collection1Raw: Awaited<ReturnType<typeof fetchCuratedProductCollectionBySlug>>;
-  recommendationsCollection: Awaited<ReturnType<typeof fetchCuratedProductCollectionBySlug>>;
+  homeRails: HomeCuratedProductRail[];
 };
 
-export async function fetchHomeCuratedCollections(): Promise<HomePageCuratedFetches> {
-  const [brandCollection, collection1Raw, recommendationsCollection] = await Promise.all([
-    fetchCuratedBrandCollectionBySlug(homePageConfig.brandCollectionSlug),
-    fetchCuratedProductCollectionBySlug(homePageConfig.collection1Slug),
-    fetchCuratedProductCollectionBySlug(homePageConfig.recommendationsCollectionSlug),
-  ]);
-  return { brandCollection, collection1Raw, recommendationsCollection };
-}
-
 export function mapHomeCuratedSections(fetches: HomePageCuratedFetches) {
-  const collection1 = mapProductCollectionSection(
-    fetches.collection1Raw,
-    homePageConfig.collection1FallbackTitle,
-    homePageConfig.collection1Limit,
-  );
-  const recommendations = mapRecommendationsSection(
-    fetches.recommendationsCollection,
-    homePageConfig.recommendationsFallbackTitle,
-  );
   const bestBrands = mapBestBrandsSection(fetches.brandCollection);
+  const rails = fetches.homeRails
+    .map(mapHomeRail)
+    .filter((r): r is HomeProductRailSection => Boolean(r?.items.length));
+
+  const afterBestBrands = rails.filter((r) => r.homeOrder === 1);
+  const afterNews = rails.filter((r) => r.homeOrder === 2);
+  const afterTours = rails.filter((r) => (r.homeOrder ?? 0) >= 3);
 
   return {
     bestBrands,
-    featuredProductRail: collection1?.items.length
-      ? {
-          title: collection1.title,
-          items: collection1.items,
-          advanceGalleryOnScroll: true,
-          progressiveLoad: false,
-          allHref: fetches.collection1Raw?.slug
-            ? `/collections/${encodeURIComponent(fetches.collection1Raw.slug)}`
-            : undefined,
-        }
-      : null,
-    recommendationsRail: recommendations?.items.length
-      ? {
-          title: recommendations.title,
-          items: recommendations.items,
-          allHref: fetches.recommendationsCollection?.slug
-            ? `/collections/${encodeURIComponent(fetches.recommendationsCollection.slug)}`
-            : undefined,
-        }
-      : null,
-    allRecommendationItems: mergeHomeRecommendationItems(collection1, recommendations),
+    afterBestBrands,
+    afterNews,
+    afterTours,
+    allRecommendationItems: mergeHomeRecommendationItems(...rails),
   };
 }

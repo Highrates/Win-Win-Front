@@ -111,6 +111,8 @@ export type ChinaTourDetail = {
     rating: number | null;
     createdAt: string;
     authorName: string;
+    photoUrls: string[];
+    videoUrl: string | null;
   }>;
 };
 
@@ -127,8 +129,13 @@ export type ChinaTourMyApplicationListItem = {
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   comment: string | null;
   createdAt: string;
-  /** ACCEPTED + published + endsAt в прошлом — можно оставить отзыв на странице тура. */
+  /**
+   * ACCEPTED + published + past endsAt и нет отзыва (или REJECTED → переписать).
+   * PENDING/APPROVED отзыв → false.
+   */
   canReview: boolean;
+  hasReview: boolean;
+  reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
   tour: {
     id: string;
     slug: string;

@@ -1,8 +1,6 @@
 import { Suspense } from 'react';
-import {
-  fetchHomeCuratedCollections,
-  mapHomeCuratedSections,
-} from '@/lib/home/mapHomeSections';
+import { fetchHomeCuratedCollections } from '@/lib/home/fetchHomeCuratedCollections';
+import { mapHomeCuratedSections } from '@/lib/home/mapHomeSections';
 import { BestBrands } from './BestBrands/BestBrands';
 import { AboutTeaser } from './AboutTeaser/AboutTeaser';
 import { News } from './News/News';
@@ -19,22 +17,19 @@ export async function HomeBelowFold() {
   return (
     <HomeProductLikesScope items={sections.allRecommendationItems}>
       {sections.bestBrands?.length ? <BestBrands brands={sections.bestBrands} /> : null}
-      <HomeProductCollections
-        sections={sections.featuredProductRail ? [sections.featuredProductRail] : []}
-      />
+      <HomeProductCollections sections={sections.afterBestBrands} />
       <AboutTeaser />
       <Suspense fallback={<NewsSkeleton />}>
         <News />
       </Suspense>
+      <HomeProductCollections sections={sections.afterNews} />
       <Suspense fallback={null}>
         <HomeProjects />
       </Suspense>
       <Suspense fallback={<HomeToursSkeleton />}>
         <HomeTours />
       </Suspense>
-      <HomeProductCollections
-        sections={sections.recommendationsRail ? [sections.recommendationsRail] : []}
-      />
+      <HomeProductCollections sections={sections.afterTours} />
     </HomeProductLikesScope>
   );
 }

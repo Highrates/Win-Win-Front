@@ -4,8 +4,8 @@ import type { BestBrandsBrandItem } from '@/sections/home/BestBrands/BestBrands'
 import type { RecommendationsStaticItem } from '@/sections/home/Recommendations/recommendationsStaticItem';
 import { cookies } from 'next/headers';
 import { homePageConfig } from './homePageConfig';
+import { fetchHomeCuratedCollections } from './fetchHomeCuratedCollections';
 import {
-  fetchHomeCuratedCollections,
   mapHomeCuratedSections,
   resolveHeroImageUrl,
   type HomeProductRailSection,
@@ -15,8 +15,9 @@ export type HomePageData = {
   catalogRoots: HomeCatalogRoot[];
   heroImageUrl: string | null;
   bestBrands: BestBrandsBrandItem[] | null;
-  featuredProductRail: HomeProductRailSection | null;
-  recommendationsRail: HomeProductRailSection | null;
+  afterBestBrands: HomeProductRailSection[];
+  afterNews: HomeProductRailSection[];
+  afterTours: HomeProductRailSection[];
   allRecommendationItems: RecommendationsStaticItem[];
 };
 
