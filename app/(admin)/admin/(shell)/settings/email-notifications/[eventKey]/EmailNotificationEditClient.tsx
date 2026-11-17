@@ -535,6 +535,7 @@ export function EmailNotificationEditClient({ eventKey }: { eventKey: string }) 
       <AdminModal
         open={compare !== null}
         title="Сравнение версий"
+        closeLabel="Закрыть"
         wide
         onClose={() => setCompare(null)}
         footer={
@@ -549,6 +550,7 @@ export function EmailNotificationEditClient({ eventKey }: { eventKey: string }) 
       <AdminModal
         open={preview !== null}
         title={`Предпросмотр · ${SAMPLE_LABEL[sampleVariant]}`}
+        closeLabel="Закрыть"
         wide
         onClose={() => setPreview(null)}
         footer={

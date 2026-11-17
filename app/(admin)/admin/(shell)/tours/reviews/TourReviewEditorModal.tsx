@@ -82,6 +82,7 @@ export function TourReviewEditorModal({
         open={open}
         wide
         title={mode === 'create' ? 'Новый отзыв' : 'Редактировать отзыв'}
+        closeLabel="Закрыть"
         onClose={onClose}
         footer={
           <>

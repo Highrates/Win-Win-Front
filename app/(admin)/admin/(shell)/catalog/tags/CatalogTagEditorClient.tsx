@@ -2,22 +2,18 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
-import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
+import { AdminProductMultiPickerModal } from '@/components/admin/AdminProductMultiPickerModal/AdminProductMultiPickerModal';
 import { AdminTableRemoveButton } from '@/components/admin/AdminTableRemoveButton/AdminTableRemoveButton';
 import { AdminTextField } from '@/components/AdminTextField/AdminTextField';
-import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
-import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
 import { adminCatalogTagEditorStrings } from '@/lib/admin-i18n/adminCatalogTagsI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
 import type { AdminProductRow } from '../products/adminProductTypes';
 import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
-import objStyles from '../../objects/objectsLibrary.module.css';
 import type { CatalogTagAdminDetail } from './catalogTagsAdminTypes';
 
 const TAG_FORM_ID = 'catalog-tag-editor-form';
@@ -45,20 +41,12 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
   const [productRows, setProductRows] = useState<ProductRow[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [addPickerOpen, setAddPickerOpen] = useState(false);
-  const [addQ, setAddQ] = useState('');
-  const [addDebouncedQ, setAddDebouncedQ] = useState('');
-  const [addLoading, setAddLoading] = useState(false);
-  const [addProductHits, setAddProductHits] = useState<AdminProductRow[]>([]);
-  const [addModalSelected, setAddModalSelected] = useState<Set<string>>(() => new Set());
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
 
-  const selectableProductIds = useMemo(
-    () =>
-      addProductHits.filter((p) => !productRows.some((r) => r.productId === p.id)).map((p) => p.id),
-    [addProductHits, productRows],
+  const excludedProductIds = useMemo(
+    () => new Set(productRows.map((r) => r.productId)),
+    [productRows],
   );
-  const modalAllSelectableSelected =
-    selectableProductIds.length > 0 && selectableProductIds.every((id) => addModalSelected.has(id));
 
   useEffect(() => {
     let cancelled = false;
@@ -97,71 +85,13 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
     };
   }, [tagId, isEdit, str.errLoad]);
 
-  useEffect(() => {
-    const t = setTimeout(() => setAddDebouncedQ(addQ.trim()), 300);
-    return () => clearTimeout(t);
-  }, [addQ]);
-
-  const loadAddHits = useCallback(async () => {
-    if (!addPickerOpen) return;
-    setAddLoading(true);
-    try {
-      const res = await adminBackendList<AdminProductRow>(
-        'catalog/admin/products',
-        adminListParams({ page: 1, limit: 100, q: addDebouncedQ }),
-      );
-      setAddProductHits(res.items);
-    } catch {
-      setAddProductHits([]);
-    } finally {
-      setAddLoading(false);
-    }
-  }, [addPickerOpen, addDebouncedQ]);
-
-  useEffect(() => {
-    void loadAddHits();
-  }, [loadAddHits]);
-
-  useEffect(() => {
-    if (addPickerOpen) setAddModalSelected(new Set());
-  }, [addDebouncedQ, addPickerOpen]);
-
-  function toggleModalSelectAll() {
-    if (modalAllSelectableSelected) {
-      setAddModalSelected((prev) => {
-        const n = new Set(prev);
-        for (const id of selectableProductIds) n.delete(id);
-        return n;
-      });
-    } else {
-      setAddModalSelected((prev) => {
-        const n = new Set(prev);
-        for (const id of selectableProductIds) n.add(id);
-        return n;
-      });
-    }
-  }
-
-  function toggleAddModalRow(id: string) {
-    setAddModalSelected((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-  }
-
-  function commitAddModalSelection() {
-    const picks = Array.from(addModalSelected)
-      .map((id) => addProductHits.find((x) => x.id === id))
-      .filter((p): p is AdminProductRow => !!p && !productRows.some((r) => r.productId === p.id));
+  function commitProductPicker(picks: AdminProductRow[]) {
     setProductRows((prev) => [
       ...prev,
-      ...picks.map((p) => ({ key: rowKey(), productId: p.id, name: p.name, slug: p.slug })),
+      ...picks
+        .filter((p) => !prev.some((r) => r.productId === p.id))
+        .map((p) => ({ key: rowKey(), productId: p.id, name: p.name, slug: p.slug })),
     ]);
-    setAddModalSelected(new Set());
-    setAddPickerOpen(false);
-    setAddQ('');
   }
 
   async function submit(e: React.FormEvent) {
@@ -237,106 +167,14 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
         }}
       />
 
-      {addPickerOpen ? (
-        <div
-          className={objStyles.modalBackdrop}
-          role="dialog"
-          aria-modal
-          aria-label={str.addProductAria}
-          onClick={() => setAddPickerOpen(false)}
-        >
-          <div
-            className={objStyles.modal}
-            onClick={(ev) => ev.stopPropagation()}
-            style={{ maxWidth: 640, width: '100%' }}
-          >
-            <div className={styles.modalHeaderRow}>
-              <h2 className={objStyles.dialogTitle} style={{ margin: 0, paddingRight: 8 }}>
-                {str.addProduct}
-              </h2>
-              <AdminModalCloseButton onClick={() => setAddPickerOpen(false)} label={str.close} />
-            </div>
-            <AdminSearchBox
-              className={styles.searchBoxFull}
-              placeholder={str.searchPh}
-              ariaLabel={str.searchAria}
-              value={addQ}
-              onChange={(e) => setAddQ(e.target.value)}
-            />
-            <div className={`${styles.tableWrap} ${styles.tableScroll}`}>
-              {addLoading ? (
-                <p className={styles.muted}>{c.loading}</p>
-              ) : addProductHits.length === 0 ? (
-                <p className={styles.muted}>{str.nothing}</p>
-              ) : (
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 44 }}>
-                        <AccountCheckbox
-                          id="catalog-tag-add-select-all"
-                          className={styles.adminCheckboxInTable}
-                          checked={modalAllSelectableSelected}
-                          onChange={toggleModalSelectAll}
-                          disabled={!selectableProductIds.length}
-                          aria-label={str.selectAllList}
-                        />
-                      </th>
-                      <th>{str.thName}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {addProductHits.map((p) => {
-                      const inTag = productRows.some((r) => r.productId === p.id);
-                      return (
-                        <tr key={p.id} className={inTag ? styles.rowInactive : undefined}>
-                          <td>
-                            <AccountCheckbox
-                              id={`catalog-tag-add-p-${p.id}`}
-                              className={styles.adminCheckboxInTable}
-                              disabled={inTag}
-                              checked={!inTag && addModalSelected.has(p.id)}
-                              onChange={() => toggleAddModalRow(p.id)}
-                              aria-label={str.selectRow(p.name)}
-                            />
-                          </td>
-                          <td>
-                            {p.name}
-                            {inTag ? (
-                              <span className={styles.muted} style={{ marginLeft: 6 }}>
-                                {str.inTag}
-                              </span>
-                            ) : null}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className={styles.formActions} style={{ marginTop: 14 }}>
-              <AdminCompactBtn
-                type="button"
-                variant="outline"
-                onClick={() => setAddModalSelected(new Set())}
-                disabled={!addModalSelected.size}
-              >
-                {str.clearSel}
-              </AdminCompactBtn>
-              <AdminCompactBtn
-                type="button"
-                disabled={!addModalSelected.size}
-                onClick={commitAddModalSelection}
-              >
-                {addModalSelected.size
-                  ? `${str.addSelected} (${addModalSelected.size})`
-                  : str.addSelected}
-              </AdminCompactBtn>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <AdminProductMultiPickerModal
+        open={productPickerOpen}
+        excludedIds={excludedProductIds}
+        alreadyInLabel={str.inTag}
+        title={str.addProduct}
+        onClose={() => setProductPickerOpen(false)}
+        onAdd={commitProductPicker}
+      />
 
       <div className={styles.detailTitleRow}>
         <h1 className={styles.title}>{isEdit ? str.titleEdit : str.titleNew}</h1>
@@ -396,7 +234,7 @@ export function CatalogTagEditorClient({ tagId }: { tagId?: string } = {}) {
         <div className={styles.fieldBlock}>
           <span className={styles.adminFieldLabel}>{str.contentTitle}</span>
           <div className={styles.formActions} style={{ marginTop: 0, marginBottom: 12 }}>
-            <AdminCompactBtn type="button" variant="outline" onClick={() => setAddPickerOpen(true)}>
+            <AdminCompactBtn type="button" variant="outline" onClick={() => setProductPickerOpen(true)}>
               {str.addProduct}
             </AdminCompactBtn>
           </div>

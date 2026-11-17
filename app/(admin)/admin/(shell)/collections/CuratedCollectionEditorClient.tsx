@@ -17,11 +17,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccountCheckbox } from '@/components/AccountProductList/AccountCheckbox';
 import { AdminCompactBtn, AdminCompactBtnLink } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { AdminCatalogVisibilityBadge } from '@/components/admin/AdminCatalogVisibilityBadge';
-import { AdminModalCloseButton } from '@/components/admin/AdminModalCloseButton/AdminModalCloseButton';
 import { AdminTableRemoveButton } from '@/components/admin/AdminTableRemoveButton/AdminTableRemoveButton';
 import { AdminTabs } from '@/components/AdminTabs/AdminTabs';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
@@ -30,9 +29,7 @@ import {
   AdminTextArea,
   AdminTextField,
 } from '@/components/AdminTextField/AdminTextField';
-import { AdminSearchBox } from '@/components/SearchBox/SearchBox';
 import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
-import { adminBackendList, adminListParams } from '@/lib/adminListResponse';
 import { adminCollectionEditorStrings } from '@/lib/admin-i18n/adminCollectionsI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminConfirm } from '@/lib/adminConfirm/useAdminConfirm';
@@ -44,12 +41,16 @@ import {
 } from '@/lib/home/computeHomePreviewCount';
 import type { AdminProductRow } from '../catalog/products/adminProductTypes';
 import styles from '@/app/(admin)/admin/catalogAdmin.module.css';
-import objStyles from '../objects/objectsLibrary.module.css';
 import type {
   CuratedCollectionDetail,
   CuratedHomeGridSize,
   CuratedHomeOrderMode,
 } from './collectionsAdminTypes';
+import {
+  CuratedBrandPickerModal,
+  type CuratedBrandPick,
+} from './CuratedBrandPickerModal';
+import { CuratedProductPickerModal } from './CuratedProductPickerModal';
 
 const COLLECTION_FORM_ID = 'curated-collection-editor-form';
 
@@ -66,8 +67,6 @@ type ProductRow = {
   isActive: boolean;
 };
 type BrandRow = { key: string; brandId: string; name: string; slug: string };
-
-type BrandListRow = { id: string; name: string; slug: string };
 
 function SortableItemRow({
   label,
@@ -138,29 +137,19 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
-  const [addPickerOpen, setAddPickerOpen] = useState(false);
-  const [addQ, setAddQ] = useState('');
-  const [addDebouncedQ, setAddDebouncedQ] = useState('');
-  const [addLoading, setAddLoading] = useState(false);
-  const [addProductHits, setAddProductHits] = useState<AdminProductRow[]>([]);
-  const [addBrandHits, setAddBrandHits] = useState<BrandListRow[]>([]);
-  const [addModalSelected, setAddModalSelected] = useState<Set<string>>(() => new Set());
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [brandPickerOpen, setBrandPickerOpen] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const selectableProductIds = useMemo(
-    () =>
-      addProductHits.filter((p) => !productRows.some((r) => r.productId === p.id)).map((p) => p.id),
-    [addProductHits, productRows],
+  const excludedProductIds = useMemo(
+    () => new Set(productRows.map((r) => r.productId)),
+    [productRows],
   );
-  const selectableBrandIds = useMemo(
-    () => addBrandHits.filter((b) => !brandRows.some((r) => r.brandId === b.id)).map((b) => b.id),
-    [addBrandHits, brandRows],
+  const excludedBrandIds = useMemo(
+    () => new Set(brandRows.map((r) => r.brandId)),
+    [brandRows],
   );
-  const modalAllSelectableSelected =
-    kind === 'PRODUCT'
-      ? selectableProductIds.length > 0 && selectableProductIds.every((id) => addModalSelected.has(id))
-      : selectableBrandIds.length > 0 && selectableBrandIds.every((id) => addModalSelected.has(id));
 
   useEffect(() => {
     let cancelled = false;
@@ -225,84 +214,16 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
   }, [collectionId, isEdit, str.errLoad]);
 
   useEffect(() => {
-    const t = setTimeout(() => setAddDebouncedQ(addQ.trim()), 300);
-    return () => clearTimeout(t);
-  }, [addQ]);
-
-  const loadAddHits = useCallback(async () => {
-    if (!addPickerOpen) return;
-    setAddLoading(true);
-    try {
-      if (kind === 'PRODUCT') {
-        const res = await adminBackendList<AdminProductRow>(
-          'catalog/admin/products',
-          adminListParams({ page: 1, limit: 100, q: addDebouncedQ }),
-        );
-        setAddProductHits(res.items);
-        setAddBrandHits([]);
-      } else {
-        const res = await adminBackendList<{ id: string; name: string; slug: string }>(
-          'catalog/admin/brands',
-          adminListParams({ page: 1, limit: 100, q: addDebouncedQ }),
-        );
-        setAddBrandHits(res.items.map((b) => ({ id: b.id, name: b.name, slug: b.slug })));
-        setAddProductHits([]);
-      }
-    } catch {
-      setAddProductHits([]);
-      setAddBrandHits([]);
-    } finally {
-      setAddLoading(false);
-    }
-  }, [addPickerOpen, addDebouncedQ, kind]);
-
-  useEffect(() => {
-    loadAddHits();
-  }, [loadAddHits]);
-
-  useEffect(() => {
     if (!saveError) return;
     saveErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [saveError]);
 
-  useEffect(() => {
-    if (addPickerOpen) setAddModalSelected(new Set());
-  }, [addDebouncedQ, addPickerOpen]);
-
-  function toggleModalSelectAll() {
-    const ids = kind === 'PRODUCT' ? selectableProductIds : selectableBrandIds;
-    if (modalAllSelectableSelected) {
-      setAddModalSelected((prev) => {
-        const n = new Set(prev);
-        for (const id of ids) n.delete(id);
-        return n;
-      });
-    } else {
-      setAddModalSelected((prev) => {
-        const n = new Set(prev);
-        for (const id of ids) n.add(id);
-        return n;
-      });
-    }
-  }
-
-  function toggleAddModalRow(id: string) {
-    setAddModalSelected((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-  }
-
-  function commitAddModalSelection() {
-    if (kind === 'PRODUCT') {
-      const picks = Array.from(addModalSelected)
-        .map((id) => addProductHits.find((x) => x.id === id))
-        .filter((p): p is AdminProductRow => !!p && !productRows.some((r) => r.productId === p.id));
-      setProductRows((prev) => [
-        ...prev,
-        ...picks.map((p) => ({
+  function commitProductPicker(picks: AdminProductRow[]) {
+    setProductRows((prev) => [
+      ...prev,
+      ...picks
+        .filter((p) => !prev.some((r) => r.productId === p.id))
+        .map((p) => ({
           key: rowKey(),
           productId: p.id,
           name: p.name,
@@ -310,19 +231,21 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
           price: parseAdminListPrice(p.price),
           isActive: p.isActive,
         })),
-      ]);
-    } else {
-      const picks = Array.from(addModalSelected)
-        .map((id) => addBrandHits.find((x) => x.id === id))
-        .filter((b): b is BrandListRow => !!b && !brandRows.some((r) => r.brandId === b.id));
-      setBrandRows((prev) => [
-        ...prev,
-        ...picks.map((b) => ({ key: rowKey(), brandId: b.id, name: b.name, slug: b.slug })),
-      ]);
-    }
-    setAddModalSelected(new Set());
-    setAddPickerOpen(false);
-    setAddQ('');
+    ]);
+  }
+
+  function commitBrandPicker(picks: CuratedBrandPick[]) {
+    setBrandRows((prev) => [
+      ...prev,
+      ...picks
+        .filter((b) => !prev.some((r) => r.brandId === b.id))
+        .map((b) => ({
+          key: rowKey(),
+          brandId: b.id,
+          name: b.name,
+          slug: b.slug,
+        })),
+    ]);
   }
 
   async function changeKind(next: 'PRODUCT' | 'BRAND') {
@@ -551,153 +474,19 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
         }}
       />
 
-      {addPickerOpen ? (
-        <div
-          className={objStyles.modalBackdrop}
-          role="dialog"
-          aria-modal
-          aria-label={kind === 'PRODUCT' ? str.addProductAria : str.addBrandAria}
-          onClick={() => setAddPickerOpen(false)}
-        >
-          <div
-            className={objStyles.modal}
-            onClick={(ev) => ev.stopPropagation()}
-            style={{ maxWidth: 640, width: '100%' }}
-          >
-            <div className={styles.modalHeaderRow}>
-              <h2 className={objStyles.dialogTitle} style={{ margin: 0, paddingRight: 8 }}>
-                {kind === 'PRODUCT' ? str.addProduct : str.addBrand}
-              </h2>
-              <AdminModalCloseButton onClick={() => setAddPickerOpen(false)} label={str.close} />
-            </div>
-            <AdminSearchBox
-              className={styles.searchBoxFull}
-              placeholder={str.searchPh}
-              ariaLabel={str.searchAria}
-              value={addQ}
-              onChange={(e) => setAddQ(e.target.value)}
-            />
-            <div className={`${styles.tableWrap} ${styles.tableScroll}`}>
-              {addLoading ? (
-                <p className={styles.muted}>{c.loading}</p>
-              ) : kind === 'PRODUCT' ? (
-                addProductHits.length === 0 ? (
-                  <p className={styles.muted}>{str.nothing}</p>
-                ) : (
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 44 }}>
-                          <AccountCheckbox
-                            id="curated-add-select-all"
-                            className={styles.adminCheckboxInTable}
-                            checked={modalAllSelectableSelected}
-                            onChange={toggleModalSelectAll}
-                            disabled={!selectableProductIds.length}
-                            aria-label={str.selectAllList}
-                          />
-                        </th>
-                        <th>{str.thName}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {addProductHits.map((p) => {
-                        const inCol = productRows.some((r) => r.productId === p.id);
-                        return (
-                          <tr key={p.id} className={inCol ? styles.rowInactive : undefined}>
-                            <td>
-                              <AccountCheckbox
-                                id={`curated-add-p-${p.id}`}
-                                className={styles.adminCheckboxInTable}
-                                disabled={inCol}
-                                checked={!inCol && addModalSelected.has(p.id)}
-                                onChange={() => toggleAddModalRow(p.id)}
-                                aria-label={str.selectRow(p.name)}
-                              />
-                            </td>
-                            <td>
-                              {p.name}
-                              {inCol ? (
-                                <span className={styles.muted} style={{ marginLeft: 6 }}>
-                                  {str.inCollection}
-                                </span>
-                              ) : null}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )
-              ) : addBrandHits.length === 0 ? (
-                <p className={styles.muted}>{str.nothing}</p>
-              ) : (
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 44 }}>
-                        <AccountCheckbox
-                          id="curated-add-select-all-brands"
-                          className={styles.adminCheckboxInTable}
-                          checked={modalAllSelectableSelected}
-                          onChange={toggleModalSelectAll}
-                          disabled={!selectableBrandIds.length}
-                          aria-label={str.selectAllList}
-                        />
-                      </th>
-                      <th>{str.thName}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {addBrandHits.map((b) => {
-                      const inCol = brandRows.some((r) => r.brandId === b.id);
-                      return (
-                        <tr key={b.id} className={inCol ? styles.rowInactive : undefined}>
-                          <td>
-                            <AccountCheckbox
-                              id={`curated-add-b-${b.id}`}
-                              className={styles.adminCheckboxInTable}
-                              disabled={inCol}
-                              checked={!inCol && addModalSelected.has(b.id)}
-                              onChange={() => toggleAddModalRow(b.id)}
-                              aria-label={str.selectRow(b.name)}
-                            />
-                          </td>
-                          <td>
-                            {b.name}
-                            {inCol ? (
-                              <span className={styles.muted} style={{ marginLeft: 6 }}>
-                                {str.inCollection}
-                              </span>
-                            ) : null}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className={styles.formActions} style={{ marginTop: 14 }}>
-              <AdminCompactBtn
-                type="button"
-                variant="outline"
-                onClick={() => setAddModalSelected(new Set())}
-                disabled={!addModalSelected.size}
-              >
-                {str.clearSel}
-              </AdminCompactBtn>
-              <AdminCompactBtn
-                type="button"
-                disabled={!addModalSelected.size}
-                onClick={commitAddModalSelection}
-              >
-                {addModalSelected.size ? `${str.addSelected} (${addModalSelected.size})` : str.addSelected}
-              </AdminCompactBtn>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <CuratedProductPickerModal
+        open={productPickerOpen}
+        excludedProductIds={excludedProductIds}
+        onClose={() => setProductPickerOpen(false)}
+        onAdd={commitProductPicker}
+      />
+
+      <CuratedBrandPickerModal
+        open={brandPickerOpen}
+        excludedBrandIds={excludedBrandIds}
+        onClose={() => setBrandPickerOpen(false)}
+        onAdd={commitBrandPicker}
+      />
 
       <div className={styles.detailTitleRow}>
         <div className={styles.detailTitleWithBadge}>
@@ -820,9 +609,8 @@ export function CuratedCollectionEditorClient({ collectionId }: { collectionId?:
           <AdminCompactBtn
             type="button"
             onClick={() => {
-              setAddQ('');
-              setAddModalSelected(new Set());
-              setAddPickerOpen(true);
+              if (kind === 'PRODUCT') setProductPickerOpen(true);
+              else setBrandPickerOpen(true);
             }}
           >
             {kind === 'PRODUCT' ? str.addProductBtn : str.addBrandBtn}
