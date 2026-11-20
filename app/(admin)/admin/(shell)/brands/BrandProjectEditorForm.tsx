@@ -28,6 +28,7 @@ type Props = {
   mediaLibraryLabel: string;
   onOpenCoverPicker: () => void;
   pickMediaFromLibrary: (kind: 'image' | 'video') => Promise<string | null>;
+  uploadMedia: (file: File, type: 'image' | 'video') => Promise<string>;
   onSave: () => void;
   onCancel: () => void;
 };
@@ -48,6 +49,7 @@ export function BrandProjectEditorForm({
   mediaLibraryLabel,
   onOpenCoverPicker,
   pickMediaFromLibrary,
+  uploadMedia,
   onSave,
   onCancel,
 }: Props) {
@@ -179,9 +181,11 @@ export function BrandProjectEditorForm({
       <div>
         <h3 className={catalog.groupHeading}>Описание</h3>
         <RichBlock
+          variant="admin"
           value={form.descriptionHtml}
           onChange={(html) => setForm((p) => ({ ...p, descriptionHtml: html }))}
           placeholder="Подробное описание проекта…"
+          uploadMedia={uploadMedia}
           pickMediaFromLibrary={pickMediaFromLibrary}
         />
       </div>

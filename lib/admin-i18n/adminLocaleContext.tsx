@@ -31,3 +31,8 @@ export function useAdminLocale(): AdminLocaleContextValue {
   }
   return v;
 }
+
+/** null вне AdminChrome — для shared-компонентов вроде RichBlock. */
+export function useOptionalAdminLocale(): AdminLocaleContextValue | null {
+  return useContext(AdminLocaleContext);
+}

@@ -480,13 +480,19 @@ body.header-super-menu-open {
 }
 
 /* wrap / wrap-end + размер */
+/* S+wrap: шире слот, чтобы два фото рядом стабильнее вставали в ряд */
 .rich-content img[data-align='wrap'][data-size='small'],
 .rich-content img.case-media-wrap.case-media-small,
 .rich-content video[data-align='wrap'][data-size='small'],
 .rich-content img[data-align='wrap-end'][data-size='small'],
 .rich-content img.case-media-wrap-end.case-media-small,
 .rich-content video[data-align='wrap-end'][data-size='small'] {
-  width: min(35%, 220px);
+  width: min(45%, 280px);
+}
+
+.rich-content p.case-rich-image-caption[data-align='wrap'][data-size='small'],
+.rich-content p.case-rich-image-caption[data-align='wrap-end'][data-size='small'] {
+  width: min(45%, 280px);
 }
 
 .rich-content img[data-align='wrap'][data-size='medium'],
@@ -545,15 +551,42 @@ body.header-super-menu-open {
   margin-right: 0;
 }
 
-/* подпись после wrap: не обтекать float — полоса на всю ширину под блоком с картинкой + текстом */
-.rich-content p.case-rich-image-caption[data-align='wrap'],
+/* wrap: подпись в float-колонке с картинкой, без clear:both — сохраняет обтекание */
+.rich-content p.case-rich-image-caption[data-align='wrap'] {
+  float: left;
+  clear: left;
+  width: min(45%, 340px);
+  max-width: 100%;
+  margin: 0 24px 12px 0;
+  text-align: center;
+}
+
 .rich-content p.case-rich-image-caption[data-align='wrap-end'] {
+  float: right;
+  clear: right;
+  width: min(45%, 340px);
+  max-width: 100%;
+  margin: 0 0 12px 24px;
+  text-align: center;
+}
+
+.rich-content p.case-rich-image-caption[data-align='wrap'][data-size='small'],
+.rich-content p.case-rich-image-caption[data-align='wrap-end'][data-size='small'] {
+  width: min(35%, 220px);
+}
+
+.rich-content p.case-rich-image-caption[data-align='wrap'][data-size='medium'],
+.rich-content p.case-rich-image-caption[data-align='wrap-end'][data-size='medium'] {
+  width: min(65%, 520px);
+}
+
+.rich-content p.case-rich-image-caption[data-align='wrap'][data-size='full'],
+.rich-content p.case-rich-image-caption[data-align='wrap-end'][data-size='full'] {
+  float: none;
   clear: both;
   width: 100%;
-  max-width: 100%;
   margin-left: 0;
   margin-right: 0;
-  text-align: center;
 }
 
 .rich-content figure {
@@ -590,6 +623,12 @@ body.header-super-menu-open {
   padding: 12px 16px;
   border-left: 2px solid rgba(0, 0, 0, 0.2);
   color: var(--color-ink-black);
+}
+
+.rich-content hr {
+  border: none;
+  border-top: 1px solid var(--account-hairline-color, #e2e6e8);
+  margin: 1.25em 0;
 }
 
 .rich-content pre,

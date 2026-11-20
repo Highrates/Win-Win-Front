@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountConfirmDialog } from '@/components/AccountConfirmDialog/AccountConfirmDialog';
 import { AdminCompactBtn } from '@/components/AdminCompactBtn/AdminCompactBtn';
 import { MediaLibraryPickerModal } from '@/components/admin/MediaLibraryPickerModal/MediaLibraryPickerModal';
-import { adminBackendJson } from '@/lib/adminBackendFetch';
+import { adminBackendJson, adminUploadRichMedia } from '@/lib/adminBackendFetch';
 import { useUnsavedChangesGuard } from '@/lib/adminConfirm/useUnsavedChangesGuard';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
 import { useAdminLocale } from '@/lib/admin-i18n/adminLocaleContext';
@@ -337,6 +337,7 @@ export function BrandProjectsPanel({
               mediaLibraryLabel={common.mediaLibrary}
               onOpenCoverPicker={openCoverPicker}
               pickMediaFromLibrary={pickMediaFromLibrary}
+              uploadMedia={(file, type) => adminUploadRichMedia(file, type)}
               onSave={() => void saveForm()}
               onCancel={() => void closeForm()}
             />

@@ -324,7 +324,10 @@
   font-weight: var(--text-body-weight, 300);
   line-height: var(--text-body-long-height, 22px);
   color: var(--color-ink-black, #1d1c1b);
-  max-width: 34ch;
+  /* Как у .introImage (403px), не уже картинки */
+  max-width: 403px;
+  width: 100%;
+  box-sizing: border-box;
   text-transform: none;
 }
 

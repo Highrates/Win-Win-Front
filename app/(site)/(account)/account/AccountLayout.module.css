@@ -37,6 +37,8 @@
 .accountContent {
   grid-column: 4 / -1;
   min-width: 0;
+  /* RichBlock sticky под fixed header-main */
+  --rich-block-sticky-top: var(--site-header-offset, 94px);
 }
 
 @media (max-width: 768px) {

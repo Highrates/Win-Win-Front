@@ -222,6 +222,7 @@ export function TourEditorDaysSection({
                               />
                             </div>
                             <RichBlock
+                              variant="admin"
                               value={it.body}
                               onChange={(html) =>
                                 setDays((prev) =>

@@ -25,6 +25,8 @@
   animation: slideInPanelFromRight 0.35s ease-out;
   display: flex;
   flex-direction: column;
+  /* RichBlock sticky относительно панели, не site header */
+  --rich-block-sticky-top: 0px;
 }
 
 @keyframes slideInPanelFromRight {

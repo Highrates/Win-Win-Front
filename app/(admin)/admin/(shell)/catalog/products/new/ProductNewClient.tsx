@@ -491,6 +491,7 @@ export function ProductFormClient({ productId }: { productId?: string } = {}) {
             <div className={pn.section}>
               <h2 className={catalogStyles.groupHeading}>{s.extraTitle}</h2>
               <RichBlock
+                variant="admin"
                 value={additionalInfoHtml}
                 onChange={setAdditionalInfoHtml}
                 placeholder={s.extraPh}

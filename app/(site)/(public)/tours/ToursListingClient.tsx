@@ -15,6 +15,7 @@ import { formatTourDateChip } from '@/lib/chinaTours/formatTourDate';
 import { tourImageUnoptimized } from '@/lib/chinaTours/tourImage';
 import type { ChinaTourListItem, ChinaToursLanding } from '@/lib/chinaTours/types';
 import { resolveMediaUrlForClient } from '@/lib/publicMediaUrl';
+import { fixRussianHangingPrepositions } from '@/lib/typography/fixRussianHangingPrepositions';
 import styles from './tours.module.css';
 
 const DEFAULT_INTRO_TITLE = 'WUPAPA ОРГАНИЗОВЫВАЕТ МЕБЕЛЬНЫЕ ТУРЫ В КИТАЙ';
@@ -126,11 +127,7 @@ function renderIntroTitle(raw: string | null | undefined): ReactNode {
       </>
     );
   }
-  // Короткие предлоги не оставляем висеть в конце строки
-  return title.replace(
-    /(\s)(в|и|на|к|с|у|о|по|из|за|от|до|об|со|во|ко|ко)(\s+)/gi,
-    '$1$2\u00A0',
-  );
+  return fixRussianHangingPrepositions(title);
 }
 
 type Props = {
@@ -163,7 +160,7 @@ export function ToursListingClient({ landing, tours, variant = 'page' }: Props) 
     if (!raw) return [];
     return raw
       .split(/\n{2,}/)
-      .map((p) => p.trim())
+      .map((p) => fixRussianHangingPrepositions(p.trim()))
       .filter(Boolean);
   }, [landing?.description]);
 
@@ -458,7 +455,9 @@ export function ToursListingClient({ landing, tours, variant = 'page' }: Props) 
 
                     <div className={styles.cardBottom}>
                       {tour.cardText ? (
-                        <p className={`text-body-long ${styles.cardText}`}>{tour.cardText}</p>
+                        <p className={`text-body-long ${styles.cardText}`}>
+                          {fixRussianHangingPrepositions(tour.cardText)}
+                        </p>
                       ) : (
                         <span />
                       )}

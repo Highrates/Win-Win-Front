@@ -13,7 +13,11 @@ import {
   ProductGalleryEditor,
   type ProductGalleryFrame,
 } from '@/components/admin/ProductGalleryEditor/ProductGalleryEditor';
-import { adminBackendJson, revalidatePublicCatalogCache } from '@/lib/adminBackendFetch';
+import {
+  adminBackendJson,
+  adminUploadRichMedia,
+  revalidatePublicCatalogCache,
+} from '@/lib/adminBackendFetch';
 import { adminBrandEditorStrings } from '@/lib/admin-i18n/adminBrandEditorI18n';
 import { adminProductGalleryEditorStrings } from '@/lib/admin-i18n/adminProductGalleryEditorI18n';
 import { adminCommonI18n } from '@/lib/admin-i18n/adminCommonI18n';
@@ -733,9 +737,11 @@ export function BrandEditorClient({ brandId }: { brandId?: string }) {
         <div>
           <h2 className={styles.groupHeading}>{s.sectionRich}</h2>
           <RichBlock
+            variant="admin"
             value={description}
             onChange={setDescription}
             placeholder={s.richPlaceholder}
+            uploadMedia={(file, type) => adminUploadRichMedia(file, type)}
             pickMediaFromLibrary={pickMediaFromLibrary}
           />
         </div>

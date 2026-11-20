@@ -104,6 +104,8 @@ export function ProfileAboutModal({
       <div className={panelModal.inner}>
         <h3 className={panelModal.title}>Подробнее о вас</h3>
         <RichBlock
+          variant="account"
+          locale="ru"
           value={draft}
           onChange={setDraft}
           placeholder="Расскажите о себе: опыт, специализация, подход к проектам..."

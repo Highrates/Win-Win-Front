@@ -6,6 +6,10 @@
   justify-content: flex-start;
   align-items: flex-start;
   gap: 24px;
+  /* Sticky case header (~56px) + site header offset */
+  --rich-block-sticky-top: calc(
+    var(--site-header-offset, 94px) + 56px + env(safe-area-inset-top, 0px)
+  );
 }
 
 .headerRow {

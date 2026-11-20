@@ -305,6 +305,8 @@
   min-width: 0;
   padding: 24px 28px;
   background: #f7f7f7;
+  /* RichBlock sticky: в админке нет fixed top-bar над контентом */
+  --rich-block-sticky-top: 0px;
 }
 
 @media (max-width: 768px) {

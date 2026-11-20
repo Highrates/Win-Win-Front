@@ -14,6 +14,8 @@ export function CaseRichDescription({ value, onChange, uploadMedia }: CaseRichDe
     <div className={styles.field}>
       <span className={styles.label}>Описание</span>
       <RichBlock
+        variant="account"
+        locale="ru"
         value={value}
         onChange={onChange}
         placeholder="Добавьте подробное описание кейса: заголовки, текст, изображения..."

@@ -270,6 +270,7 @@ export function BlogPostEditorClient({ postId }: Props) {
         <div className={pn.section}>
           <h2 className={catalogStyles.groupHeading}>{s.body}</h2>
           <RichBlock
+            variant="admin"
             value={body}
             onChange={setBody}
             uploadMedia={(file, type) => adminUploadRichMedia(file, type)}
