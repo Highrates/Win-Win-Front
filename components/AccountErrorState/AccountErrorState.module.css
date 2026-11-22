@@ -12,3 +12,22 @@
   font-size: var(--text-body);
   font-weight: var(--text-body-weight);
 }
+
+@media (max-width: 768px) {
+  .root {
+    max-width: none;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .message {
+    font-size: var(--text-caption);
+    font-weight: var(--text-caption-weight);
+    line-height: 1.45;
+  }
+
+  .root :global(button) {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -141,12 +141,87 @@
 }
 
 @media (max-width: 768px) {
+  .page {
+    gap: 20px;
+    max-width: none;
+  }
+
+  .toolbar {
+    gap: 12px;
+  }
+
   .toolbarRow {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
+  }
+
+  .filters {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .filters::-webkit-scrollbar {
+    display: none;
   }
 
   .viewToggle {
-    align-self: flex-start;
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .list {
+    gap: 20px;
+  }
+
+  .dateWrapper {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .dateLabel {
+    font-size: var(--text-caption);
+    font-weight: var(--text-caption-weight);
+    white-space: normal;
+    max-width: 70%;
+  }
+
+  .muted {
+    max-width: none;
+    font-size: var(--text-caption);
+    font-weight: var(--text-caption-weight);
+    line-height: 1.45;
+  }
+
+  .empty {
+    gap: 16px;
+    width: 100%;
+  }
+
+  .emptyActions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .emptyActions :global(a),
+  .emptyActions :global(button) {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .loadMore,
+  .groupMore {
+    width: 100%;
+  }
+
+  .loadMore :global(button),
+  .groupMore :global(button) {
+    width: 100%;
+    justify-content: center;
   }
 }

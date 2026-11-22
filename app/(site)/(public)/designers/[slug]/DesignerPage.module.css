@@ -41,14 +41,6 @@
   gap: 24px;
 }
 
-.designerAvatar {
-  width: 82px;
-  height: 82px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  object-fit: cover;
-}
-
 .designerTitlesCol {
   display: inline-flex;
   flex-direction: column;
@@ -210,27 +202,45 @@ button.interactItem:disabled {
   user-select: none;
 }
 
-.previewImages {
-  display: block;
-  width: 100%;
-  max-width: min(100%, 800px);
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.previewImageSlot {
+.previewCollage {
   position: relative;
+  /* Ширина как tours .cardSlide, высота как tours .collage — иначе кадры квадратнее */
+  flex: 0 0 auto;
+  width: min(62vw, 560px);
+  max-width: 100%;
   min-width: 0;
-  width: 100%;
+  height: min(58vw, 460px);
+  max-height: 520px;
+  margin-right: 20px;
 }
 
-.previewImage {
-  display: block;
-  width: 100%;
-  height: 393px;
-  border-radius: var(--radius-4);
+.collagePlaceholder {
+  position: absolute;
+  inset: 0 18% 8% 0;
+  background: #e8ecef;
+}
+
+.collagePrimary {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 62%;
+  height: 94%;
   object-fit: cover;
-  object-position: center;
+  display: block;
+}
+
+.collageSecondary {
+  position: absolute;
+  right: 0;
+  bottom: 2%;
+  width: 50%;
+  height: 72%;
+  object-fit: cover;
+  display: block;
+  transform: rotate(7deg);
+  transform-origin: center center;
+  box-shadow: 0 14px 36px rgba(5, 24, 38, 0.14);
 }
 
 .marketSection {
@@ -984,7 +994,7 @@ button.projectInteractItem:disabled {
 
 @media (max-width: 768px) {
   .previewPageSection {
-    margin-top: 78px;
+    margin-top: 64px;
   }
 
   .previewPageWrapper {
@@ -1006,14 +1016,14 @@ button.projectInteractItem:disabled {
     align-items: flex-start;
   }
 
-  .designerAvatar {
-    width: 64px;
-    height: 64px;
-  }
-
   .designerName {
     font-size: var(--h3-size);
     font-weight: var(--h3-weight);
+  }
+
+  .designerCity {
+    font-size: var(--text-caption);
+    letter-spacing: 0.02em;
   }
 
   .interactWrapper {
@@ -1021,12 +1031,12 @@ button.projectInteractItem:disabled {
     gap: 16px 24px;
   }
 
-  .previewImages {
-    max-width: none;
-  }
-
-  .previewImageSlot {
-    width: 100%;
+  .previewCollage {
+    /* Как tours .cardSlide + .collage @media ≤720 */
+    width: min(82vw, 340px);
+    max-width: 100%;
+    height: min(72vw, 300px);
+    max-height: none;
   }
 
   .marketSection {
@@ -1111,5 +1121,50 @@ button.projectInteractItem:disabled {
   /* Список товаров справа — только десктоп; на мобилке смотреть «Подробнее о проекте» / сетку */
   .projectProductsWrapper {
     display: none;
+  }
+
+  /* Контент SideSheet-модалок (о дизайнере / о проекте) */
+  .richContent :global(p),
+  .richContent :global(li) {
+    font-size: var(--text-body);
+    line-height: 1.45;
+  }
+
+  .modalCoverGallery {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .modalCoverImg {
+    border-radius: var(--radius-4);
+  }
+
+  .modalProjectPlaces {
+    margin-bottom: 12px;
+  }
+
+  .modalAccordionsWrapper {
+    padding: 0 12px;
+  }
+
+  .modalAccordionTrigger {
+    padding: 12px 0;
+  }
+
+  .modalAccordionTriggerInner {
+    gap: 10px;
+  }
+
+  .modalAccordionTitle {
+    font-size: var(--text-body);
+  }
+
+  .modalAccordionContent {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .modalDescriptionBlock {
+    margin-top: 16px;
   }
 }

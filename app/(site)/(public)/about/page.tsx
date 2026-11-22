@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { SITE_NAME } from '@/lib/brand';
 import { Hero } from '@/sections/home';
-import recommendationsStyles from '@/sections/home/Recommendations/Recommendations.module.css';
 import topFoldStyles from '@/sections/home/HomeTopFold.module.css';
 import styles from './AboutPage.module.css';
 
@@ -17,20 +16,11 @@ export default function AboutPage() {
   return (
     <>
       <div className={`${topFoldStyles.topFold} ${topFoldStyles.topFoldCompact}`}>
-        <Hero
-          imageUrl={ABOUT_HERO_IMAGE_SRC}
-          fillFold
-          cornerAlign="left"
-          cornerAriaHidden={false}
-          cornerLabel={
-            <h1 id="about-title" className={`${recommendationsStyles.title} ${styles.heroTitle}`}>
-              О нас
-            </h1>
-          }
-        />
+        <Hero imageUrl={ABOUT_HERO_IMAGE_SRC} fillFold cornerLabel={null} />
       </div>
 
-      <section className={styles.section} aria-labelledby="about-title">
+      <section className={styles.section} aria-label="О нас">
+        <h1 className={styles.visuallyHidden}>О нас</h1>
         <div className={`padding-global ${styles.inner}`}>
           <div className={styles.body}>
             <p>

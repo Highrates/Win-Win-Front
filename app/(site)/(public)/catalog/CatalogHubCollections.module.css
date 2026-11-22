@@ -21,3 +21,18 @@
   color: var(--color-gray);
   text-align: center;
 }
+
+@media (max-width: 768px) {
+  .collections {
+    padding-bottom: 64px;
+  }
+
+  .collections :global(section:first-of-type),
+  .hubRails :global(section:first-of-type) {
+    margin-top: 12px;
+  }
+
+  .hubRails :global(section) {
+    margin-top: 40px;
+  }
+}

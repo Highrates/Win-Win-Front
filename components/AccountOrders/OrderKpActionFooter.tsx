@@ -48,6 +48,9 @@ export function OrderKpActionFooter({
           onClick={onOpenChat}
         >
           <OrderCtaMessageIcon className={`${cta.ctaIcon}${unread ? ` ${cta.ctaIconUnread}` : ''}`} />
+          <span className={styles.cardLabel}>
+            Чат{unread ? ` (${staffUnreadCount})` : ''}
+          </span>
           {unread ? <span className={styles.cardUnreadCount}>({staffUnreadCount})</span> : null}
         </button>
         {canRespondKp ? (

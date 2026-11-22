@@ -15,8 +15,16 @@
 }
 
 @media (max-width: 768px) {
+  /* Моб. home: hero + сетка корневых категорий целиком (подписи последнего ряда не режем) */
+  .topFold {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* /catalog hub: короче, чтобы сетка категорий раньше попадала в первый экран */
   .topFoldCompact {
-    height: min(58vh, 520px);
-    max-height: min(58vh, 520px);
+    height: min(38svh, 320px);
+    max-height: min(38svh, 320px);
   }
 }

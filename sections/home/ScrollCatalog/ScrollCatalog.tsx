@@ -7,6 +7,7 @@ import {
   HOME_SCROLL_CATALOG_PANEL_ID,
   homeScrollCatalogTabId,
   stripItemsForRoot,
+  stripItemsForRoots,
 } from './scrollCatalogStripItems';
 
 type Props = {
@@ -23,16 +24,28 @@ export function ScrollCatalog({ roots, fillFold = false }: Props) {
   const initialRoot = roots[0];
   const initialActiveSlug = initialRoot.slug;
   const initialStripItems = stripItemsForRoot(initialRoot);
+  const rootSquareItems = stripItemsForRoots(roots);
 
   const staticView = (
     <>
-      <ScrollCatalogTabsStatic roots={roots} activeSlug={initialActiveSlug} />
-      <ScrollCatalogStaticStrip
-        items={initialStripItems}
-        panelId={HOME_SCROLL_CATALOG_PANEL_ID}
-        panelLabelledBy={homeScrollCatalogTabId(initialActiveSlug)}
-        eagerImageCount={2}
-      />
+      {/* Desktop: табы + дочерние; mobile: только корневые квадраты */}
+      <div className={styles.homeDesktopCatalog}>
+        <ScrollCatalogTabsStatic roots={roots} activeSlug={initialActiveSlug} />
+        <ScrollCatalogStaticStrip
+          items={initialStripItems}
+          panelId={HOME_SCROLL_CATALOG_PANEL_ID}
+          panelLabelledBy={homeScrollCatalogTabId(initialActiveSlug)}
+          eagerImageCount={2}
+        />
+      </div>
+      <div className={styles.homeMobileCatalog}>
+        <ScrollCatalogStaticStrip
+          items={rootSquareItems}
+          panelId={`${HOME_SCROLL_CATALOG_PANEL_ID}-roots`}
+          eagerImageCount={4}
+          variant="rootSquares"
+        />
+      </div>
     </>
   );
 

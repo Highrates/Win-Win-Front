@@ -27,6 +27,10 @@ export type CoverFormState = {
   cover43aPreview: string | null;
   cover43bPreview: string | null;
   cover169Preview: string | null;
+  /** Основной кадр коллажа (coverImageUrls[0]). */
+  collagePrimaryUrl: string | null;
+  /** Второй кадр коллажа (coverImageUrls[1]); если нет — на сайте берётся аватар. */
+  collageSecondaryUrl: string | null;
 };
 
 export function coverFormStateFromProfile(
@@ -34,28 +38,31 @@ export function coverFormStateFromProfile(
   opts?: { forceHorizontal?: boolean },
 ): CoverFormState {
   const urls = parseStringArray(p.coverImageUrls);
+  const primary = urls[0] ?? null;
+  const secondary = urls[1] ?? null;
   const force169 = Boolean(opts?.forceHorizontal) || p.coverLayout === '16:9';
   if (force169) {
-    const u0 = urls[0] ?? null;
     return {
       coverGrid: '16:9',
       remoteCoverA: null,
       remoteCoverB: null,
-      remoteCover169: u0,
+      remoteCover169: primary,
       cover43aPreview: null,
       cover43bPreview: null,
-      cover169Preview: u0,
+      cover169Preview: primary,
+      collagePrimaryUrl: primary,
+      collageSecondaryUrl: secondary,
     };
   }
-  const a = urls[0] ?? null;
-  const b = urls[1] ?? null;
   return {
     coverGrid: '4:3',
-    remoteCoverA: a,
-    remoteCoverB: b,
+    remoteCoverA: primary,
+    remoteCoverB: secondary,
     remoteCover169: null,
-    cover43aPreview: a,
-    cover43bPreview: b,
+    cover43aPreview: primary,
+    cover43bPreview: secondary,
     cover169Preview: null,
+    collagePrimaryUrl: primary,
+    collageSecondaryUrl: secondary,
   };
 }

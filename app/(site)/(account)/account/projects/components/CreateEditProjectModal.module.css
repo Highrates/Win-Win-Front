@@ -308,3 +308,73 @@
   display: flex;
   justify-content: flex-end;
 }
+
+@media (max-width: 768px) {
+  .overlay {
+    padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px))
+      max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+    align-items: stretch;
+  }
+
+  .panel,
+  .catalogPanel {
+    width: 100%;
+    max-height: none;
+    height: 100%;
+    border-radius: 10px;
+  }
+
+  .panelHead,
+  .catalogHead {
+    padding: 12px 14px;
+  }
+
+  .panelTitle,
+  .catalogTitle {
+    font-size: var(--text-body);
+    line-height: 1.3;
+  }
+
+  .closeBtn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .body {
+    padding: 14px;
+  }
+
+  .panelFooter {
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom, 0px));
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .footerActions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .footerActions :global(button) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .catalogToolbar,
+  .catalogScroll {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .catalogFooter {
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom, 0px));
+    justify-content: stretch;
+  }
+
+  .catalogFooter :global(button) {
+    width: 100%;
+    justify-content: center;
+  }
+}

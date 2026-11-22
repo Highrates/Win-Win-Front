@@ -131,4 +131,30 @@
     width: 100%;
     align-self: stretch;
   }
+
+  /* Архив справа фиксирован; вкладки скроллятся отдельно */
+  .tabsWrapperWithEnd {
+    overflow: hidden;
+    gap: 8px;
+  }
+
+  .tabsWrapperWithEnd .tabsInner {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 28px), transparent 100%);
+  }
+
+  .tabsWrapperWithEnd .tabsInner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    padding: 7px 12px;
+  }
 }

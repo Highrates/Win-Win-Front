@@ -84,7 +84,7 @@ export function CatalogHubClient({
   return (
     <>
       <div className={`${topFoldStyles.topFold} ${topFoldStyles.topFoldCompact}`}>
-        <Hero imageUrl={heroImageSrc} fillFold />
+        <Hero imageUrl={heroImageSrc} fillFold cornerLabel={null} />
         <CatalogHubTabs activeTab={activeTab} onTabChange={onTabChange} fillFold />
       </div>
       <div id="catalog-hub-panel" role="tabpanel" aria-labelledby={`catalog-hub-tab-${activeTab}`}>

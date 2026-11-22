@@ -21,6 +21,7 @@ type Props = {
   scrollNextLabel?: string;
   tabPanel?: { id: string; labelledBy?: string };
   onLinkClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  cardsModifierClass?: string;
 };
 
 export function ScrollCatalogStripPanel({
@@ -35,6 +36,7 @@ export function ScrollCatalogStripPanel({
   scrollNextLabel = 'Прокрутить вправо',
   tabPanel,
   onLinkClick,
+  cardsModifierClass,
 }: Props) {
   const desktopStrip = useMatchMinWidth(769);
   const itemsKey = useMemo(() => items.map((c) => c.key).join('\0'), [items]);
@@ -72,6 +74,7 @@ export function ScrollCatalogStripPanel({
       ? styles.cardsWrapperHome
       : styles.cardsWrapperOnCategoryParent,
     tightTop ? styles.cardsWrapperTightTop : null,
+    cardsModifierClass,
   ]
     .filter(Boolean)
     .join(' ');

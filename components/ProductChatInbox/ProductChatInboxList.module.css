@@ -97,3 +97,37 @@
   background: color-mix(in srgb, var(--color-ink-black) 8%, transparent);
   color: var(--color-ink-black);
 }
+
+@media (max-width: 768px) {
+  .list {
+    gap: 8px;
+  }
+
+  .row {
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+  }
+
+  .productName {
+    font-size: var(--text-body);
+    line-height: 1.3;
+  }
+
+  .preview {
+    font-size: var(--text-caption);
+    font-weight: var(--text-caption-weight);
+    -webkit-line-clamp: 2;
+  }
+
+  .meta {
+    gap: 6px;
+    margin-top: 2px;
+  }
+}

@@ -1,5 +1,13 @@
-.heroTitle {
-  color: var(--color-white);
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .section {
@@ -28,10 +36,15 @@
 
 @media (max-width: 768px) {
   .section {
-    padding: 48px 0 24px;
+    padding: 40px 0 24px;
   }
 
   .body {
-    gap: 18px;
+    gap: 16px;
+  }
+
+  .body p {
+    font-size: var(--text-body);
+    line-height: 1.45;
   }
 }

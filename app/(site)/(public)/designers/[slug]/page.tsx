@@ -13,6 +13,7 @@ import {
   designerProjectsFromPayload,
   loadPublicDesignerBySlug,
 } from '@/lib/designersPublicServer';
+import { resolveDesignerCollageImages } from '@/lib/designersPublicShared';
 import { getServerRequestOrigin } from '@/lib/serverRequestOrigin';
 import styles from './DesignerPage.module.css';
 
@@ -43,8 +44,8 @@ export default async function DesignerPage({
   }
   const designer = result.designer;
 
-  const avatarSrc = designer.photoUrl?.trim() ? designer.photoUrl.trim() : '/images/placeholder.svg';
-  const previewCoverUrl = designer.coverImageUrls[0]?.trim() || null;
+  const collage = resolveDesignerCollageImages(designer);
+  const showCollage = Boolean(collage.primaryUrl || collage.secondaryUrl);
 
   const breadcrumbs = [
     { label: 'Главная', href: '/', current: false },
@@ -75,13 +76,6 @@ export default async function DesignerPage({
               <div className={styles.previewPageTitlesBody}>
                 <div className={styles.previewPageTitlesOuter}>
                   <div className={styles.previewPageTitlesRow}>
-                    <img
-                      src={avatarSrc}
-                      alt={designer.displayName}
-                      className={styles.designerAvatar}
-                      width={82}
-                      height={82}
-                    />
                     <div className={styles.designerTitlesCol}>
                       {designer.city && (
                         <span className={styles.designerCity}>{designer.city}</span>
@@ -145,15 +139,24 @@ export default async function DesignerPage({
                 </div>
               </div>
             </div>
-            {previewCoverUrl ? (
-              <div className={styles.previewImages}>
-                <div className={styles.previewImageSlot}>
+            {showCollage ? (
+              <div className={styles.previewCollage} aria-label={`Коллаж профиля ${designer.displayName}`}>
+                {collage.primaryUrl ? (
                   <img
-                    src={previewCoverUrl}
-                    alt={`Обложка профиля ${designer.displayName}`}
-                    className={styles.previewImage}
+                    src={collage.primaryUrl}
+                    alt={`Основное фото — ${designer.displayName}`}
+                    className={styles.collagePrimary}
                   />
-                </div>
+                ) : (
+                  <div className={styles.collagePlaceholder} aria-hidden />
+                )}
+                {collage.secondaryUrl ? (
+                  <img
+                    src={collage.secondaryUrl}
+                    alt={`Дополнительное фото — ${designer.displayName}`}
+                    className={styles.collageSecondary}
+                  />
+                ) : null}
               </div>
             ) : null}
           </div>

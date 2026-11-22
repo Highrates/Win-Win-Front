@@ -2,7 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type TransitionEvent,
+} from 'react';
 import { Button } from '@/components/Button';
 import { useModalBodyLock } from '@/hooks/useModalBodyLock';
 import { useModalFocusTrap } from '@/lib/useModalFocusTrap';
@@ -130,6 +138,8 @@ export function CustomerAccountSidebar({
   const notifySet = new Set(menuItemsWithNotification);
   const hrefFor = (baseHref: string) => menuHrefOverrides[baseHref] ?? baseHref;
   const [moreOpen, setMoreOpen] = useState(false);
+  const [sheetMounted, setSheetMounted] = useState(false);
+  const [sheetEntered, setSheetEntered] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const logoutPanelRef = useRef<HTMLDivElement>(null);
   const sheetId = useId();
@@ -153,7 +163,34 @@ export function CustomerAccountSidebar({
     onLogout?.();
   }, [onLogout]);
 
-  const { primaryItems, moreTopItems, moreBottomItems } = useMemo(() => {
+  useEffect(() => {
+    if (moreOpen) {
+      setSheetMounted(true);
+      const id = window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => setSheetEntered(true));
+      });
+      return () => window.cancelAnimationFrame(id);
+    }
+    setSheetEntered(false);
+  }, [moreOpen]);
+
+  /** Если transitionend не пришёл (reduced-motion / interrupted) — снять DOM */
+  useEffect(() => {
+    if (moreOpen || sheetEntered || !sheetMounted) return;
+    const t = window.setTimeout(() => setSheetMounted(false), 400);
+    return () => window.clearTimeout(t);
+  }, [moreOpen, sheetEntered, sheetMounted]);
+
+  const onSheetTransitionEnd = useCallback(
+    (e: TransitionEvent<HTMLDivElement>) => {
+      if (e.target !== e.currentTarget) return;
+      if (e.propertyName !== 'transform') return;
+      if (!moreOpen) setSheetMounted(false);
+    },
+    [moreOpen],
+  );
+
+  const { primaryItems, moreTopItems, moreBottomItems, dockItems, sheetMoreItems } = useMemo(() => {
     const primary: MenuDef[] = [
       { href: '/account/orders', iconSrc: ICON.orders, label: 'Заказы' },
       { href: '/account/questions', iconSrc: ICON.questions, label: 'Мои вопросы' },
@@ -178,14 +215,43 @@ export function CustomerAccountSidebar({
       { href: '/account/contact', iconSrc: ICON.contact, label: 'Связаться с нами' },
     ];
 
-    return { primaryItems: primary, moreTopItems: moreTop, moreBottomItems: moreBottom };
+    /** Мобильный док: только 3 пункта + «Ещё» */
+    const dock: MenuDef[] = [
+      { href: '/account/orders', iconSrc: ICON.orders, label: 'Заказы' },
+      { href: '/account/favorites', iconSrc: ICON.favorites, label: 'Избранное' },
+      { href: '/account/profile', iconSrc: ICON.profile, label: 'Профиль' },
+    ];
+
+    const sheetMore: MenuDef[] = [
+      { href: '/account/questions', iconSrc: ICON.questions, label: 'Мои вопросы' },
+      { href: '/account/tours', iconSrc: ICON.tours, label: 'Туры в Китай' },
+    ];
+    if (showDesignerNav) {
+      sheetMore.push(
+        { href: '/account/projects', iconSrc: ICON.projects, label: 'Проекты' },
+        { href: '/account/cases', iconSrc: ICON.cases, label: 'Кейсы' },
+        { href: '/account/team', iconSrc: ICON.team, label: 'Команда' },
+      );
+    }
+    sheetMore.push(
+      { href: '/account/docs', iconSrc: ICON.docs, label: 'Документы' },
+      { href: '/account/contact', iconSrc: ICON.contact, label: 'Связаться с нами' },
+    );
+
+    return {
+      primaryItems: primary,
+      moreTopItems: moreTop,
+      moreBottomItems: moreBottom,
+      dockItems: dock,
+      sheetMoreItems: sheetMore,
+    };
   }, [showDesignerNav]);
 
   useEffect(() => {
-    if (!moreOpen) return;
+    if (!sheetMounted) return;
     document.body.classList.add(BODY_DOCK_OPEN);
     return () => document.body.classList.remove(BODY_DOCK_OPEN);
-  }, [moreOpen]);
+  }, [sheetMounted]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -197,7 +263,7 @@ export function CustomerAccountSidebar({
   }, [moreOpen]);
 
   const closeMore = () => setMoreOpen(false);
-  const moreActive = [...moreTopItems, ...moreBottomItems].some((item) => isMenuItemActive(pathname, item.href));
+  const moreActive = sheetMoreItems.some((item) => isMenuItemActive(pathname, item.href));
 
   return (
     <>
@@ -352,7 +418,7 @@ export function CustomerAccountSidebar({
           </>
         ) : (
           <>
-            {primaryItems.map((item) => (
+            {dockItems.map((item) => (
               <MobileDockItem
                 key={item.href}
                 href={hrefFor(item.href)}
@@ -394,8 +460,11 @@ export function CustomerAccountSidebar({
         )}
       </nav>
 
-      {moreOpen && profileLoaded ? (
-        <div className={styles.mobileSheet} role="presentation">
+      {sheetMounted && profileLoaded ? (
+        <div
+          className={`${styles.mobileSheet}${sheetEntered ? ` ${styles.mobileSheetOpen}` : ''}`}
+          role="presentation"
+        >
           <button
             type="button"
             className={styles.mobileSheetBackdrop}
@@ -408,6 +477,7 @@ export function CustomerAccountSidebar({
             role="dialog"
             aria-modal="true"
             aria-label="Меню личного кабинета"
+            onTransitionEnd={onSheetTransitionEnd}
           >
             <div className={styles.mobileSheetTop}>
               <div className={styles.mobileSheetProfile}>
@@ -441,7 +511,7 @@ export function CustomerAccountSidebar({
               </button>
             </div>
             <div className={styles.mobileSheetList}>
-              {primaryItems.map((item) => (
+              {sheetMoreItems.map((item) => (
                 <MenuItem
                   key={item.href}
                   href={hrefFor(item.href)}
@@ -452,40 +522,18 @@ export function CustomerAccountSidebar({
                   onNavigate={closeMore}
                 />
               ))}
-              <hr className={styles.sheetDivider} aria-hidden />
-              {moreTopItems.map((item) => (
-                <MenuItem
-                  key={item.href}
-                  href={item.href}
-                  iconSrc={item.iconSrc}
-                  label={item.label}
-                  active={isMenuItemActive(pathname, item.href)}
-                  hasNotification={notifySet.has(item.href)}
-                  onNavigate={closeMore}
-                />
-              ))}
-              <hr className={styles.sheetDivider} aria-hidden />
-              {moreBottomItems.map((item) => (
-                <MenuItem
-                  key={item.href}
-                  href={item.href}
-                  iconSrc={item.iconSrc}
-                  label={item.label}
-                  active={isMenuItemActive(pathname, item.href)}
-                  hasNotification={notifySet.has(item.href)}
-                  onNavigate={closeMore}
-                />
-              ))}
-              <hr className={styles.sheetDivider} aria-hidden />
               {onLogout ? (
-                <button
-                  type="button"
-                  className={styles.footerLogoutBtn}
-                  disabled={loggingOut}
-                  onClick={openLogoutConfirm}
-                >
-                  {loggingOut ? 'Выход…' : 'Выйти'}
-                </button>
+                <>
+                  <hr className={styles.sheetDivider} aria-hidden />
+                  <button
+                    type="button"
+                    className={styles.footerLogoutBtn}
+                    disabled={loggingOut}
+                    onClick={openLogoutConfirm}
+                  >
+                    {loggingOut ? 'Выход…' : 'Выйти'}
+                  </button>
+                </>
               ) : null}
             </div>
           </div>

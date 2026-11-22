@@ -133,6 +133,8 @@
   max-width: 100% !important;
   align-self: stretch;
   box-sizing: border-box;
+  flex-shrink: 0;
+  min-height: min-content;
 }
 
 .accordionPanel {
@@ -536,8 +538,20 @@
 }
 
 @media (max-width: 768px) {
+  .form {
+    gap: 16px;
+  }
+
+  .formFields {
+    gap: 12px;
+  }
+
   .fieldRow,
   .fieldRowThree {
     grid-template-columns: 1fr;
+  }
+
+  .textarea {
+    min-height: 96px;
   }
 }

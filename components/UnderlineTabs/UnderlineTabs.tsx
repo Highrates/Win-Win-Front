@@ -37,6 +37,7 @@ type Props = {
 /**
  * Горизонтальные табы по центру со скользящей линией (как ScrollCatalog).
  * Неактивный — `--color-gray`, линия — `--account-hairline-width`.
+ * На мобилке: fade + chevron, если ряд можно скроллить.
  */
 export function UnderlineTabs({
   tabs,
@@ -47,9 +48,21 @@ export function UnderlineTabs({
   asTablist = true,
 }: Props) {
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
   const tabsWrapperRef = useRef<HTMLElement>(null);
   const tabBtnRefs = useRef(new Map<string, HTMLElement>());
   const indicatorTarget = hoverId ?? activeId;
+
+  const updateScrollEdges = useCallback(() => {
+    const el = tabsWrapperRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    const scrollable = maxScroll > 2;
+    setCanScrollPrev(scrollable && scrollLeft > 2);
+    setCanScrollNext(scrollable && scrollLeft < maxScroll - 2);
+  }, []);
 
   const updateIndicator = useCallback(() => {
     const wrap = tabsWrapperRef.current;
@@ -66,14 +79,21 @@ export function UnderlineTabs({
 
   useLayoutEffect(() => {
     updateIndicator();
-    const t = window.setTimeout(updateIndicator, 0);
+    updateScrollEdges();
+    const t = window.setTimeout(() => {
+      updateIndicator();
+      updateScrollEdges();
+    }, 0);
     return () => window.clearTimeout(t);
-  }, [updateIndicator, activeId, hoverId, tabs]);
+  }, [updateIndicator, updateScrollEdges, activeId, hoverId, tabs]);
 
   useLayoutEffect(() => {
     const wrap = tabsWrapperRef.current;
     if (!wrap) return;
-    const sync = () => updateIndicator();
+    const sync = () => {
+      updateIndicator();
+      updateScrollEdges();
+    };
     const ro = new ResizeObserver(sync);
     ro.observe(wrap);
     wrap.addEventListener('scroll', sync, { passive: true });
@@ -83,7 +103,15 @@ export function UnderlineTabs({
       wrap.removeEventListener('scroll', sync);
       window.removeEventListener('resize', sync);
     };
-  }, [updateIndicator]);
+  }, [updateIndicator, updateScrollEdges]);
+
+  /* Активный таб в зоне видимости + подсказка, что ряд скроллится */
+  useLayoutEffect(() => {
+    const wrap = tabsWrapperRef.current;
+    const btn = tabBtnRefs.current.get(activeId);
+    if (!wrap || !btn) return;
+    btn.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+  }, [activeId, tabs.length]);
 
   if (!tabs.length) return null;
 
@@ -95,55 +123,68 @@ export function UnderlineTabs({
   };
 
   return (
-    <nav
-      className={wrapClass}
-      aria-label={ariaLabel}
-      role={asTablist ? 'tablist' : undefined}
-      ref={tabsWrapperRef}
-      onMouseLeave={() => setHoverId(null)}
+    <div
+      className={styles.tabsShell}
+      data-can-scroll-prev={canScrollPrev ? 'true' : 'false'}
+      data-can-scroll-next={canScrollNext ? 'true' : 'false'}
     >
-      {tabs.map((tab) => {
-        const isActive = tab.id === activeId;
-        const classNameTab = isActive ? styles.tabActive : styles.tab;
-        const { role: btnRole, ...restButtonProps } = tab.buttonProps ?? {};
-        if (tab.href) {
-          const { id, 'aria-controls': ariaControls } = restButtonProps;
+      <nav
+        className={wrapClass}
+        aria-label={ariaLabel}
+        role={asTablist ? 'tablist' : undefined}
+        ref={tabsWrapperRef}
+        onMouseLeave={() => setHoverId(null)}
+      >
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeId;
+          const classNameTab = isActive ? styles.tabActive : styles.tab;
+          const { role: btnRole, ...restButtonProps } = tab.buttonProps ?? {};
+          if (tab.href) {
+            const { id, 'aria-controls': ariaControls } = restButtonProps;
+            return (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className={classNameTab}
+                onMouseEnter={() => setHoverId(tab.id)}
+                ref={(el) => setTabRef(tab.id, el)}
+                id={id}
+                aria-controls={ariaControls}
+                role={asTablist ? (btnRole ?? 'tab') : btnRole}
+                aria-selected={asTablist ? isActive : undefined}
+                aria-current={!asTablist && isActive ? 'page' : undefined}
+              >
+                {tab.label}
+              </Link>
+            );
+          }
+
           return (
-            <Link
+            <button
               key={tab.id}
-              href={tab.href}
+              type="button"
               className={classNameTab}
+              onClick={() => onSelect?.(tab.id)}
               onMouseEnter={() => setHoverId(tab.id)}
               ref={(el) => setTabRef(tab.id, el)}
-              id={id}
-              aria-controls={ariaControls}
               role={asTablist ? (btnRole ?? 'tab') : btnRole}
               aria-selected={asTablist ? isActive : undefined}
               aria-current={!asTablist && isActive ? 'page' : undefined}
+              {...restButtonProps}
             >
               {tab.label}
-            </Link>
+            </button>
           );
-        }
-
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            className={classNameTab}
-            onClick={() => onSelect?.(tab.id)}
-            onMouseEnter={() => setHoverId(tab.id)}
-            ref={(el) => setTabRef(tab.id, el)}
-            role={asTablist ? (btnRole ?? 'tab') : btnRole}
-            aria-selected={asTablist ? isActive : undefined}
-            aria-current={!asTablist && isActive ? 'page' : undefined}
-            {...restButtonProps}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
-      <span className={styles.tabsIndicator} aria-hidden="true" />
-    </nav>
+        })}
+        <span className={styles.tabsIndicator} aria-hidden="true" />
+      </nav>
+      <span className={styles.tabsFadeStart} aria-hidden="true" />
+      <span className={styles.tabsFadeEnd} aria-hidden="true" />
+      {canScrollNext ? (
+        <span className={styles.scrollHint} aria-hidden="true">
+          <img src="/icons/arrow.svg" alt="" className={styles.scrollHintIcon} />
+        </span>
+      ) : null}
+    </div>
   );
 }

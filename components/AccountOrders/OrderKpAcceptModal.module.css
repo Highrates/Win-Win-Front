@@ -83,8 +83,21 @@
   color: #c62828;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 768px) {
   .fieldRow {
     grid-template-columns: 1fr;
+  }
+
+  .form {
+    gap: 12px;
+  }
+
+  .legalTypeRow {
+    gap: 6px;
+  }
+
+  .legalTypeChip {
+    padding: 8px 12px;
+    font-size: var(--text-caption);
   }
 }

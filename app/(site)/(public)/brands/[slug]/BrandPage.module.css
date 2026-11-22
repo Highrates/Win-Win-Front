@@ -393,7 +393,7 @@
 
 @media (max-width: 768px) {
   .previewPageSection {
-    margin-top: 78px;
+    margin-top: 64px;
   }
 
   .previewPageWrapper {
@@ -402,7 +402,13 @@
   }
 
   .previewPageTitles {
-    gap: 56px;
+    gap: 24px;
+  }
+
+  .richContent :global(p),
+  .richContent :global(li) {
+    font-size: var(--text-body);
+    line-height: 1.45;
   }
 
   .previewPageTitlesBody {

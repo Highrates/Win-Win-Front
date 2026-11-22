@@ -4,6 +4,7 @@ import {
   designerPageMetadata,
   designerProjectsFromPayload,
   parsePublicDesignerPayload,
+  resolveDesignerCollageImages,
 } from '@/lib/designersPublicShared';
 
 function samplePayload(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
@@ -69,6 +70,39 @@ describe('designerProjectsFromPayload', () => {
     expect(projects).toHaveLength(1);
     expect(projects[0]?.title).toBe('Квартира на Арбате');
     expect(projects[0]?.id).toBe('c1');
+  });
+});
+
+describe('resolveDesignerCollageImages', () => {
+  it('uses cover[0] and cover[1] when both set', () => {
+    const d = parsePublicDesignerPayload(
+      samplePayload({ coverImageUrls: ['/uploads/p.jpg', '/uploads/s.jpg'] }),
+      'x',
+    );
+    const c = resolveDesignerCollageImages(d);
+    expect(c.primarySource).toBe('cover');
+    expect(c.secondarySource).toBe('cover');
+    expect(c.primaryUrl).toContain('/uploads/p.jpg');
+    expect(c.secondaryUrl).toContain('/uploads/s.jpg');
+  });
+
+  it('falls back primary to first case cover and secondary to avatar', () => {
+    const d = parsePublicDesignerPayload(samplePayload({ coverImageUrls: [] }), 'x');
+    const c = resolveDesignerCollageImages(d);
+    expect(c.primarySource).toBe('case');
+    expect(c.primaryUrl).toContain('/uploads/case1.jpg');
+    expect(c.secondarySource).toBe('avatar');
+    expect(c.secondaryUrl).toContain('/uploads/avatar.jpg');
+  });
+
+  it('returns nulls when no cover, cases or avatar', () => {
+    const d = parsePublicDesignerPayload(
+      samplePayload({ coverImageUrls: [], photoUrl: null, cases: [] }),
+      'x',
+    );
+    const c = resolveDesignerCollageImages(d);
+    expect(c.primaryUrl).toBeNull();
+    expect(c.secondaryUrl).toBeNull();
   });
 });
 

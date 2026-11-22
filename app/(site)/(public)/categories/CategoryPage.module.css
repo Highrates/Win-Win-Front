@@ -758,7 +758,7 @@
 
 @media (max-width: 768px) {
   .previewPageSection {
-    margin-top: 78px;
+    margin-top: 64px;
   }
 
   .previewPageWrapper {
@@ -771,7 +771,7 @@
   }
 
   .catalogSectionsSlot {
-    padding-top: 48px;
+    padding-top: 28px;
   }
 
   .previewImage {

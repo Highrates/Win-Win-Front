@@ -94,6 +94,26 @@
   color: var(--color-gray);
 }
 
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding-top: 18px;
+  width: 100%;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+}
+
+.emptyCreateButton {
+  align-self: flex-start;
+}
+
 /* Masonry как на витрине: колонки через JS (round-robin) */
 .casesGrid {
   display: flex;
@@ -286,6 +306,7 @@
   .topBar {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
 
   .caseSearchBox {
@@ -294,12 +315,38 @@
     min-width: 100%;
   }
 
+  .topBar :global(button) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .emptyState {
+    gap: 10px;
+    padding-top: 8px;
+  }
+
+  .emptyText {
+    font-size: var(--h5-size);
+    font-weight: var(--h5-weight);
+  }
+
+  .emptyCreateButton {
+    width: 100%;
+    justify-content: center;
+  }
+
   .page .productsTopRowOrders {
-    margin-top: 24px;
+    margin-top: 20px;
+    justify-content: flex-start;
+  }
+
+  .selectionToolbar {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .casesGrid {
-    margin-top: 24px;
+    margin-top: 20px;
     gap: 12px;
   }
 

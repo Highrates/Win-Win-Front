@@ -130,6 +130,52 @@
 }
 
 @media (max-width: 768px) {
+  .panel {
+    top: max(8px, env(safe-area-inset-top, 0px));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    left: max(8px, env(safe-area-inset-left, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
+    border-radius: var(--radius-8, 10px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .panel.panelFullscreen {
+    inset: 0;
+    border-radius: 0;
+  }
+
+  .header {
+    padding: 4px 12px;
+  }
+
+  .iconBtn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .inner {
+    gap: 16px;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .title {
+    font-size: var(--h5-size);
+    line-height: 1.25;
+  }
+
+  .actions {
+    margin-top: 16px;
+    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions > * {
+    width: 100%;
+    justify-content: center;
+  }
+
   .fullscreenBtn {
     display: none;
   }

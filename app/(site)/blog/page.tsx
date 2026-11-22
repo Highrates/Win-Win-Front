@@ -7,7 +7,6 @@ import {
   fetchBlogPostsThroughPages,
 } from '@/lib/blogPublicServer';
 import brandsStyles from '@/app/(site)/(public)/brands/BrandsPage.module.css';
-import projectsStyles from '@/app/(site)/(public)/projects/ProjectsPage.module.css';
 import blogStyles from './BlogPage.module.css';
 import { BlogPostsGridWithLoadMore } from './BlogPostsGridWithLoadMore';
 
@@ -98,7 +97,7 @@ export default async function BlogPage({ searchParams }: Props) {
                           role="tab"
                           aria-selected={true}
                           tabIndex={0}
-                          className={`${projectsStyles.marketRoomBtnActive} ${blogStyles.blogTabActive}`}
+                          className={`${blogStyles.marketRoomBtnActive} ${blogStyles.blogTabActive}`}
                         >
                           {tab.label}
                         </span>
@@ -108,7 +107,7 @@ export default async function BlogPage({ searchParams }: Props) {
                           href={href}
                           role="tab"
                           aria-selected={false}
-                          className={projectsStyles.marketRoomBtn}
+                          className={blogStyles.marketRoomBtn}
                         >
                           {tab.label}
                         </Link>

@@ -120,7 +120,7 @@ export function SideSheetModal({ open, onClose, title, srTitle, children, onPane
             <div className={styles.headerActions}>
               <button
                 type="button"
-                className={styles.iconBtn}
+                className={`${styles.iconBtn} ${styles.fullscreenBtn}`}
                 onClick={toggleFullscreen}
                 aria-label={fullscreen ? 'Выйти из полноэкранного режима' : 'Открыть во весь экран'}
               >

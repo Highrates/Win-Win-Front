@@ -142,26 +142,78 @@
 
 @media (max-width: 768px) {
   .section {
-    margin-top: 16px;
+    margin-top: 8px;
     padding-bottom: 64px;
   }
 
   .grid {
-    gap: 24px 8px;
+    gap: 16px 10px;
+    align-items: stretch;
   }
 
   /* Intro на всю ширину — иначе текст рядом с карточкой нечитаем */
   .textCell {
     grid-column: 1 / -1;
     padding: 0;
+    gap: 8px;
   }
 
   .textBody {
     font-size: var(--text-body);
     line-height: 1.4;
+    color: color-mix(in srgb, var(--color-ink-black) 78%, transparent);
+  }
+
+  .card {
+    gap: 8px;
+    height: 100%;
+  }
+
+  /* Первая категория — на 2 колонки */
+  .grid > .card:first-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .grid > .card:first-of-type .cardImgWrap {
+    aspect-ratio: 16 / 10;
   }
 
   .cardWide {
-    grid-column: span 2;
+    grid-column: span 1;
+  }
+
+  .cardWide .cardImgWrap {
+    aspect-ratio: 1 / 1;
+  }
+
+  .cardImgWrap {
+    aspect-ratio: 1 / 1;
+    flex: 0 0 auto;
+  }
+
+  .card:hover .cardImg {
+    transform: none;
+  }
+
+  .cardImg {
+    transition: none;
+  }
+
+  .cardName {
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+    font-size: var(--text-caption);
+  }
+
+  .cardMeta {
+    align-items: flex-start;
+    /* Одинаковая высота подписи → одинаковая высота карточек в ряду */
+    min-height: calc(1.25em * 2);
+    flex: 0 0 auto;
   }
 }

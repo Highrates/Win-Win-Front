@@ -145,27 +145,26 @@
   pointer-events: none;
 }
 
+/* Как BestBrands / ScrollCatalog stripArrow */
 .trackArrow {
   pointer-events: auto;
   width: 40px;
   height: 40px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-ink-black, #1d1c1b) 18%, transparent);
-  background: color-mix(in srgb, #fff 88%, transparent);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-4);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   color: var(--color-ink-black, #1d1c1b);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition:
-    opacity 0.2s ease,
-    background 0.2s ease,
-    border-color 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .trackArrow:hover:not(:disabled) {
-  background: #fff;
-  border-color: color-mix(in srgb, var(--color-ink-black, #1d1c1b) 32%, transparent);
+  opacity: 0.92;
 }
 
 .trackArrow:disabled {
@@ -178,23 +177,42 @@
   outline-offset: 2px;
 }
 
+.trackArrowIcon,
+.trackArrowIconNext {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.trackArrowIcon {
+  transform: rotate(180deg);
+}
+
 @media (max-width: 768px) {
   .pageSection {
     padding-bottom: 64px;
   }
 
   .pageSectionListing {
-    margin-top: 72px;
+    margin-top: 64px;
   }
 
   .trackArrows {
     right: max(0.75rem, env(safe-area-inset-right, 0px));
     top: 4px;
+    gap: 6px;
   }
 
   .trackArrow {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .trackArrowIcon,
+  .trackArrowIconNext {
+    width: 14px;
+    height: 14px;
   }
 }
 

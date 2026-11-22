@@ -136,3 +136,40 @@
   color: var(--color-blue);
   text-decoration: underline;
 }
+
+@media (max-width: 768px) {
+  .doc {
+    padding: 12px 10px;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .docIcon {
+    margin-top: 2px;
+  }
+
+  .docBadge {
+    align-self: flex-start;
+    margin-top: 1px;
+    padding: 2px 7px;
+    font-size: 11px;
+  }
+
+  .docTrailing {
+    margin-top: 2px;
+  }
+
+  .docText {
+    gap: 4px;
+  }
+
+  .docTitle {
+    font-size: var(--text-body);
+    line-height: 1.35;
+  }
+
+  .docMeta {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}

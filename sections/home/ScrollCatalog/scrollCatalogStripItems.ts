@@ -30,6 +30,19 @@ export function stripItemsForRoot(root: HomeCatalogRoot | undefined): ScrollCata
   ];
 }
 
+/** Корневые категории как карточки (моб. home: квадраты без дочерних). */
+export function stripItemsForRoots(
+  roots: HomeCatalogRoot[] | undefined,
+): ScrollCatalogStripItem[] {
+  if (!roots?.length) return [];
+  return roots.map((r) => ({
+    key: r.slug,
+    href: `/catalog/${r.slug}`,
+    name: r.name,
+    imageSrc: r.cardImageUrl,
+  }));
+}
+
 /** Карточки полосы из списка дочерних категорий. */
 export function stripItemsForChildren(
   children: HomeCatalogChild[] | undefined,

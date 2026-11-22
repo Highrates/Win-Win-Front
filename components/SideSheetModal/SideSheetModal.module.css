@@ -92,9 +92,50 @@
 }
 
 @media (max-width: 768px) {
+  .panel {
+    top: max(8px, env(safe-area-inset-top, 0px));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    left: max(8px, env(safe-area-inset-left, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
+    border-radius: var(--radius-8, 10px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .panelFullscreen {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 0;
+  }
+
+  .header {
+    padding: 4px 0;
+  }
+
   .headerPadding {
     padding-left: max(1rem, env(safe-area-inset-left, 0px));
     padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    gap: 8px;
+  }
+
+  .headerTitle {
+    font-size: var(--text-caption);
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .iconBtn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* На мобилке панель и так почти fullscreen — кнопка лишняя */
+  .fullscreenBtn {
+    display: none;
   }
 }
 
@@ -169,6 +210,8 @@
 
 @media (max-width: 768px) {
   .contentPad {
+    padding-top: 16px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
     padding-left: max(1rem, env(safe-area-inset-left, 0px));
     padding-right: max(1rem, env(safe-area-inset-right, 0px));
   }

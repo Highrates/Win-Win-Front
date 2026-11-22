@@ -11,7 +11,20 @@ section.projectsPageMarketSection {
 
 @media (max-width: 768px) {
   .projectsPreviewTitlesTight {
-    gap: 48px;
+    gap: 16px;
+  }
+
+  .projectsPageHeroOuter {
+    gap: 12px;
+  }
+
+  .projectsPageHeroTitle {
+    font-size: var(--h3-size);
+    line-height: 1.2;
+  }
+
+  section.projectsPageMarketSection {
+    margin-top: 28px;
   }
 }
 
@@ -251,9 +264,24 @@ section.projectsPageMarketSection {
   .marketRoomToolbar {
     max-width: 100%;
     width: 100%;
+    gap: 12px;
+  }
+
+  .marketRoomToolbarRow {
+    gap: 12px;
+  }
+
+  .marketRoomToolbarEnd {
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   .withProductsSwitchLabel {
+    font-size: var(--text-caption);
+  }
+
+  .sourceSegmentBtn {
+    padding: 5px 12px;
     font-size: var(--text-caption);
   }
 }

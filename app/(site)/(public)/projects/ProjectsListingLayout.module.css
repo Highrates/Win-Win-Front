@@ -798,16 +798,17 @@ button.projectInteractItem:disabled {
 
 @media (max-width: 768px) {
   .previewPageSection {
-    margin-top: 78px;
+    margin-top: 64px;
   }
 
   .previewPageWrapper {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
   }
 
   .previewPageTitles {
-    gap: 56px;
+    gap: 16px;
   }
 
   .previewImages {
@@ -823,25 +824,31 @@ button.projectInteractItem:disabled {
   }
 
   .marketSection {
-    margin-top: 96px;
+    margin-top: 40px;
+  }
+
+  .marketSectionInner {
+    gap: 20px;
   }
 
   .projectWrapper {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
   }
 
   /* flex: 1 1 0 + overflow: hidden на десктопе давали на мобилке нулевую/обрезанную высоту блока с текстом */
   .projectBlockLeft {
-    padding: 16px;
+    padding: 14px;
     flex: 0 1 auto;
     align-self: stretch;
     overflow: visible;
     min-height: min-content;
+    gap: 16px;
   }
 
   .designerLinkWrapper {
-    padding-top: 16px;
+    padding-top: 12px;
   }
 
   .projectTitlesWrapper {
@@ -853,6 +860,15 @@ button.projectInteractItem:disabled {
     align-items: stretch;
   }
 
+  .projectTitleName {
+    font-size: var(--text-card-16-400);
+  }
+
+  .projectDescription {
+    font-size: var(--text-body);
+    line-height: 1.4;
+  }
+
   .projectImagesWrapper {
     grid-template-columns: 1fr;
     grid-template-rows: none;
@@ -860,6 +876,7 @@ button.projectInteractItem:disabled {
     height: auto;
     min-height: 0;
     align-items: stretch;
+    gap: 10px;
   }
 
   .projectThumbSlot,
@@ -869,17 +886,22 @@ button.projectInteractItem:disabled {
     width: 100%;
   }
 
-  /* Две обложки — по-прежнему 393px; одна широкая — компактнее 216px */
   .projectThumbSlot:not(.projectThumbSlotDouble) {
-    height: 393px;
+    height: auto;
+    aspect-ratio: 4 / 5;
   }
 
   .projectThumbSlotDouble {
-    height: 216px;
+    height: auto;
+    aspect-ratio: 16 / 10;
   }
 
   .projectThumbImg {
     max-width: none;
+  }
+
+  .projectsList {
+    gap: 28px;
   }
 
   .sliderCoversGrid {
@@ -890,10 +912,21 @@ button.projectInteractItem:disabled {
     gap: 8px;
   }
 
+  .sliderCoverCard {
+    border-radius: var(--radius-4);
+  }
+
   .sliderCoverLikeBtn {
     top: 8px;
     right: 8px;
     padding: 5px 7px;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sliderCoverOverlay,
+  .sliderCoverArrow {
+    display: none;
   }
 
   .designerLinkArrow {

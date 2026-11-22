@@ -123,11 +123,12 @@
 
 @media (max-width: 768px) {
   .createBtn {
-    width: 140px;
+    width: 100%;
+    max-width: none;
   }
 
   .cardThumb {
-    width: 80px;
-    height: 80px;
+    width: 88px;
+    height: 96px;
   }
 }

@@ -258,5 +258,17 @@
 @media (max-width: 768px) {
   .nameRow {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .avatarUploaderField,
+  .avatarPreview {
+    width: 112px;
+    height: 112px;
+  }
+
+  .partnerFilePick {
+    width: 100%;
+    justify-content: center;
   }
 }

@@ -9,7 +9,6 @@ import {
 import { loadBlogPostBySlug } from '@/lib/blogPublicServer';
 import { resolveMediaUrlForServer } from '@/lib/publicMediaUrl';
 import { getServerRequestOrigin } from '@/lib/serverRequestOrigin';
-import projectsStyles from '@/app/(site)/(public)/projects/ProjectsPage.module.css';
 import blogStyles from '../BlogPage.module.css';
 import articleStyles from './ArticlePage.module.css';
 
@@ -99,7 +98,7 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
                       <Link
                         href={`/blog?category=${encodeURIComponent(post.category.slug)}`}
                         role="listitem"
-                        className={projectsStyles.marketRoomBtn}
+                        className={blogStyles.marketRoomBtn}
                       >
                         <span className={articleStyles.categoryBtnInner}>
                           {post.category.name}

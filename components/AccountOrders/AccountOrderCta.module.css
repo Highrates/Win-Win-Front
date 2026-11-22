@@ -100,11 +100,14 @@
   .ctaButton {
     flex: 1 1 0;
     min-width: 0;
-    min-height: 72px;
+    min-height: 56px;
+    height: auto;
     width: auto;
     justify-content: center;
     align-items: center;
     text-align: center;
+    gap: 6px;
+    padding: 8px;
   }
 
   .ctaIcon {

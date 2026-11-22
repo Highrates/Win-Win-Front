@@ -10,6 +10,8 @@
   max-width: 100% !important;
   align-self: stretch;
   box-sizing: border-box;
+  flex-shrink: 0;
+  min-height: min-content;
 }
 
 .inner {
@@ -207,9 +209,28 @@
   font-weight: 600;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .summaryRow,
   .itemRow {
     grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .kpLineThumb,
+  .kpLineThumbPh {
+    width: 72px;
+    height: 72px;
+  }
+
+  .actions {
+    margin-top: 12px;
+    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions :global(button) {
+    width: 100%;
+    justify-content: center;
   }
 }

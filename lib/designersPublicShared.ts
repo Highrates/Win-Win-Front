@@ -76,6 +76,48 @@ export function designerProjectsFromPayload(designer: PublicDesignerPayload): Pr
   return designer.cases.map((c) => mapPublicCaseToProjectData(c));
 }
 
+export type DesignerCollageImages = {
+  /** Большой кадр слева (как tours collagePrimary). */
+  primaryUrl: string | null;
+  /** Наклонённый кадр справа (как tours collageSecondary). */
+  secondaryUrl: string | null;
+  primarySource: 'cover' | 'case' | null;
+  secondarySource: 'cover' | 'avatar' | null;
+};
+
+/**
+ * Коллаж профиля дизайнера:
+ * - primary: coverImageUrls[0] → иначе обложка первого кейса;
+ * - secondary: coverImageUrls[1] → иначе аватар (photoUrl).
+ */
+export function resolveDesignerCollageImages(designer: PublicDesignerPayload): DesignerCollageImages {
+  const coverPrimary = designer.coverImageUrls[0]?.trim() || null;
+  const coverSecondary = designer.coverImageUrls[1]?.trim() || null;
+  const avatar = designer.photoUrl?.trim() || null;
+
+  let primaryUrl = coverPrimary;
+  let primarySource: DesignerCollageImages['primarySource'] = coverPrimary ? 'cover' : null;
+  if (!primaryUrl) {
+    for (const c of designer.cases) {
+      const caseCover = c.coverImageUrls[0]?.trim();
+      if (caseCover) {
+        primaryUrl = resolveMediaUrlForServer(caseCover);
+        primarySource = 'case';
+        break;
+      }
+    }
+  }
+
+  const secondaryUrl = coverSecondary || avatar;
+  const secondarySource: DesignerCollageImages['secondarySource'] = coverSecondary
+    ? 'cover'
+    : avatar
+      ? 'avatar'
+      : null;
+
+  return { primaryUrl, secondaryUrl, primarySource, secondarySource };
+}
+
 export function designerPageMetadata(
   designer: PublicDesignerPayload,
   opts?: { siteOrigin?: string | null },
@@ -93,7 +135,8 @@ export function designerPageMetadata(
     (bits.length ? `${name}: ${bits.join(' · ')}` : undefined) ||
     `Дизайнер ${name} на ${SITE_NAME}`;
 
-  const coverPath = designer.coverImageUrls[0]?.trim() || designer.photoUrl?.trim() || null;
+  const collage = resolveDesignerCollageImages(designer);
+  const coverPath = collage.primaryUrl || collage.secondaryUrl || null;
   const coverAbsolute =
     coverPath && opts?.siteOrigin && coverPath.startsWith('/')
       ? `${opts.siteOrigin}${coverPath}`

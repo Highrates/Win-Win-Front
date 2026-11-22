@@ -105,3 +105,21 @@
   z-index: 1;
   color: var(--color-white);
 }
+
+@media (max-width: 768px) {
+  .btn {
+    padding: 9px 16px;
+    gap: 8px;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    font-size: var(--text-caption);
+    font-weight: var(--text-caption-weight);
+  }
+
+  .btnIcon {
+    width: 16px;
+    height: 16px;
+  }
+}

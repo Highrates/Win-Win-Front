@@ -112,11 +112,20 @@
 
 @media (max-width: 768px) {
   .mainSection {
-    margin-top: 78px;
+    margin-top: 64px;
+  }
+
+  .mainSectionInner {
+    gap: 16px;
+  }
+
+  .searchBox {
+    padding-bottom: 8px;
   }
 
   .brandCardsWrapper {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 }
 
@@ -178,7 +187,24 @@
 }
 
 @media (max-width: 768px) {
+  .brandCard {
+    gap: 10px;
+  }
+
   .brandCardImageWrap {
-    max-height: 148px;
+    max-height: none;
+    aspect-ratio: 16 / 10;
+  }
+
+  .brandCard:hover .brandCardImage {
+    transform: none;
+  }
+
+  .brandCardImage {
+    transition: none;
+  }
+
+  .brandCardName {
+    font-size: var(--text-body);
   }
 }

@@ -83,6 +83,29 @@
     font-size: var(--text-caption);
   }
 
+  .titleBlock {
+    gap: 4px;
+  }
+
+  .metaGridPlain {
+    gap: 10px 16px;
+  }
+
+  .kpSectionHead {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .kpDownloadBtn {
+    align-self: stretch;
+    justify-content: center;
+  }
+
+  .sectionTitle {
+    font-size: var(--text-caption);
+  }
+
   .modalFooter {
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
     gap: 6px;
@@ -353,6 +376,8 @@ td.tableFooterValue {
   max-width: 100% !important;
   align-self: stretch;
   box-sizing: border-box;
+  flex-shrink: 0;
+  min-height: min-content;
 }
 
 .accordionPanelMeta {

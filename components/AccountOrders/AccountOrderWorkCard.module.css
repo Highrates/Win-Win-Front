@@ -418,20 +418,84 @@
 }
 
 @media (max-width: 768px) {
-  .ctaKpRow .ctaButton {
-    flex-direction: column;
-    gap: 4px;
-    padding: 6px 8px;
-  }
-
-  .ctaKpRow .ctaIcon {
-    width: 20px;
-    height: 20px;
-  }
-
   .orderWrapper {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
+  }
+
+  .orderCard {
+    padding: 14px;
+    gap: 16px;
+  }
+
+  .orderCardTop {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .orderCardTopActions {
+    margin-left: 0;
+  }
+
+  .orderStatus {
+    font-size: var(--text-body);
+    line-height: 1.25;
+  }
+
+  .orderCardCornerChip {
+    white-space: normal;
+  }
+
+  .metaOfferRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .orderOffer {
+    max-width: none;
+    align-self: stretch;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .priceDetails {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .priceFinal,
+  .priceOld {
+    font-size: var(--text-card-20-400);
+  }
+
+  .orderOfferExpectedBonus {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .orderOfferExpectedBonusLine {
+    white-space: normal;
+    text-align: left;
+  }
+
+  .orderProductImgs {
+    gap: 6px;
+  }
+
+  .orderDetailLinkRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .orderDetailLink {
+    max-width: 100%;
+    width: 100%;
+    justify-content: center;
+    min-height: 40px;
+    box-sizing: border-box;
   }
 
   .orderCTA {
@@ -443,7 +507,8 @@
     justify-content: flex-start;
     align-items: stretch;
     align-content: stretch;
-    min-height: 72px;
+    min-height: 0;
+    height: auto;
     box-sizing: border-box;
   }
 
@@ -451,49 +516,35 @@
     width: 100%;
     flex-direction: column;
     min-height: 0;
+    height: auto;
+    gap: 8px;
   }
 
   .orderCTAKp > .ctaButton:first-child,
   .orderCTAKp > .ctaKpConfirm {
     width: 100%;
-    flex: 1 1 0;
-    height: auto;
-    min-height: 56px;
+    flex: 0 0 auto;
+    height: 48px;
+    min-height: 48px;
   }
 
   .ctaKpRow {
     flex: 0 0 auto;
-    height: auto;
-    min-height: 56px;
+    height: 48px;
+    min-height: 48px;
   }
 
   .ctaKpRow .ctaButton {
-    height: auto;
-    min-height: 56px;
+    height: 48px;
+    min-height: 48px;
     flex: 1 1 0;
     flex-direction: column;
-    gap: 4px;
-    padding: 6px 8px;
+    gap: 2px;
+    padding: 4px 8px;
   }
 
   .ctaKpRow .ctaIcon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .metaOfferRow {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-
-  .orderOffer {
-    max-width: none;
-    align-self: stretch;
-    align-items: flex-start;
-  }
-
-  .priceDetails {
-    justify-content: flex-start;
+    width: 18px;
+    height: 18px;
   }
 }

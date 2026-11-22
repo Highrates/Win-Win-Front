@@ -49,12 +49,21 @@
     background: rgba(5, 24, 38, 0.4);
   }
 
+  /* svh: высота не прыгает при скрытии/показе адресной строки (иначе object-fit:cover выглядит как зум) */
   .heroBg {
-    min-height: 64vh;
+    min-height: 30svh;
   }
 
   .heroBgFold {
-    min-height: 0;
+    flex: 0 0 30svh;
+    min-height: 30svh;
+    height: 30svh;
+    max-height: 30svh;
+  }
+
+  .heroImage {
+    transform: none;
+    transition: none;
   }
 }
 

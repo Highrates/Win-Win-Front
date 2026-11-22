@@ -116,3 +116,41 @@
   gap: 10px;
   margin-top: 24px;
 }
+
+@media (max-width: 768px) {
+  .tabList {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabList::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    padding: 10px 10px;
+  }
+
+  .qrCanvas {
+    width: min(200px, 70vw);
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .publicActions {
+    margin-top: 16px;
+    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .publicActions :global(button),
+  .copyBesideLink {
+    width: 100%;
+    align-self: stretch;
+    justify-content: center;
+  }
+}

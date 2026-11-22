@@ -1,3 +1,8 @@
+.tabsShell {
+  position: relative;
+  width: 100%;
+}
+
 .tabsWrapper {
   display: inline-flex;
   flex-wrap: wrap;
@@ -63,6 +68,12 @@
   border-radius: 2px;
 }
 
+.tabsFadeStart,
+.tabsFadeEnd,
+.scrollHint {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .tabsWrapper {
     gap: 16px;
@@ -71,7 +82,11 @@
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
+    /* Запас справа: последний таб «выглядывает», понятнее что есть скролл */
+    padding-right: 28px;
+    touch-action: pan-x;
   }
 
   .tabsWrapper::-webkit-scrollbar {
@@ -81,5 +96,75 @@
   .tab,
   .tabActive {
     flex-shrink: 0;
+  }
+
+  .tab:hover {
+    color: var(--color-gray);
+  }
+
+  .tabActive:hover {
+    color: var(--color-ink-black);
+  }
+
+  .tabsFadeStart,
+  .tabsFadeEnd {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 36px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .tabsFadeStart {
+    left: 0;
+    background: linear-gradient(
+      to right,
+      var(--color-white) 0%,
+      color-mix(in srgb, var(--color-white) 70%, transparent) 55%,
+      transparent 100%
+    );
+  }
+
+  .tabsFadeEnd {
+    right: 0;
+    background: linear-gradient(
+      to left,
+      var(--color-white) 0%,
+      color-mix(in srgb, var(--color-white) 70%, transparent) 55%,
+      transparent 100%
+    );
+  }
+
+  .tabsShell[data-can-scroll-prev='true'] .tabsFadeStart,
+  .tabsShell[data-can-scroll-next='true'] .tabsFadeEnd {
+    opacity: 1;
+  }
+
+  .scrollHint {
+    display: inline-flex;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--color-white) 88%, transparent);
+    border-radius: var(--radius-4);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .scrollHintIcon {
+    display: block;
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
   }
 }

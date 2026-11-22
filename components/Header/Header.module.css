@@ -248,6 +248,13 @@
   color: var(--color-white);
 }
 
+/* Чуть жирнее глифы без роста высоты headerMain (box 80px / aspect-ratio те же). */
+.headerMain .logoWaveSvg :global(.logo-wave__letter path) {
+  stroke: currentColor;
+  stroke-width: 1.2;
+  paint-order: stroke fill;
+}
+
 .logoImg {
   display: block;
   width: 240px;
@@ -733,7 +740,7 @@
   .headerMinimal .rightNav {
     grid-column: 2;
     justify-self: end;
-    gap: 16px;
+    gap: 22px;
   }
 
   .headerMain .accountTextLink .menuItemText,

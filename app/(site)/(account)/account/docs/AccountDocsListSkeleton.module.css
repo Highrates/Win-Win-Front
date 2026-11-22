@@ -72,3 +72,19 @@
     animation: none;
   }
 }
+
+@media (max-width: 768px) {
+  .dateLabel {
+    width: min(140px, 55%);
+    height: 16px;
+  }
+
+  .row {
+    gap: 12px;
+    padding: 12px 10px;
+  }
+
+  .meta {
+    width: 48%;
+  }
+}

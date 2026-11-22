@@ -1,0 +1,154 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.collage {
+  position: relative;
+  /* Пропорции как tours .cardSlide + .collage */
+  width: min(62vw, 560px);
+  max-width: 100%;
+  height: min(58vw, 460px);
+  max-height: 520px;
+  margin-right: 8%;
+}
+
+.collagePlaceholder {
+  position: absolute;
+  inset: 0 18% 8% 0;
+  background: #e8ecef;
+  display: flex;
+  align-items: flex-end;
+  padding: 12px;
+  box-sizing: border-box;
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  line-height: 1.35;
+}
+
+.collagePrimary {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 62%;
+  height: 94%;
+  object-fit: cover;
+  display: block;
+  border-radius: 2px;
+}
+
+.collageSecondary {
+  position: absolute;
+  right: 0;
+  bottom: 2%;
+  width: 50%;
+  height: 72%;
+  object-fit: cover;
+  display: block;
+  transform: rotate(7deg);
+  transform-origin: center center;
+  box-shadow: 0 14px 36px rgba(5, 24, 38, 0.14);
+  border-radius: 2px;
+}
+
+.slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.slotHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slotLabel {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  color: var(--color-ink-black);
+}
+
+.slotHint {
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-gray);
+  line-height: 1.35;
+}
+
+.uploadInput {
+  display: none;
+}
+
+.uploadBox {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: var(--account-hairline-width) dashed var(--account-hairline-color);
+  border-radius: 8px;
+  background: var(--color-bright-snow);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--color-gray);
+  box-sizing: border-box;
+}
+
+.uploadCaption {
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--color-gray);
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploadRemove {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: var(--text-caption);
+  font-weight: var(--text-caption-weight);
+  color: var(--color-black);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 768px) {
+  .collage {
+    /* Как tours .cardSlide + .collage @media ≤720 */
+    width: min(82vw, 340px);
+    max-width: 100%;
+    height: min(72vw, 300px);
+    max-height: none;
+    margin-right: 4%;
+  }
+
+  .slots {
+    grid-template-columns: 1fr;
+  }
+}

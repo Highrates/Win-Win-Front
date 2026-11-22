@@ -39,6 +39,15 @@
 @media (max-width: 768px) {
   .headerRow {
     top: calc(42px + env(safe-area-inset-top, 0px));
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .backText {
+    font-size: var(--text-caption);
+    font-weight: var(--text-caption-weight);
   }
 }
 
@@ -426,7 +435,24 @@
 
 @media (max-width: 768px) {
   .form {
-    gap: 24px;
+    gap: 20px;
+  }
+
+  .headerActions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .headerActions :global(button),
+  .deleteCaseBtn {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .skeletonCover {
+    width: min(180px, 100%);
   }
 }
 

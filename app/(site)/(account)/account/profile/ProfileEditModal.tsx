@@ -17,8 +17,12 @@ import {
 import { TextField } from '@/components/TextField';
 import textFieldStyles from '@/components/TextField/TextField.module.css';
 import { useProfileUploads } from '@/hooks/useProfileUploads';
-import { ProfileCoverUpload } from './ProfileCoverUpload';
+import { ProfileCollageUpload } from './ProfileCollageUpload';
 import profileStyles from './profileForm.module.css';
+
+function revokeIfBlob(url: string | null | undefined) {
+  if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+}
 
 export type ProfileEditModalProps = {
   open: boolean;
@@ -50,9 +54,12 @@ export function ProfileEditModal({
   const [servicesOpen, setServicesOpen] = useState(false);
   const [city, setCity] = useState('');
   const [services, setServices] = useState<string[]>([]);
-  const [cover169, setCover169] = useState<File | null>(null);
-  const [cover169Preview, setCover169Preview] = useState<string | null>(null);
-  const [remoteCover169, setRemoteCover169] = useState<string | null>(null);
+  const [primaryFile, setPrimaryFile] = useState<File | null>(null);
+  const [primaryPreview, setPrimaryPreview] = useState<string | null>(null);
+  const [remotePrimary, setRemotePrimary] = useState<string | null>(null);
+  const [secondaryFile, setSecondaryFile] = useState<File | null>(null);
+  const [secondaryPreview, setSecondaryPreview] = useState<string | null>(null);
+  const [remoteSecondary, setRemoteSecondary] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -61,12 +68,16 @@ export function ProfileEditModal({
     setLastName(p.lastName ?? '');
     setCity(p.city ?? '');
     setServices(Array.isArray(p.services) ? p.services.filter((x): x is string => typeof x === 'string') : []);
-    setAvatarPreview(p.avatarUrl?.trim() ? p.avatarUrl.trim() : '/images/placeholder.svg');
+    const avatar = p.avatarUrl?.trim() ? p.avatarUrl.trim() : '/images/placeholder.svg';
+    setAvatarPreview(avatar);
     setAvatarFile(null);
-    setCover169(null);
+    setPrimaryFile(null);
+    setSecondaryFile(null);
     const covers = coverFormStateFromProfile(p, { forceHorizontal: true });
-    setRemoteCover169(covers.remoteCover169);
-    setCover169Preview(covers.cover169Preview);
+    setRemotePrimary(covers.collagePrimaryUrl);
+    setPrimaryPreview(covers.collagePrimaryUrl);
+    setRemoteSecondary(covers.collageSecondaryUrl);
+    setSecondaryPreview(covers.collageSecondaryUrl ?? (avatar !== '/images/placeholder.svg' ? avatar : null));
     setCityOpen(false);
     setServicesOpen(false);
     setSaveError(null);
@@ -123,13 +134,24 @@ export function ProfileEditModal({
         nextAvatarUrl = null;
       }
 
-      const uploaded: string[] = [];
-      if (cover169) {
-        const up = await postMultipart('/api/user/profile/cover', cover169, 'cover');
-        uploaded.push(up.publicUrl);
-      } else if (remoteCover169) {
-        uploaded.push(remoteCover169);
+      let primaryUrl: string | null = remotePrimary;
+      if (primaryFile) {
+        const up = await postMultipart('/api/user/profile/cover', primaryFile, 'cover');
+        primaryUrl = up.publicUrl;
       }
+
+      let secondaryUrl: string | null = remoteSecondary;
+      if (secondaryFile) {
+        const up = await postMultipart('/api/user/profile/cover', secondaryFile, 'cover');
+        secondaryUrl = up.publicUrl;
+      }
+
+      /** Второе фото = аватар не пишем в coverImageUrls — на сайте подставится photoUrl. */
+      const avatarForSecondary =
+        nextAvatarUrl && secondaryUrl && secondaryUrl === nextAvatarUrl ? null : secondaryUrl;
+      const uploaded: string[] = [];
+      if (primaryUrl) uploaded.push(primaryUrl);
+      if (avatarForSecondary && avatarForSecondary !== primaryUrl) uploaded.push(avatarForSecondary);
       const coverImageUrls = uploaded.length ? uploaded : null;
 
       const patch: ProfilePatch = {
@@ -155,15 +177,17 @@ export function ProfileEditModal({
     avatarFile,
     avatarPreview,
     city,
-    cover169,
     firstName,
     handleClose,
     lastName,
     onSuccess,
     patchProfile,
     postMultipart,
+    primaryFile,
     profile?.avatarUrl,
-    remoteCover169,
+    remotePrimary,
+    remoteSecondary,
+    secondaryFile,
     services,
   ]);
 
@@ -191,10 +215,18 @@ export function ProfileEditModal({
                 const file = e.target.files?.[0];
                 if (!file) return;
                 setAvatarFile(file);
+                const nextUrl = URL.createObjectURL(file);
                 setAvatarPreview((prev) => {
                   if (prev.startsWith('blob:')) URL.revokeObjectURL(prev);
-                  return URL.createObjectURL(file);
+                  return nextUrl;
                 });
+                // Если второе фото коллажа = аватар (нет явного cover[1]), обновляем превью.
+                if (!remoteSecondary && !secondaryFile) {
+                  setSecondaryPreview((prev) => {
+                    revokeIfBlob(prev);
+                    return nextUrl;
+                  });
+                }
                 e.currentTarget.value = '';
               }}
             />
@@ -285,23 +317,52 @@ export function ProfileEditModal({
         />
 
         <p className={profileStyles.fieldLabel} style={{ marginTop: 8 }}>
-          Создайте обложку страницы
+          Коллаж обложки страницы
         </p>
-        <ProfileCoverUpload
-          file={cover169}
-          previewUrl={cover169Preview}
-          onChange={(f) => {
-            setCover169(f);
-            setCover169Preview((prev) => {
-              if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
-              return f ? URL.createObjectURL(f) : remoteCover169;
+        <ProfileCollageUpload
+          primaryFile={primaryFile}
+          primaryPreviewUrl={primaryPreview}
+          onPrimaryChange={(f) => {
+            setPrimaryFile(f);
+            setPrimaryPreview((prev) => {
+              revokeIfBlob(prev);
+              return f ? URL.createObjectURL(f) : remotePrimary;
             });
           }}
-          onRemove={() => {
-            setCover169(null);
-            setRemoteCover169(null);
-            setCover169Preview(null);
+          onPrimaryRemove={() => {
+            setPrimaryFile(null);
+            setRemotePrimary(null);
+            setPrimaryPreview((prev) => {
+              revokeIfBlob(prev);
+              return null;
+            });
           }}
+          secondaryFile={secondaryFile}
+          secondaryPreviewUrl={secondaryPreview}
+          onSecondaryChange={(f) => {
+            setSecondaryFile(f);
+            setSecondaryPreview((prev) => {
+              revokeIfBlob(prev);
+              return f ? URL.createObjectURL(f) : remoteSecondary;
+            });
+          }}
+          onSecondaryRemove={() => {
+            setSecondaryFile(null);
+            setRemoteSecondary(null);
+            const avatarFallback =
+              avatarPreview !== '/images/placeholder.svg' ? avatarPreview : null;
+            setSecondaryPreview((prev) => {
+              revokeIfBlob(prev);
+              return avatarFallback;
+            });
+          }}
+          primaryFallbackHint={
+            !primaryPreview && (profile?.designerCasesCount ?? 0) > 0
+              ? 'Если не загрузите — на сайте возьмём обложку первого кейса'
+              : !primaryPreview
+                ? 'Загрузите основное фото или добавьте кейс'
+                : null
+          }
         />
 
         {saveError ? (

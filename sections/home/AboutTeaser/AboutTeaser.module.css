@@ -53,16 +53,31 @@
 
 @media (max-width: 768px) {
   .section {
-    margin-top: 64px;
+    margin-top: 48px;
   }
 
   .inner {
-    gap: 20px;
-    padding-top: 32px;
-    padding-bottom: 32px;
+    gap: 14px;
+    padding-top: 28px;
+    padding-bottom: 28px;
   }
 
   .logo {
-    width: min(100%, 190px);
+    width: min(100%, 140px);
+  }
+
+  .tagline {
+    max-width: 18em;
+    font-size: var(--text-card-16-300);
+    font-weight: 300;
+    line-height: 1.35;
+  }
+
+  .aboutLink {
+    margin-top: 4px;
+  }
+
+  .aboutLinkText {
+    font-size: var(--text-caption);
   }
 }

@@ -8,7 +8,9 @@ import {
   HOME_SCROLL_CATALOG_PANEL_ID,
   homeScrollCatalogTabId,
   stripItemsForRoot,
+  stripItemsForRoots,
 } from './scrollCatalogStripItems';
+import { useMatchMinWidth } from './useMatchMinWidth';
 
 type Props = {
   roots: HomeCatalogRoot[];
@@ -19,6 +21,7 @@ export function ScrollCatalogClient({
   roots,
   initialActiveSlug,
 }: Props) {
+  const isDesktop = useMatchMinWidth(769);
   const tabsWrapperRef = useRef<HTMLDivElement>(null);
   const tabBtnRefs = useRef(new Map<string, HTMLButtonElement>());
   const [hoverTabSlug, setHoverTabSlug] = useState<string | null>(null);
@@ -41,7 +44,8 @@ export function ScrollCatalogClient({
     [roots, activeRootSlug],
   );
 
-  const stripItems = useMemo(() => stripItemsForRoot(activeRoot), [activeRoot]);
+  const childStripItems = useMemo(() => stripItemsForRoot(activeRoot), [activeRoot]);
+  const rootSquareItems = useMemo(() => stripItemsForRoots(roots), [roots]);
 
   const indicatorTargetSlug = hoverTabSlug ?? activeRootSlug;
 
@@ -71,11 +75,13 @@ export function ScrollCatalogClient({
   }, [indicatorTargetSlug]);
 
   useLayoutEffect(() => {
+    if (!isDesktop) return;
     updateIndicator();
     updateTabsScrollEdges();
-  }, [updateIndicator, updateTabsScrollEdges, activeRootSlug, hoverTabSlug, roots.length]);
+  }, [updateIndicator, updateTabsScrollEdges, activeRootSlug, hoverTabSlug, roots.length, isDesktop]);
 
   useEffect(() => {
+    if (!isDesktop) return;
     const wrap = tabsWrapperRef.current;
     if (!wrap) return;
     const sync = () => {
@@ -92,7 +98,7 @@ export function ScrollCatalogClient({
       wrap.removeEventListener('scroll', sync);
       window.removeEventListener('resize', sync);
     };
-  }, [updateIndicator, updateTabsScrollEdges]);
+  }, [updateIndicator, updateTabsScrollEdges, isDesktop]);
 
   const selectRoot = useCallback((slug: string) => {
     setActiveRootSlug(slug);
@@ -102,6 +108,24 @@ export function ScrollCatalogClient({
 
   if (!roots.length) {
     return null;
+  }
+
+  /* Моб. home: только корневые категории квадратами, без табов и дочерних. */
+  if (!isDesktop) {
+    return (
+      <ScrollCatalogStripPanel
+        items={rootSquareItems}
+        layout="home"
+        uniformCards
+        eagerImageCount={4}
+        scrollPrevLabel="Прокрутить категории влево"
+        scrollNextLabel="Прокрутить категории вправо"
+        tabPanel={{
+          id: `${HOME_SCROLL_CATALOG_PANEL_ID}-roots`,
+        }}
+        cardsModifierClass={styles.cardsWrapperRootSquares}
+      />
+    );
   }
 
   return (
@@ -146,7 +170,7 @@ export function ScrollCatalogClient({
       </div>
 
       <ScrollCatalogStripPanel
-        items={stripItems}
+        items={childStripItems}
         layout="home"
         eagerImageCount={2}
         scrollPrevLabel="Прокрутить подкатегории влево"

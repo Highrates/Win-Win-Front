@@ -193,15 +193,18 @@
   background: rgba(0, 0, 0, 0.06);
 }
 
+/* Как Tours / ScrollCatalog stripArrow: 40×40, radius-4 */
 .splitWrap .navArrow {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-8);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-4);
   z-index: 3;
   display: inline-flex;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .splitWrap .navArrowPrev {
@@ -215,8 +218,8 @@
 .navArrowIcon,
 .navArrowIconNext {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   pointer-events: none;
 }
 
@@ -253,15 +256,6 @@
 
 .dotActive {
   background: var(--color-ink-black);
-}
-
-@media (max-width: 768px) {
-  .infoPad {
-    padding-left: max(1rem, env(safe-area-inset-left, 0px));
-    padding-right: max(1rem, env(safe-area-inset-right, 0px));
-    padding-top: 28px;
-    padding-bottom: 28px;
-  }
 }
 
 @media (max-width: 900px) {
@@ -304,5 +298,107 @@
 
   .splitWrap .navArrowNext {
     right: 8px;
+  }
+}
+
+/* Моб.: секция + точки целиком в один экран */
+@media (max-width: 768px) {
+  .section {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    box-sizing: border-box;
+  }
+
+  .splitWrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .split {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  }
+
+  .infoCol {
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+  }
+
+  .infoPad {
+    height: 100%;
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-top: 20px;
+    padding-bottom: 16px;
+  }
+
+  .infoLink {
+    gap: 12px;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .brandName {
+    font-size: var(--text-card-16-300);
+  }
+
+  .productPreviewWrap {
+    flex: 1 1 auto;
+    max-width: min(100%, 280px);
+    max-height: none;
+    min-height: 0;
+  }
+
+  .productPreviewPlaceholder {
+    min-height: 0;
+  }
+
+  .description {
+    min-height: 0;
+    -webkit-line-clamp: 3;
+    font-size: var(--text-body);
+    line-height: 1.35;
+  }
+
+  .lifestyleCol {
+    height: auto;
+    min-height: 0;
+  }
+
+  /* Стык info / lifestyle: 1.05fr / (1.05fr + 0.95fr); размер как Tours mobile */
+  .splitWrap .navArrow {
+    top: calc(100% * 1.05 / 2);
+    width: 32px;
+    height: 32px;
+  }
+
+  .splitWrap .navArrowPrev {
+    left: 8px;
+  }
+
+  .splitWrap .navArrowNext {
+    right: 8px;
+  }
+
+  .navArrowIcon,
+  .navArrowIconNext {
+    width: 14px;
+    height: 14px;
+  }
+
+  .dots {
+    flex: 0 0 auto;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
   }
 }

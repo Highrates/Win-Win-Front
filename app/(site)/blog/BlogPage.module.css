@@ -38,6 +38,49 @@
   text-decoration: none;
 }
 
+/* Чипы рубрик (раньше — ProjectsPage.marketRoomBtn, класс удалён) */
+.marketRoomBtn,
+.marketRoomBtnActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 100px;
+  border: var(--account-hairline-width) solid var(--account-hairline-color, #e2e6e8);
+  background: var(--color-bright-snow);
+  color: var(--color-ink-black);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.marketRoomBtn:visited,
+.marketRoomBtnActive:visited {
+  color: var(--color-ink-black);
+}
+
+.marketRoomBtn:hover {
+  opacity: 0.85;
+}
+
+.marketRoomBtnActive {
+  border-color: var(--color-ink-black);
+  background: var(--color-ink-black);
+  color: var(--color-white);
+  cursor: default;
+}
+
+.marketRoomBtnActive:visited {
+  color: var(--color-white);
+}
+
 /* Сетка статей */
 .articlesGrid {
   display: grid;
@@ -132,5 +175,15 @@
   .articleCardCover {
     aspect-ratio: 1 / 1;
     border-radius: var(--radius-4);
+  }
+
+  .marketRoomBtn,
+  .marketRoomBtnActive {
+    padding: 7px 14px;
+    font-size: var(--text-caption);
+  }
+
+  .articleCard:hover {
+    opacity: 1;
   }
 }

@@ -290,36 +290,69 @@ button.interactItem:disabled {
 
 @media (max-width: 768px) {
   .mainSection {
-    margin-top: 78px;
+    margin-top: 64px;
+  }
+
+  .sectionInner {
+    gap: 16px;
+  }
+
+  .searchBox {
+    padding-top: 0;
+    padding-bottom: 8px;
+  }
+
+  .designersCardsWrapper {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .designerCard {
-    padding: 8px 10px 8px 8px;
-    gap: 10px;
+    padding: 12px;
+    gap: 12px;
+    align-items: stretch;
   }
 
   .designerCardInner {
+    flex-direction: column;
+    align-items: stretch;
     gap: 12px;
   }
 
   .designerCardAvatar {
-    width: 96px;
-    height: 96px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-4);
+  }
+
+  .designerCardContent {
+    gap: 12px;
+    padding: 0;
+  }
+
+  .designerCardInfo {
+    gap: 6px;
+  }
+
+  .designerCardName {
+    font-size: var(--text-card-16-500);
+  }
+
+  .designerCardServices {
+    font-size: var(--text-caption);
   }
 
   .designerCardArrow {
     display: none;
   }
 
-  .designersCardsWrapper {
-    grid-template-columns: 1fr;
-  }
-
   .interactWrapper {
-    gap: 22px;
+    gap: 20px;
   }
 
-  .interactIcon {
+  .interactIcon,
+  .heartIconActive {
     width: 18px;
     height: 18px;
   }

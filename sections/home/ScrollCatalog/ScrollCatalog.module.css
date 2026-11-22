@@ -20,6 +20,55 @@
   margin-top: 24px;
 }
 
+/* SSR dual-render: desktop = табы+дети, mobile = корневые квадраты */
+.homeDesktopCatalog {
+  display: block;
+}
+
+.homeMobileCatalog {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .homeDesktopCatalog {
+    display: none;
+  }
+
+  .homeMobileCatalog {
+    display: block;
+  }
+}
+
+.cardsWrapper.cardsWrapperHome.cardsWrapperRootSquares,
+.cardsWrapper.cardsWrapperRootSquares {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  overflow: visible;
+  padding: 0;
+  -webkit-overflow-scrolling: auto;
+  touch-action: auto;
+}
+
+.cardsWrapperRootSquares .card {
+  width: 100%;
+  gap: 8px;
+}
+
+.cardsWrapperRootSquares .imgWrap,
+.cardsWrapperRootSquares .imgWrapWide {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+}
+
+.cardsWrapperRootSquares .cardTitle {
+  font-size: var(--text-body);
+  font-weight: var(--text-body-weight);
+  text-align: center;
+  line-height: 1.2;
+}
+
 @media (max-height: 820px) {
   .sectionFold {
     padding-bottom: 8px;
@@ -388,7 +437,8 @@
   }
 
   .sectionFold {
-    margin-top: 16px;
+    margin-top: 0;
+    padding-bottom: 24px;
   }
 
   .sectionFold .tabsShell {
@@ -397,12 +447,24 @@
   }
 
   .sectionFold .stripHostFlexHome {
-    margin-top: 24px;
+    margin-top: 16px;
+  }
+
+  .homeMobileCatalog .stripHostFlexHome {
+    margin-top: 12px;
+  }
+
+  .card:hover .imgCover {
+    transform: none;
+  }
+
+  .imgCover {
+    transition: none;
   }
 
   @media (max-height: 820px) {
     .sectionFold {
-      margin-top: 8px;
+      margin-top: 0;
     }
 
     .sectionFold .stripHostFlexHome {
@@ -469,5 +531,35 @@
     font-weight: var(--text-body-weight);
     text-align: center;
     line-height: 1.2;
+  }
+
+  .cardsWrapper.cardsWrapperHome.cardsWrapperRootSquares {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 12px;
+    row-gap: 16px;
+    overflow: visible;
+    padding: 0 0 8px;
+    touch-action: auto;
+  }
+
+  .cardsWrapper.cardsWrapperHome.cardsWrapperRootSquares .card {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .cardsWrapper.cardsWrapperHome.cardsWrapperRootSquares .imgWrap,
+  .cardsWrapper.cardsWrapperHome.cardsWrapperRootSquares .imgWrapWide {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  .cardsWrapper.cardsWrapperHome.cardsWrapperRootSquares .cardTitle {
+    display: block;
+    width: 100%;
+    overflow: visible;
+    white-space: normal;
   }
 }

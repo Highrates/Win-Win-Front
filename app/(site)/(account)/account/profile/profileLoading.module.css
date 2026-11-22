@@ -93,4 +93,26 @@
   border-radius: 10px;
 }
 
+@media (max-width: 768px) {
+  .profileLoadRoot {
+    gap: 20px;
+  }
 
+  .profileLoadHeader {
+    gap: 14px;
+  }
+
+  .skeletonAvatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .profileLoadImages {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .skeletonRect {
+    max-width: none;
+  }
+}

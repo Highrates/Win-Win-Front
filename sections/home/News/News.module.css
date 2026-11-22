@@ -300,12 +300,16 @@
 
 @media (max-width: 768px) {
   .section {
-    margin-top: 64px;
+    margin-top: 48px;
   }
 
   .inner {
-    padding-top: 24px;
-    padding-bottom: 32px;
+    padding-top: 20px;
+    padding-bottom: 28px;
+  }
+
+  .titles {
+    gap: 12px;
   }
 
   .titles .logo {
@@ -315,28 +319,93 @@
   .categoriesWrapper {
     justify-content: flex-start;
     flex-wrap: nowrap;
-    gap: 20px;
+    gap: 16px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding-bottom: 4px;
+    width: 100%;
   }
 
   .categoriesWrapper::-webkit-scrollbar {
     display: none;
   }
 
+  .categoryItem,
+  .allNewsText {
+    white-space: nowrap;
+  }
+
   .grid {
-    margin-top: 24px;
+    margin-top: 16px;
+    gap: 28px;
+  }
+
+  .leftCol,
+  .rightCol {
+    padding-top: 20px;
+  }
+
+  .sourcingPromo {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Градация: eyebrow → title → body (раньше title=h5 14px был меньше body 15px) */
+  .sourcingCopy {
+    gap: 8px;
+    max-width: none;
+  }
+
+  .sourcingEyebrow {
+    font-size: var(--text-caption);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .sourcingTitle {
+    font-size: var(--h3-size);
+    font-weight: var(--h3-weight);
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .sourcingDescription {
+    font-size: var(--text-body);
+    line-height: 1.45;
+    color: color-mix(in srgb, var(--color-ink-black) 72%, transparent);
+  }
+
+  .sourcingVisual {
+    width: 100%;
+    max-width: none;
+    aspect-ratio: 16 / 10;
+  }
+
+  .sourcingBtn {
+    width: auto;
+    align-self: flex-start;
+    margin-top: 12px;
   }
 
   .articleCard {
     flex-direction: row;
-    gap: 16px;
+    gap: 12px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
   }
 
   .articleCardCoverWrap {
-    width: 140px;
-    height: 164px;
+    width: 96px;
+    height: 112px;
+  }
+
+  .articleTitle {
+    font-size: var(--text-card-16-300);
+    line-height: 1.25;
+  }
+
+  .articleCategory {
+    font-size: var(--text-caption);
   }
 }

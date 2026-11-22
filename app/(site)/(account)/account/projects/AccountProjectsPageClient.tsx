@@ -267,13 +267,13 @@ export function AccountProjectsPageClient() {
         <AccountProjectsPageSkeleton />
       ) : summaries.length === 0 ? (
         <div className={styles.page}>
-          <div className={styles.toolbar}>
-            <div />
+          <div className={styles.emptyState}>
+            <p className={styles.emptyProjectsOnly}>Проектов пока нет</p>
+            <p className={styles.emptyText}>Создайте проект, чтобы собирать позиции из каталога и оформлять заказ.</p>
             <Button variant="primary" className={styles.createProjectButton} type="button" onClick={openCreate}>
               Создать проект
             </Button>
           </div>
-          <p className={styles.emptyProjectsOnly}>Проектов пока нет</p>
         </div>
       ) : (
         <div className={styles.page}>
@@ -285,11 +285,16 @@ export function AccountProjectsPageClient() {
           </div>
 
           <div className={styles.projectHeader}>
-            <div className={styles.projectTitleRow}>
-              <span className={styles.projectTitle}>{activeSummary?.name.trim() || 'Проект'}</span>
-              <button type="button" className={styles.iconButton} aria-label="Редактировать проект" onClick={openEdit}>
-                <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
-              </button>
+            <div className={styles.projectMeta}>
+              <div className={styles.projectTitleRow}>
+                <span className={styles.projectTitle}>{activeSummary?.name.trim() || 'Проект'}</span>
+                <button type="button" className={styles.iconButton} aria-label="Редактировать проект" onClick={openEdit}>
+                  <img src="/icons/edit.svg" alt="" width={20} height={20} className={styles.iconBlack} />
+                </button>
+              </div>
+              <p className={styles.projectAddress}>
+                {detail?.address?.trim() ? <>Адрес: {detail.address.trim()}</> : <>Адрес не указан</>}
+              </p>
             </div>
             <div className={styles.projectTools}>
               <button type="button" className={styles.specLink} aria-label="Скачать спецификацию PDF">
@@ -301,10 +306,6 @@ export function AccountProjectsPageClient() {
               </button>
             </div>
           </div>
-
-          <p className={styles.projectAddress}>
-            {detail?.address?.trim() ? <>Адрес: {detail.address.trim()}</> : <>Адрес не указан</>}
-          </p>
 
           <AccountProjectsCta
             isAccordionLayout={isCtaAccordionLayout}

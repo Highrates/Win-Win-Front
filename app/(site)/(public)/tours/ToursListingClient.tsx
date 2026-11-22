@@ -339,15 +339,12 @@ export function ToursListingClient({ landing, tours, variant = 'page' }: Props) 
               disabled={!canGoPrev}
               aria-label="Предыдущий тур"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  d="M15 6l-6 6 6 6"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <img
+                src="/icons/arrow.svg"
+                alt=""
+                className={styles.trackArrowIcon}
+                aria-hidden
+              />
             </button>
             <button
               type="button"
@@ -356,15 +353,12 @@ export function ToursListingClient({ landing, tours, variant = 'page' }: Props) 
               disabled={!canGoNext}
               aria-label="Следующий тур"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  d="M9 6l6 6-6 6"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <img
+                src="/icons/arrow.svg"
+                alt=""
+                className={styles.trackArrowIconNext}
+                aria-hidden
+              />
             </button>
           </div>
         ) : null}

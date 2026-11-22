@@ -22,9 +22,21 @@ const TABS: CatalogHubTabId[] = ['categories', 'zones', 'collections'];
 
 export function CatalogHubTabs({ activeTab, onTabChange, fillFold = false }: Props) {
   const [hoverTab, setHoverTab] = useState<CatalogHubTabId | null>(null);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
   const tabsWrapperRef = useRef<HTMLDivElement>(null);
   const tabBtnRefs = useRef(new Map<CatalogHubTabId, HTMLButtonElement>());
   const indicatorTarget = hoverTab ?? activeTab;
+
+  const updateScrollEdges = useCallback(() => {
+    const el = tabsWrapperRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    const scrollable = maxScroll > 2;
+    setCanScrollPrev(scrollable && scrollLeft > 2);
+    setCanScrollNext(scrollable && scrollLeft < maxScroll - 2);
+  }, []);
 
   const updateIndicator = useCallback(() => {
     const wrap = tabsWrapperRef.current;
@@ -41,22 +53,31 @@ export function CatalogHubTabs({ activeTab, onTabChange, fillFold = false }: Pro
 
   useLayoutEffect(() => {
     updateIndicator();
-    // После шрифтов/лейаута пересчитать позицию линии
-    const t = window.setTimeout(updateIndicator, 0);
+    updateScrollEdges();
+    const t = window.setTimeout(() => {
+      updateIndicator();
+      updateScrollEdges();
+    }, 0);
     return () => window.clearTimeout(t);
-  }, [updateIndicator, activeTab, hoverTab]);
+  }, [updateIndicator, updateScrollEdges, activeTab, hoverTab]);
 
   useLayoutEffect(() => {
     const wrap = tabsWrapperRef.current;
     if (!wrap) return;
-    const ro = new ResizeObserver(updateIndicator);
+    const sync = () => {
+      updateIndicator();
+      updateScrollEdges();
+    };
+    const ro = new ResizeObserver(sync);
     ro.observe(wrap);
-    window.addEventListener('resize', updateIndicator);
+    wrap.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', updateIndicator);
+      wrap.removeEventListener('scroll', sync);
+      window.removeEventListener('resize', sync);
     };
-  }, [updateIndicator]);
+  }, [updateIndicator, updateScrollEdges]);
 
   return (
     <section
@@ -64,7 +85,11 @@ export function CatalogHubTabs({ activeTab, onTabChange, fillFold = false }: Pro
       aria-label="Разделы каталога"
     >
       <div className="padding-global">
-        <div className={styles.tabsShell}>
+        <div
+          className={styles.tabsShell}
+          data-can-scroll-prev={canScrollPrev ? 'true' : 'false'}
+          data-can-scroll-next={canScrollNext ? 'true' : 'false'}
+        >
           <div className={styles.tabsPill}>
             <div
               className={styles.tabsWrapper}
@@ -94,6 +119,8 @@ export function CatalogHubTabs({ activeTab, onTabChange, fillFold = false }: Pro
               ))}
               <span className={styles.tabsIndicator} aria-hidden="true" />
             </div>
+            <span className={styles.tabsFadeStart} aria-hidden="true" />
+            <span className={styles.tabsFadeEnd} aria-hidden="true" />
           </div>
         </div>
       </div>

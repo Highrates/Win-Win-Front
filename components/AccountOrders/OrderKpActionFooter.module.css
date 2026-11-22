@@ -180,45 +180,54 @@
     align-self: stretch;
     flex-direction: row;
     flex-wrap: nowrap;
-    min-height: 72px;
+    min-height: 0;
+    height: auto;
   }
 
   .cardKp {
     width: 100%;
     flex-direction: column;
     min-height: 0;
+    height: auto;
+    gap: 8px;
   }
 
   .cardKp > .btn:first-child,
   .cardKp > .confirm {
     width: 100%;
-    flex: 1 1 0;
-    height: auto;
-    min-height: 56px;
+    flex: 0 0 auto;
+    height: 48px;
+    min-height: 48px;
   }
 
   .cardKpRow {
     flex: 0 0 auto;
-    height: auto;
-    min-height: 56px;
+    height: 48px;
+    min-height: 48px;
   }
 
   .cardKpRow .btn {
-    height: auto;
-    min-height: 56px;
+    height: 48px;
+    min-height: 48px;
     flex: 1 1 0;
     flex-direction: column;
-    gap: 4px;
-    padding: 6px 8px;
+    gap: 2px;
+    padding: 4px 8px;
   }
 
   .cardLabel {
     display: inline;
   }
 
+  .cardUnreadCount {
+    display: none;
+  }
+
   .card .btn {
     flex: 1 1 0;
     min-width: 0;
-    min-height: 72px;
+    min-height: 48px;
+    height: auto;
+    padding: 8px;
   }
 }

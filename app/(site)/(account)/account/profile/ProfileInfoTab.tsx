@@ -28,7 +28,13 @@ export function ProfileInfoTab({
   const servicesLine = services.length > 0 ? services.join(', ') : 'Услуги: Не указаны';
   const aboutHtml = profile.aboutHtml ?? '';
   const hasAbout = !!aboutHtml.trim();
-  const coverPreviewUrl = parseStringArray(profile.coverImageUrls)[0]?.trim() || null;
+  const coverUrls = parseStringArray(profile.coverImageUrls)
+    .map((u) => u.trim())
+    .filter(Boolean);
+  const collagePrimaryUrl = coverUrls[0] || null;
+  const collageSecondaryUrl =
+    coverUrls[1] || (avatarSrc !== '/images/placeholder.svg' ? avatarSrc : null);
+  const showCollage = Boolean(collagePrimaryUrl || collageSecondaryUrl);
 
   const partnerApplicationPending = Boolean(
     profile.partnerApplicationSubmittedAt &&
@@ -142,9 +148,9 @@ export function ProfileInfoTab({
         </div>
       </div>
 
-      {coverPreviewUrl ? (
+      {showCollage ? (
         <div
-          className={`${styles.previewImages} ${styles.previewImagesEditable}`}
+          className={`${styles.previewCollageWrap} ${styles.previewImagesEditable}`}
           role="button"
           tabIndex={0}
           onClick={onOpenProfileEdit}
@@ -154,13 +160,42 @@ export function ProfileInfoTab({
               onOpenProfileEdit();
             }
           }}
-          aria-label="Редактировать обложку профиля"
+          aria-label="Редактировать коллаж обложки профиля"
         >
-          <div className={`${styles.previewImageSlot} ${styles.previewImageSlotDouble}`}>
-            <img src={coverPreviewUrl} alt="Обложка профиля" className={styles.previewImage} />
+          <div className={styles.previewCollage}>
+            {collagePrimaryUrl ? (
+              <img
+                src={collagePrimaryUrl}
+                alt="Основное фото обложки"
+                className={styles.previewCollagePrimary}
+              />
+            ) : (
+              <div className={styles.previewCollagePlaceholder}>
+                <span>
+                  {(profile.designerCasesCount ?? 0) > 0
+                    ? 'На сайте подставим обложку кейса'
+                    : 'Добавьте основное фото'}
+                </span>
+              </div>
+            )}
+            {collageSecondaryUrl ? (
+              <img
+                src={collageSecondaryUrl}
+                alt="Второе фото обложки"
+                className={styles.previewCollageSecondary}
+              />
+            ) : null}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <button
+          type="button"
+          className={styles.previewCollageEmptyBtn}
+          onClick={onOpenProfileEdit}
+        >
+          Добавить коллаж обложки
+        </button>
+      )}
 
       <section
         className={`${styles.aboutSection} ${!hasAbout ? styles.aboutSectionHeaderOnly : ''}`}

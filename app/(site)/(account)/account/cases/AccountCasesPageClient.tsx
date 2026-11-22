@@ -203,9 +203,13 @@ export function AccountCasesPageClient() {
   return (
     <div className={styles.page}>
       {empty ? (
-        <div style={{ paddingTop: 18 }}>
-          <p style={{ marginTop: 0, marginBottom: 12 }}>У вас пока нет кейсов!</p>
-          <Button variant="primary" onClick={() => router.push('/account/cases/new')}>
+        <div className={styles.emptyState}>
+          <p className={styles.emptyText}>У вас пока нет кейсов!</p>
+          <Button
+            variant="primary"
+            className={styles.emptyCreateButton}
+            onClick={() => router.push('/account/cases/new')}
+          >
             Добавить новый кейс
           </Button>
         </div>

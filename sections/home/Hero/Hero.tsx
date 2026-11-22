@@ -17,7 +17,7 @@ export function Hero({
   /** Hero + ScrollCatalog в fold: hero растягивается на оставшееся место */
   fillFold?: boolean;
   /**
-   * Нижний угол обложки. `undefined` — Beta 2.1 (home/catalog);
+   * Нижний угол обложки. `undefined` — Beta 3.0 (home/catalog);
    * `null` — скрыть; иначе кастомная подпись (напр. «О нас»).
    */
   cornerLabel?: ReactNode | null;
@@ -52,7 +52,7 @@ export function Hero({
           >
             <div className="padding-global">
               {showDefaultBeta ? (
-                <p className={styles.heroBeta}>Beta 2.1 · 2026</p>
+                <p className={styles.heroBeta}>Beta 3.0 · 2026</p>
               ) : (
                 <div
                   className={
